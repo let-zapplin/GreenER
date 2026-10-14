@@ -149,4 +149,16 @@ export class ServicosService {
 
     return { created, updated };
   }
+  // ========================================================
+  // US03: Listar todos os serviços armazenados no banco
+  // ========================================================
+  async listAll() {
+    console.log("📋 Listando serviços do banco...");
+
+    const services = await this.repository.listAll();
+
+    console.log(`✅ ${services.length} serviços listados`);
+
+    return services;
+  }
 }

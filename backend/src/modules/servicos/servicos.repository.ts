@@ -1,4 +1,4 @@
-import  pool  from "../../db/connection.js";
+import pool from "../../db/connection.js";
 
 // ============================================================
 // CLASSE: ServicosRepository
@@ -77,5 +77,27 @@ export class ServicosRepository {
              WHERE id = $3`,
       [data.name, data.locationId, data.id],
     );
+  }
+
+  // ========================================================
+  // US03: Listar todos os serviços
+  // ========================================================
+  async listAll() {
+    const result = await pool.query(
+      `SELECT 
+          s.id_service,
+          s.id AS external_id,
+          s.name,
+          l.region_code,
+          l.country,
+          l.region,
+          l.city,
+          l.latitude,
+          l.longitude
+       FROM service s
+       INNER JOIN location l ON l.id_location = s.location_id_location
+       ORDER BY s.name`
+    );
+    return result.rows;
   }
 }
