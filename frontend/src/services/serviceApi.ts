@@ -1,8 +1,8 @@
 import type {
   DiscoverServicesResponse,
   ListServicesResponse,
-  Service,
   StoredService,
+  MonitoredService,
 } from "../types/service";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -36,7 +36,9 @@ export async function listServices(
   return response.json();
 }
 
-export function storedServiceToService(storedService: StoredService): Service {
+export function storedServiceToService(
+  storedService: StoredService,
+): MonitoredService {
   return {
     id: storedService.external_id,
     name: storedService.name,
@@ -49,6 +51,9 @@ export function storedServiceToService(storedService: StoredService): Service {
       latitude: storedService.latitude,
       longitude: storedService.longitude,
     },
-      metrics_path: "",
+
+    metrics_path: "",
+
+    status: storedService.status,
   };
 }
