@@ -19,6 +19,14 @@ export type DiscoverServicesResponse ={
     services: Service[];
 };
 
+export type ServiceStatus =
+  | "active"
+  | "new"
+  | "unavailable"
+  | "returned";
+
 export type MonitoredService = Service & {
-    available: boolean;
+    status: ServiceStatus;
+    statusExpiresAt?: number;
+    lastConfirmedAt?: string;
 };

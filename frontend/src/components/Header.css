@@ -74,14 +74,11 @@
   gap: 12px;
 }
 
-.notification {
-  font-size: 20px;
-  cursor: pointer;
-}
-
+.notification,
 .user-avatar {
   width: 42px;
   height: 42px;
+  flex-shrink: 0;
 
   border-radius: 50%;
 
@@ -89,16 +86,16 @@
   align-items: center;
   justify-content: center;
 
-  background: #28676b;
+  background: #12383b;
+  border: 1px solid #426c60;
+  color: #87e46c;
 }
 
-.user-avatar span {
-  width: 16px;
-  height: 16px;
-
-  border-radius: 50%;
-
-  background: #a8d9bd;
+.notification svg,
+.user-avatar svg {
+  display: block;
+  width: 22px;
+  height: 22px;
 }
 
 .user-info {
