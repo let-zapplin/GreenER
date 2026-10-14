@@ -12,7 +12,7 @@ const steps = [
 const faqs = [
   ["Os valores são medidos ou estimados?", "Estimados. Partimos do uso de CPU, memória e disco do serviço e aplicamos um fator de energia por métrica."],
   ["Por que a região importa?", "A geração de eletricidade varia por região. A mesma quantidade de energia pode produzir emissões diferentes conforme a intensidade de carbono local."],
-  ["Com que frequência os dados atualizam?", "A coleta acontece em intervalos configurados no monitoramento. A lista de serviços é consultada automaticamente a cada 10 segundos."],
+  ["Com que frequência os dados atualizam?", "A coleta acontece em intervalos configurados no monitoramento. A lista de serviços é consultada automaticamente a cada 1 segundo, aguardando a conclusão de consultas em andamento."],
   ["O que significa “sem métricas”?", "Significa que não há dados de métricas disponíveis para o serviço naquele momento. Sem eles, não é possível calcular uma nova estimativa de consumo e emissões."],
 ];
 const format = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });

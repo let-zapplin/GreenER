@@ -27,4 +27,6 @@ export type ServiceStatus =
 
 export type MonitoredService = Service & {
     status: ServiceStatus;
+    statusExpiresAt?: number;
+    lastConfirmedAt?: string;
 };
