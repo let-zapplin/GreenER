@@ -42,4 +42,19 @@ export class ServicosController {
       next(error);
     }
   }
+  // ========================================================
+  // GET /api/servicos
+  // Listar serviços armazenados no banco
+  // ========================================================
+  async list(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const services = await this.service.listAll();
+      res.status(200).json({
+        message: `${services.length} serviços encontrados`,
+        services,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
