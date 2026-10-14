@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ServiceList } from "../components/ServiceList";
 import { ServiceIndicator } from "../components/ServiceIndicator";
-import { discoverServices } from "../services/serviceApi";
+import {  listServices,  storedServiceToService,} from "../services/serviceApi";
 import { getMonitoringSnapshot, recordDiscovery } from "../services/monitoringState";
 import "./Monitoring.css";
 
@@ -50,9 +50,16 @@ export function Monitoring() {
       controller = requestController;
       const requestTimeout = setTimeout(() => requestController.abort(), REQUEST_TIMEOUT_MS);
       try {
-        const data = await discoverServices(requestController.signal);
+       
+        // testando loading -> await new Promise((resolve) => setTimeout(resolve, 1000));
+        const data = await listServices(requestController.signal);
         if (disposed) return;
-        setSnapshot(recordDiscovery(data.services));
+
+        const services = data.services.map(
+        storedServiceToService,
+        );
+                
+        setSnapshot(recordDiscovery(services));
         setError(null);
       } catch (error) {
         if (disposed) return;
