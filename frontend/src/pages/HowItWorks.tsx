@@ -17,6 +17,20 @@ const faqs = [
 ];
 const format = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 
+function CalculatorInput({ id, label, value, onChange, step }: { id: string; label: string; value: string; onChange: (value: string) => void; step: number }) {
+  function adjust(direction: number) {
+    const current = Number(value);
+    onChange(String(Math.max(0, Math.round(((Number.isFinite(current) ? current : 0) + direction * step) * 10) / 10)));
+  }
+  return <div className="how-number-field">
+    <input id={id} type="number" min="0" step={step} value={value} onChange={event => onChange(event.target.value)} />
+    <div className="how-number-controls">
+      <button type="button" aria-label={`Aumentar ${label}`} onClick={() => adjust(1)}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 10 4-4 4 4"/></svg></button>
+      <button type="button" aria-label={`Diminuir ${label}`} disabled={value.trim() !== "" && Number(value) <= 0} onClick={() => adjust(-1)}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
+    </div>
+  </div>;
+}
+
 export function HowItWorks() {
   const [selected, setSelected] = useState(0);
   const [energy, setEnergy] = useState("1248.6");
@@ -36,8 +50,8 @@ export function HowItWorks() {
 
       <div className="how-columns">
         <section className="how-panel" aria-labelledby="calculation-title"><h2 id="calculation-title">Como calculamos a emissão</h2><p>Emissão de CO₂e = energia estimada (kWh) × intensidade de carbono da região (gCO₂e/kWh).</p>
-          <div className="how-calculator"><label htmlFor="how-energy">Energia estimada (kWh)</label><input id="how-energy" type="number" min="0" step="any" value={energy} onChange={event => setEnergy(event.target.value)} />
-            <label htmlFor="how-carbon">Intensidade de carbono (gCO₂e/kWh)</label><input id="how-carbon" type="number" min="0" step="any" value={carbon} onChange={event => setCarbon(event.target.value)} />
+          <div className="how-calculator"><label htmlFor="how-energy">Energia estimada (kWh)</label><CalculatorInput id="how-energy" label="energia estimada" value={energy} onChange={setEnergy} step={0.1} />
+            <label htmlFor="how-carbon">Intensidade de carbono (gCO₂e/kWh)</label><CalculatorInput id="how-carbon" label="intensidade de carbono" value={carbon} onChange={setCarbon} step={1} />
             <div className="how-result" aria-live="polite" aria-atomic="true">{valid ? <><strong>{format.format(energyValue * carbonValue / 1000)}</strong> kg CO₂e</> : <span>Informe valores iguais ou maiores que zero.</span>}<p>Altere os valores para ver como a região muda o resultado.</p></div>
           </div>
         </section>

@@ -152,11 +152,6 @@ export function Home() {
       </section>
 
       <p className="view-debug">Perspectiva selecionada: {view ?? "nenhuma"}</p>
-
-      <div className="home-status">
-        <span className="status-dot" />
-        Sistema operando normalmente
-      </div>
     </main>
   );
 }

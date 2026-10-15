@@ -1,16 +1,32 @@
+import { useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import "./Header.css";
 import logo from "../../assets/logo.png";
 
 export function Header() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+
   return (
-    <header className="header-wrapper">
+    <header className="header-wrapper" onKeyDown={(event) => {
+      if (event.key === "Escape" && menuOpen) {
+        setMenuOpen(false);
+        menuButton.current?.focus();
+      }
+    }}>
       <div className="app-header">
         <div className="header-logo-area">
           <img src={logo} alt="GreenER" className="header-logo" />
         </div>
 
-        <nav className="app-nav">
+        <button ref={menuButton} type="button" className="header-menu-toggle" aria-label={menuOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={menuOpen} aria-controls="header-navigation" onClick={() => setMenuOpen(open => !open)}>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            {menuOpen ? <path d="m6 6 12 12M6 18 18 6"/> : <path d="M4 6h16M4 12h16M4 18h16"/>}
+          </svg>
+        </button>
+        <nav id="header-navigation" aria-label="Navegação principal" className={`app-nav${menuOpen ? " is-open" : ""}`} onClick={(event) => {
+          if ((event.target as HTMLElement).closest("a")) setMenuOpen(false);
+        }}>
           <NavLink
             to="/"
             className={({ isActive }) => (isActive ? "active" : "")}
