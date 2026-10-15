@@ -33,11 +33,11 @@ Voltar para o [README principal](../README.md).
 
 O backend é organizado em módulos, e cada módulo separa as responsabilidades em camadas:
 
-| Camada | Responsabilidade |
-| --- | --- |
-| `routes` | Define os endpoints do recurso |
-| `controllers` | Recebe as requisições e devolve as respostas |
-| `services` | Concentra as regras de negócio |
+| Camada           | Responsabilidade                                  |
+| ---------------- | ------------------------------------------------- |
+| `routes`       | Define os endpoints do recurso                    |
+| `controllers`  | Recebe as requisições e devolve as respostas    |
+| `services`     | Concentra as regras de negócio                   |
 | `repositories` | Acessa o PostgreSQL por meio de SQL parametrizado |
 
 Estrutura geral:
@@ -69,10 +69,10 @@ backend/
 
 ### APIs auxiliares da Unilaunch
 
-| API | Uso no backend | Documentação |
-| --- | --- | --- |
-| Agregador de Métricas | Descoberta dos serviços e coleta das métricas | [metrics.unilaunch.org/docs](https://metrics.unilaunch.org/docs) |
-| Serviço de Intensidade de Carbono | Consulta da intensidade de carbono para o cálculo das emissões | [carbon.unilaunch.org/docs](https://carbon.unilaunch.org/docs) |
+| API                                | Uso no backend                                                   | Documentação                                                  |
+| ---------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------- |
+| Agregador de Métricas             | Descoberta dos serviços e coleta das métricas                  | [metrics.unilaunch.org/docs](https://metrics.unilaunch.org/docs) |
+| Serviço de Intensidade de Carbono | Consulta da intensidade de carbono para o cálculo das emissões | [carbon.unilaunch.org/docs](https://carbon.unilaunch.org/docs)   |
 
 As chamadas a essas APIs ficam na pasta `src/integrations/`, separadas das regras de negócio. Falhas nas APIs auxiliares são tratadas para que não interrompam o funcionamento do restante da aplicação.
 
@@ -86,13 +86,12 @@ A conexão com o banco é configurada em `src/db/connection.ts` e utilizada apen
 
 As variáveis ficam no arquivo `.env` na raiz do projeto. Use o [`.env.example`](../.env.example) como modelo e nunca envie o `.env` para o repositório.
 
-| Variável | Descrição |
-| --- | --- |
-| _a definir_ | Dados de conexão com o PostgreSQL |
-| _a definir_ | URLs das APIs auxiliares (métricas e carbono) |
-| _a definir_ | Segredo usado na assinatura do JWT |
-| _a definir_ | Porta da API |
-
+| Variável                                                                                    | Descrição                                    |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| POSTGRES_HOST<br />POSTGRES_PORT<br />POSTGRES_DB<br />POSTGRES_USER<br />POSTGRESS_PASSWORD | Dados de conexão com o PostgreSQL             |
+| <br />METRICS_API_URL<br />CARBON_API_URL                                                    | URLs das APIs auxiliares (métricas e carbono) |
+| <br />JWT_SECRET<br />JWT_EXPIRES_IN                                                         | Segredo usado na assinatura do JWT             |
+| CORS_ORIGIN<br />VITE_API_URL                                                                | Porta da API                                   |
 
 ---
 
@@ -116,12 +115,12 @@ npm install
 npm run dev
 ```
 
-| Comando | Função |
-| --- | --- |
-| `npm run dev` | Executa `src/server.ts` com recarga ao salvar, usando `tsx` |
-| `npm run typecheck` | Verifica os tipos sem gerar arquivos |
-| `npm run build` | Compila os arquivos de `src/` para `dist/` |
-| `npm start` | Executa `dist/server.js` após o build |
+| Comando               | Função                                                       |
+| --------------------- | -------------------------------------------------------------- |
+| `npm run dev`       | Executa`src/server.ts` com recarga ao salvar, usando `tsx` |
+| `npm run typecheck` | Verifica os tipos sem gerar arquivos                           |
+| `npm run build`     | Compila os arquivos de`src/` para `dist/`                  |
+| `npm start`         | Executa`dist/server.js` após o build                        |
 
 ---
 
@@ -148,7 +147,6 @@ Com o Docker Desktop iniciado, abra um terminal na raiz do projeto, onde está o
    ```bash
    docker compose up --build -d
    ```
-
 2. Execute os testes dentro do container do backend:
 
    ```bash
@@ -156,7 +154,6 @@ Com o Docker Desktop iniciado, abra um terminal na raiz do projeto, onde está o
    ```
 
    Se os containers já estiverem rodando, basta executar o comando de teste.
-
 3. Para executar os testes automaticamente a cada alteração:
 
    ```bash
