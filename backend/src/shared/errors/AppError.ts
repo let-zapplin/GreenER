@@ -31,3 +31,11 @@ export class NotFoundError extends AppError {
     super(message, 404, "NOT_FOUND");
   }
 }
+
+// Erro 401: Dados inexistentes ou incorretos no login
+export class UnauthorizedError extends AppError {
+  constructor(message = "Credenciais inválidas") {
+    super(message, 401, "UNAUTHORIZED")
+  }
+}
+
