@@ -109,7 +109,13 @@ npm install
 npm run dev
 ```
 
-Acesse `http://localhost:5173` para a Home ou `http://localhost:5173/monitoramento` para acompanhar os serviços.
+Acesse `http://localhost:5173` para a landing page, `/home` para a Home ou `/monitoramento` para acompanhar os serviços.
+
+### Landing page
+
+O formulário envia login para `POST /auth/login` e cadastro para `POST /auth/register`, usando `VITE_API_URL`. Após o login, o token retornado é armazenado em `sessionStorage`; a opção “Lembrar de mim” usa `localStorage`. O usuário é redirecionado para `/home`. Isso não adiciona proteção de rotas às páginas existentes.
+
+O globo usa `@maptiler/sdk` com projeção 3D e cartografia local do Natural Earth, sem exigir chave. A rotação pausa quando o globo sai da tela, quando a aba fica oculta ou quando o usuário prefere movimento reduzido. Configure `VITE_MAPTILER_API_KEY` no `.env` da raiz para usar o mapa-base de satélite do MapTiler Cloud. Reinicie o frontend após alterar variáveis de ambiente.
 
 | Comando | Função |
 | --- | --- |

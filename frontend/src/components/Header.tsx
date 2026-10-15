@@ -12,7 +12,7 @@ export function Header() {
 
         <nav className="app-nav">
           <NavLink
-            to="/"
+            to="/home"
             className={({ isActive }) => (isActive ? "active" : "")}
           >
             HOME
