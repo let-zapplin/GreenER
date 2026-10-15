@@ -131,4 +131,5 @@ npm run dev
 - [`docs/calculos.md`](../docs/calculos.md): fórmulas e premissas do cálculo de energia e CO₂e
 - [`database/README.md`](../database/README.md): banco de dados
 - [`frontend/README.md`](../frontend/README.md): frontend
+- [`docs/testes/manual_teste_unitario.md`](../docs/testes/manual_teste_unitario.md): manual de execução de teste unitário
 
