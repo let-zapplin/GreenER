@@ -90,12 +90,17 @@
 .about-cta {
     position: relative;
 }
-.about-cta::before {
+.about-ending {
+    position: relative;
+    isolation: isolate;
+    padding-top: 79px;
+}
+.about-ending::before {
     content: "";
     position: absolute;
     z-index: -1;
-    top: -80px;
-    bottom: -140px;
+    top: 0;
+    bottom: 0;
     left: calc(50% - 50vw);
     width: 100vw;
     background: #153e43;
@@ -288,12 +293,15 @@
     width: 32px;
     height: 32px;
 }
+.about-person-icon { overflow: hidden; }
+.about-person-icon img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .about-cta {
-    margin-top: 79px;
+    margin-top: 0;
     padding: 36px 24px;
     border-radius: 24px;
     text-align: center;
 }
+
 .about-cta p {
     font-size: 16px;
 }
@@ -440,12 +448,26 @@
         left: 0;
     }
     .about-cta {
-        margin-top: 52px;
+        margin-top: 0;
         padding: 28px 20px;
     }
+    .about-ending { padding-top: 40px; }
+    .about-middle { margin-top: 40px; padding-top: 120px; padding-bottom: 130px; }
+    .about-middle::before { top: 120px; bottom: 130px; }
+    .about-waves { height: 150px; background-size: 100% 200px; }
+    .about-waves-enter { background-position: center 65px, center 43px, center 20px, center 0; }
+    .about-waves-exit { background-position: center 57px, center 31px, center 6px, center -20px; }
     .about-button {
         width: 100%;
         padding: 14px 12px;
         font-size: 14px;
     }
+}
+
+@media (max-width: 480px) {
+    .about-team { grid-template-columns: minmax(0, 1fr); }
+    .about-person { display: grid; grid-template-columns: 72px minmax(0, 1fr); column-gap: 16px; align-items: center; text-align: left; }
+    .about-person-icon { grid-row: 1 / 3; margin: 0; }
+    .about-person h3 { align-self: end; overflow-wrap: normal; font-size: 14px; }
+    .about-person p { align-self: start; margin-top: 6px; }
 }
