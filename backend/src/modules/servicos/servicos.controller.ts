@@ -37,6 +37,7 @@ export class ServicosController {
         message: "Serviços sincronizados com sucesso",
         created: result.created,
         updated: result.updated,
+        unavailable: result.unavailable,
       });
     } catch (error) {
       next(error);

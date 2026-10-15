@@ -23,6 +23,11 @@ CREATE TABLE service (
   location_id_location INTEGER NOT NULL,
   id VARCHAR(255) UNIQUE NOT NULL,
   name VARCHAR(255) NOT NULL,
+
+  status VARCHAR(30) NOT NULL DEFAULT 'active',
+
+  last_seen_at TIMESTAMPTZ,
+
   FOREIGN KEY(location_id_location)
     REFERENCES location(id_location)
       ON DELETE NO ACTION

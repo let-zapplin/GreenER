@@ -24,4 +24,7 @@ export const env = {
   metricsApiUrl: required("METRICS_API_URL"),
   carbonApiUrl: required("CARBON_API_URL"),
   externalApiTimeoutMs: Number(optional("EXTERNAL_API_TIMEOUT_MS", "5000")),
+
+  // Monitoramento
+  collectionIntervalMs: Number(optional("COLLECTION_INTERVAL_MS", "60000")),
 } as const;

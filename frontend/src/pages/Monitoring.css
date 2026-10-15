@@ -75,11 +75,24 @@
 @keyframes monitoring-spin { to { transform: rotate(360deg); } }
 @media (hover: hover) and (pointer: fine) { button.service-indicator:hover { transform: translateY(-2px); box-shadow: 0 6px 14px #0003; } }
 @media (max-width: 1000px) {
-  .monitoring-page { padding: 48px 32px 40px; }
-  .monitoring-header { align-items: flex-start; flex-direction: column; gap: 24px; }
-  .monitoring-sync { width: 100%; }
-  .services-summary { gap: 28px; padding: 28px; }
-  .services-overview { padding-left: 28px; }
+  .monitoring-page {
+    padding: 48px 32px 40px;
+  }
+  .monitoring-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .monitoring-sync {
+    width: 100%;
+  }
+  .services-summary {
+    gap: 28px;
+    padding: 28px;
+  }
+  .services-overview {
+    padding-left: 28px;
+  }
 }
 @media (max-width: 700px) {
   .monitoring-page { padding: 36px 20px 32px; }
@@ -97,6 +110,14 @@
   .monitoring-list-heading > div { min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .monitoring-page *, .monitoring-page *::before, .monitoring-page *::after { animation: none !important; transition: none !important; }
-  .monitoring-page button.service-indicator:hover, .monitoring-page .service-card:hover { transform: none; }
+  .monitoring-page *,
+  .monitoring-page *::before,
+  .monitoring-page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .monitoring-page button.service-indicator:hover,
+  .monitoring-page .service-card:hover {
+    transform: none;
+  }
 }
