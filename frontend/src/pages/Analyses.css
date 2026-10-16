@@ -24,7 +24,8 @@
 .analyses-page {
   width: 100%;
   max-width: 1328px;
-  min-height: calc(100vh - 118px);
+  min-height: 0;
+  flex: 1;
   margin: 0 auto;
   padding: 64px 64px 196px;
   display: grid;

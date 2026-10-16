@@ -13,9 +13,9 @@ function App() {
   const { pathname } = useLocation();
   const landing = ["/", "/landing"].includes(pathname);
    return (
-    <div className={pathname === "/home" ? "app-shell app-shell-home" : "app-shell"}>
-      {landing ? <LandingHeader /> : <Header />}
- 
+    <div className="app-shell">
+      <Header />
+    <div className="app-content">
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/landing" element={<Landing />} />
@@ -27,6 +27,7 @@ function App() {
       <Route path="/sobre" element={<About />} />
       <Route path="/funcionamento" element={<HowItWorks />} />
       </Routes>
+      </div>
       </div>
    );
 

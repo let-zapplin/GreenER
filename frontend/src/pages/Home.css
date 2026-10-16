@@ -1,4 +1,6 @@
 .home {
+  container-type: inline-size;
+  container-name: home;
   min-height: 0;
   padding: 72px 8% 48px;
 
@@ -16,6 +18,8 @@
   position: relative;
   overflow: hidden;
 }
+
+
 
 .home[data-view="impacto"] {
   --adaptive-color: #87e46c;
@@ -468,4 +472,15 @@
   .home-status {
     margin-top: 24px;
   }
+}
+
+@container home (max-width: 64rem) {
+  .home-hero { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .home-content { max-width: 100%; min-width: 0; }
+  .home-content h1 { font-size: clamp(2.2rem, 6cqi, 3.4rem); }
+  .home-visual { min-height: auto; }
+  .chameleon-wrapper { min-width: 0; max-width: 340px; }
+  .analysis-selector { grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+  .analysis-option:last-child { grid-column: auto; }
+  .analysis-option { flex-wrap: wrap; }
 }

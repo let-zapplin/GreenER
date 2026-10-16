@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { ServiceList } from "../components/ServiceList";
 import { ServiceIndicator } from "../components/ServiceIndicator";
-import { useMonitoring } from "../hooks/useMonitoring";
+import {  listServices,  storedServiceToService,} from "../services/serviceApi";
+import { getMonitoringSnapshot, recordDiscovery } from "../services/monitoringState";
 import "./Monitoring.css";
 
 export function Monitoring() {
@@ -31,7 +32,52 @@ export function Monitoring() {
     };
   }, [selection]);
 
+  useEffect(() => {
+    let disposed = false;
+    let requestInFlight = false;
+    let controller: AbortController | null = null;
 
+    async function loadServices() {
+      if (disposed || requestInFlight) return;
+      requestInFlight = true;
+      const requestController = new AbortController();
+      controller = requestController;
+      const requestTimeout = setTimeout(() => requestController.abort(), REQUEST_TIMEOUT_MS);
+      try {
+       
+        // testando loading -> await new Promise((resolve) => setTimeout(resolve, 1000));
+        const data = await listServices(requestController.signal);
+        if (disposed) return;
+
+        const services = data.services.map(
+        storedServiceToService,
+        );
+                
+        setSnapshot(recordDiscovery(services));
+        setError(null);
+      } catch (error) {
+        if (disposed) return;
+        console.error("[Monitoring] Falha ao carregar serviços:", error);
+        setError(requestController.signal.aborted
+          ? "A consulta excedeu o tempo de espera"
+          : "Erro ao carregar os serviços");
+      } finally {
+        clearTimeout(requestTimeout);
+        requestInFlight = false;
+        if (!disposed) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadServices();
+    const refreshTimer = setInterval(() => void loadServices(), REFRESH_INTERVAL_MS);
+    return () => {
+      disposed = true;
+      clearInterval(refreshTimer);
+      controller?.abort();
+    };
+  }, []);
 
   return (
     <main className="monitoring-page">

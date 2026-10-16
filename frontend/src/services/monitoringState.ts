@@ -1,4 +1,4 @@
-import type { MonitoredService, Service } from "../types/service";
+import type { MonitoredService } from "../types/service";
 
 const STATUS_HIGHLIGHT_MS = 3_000;
 
@@ -18,36 +18,90 @@ export function getMonitoringSnapshot(): MonitoringSnapshot {
   return snapshot;
 }
 
-export function reconcileServices(previous: MonitoredService[], current: Service[], hasLoaded: boolean, now = Date.now()): MonitoredService[] {
-  const currentById = new Map(current.map((service) => [service.id, service]));
-  const knownIds = new Set(previous.map((service) => service.id));
-  const remembered = previous.map((service): MonitoredService => {
-    const found = currentById.get(service.id);
-    if (!found) {
-      const { statusExpiresAt: _expiresAt, ...rememberedService } = service;
-      return { ...rememberedService, status: "unavailable" };
-    }
+export function reconcileServices(
+  previous: MonitoredService[],
+  current: MonitoredService[],
+  hasLoaded: boolean,
+  now = Date.now(),
+): MonitoredService[] {
+  const previousById = new Map(
+    previous.map((service) => [service.id, service]),
+  );
+
+  return current.map((service): MonitoredService => {
+    const previousService = previousById.get(service.id);
+
+    // O backend é a fonte oficial da indisponibilidade.
     if (service.status === "unavailable") {
-      return { ...found, status: "returned", statusExpiresAt: now + STATUS_HIGHLIGHT_MS, lastConfirmedAt: new Date(now).toISOString() };
+      return {
+        ...service,
+        status: "unavailable",
+      };
     }
-    if ((service.status === "new" || service.status === "returned") &&
-        service.statusExpiresAt !== undefined && now < service.statusExpiresAt) {
-      return { ...found, status: service.status, statusExpiresAt: service.statusExpiresAt, lastConfirmedAt: new Date(now).toISOString() };
+
+    // Primeira vez que a página carrega:
+    // não tratamos todos os serviços existentes como "novos".
+    if (!hasLoaded) {
+      return {
+        ...service,
+        status: "active",
+        lastConfirmedAt: new Date(now).toISOString(),
+      };
     }
-    return { ...found, status: "active", lastConfirmedAt: new Date(now).toISOString() };
+
+    // Serviço ainda não era conhecido pelo frontend.
+    if (!previousService) {
+      return {
+        ...service,
+        status: "new",
+        statusExpiresAt: now + STATUS_HIGHLIGHT_MS,
+        lastConfirmedAt: new Date(now).toISOString(),
+      };
+    }
+
+    // Antes estava indisponível e agora o backend diz que está ativo.
+    if (previousService.status === "unavailable") {
+      return {
+        ...service,
+        status: "returned",
+        statusExpiresAt: now + STATUS_HIGHLIGHT_MS,
+        lastConfirmedAt: new Date(now).toISOString(),
+      };
+    }
+
+    // Mantém temporariamente o destaque de "new" ou "returned".
+    if (
+      (previousService.status === "new" ||
+        previousService.status === "returned") &&
+      previousService.statusExpiresAt !== undefined &&
+      now < previousService.statusExpiresAt
+    ) {
+      return {
+        ...service,
+        status: previousService.status,
+        statusExpiresAt: previousService.statusExpiresAt,
+        lastConfirmedAt: new Date(now).toISOString(),
+      };
+    }
+
+    // Caso normal: serviço ativo.
+    return {
+      ...service,
+      status: "active",
+      lastConfirmedAt: new Date(now).toISOString(),
+    };
   });
-  const discovered = [...currentById.values()]
-    .filter((service) => !knownIds.has(service.id))
-    .map((service): MonitoredService => hasLoaded
-      ? { ...service, status: "new", statusExpiresAt: now + STATUS_HIGHLIGHT_MS, lastConfirmedAt: new Date(now).toISOString() }
-      : { ...service, status: "active", lastConfirmedAt: new Date(now).toISOString() });
-  return [...remembered, ...discovered];
 }
 
-export function recordDiscovery(current: Service[]): MonitoringSnapshot {
+export function recordDiscovery(current: MonitoredService[]): MonitoringSnapshot {
   const now = Date.now();
   snapshot = {
-    services: reconcileServices(snapshot.services, current, snapshot.lastUpdated !== null, now),
+    services: reconcileServices(
+      snapshot.services,
+      current,
+      snapshot.lastUpdated !== null,
+      now,
+    ),
     lastUpdated: new Date(now).toISOString(),
   };
   return snapshot;

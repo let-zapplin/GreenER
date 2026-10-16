@@ -1,43 +1,32 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useRef, useState } from "react";
+import { NavLink } from "react-router-dom";
 import "./Header.css";
 import logo from "../../assets/logo.png";
 
 export function Header() {
-  const [accountOpen, setAccountOpen] = useState(false);
-  const account = useRef<HTMLDivElement>(null);
-  const accountButton = useRef<HTMLButtonElement>(null);
-  const navigate = useNavigate();
-  const { user, isAuthenticated, logout: endSession } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!accountOpen) return;
-    function outside(event: PointerEvent) {
-      if (event.target instanceof Node && !account.current?.contains(event.target)) setAccountOpen(false);
-    }
-    function escape(event: KeyboardEvent) {
-      if (event.key === "Escape") { setAccountOpen(false); accountButton.current?.focus(); }
-    }
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", escape);
-    return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };
-  }, [accountOpen]);
-
-  function logout() {
-    endSession();
-    setAccountOpen(false);
-    navigate("/", { replace: true });
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }
   return (
-    <header className="header-wrapper">
+    <header className="header-wrapper" onKeyDown={(event) => {
+      if (event.key === "Escape" && menuOpen) {
+        setMenuOpen(false);
+        menuButton.current?.focus();
+      }
+    }}>
       <div className="app-header">
         <div className="header-logo-area">
           <img src={logo} alt="GreenER" className="header-logo" />
         </div>
 
-        <nav className="app-nav">
+        <button ref={menuButton} type="button" className="header-menu-toggle" aria-label={menuOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={menuOpen} aria-controls="header-navigation" onClick={() => setMenuOpen(open => !open)}>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            {menuOpen ? <path d="m6 6 12 12M6 18 18 6"/> : <path d="M4 6h16M4 12h16M4 18h16"/>}
+          </svg>
+        </button>
+        <nav id="header-navigation" aria-label="Navegação principal" className={`app-nav${menuOpen ? " is-open" : ""}`} onClick={(event) => {
+          if ((event.target as HTMLElement).closest("a")) setMenuOpen(false);
+        }}>
           <NavLink
             to="/home"
             className={({ isActive }) => (isActive ? "active" : "")}

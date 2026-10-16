@@ -15,12 +15,6 @@
     height: 0;
 }
 
-html { scroll-behavior: smooth; }
-
-@media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-}
-
 html, 
 body,
 #root {
@@ -34,15 +28,11 @@ body {
     color:#ffffff;
 }
 
-.app-shell-home {
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-}
-
-.app-shell-home > .header-wrapper { flex-shrink: 0; }
-.app-shell-home > .home { flex: 1; min-width: 0; }
+.app-shell { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+.header-wrapper { flex-shrink: 0; }
+.app-content { display: flex; flex: 1; min-width: 0; }
+.app-content > * { flex: 1; min-width: 0; }
+.analyses-screen { display: flex; flex-direction: column; }
 
 h1, h2, h3, h4, h5, h6, strong, b,
 .app-nav a, .service-region-code,

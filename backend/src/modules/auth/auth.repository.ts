@@ -2,7 +2,7 @@
 import pool from "../../db/connection.js";
 import type { PoolClient } from "pg";
 import { randomBytes } from "crypto";
-import { hashPassword, verifyPassword } from "../utils/password.js";
+import { hashPassword, verifyPassword } from "../../shared/utils/password.util.js";
 
 export class UserRepository {
   private async insertUser(
@@ -73,7 +73,7 @@ export class UserRepository {
     return result.rows[0].email_exists;
   }
 
-  async findUser(email: string, password: string) {
+  async findUser(email: string) {
     const result = await pool.query(
       `
             SELECT id_users, name, email, password_hash
@@ -83,19 +83,12 @@ export class UserRepository {
       [email],
     );
     const user = result.rows[0];
-    if (!user) {
-      throw new Error("Credenciais inválidas");
-    }
-
-    const valid_password = verifyPassword(password, user.password_hash);
-    if (!valid_password) {
-      throw new Error("Credenciais inválidas");
-    }
-
+    
     return {
       id_users: user.id_users,
       name: user.name,
       email: user.email,
+      password_hash: user.password_hash
     };
   }
 }

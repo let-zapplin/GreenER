@@ -1,4 +1,6 @@
-import { createToken } from "../utils/jwt.js";
+import { createToken } from "../../shared/utils/jwt.util.js";
+import { UnauthorizedError } from "../../shared/errors/AppError.js";
+import { verifyPassword } from "../utils/password.js";
 import { UserRepository } from "./auth.repository.js";
 
 export class AuthService {
@@ -18,8 +20,11 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    const user = await this.repo.findUser(email, password);
-    if (!user) throw new Error("Credenciais inválidas");
+    const user = await this.repo.findUser(email);
+    if (!user) throw new UnauthorizedError("Credenciais inválidas");
+
+    const valid_password = verifyPassword(password, user.password_hash);
+    if (!valid_password) throw new UnauthorizedError("Credenciais inválidas");  
 
     const token = createToken({ sub: String(user.id_users) });
 
