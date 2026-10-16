@@ -5,8 +5,14 @@ import {  listServices,  storedServiceToService,} from "../services/serviceApi";
 import { getMonitoringSnapshot, recordDiscovery } from "../services/monitoringState";
 import "./Monitoring.css";
 
+const REFRESH_INTERVAL_MS = 1_000;
+// Allows the backend's default/example upstream timeout (5/10s) to complete.
+const REQUEST_TIMEOUT_MS = 15_000;
+
 export function Monitoring() {
-  const { snapshot, loading, error } = useMonitoring();
+  const [snapshot, setSnapshot] = useState(getMonitoringSnapshot);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selection, setSelection] = useState<{ id: string; key: number } | null>(null);
   const { services, lastUpdated } = snapshot;
   const activeCount = services.filter((service) => service.status !== "unavailable").length;

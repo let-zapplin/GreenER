@@ -10,10 +10,6 @@ export type MonitoringSnapshot = {
 // Retains successful discoveries while navigating within this tab.
 let snapshot: MonitoringSnapshot = { services: [], lastUpdated: null };
 
-export function clearMonitoringSnapshot() {
-  snapshot = { services: [], lastUpdated: null };
-}
-
 export function getMonitoringSnapshot(): MonitoringSnapshot {
   return snapshot;
 }

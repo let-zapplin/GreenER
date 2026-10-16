@@ -28,6 +28,6 @@ export class AuthService {
 
     const token = createToken({ sub: String(user.id_users) });
 
-    return { token, user: { id: String(user.id_users), name: user.name, email: user.email } };
+    return { token };
   }
 }

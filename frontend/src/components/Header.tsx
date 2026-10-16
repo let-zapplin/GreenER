@@ -28,7 +28,7 @@ export function Header() {
           if ((event.target as HTMLElement).closest("a")) setMenuOpen(false);
         }}>
           <NavLink
-            to="/home"
+            to="/"
             className={({ isActive }) => (isActive ? "active" : "")}
           >
             HOME
@@ -48,7 +48,7 @@ export function Header() {
           <NavLink to="/funcionamento">FUNCIONAMENTO</NavLink>
         </nav>
 
-        {isAuthenticated ? <div className="header-user">
+        <div className="header-user">
           <div className="notification" role="img" aria-label="Notificações">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
@@ -56,23 +56,18 @@ export function Header() {
             </svg>
           </div>
 
-          <div className="header-account" ref={account} onBlur={event => {
-            if (!event.currentTarget.contains(event.relatedTarget)) setAccountOpen(false);
-          }}>
-          <button type="button" ref={accountButton} className="user-avatar" aria-label="Opções do usuário" aria-expanded={accountOpen} aria-controls="header-account-options" onClick={() => setAccountOpen(open => !open)}>
+          <div className="user-avatar" role="img" aria-label="Perfil do usuário">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="8" r="3.5" />
               <path d="M5 21v-2a7 7 0 0 1 14 0v2" />
             </svg>
-          </button>
-          {accountOpen && <div className="header-account-menu" id="header-account-options" role="group" aria-label="Conta do usuário"><button type="button" onClick={logout}>Sair <span aria-hidden="true">↗</span></button></div>}
           </div>
 
           <div className="user-info">
-            <span>{user?.name || "Minha conta"}</span>
-            <small>{user?.email || `Usuário ${user?.id}`}</small>
+            <span>Usuário</span>
+            <small>user@greener.com</small>
           </div>
-        </div> : <Link className="header-sign-in" to="/#acessar">Entrar</Link>}
+        </div>
       </div>
     </header>
   );
