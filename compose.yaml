@@ -88,6 +88,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       VITE_API_URL: ${VITE_API_URL}
+      VITE_MAPTILER_API_KEY: ${VITE_MAPTILER_API_KEY:-}
 
     depends_on:
       backend:
