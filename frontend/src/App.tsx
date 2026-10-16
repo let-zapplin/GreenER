@@ -7,6 +7,7 @@ import { About } from "./pages/About";
 import { HowItWorks } from "./pages/HowItWorks";
 import { Analyses } from "./pages/Analyses";
 import { Landing, LandingHeader } from "./pages/Landing";
+import { RequireAuth } from "./components/RequireAuth";
 
 function App() {
   const { pathname } = useLocation();
@@ -18,9 +19,11 @@ function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/landing" element={<Landing />} />
+      <Route element={<RequireAuth />}>
       <Route path="/home" element={<Home />} />
       <Route path="/monitoramento" element={<Monitoring/>}/>
       <Route path="/analises" element={<Analyses />} />
+      </Route>
       <Route path="/sobre" element={<About />} />
       <Route path="/funcionamento" element={<HowItWorks />} />
       </Routes>

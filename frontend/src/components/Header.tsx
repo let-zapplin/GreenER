@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 import "./Header.css";
 import logo from "../../assets/logo.png";
 
@@ -8,6 +9,7 @@ export function Header() {
   const account = useRef<HTMLDivElement>(null);
   const accountButton = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout: endSession } = useAuth();
 
   useEffect(() => {
     if (!accountOpen) return;
@@ -23,8 +25,7 @@ export function Header() {
   }, [accountOpen]);
 
   function logout() {
-    localStorage.removeItem("greener.accessToken");
-    sessionStorage.removeItem("greener.accessToken");
+    endSession();
     setAccountOpen(false);
     navigate("/", { replace: true });
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -58,7 +59,7 @@ export function Header() {
           <NavLink to="/funcionamento">FUNCIONAMENTO</NavLink>
         </nav>
 
-        <div className="header-user">
+        {isAuthenticated ? <div className="header-user">
           <div className="notification" role="img" aria-label="Notificações">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
@@ -79,10 +80,10 @@ export function Header() {
           </div>
 
           <div className="user-info">
-            <span>Usuário</span>
-            <small>user@greener.com</small>
+            <span>{user?.name || "Minha conta"}</span>
+            <small>{user?.email || `Usuário ${user?.id}`}</small>
           </div>
-        </div>
+        </div> : <Link className="header-sign-in" to="/#acessar">Entrar</Link>}
       </div>
     </header>
   );

@@ -1,38 +1,8 @@
-import { useRef, useState, type SubmitEvent } from "react";
-import { useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon, SpinnerGapIcon } from "@phosphor-icons/react";
+import { useAuthForm } from "../hooks/useAuthForm";
 
 export function LandingLogin() {
-  const navigate = useNavigate();
-  const [register, setRegister] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const submitting = useRef(false);
-
-  async function submit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (submitting.current) return;
-    const data = new FormData(event.currentTarget);
-    submitting.current = true; setBusy(true); setError(""); setSuccess("");
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/auth/${register ? "register" : "login"}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: String(data.get("name") || "").trim(), email: String(data.get("email")).trim(), password: data.get("password") }),
-        signal: AbortSignal.timeout(15000),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Não foi possível acessar sua conta. Tente novamente.");
-      if (register) { setRegister(false); setSuccess("Conta criada! Entre com seu e-mail e senha."); return; }
-      if (typeof result.token !== "string" || !result.token) throw new Error("Resposta de autenticação inválida. Tente novamente.");
-      localStorage.removeItem("greener.accessToken"); sessionStorage.removeItem("greener.accessToken");
-      (data.get("remember") ? localStorage : sessionStorage).setItem("greener.accessToken", result.token);
-      navigate("/home");
-    } catch (reason) {
-      setError(reason instanceof TypeError ? "Não foi possível conectar ao servidor. Tente novamente." : reason instanceof Error && reason.name === "TimeoutError" ? "O servidor demorou para responder. Tente novamente." : reason instanceof Error ? reason.message : "Não foi possível entrar. Tente novamente.");
-    } finally { submitting.current = false; setBusy(false); }
-  }
+  const { register, showPassword, setShowPassword, busy, error, success, setSuccess, submit, toggleMode } = useAuthForm();
 
   return <section className="landing-login" id="acessar" aria-labelledby="landing-login-title">
     <h2 id="landing-login-title">{register ? "Solicitar cadastro" : "Bem-vindo(a)"}</h2>
@@ -48,6 +18,6 @@ export function LandingLogin() {
         <button className="landing-primary landing-submit" type="submit">{busy ? <><SpinnerGapIcon className="landing-spinner" size={20}/> Aguarde…</> : register ? "CRIAR CONTA" : "ENTRAR"}</button>
       </fieldset>
     </form>
-    <button className="landing-register-button" type="button" disabled={busy} onClick={() => { setRegister(!register); setError(""); setSuccess(""); }}>{register ? "VOLTAR AO LOGIN" : "SOLICITAR CADASTRO"}</button>
+    <button className="landing-register-button" type="button" disabled={busy} onClick={toggleMode}>{register ? "VOLTAR AO LOGIN" : "SOLICITAR CADASTRO"}</button>
   </section>;
 }

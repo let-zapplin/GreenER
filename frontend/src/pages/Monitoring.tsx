@@ -1,18 +1,11 @@
 import { useEffect, useState } from "react";
 import { ServiceList } from "../components/ServiceList";
 import { ServiceIndicator } from "../components/ServiceIndicator";
-import { discoverServices } from "../services/serviceApi";
-import { getMonitoringSnapshot, recordDiscovery } from "../services/monitoringState";
+import { useMonitoring } from "../hooks/useMonitoring";
 import "./Monitoring.css";
 
-const REFRESH_INTERVAL_MS = 1_000;
-// Allows the backend's default/example upstream timeout (5/10s) to complete.
-const REQUEST_TIMEOUT_MS = 15_000;
-
 export function Monitoring() {
-  const [snapshot, setSnapshot] = useState(getMonitoringSnapshot);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { snapshot, loading, error } = useMonitoring();
   const [selection, setSelection] = useState<{ id: string; key: number } | null>(null);
   const { services, lastUpdated } = snapshot;
   const activeCount = services.filter((service) => service.status !== "unavailable").length;
@@ -38,45 +31,7 @@ export function Monitoring() {
     };
   }, [selection]);
 
-  useEffect(() => {
-    let disposed = false;
-    let requestInFlight = false;
-    let controller: AbortController | null = null;
 
-    async function loadServices() {
-      if (disposed || requestInFlight) return;
-      requestInFlight = true;
-      const requestController = new AbortController();
-      controller = requestController;
-      const requestTimeout = setTimeout(() => requestController.abort(), REQUEST_TIMEOUT_MS);
-      try {
-        const data = await discoverServices(requestController.signal);
-        if (disposed) return;
-        setSnapshot(recordDiscovery(data.services));
-        setError(null);
-      } catch (error) {
-        if (disposed) return;
-        console.error("[Monitoring] Falha ao carregar serviços:", error);
-        setError(requestController.signal.aborted
-          ? "A consulta excedeu o tempo de espera"
-          : "Erro ao carregar os serviços");
-      } finally {
-        clearTimeout(requestTimeout);
-        requestInFlight = false;
-        if (!disposed) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadServices();
-    const refreshTimer = setInterval(() => void loadServices(), REFRESH_INTERVAL_MS);
-    return () => {
-      disposed = true;
-      clearInterval(refreshTimer);
-      controller?.abort();
-    };
-  }, []);
 
   return (
     <main className="monitoring-page">

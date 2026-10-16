@@ -113,7 +113,11 @@ Acesse `http://localhost:5173` para a landing page, `/home` para a Home ou `/mon
 
 ### Landing page
 
-O formulário envia login para `POST /auth/login` e cadastro para `POST /auth/register`, usando `VITE_API_URL`. Após o login, o token retornado é armazenado em `sessionStorage`; a opção “Lembrar de mim” usa `localStorage`. O usuário é redirecionado para `/home`. Isso não adiciona proteção de rotas às páginas existentes.
+O formulário envia login para `POST /auth/login` e cadastro para `POST /auth/register`, usando `VITE_API_URL`. O `AuthProvider` centraliza a sessão (token, usuário e expiração), consumida pelo hook `useAuth`. A chave `greener.session` fica em `sessionStorage`; “Lembrar de mim” usa `localStorage`. Tokens antigos válidos são migrados automaticamente. Expiração, logout e respostas `401` do monitoramento encerram a sessão e limpam o histórico em memória.
+
+`RequireAuth` protege `/home`, `/monitoramento` e `/analises` no frontend. Após o login, o usuário retorna à rota interna solicitada ou a `/home`. Landing, Sobre e Funcionamento continuam públicos. A proteção visual não substitui a validação da assinatura do JWT e a autorização dos endpoints pelo backend.
+
+`useAuthForm` concentra o estado e as ações do formulário; `useMonitoring` concentra as consultas periódicas autenticadas. Os serviços `api`, `authApi` e `authSession` cuidam de HTTP, endpoints e persistência, respectivamente. O contexto é reservado à sessão compartilhada; estados de interface, como abrir o menu ou mostrar a senha, permanecem locais.
 
 O globo usa `@maptiler/sdk` com projeção 3D e cartografia local do Natural Earth, sem exigir chave. A rotação pausa quando o globo sai da tela, quando a aba fica oculta ou quando o usuário prefere movimento reduzido. Configure `VITE_MAPTILER_API_KEY` no `.env` da raiz para usar o mapa-base de satélite do MapTiler Cloud. Reinicie o frontend após alterar variáveis de ambiente.
 
