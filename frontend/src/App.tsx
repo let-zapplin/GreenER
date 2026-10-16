@@ -9,9 +9,10 @@ import { Analyses } from "./pages/Analyses";
 import { Landing, LandingHeader } from "./pages/Landing";
 
 function App() {
-  const landing = ["/", "/landing"].includes(useLocation().pathname);
+  const { pathname } = useLocation();
+  const landing = ["/", "/landing"].includes(pathname);
    return (
-    <>
+    <div className={pathname === "/home" ? "app-shell app-shell-home" : "app-shell"}>
       {landing ? <LandingHeader /> : <Header />}
  
     <Routes>
@@ -23,7 +24,7 @@ function App() {
       <Route path="/sobre" element={<About />} />
       <Route path="/funcionamento" element={<HowItWorks />} />
       </Routes>
-      </>
+      </div>
    );
 
 }

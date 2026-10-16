@@ -1,7 +1,6 @@
 import { useRef, useState, type SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRightIcon, EyeIcon, EyeSlashIcon, LockKeyIcon, SpinnerGapIcon } from "@phosphor-icons/react";
-import logo from "../../assets/logo.png";
+import { EyeIcon, EyeSlashIcon, SpinnerGapIcon } from "@phosphor-icons/react";
 
 export function LandingLogin() {
   const navigate = useNavigate();
@@ -36,21 +35,19 @@ export function LandingLogin() {
   }
 
   return <section className="landing-login" id="acessar" aria-labelledby="landing-login-title">
-    <img className="landing-login-logo" src={logo} alt="GreenER" width="150" height="100" />
-    <h2 id="landing-login-title">{register ? "Comece por aqui." : "Bom ter você aqui."}</h2>
-    <p>{register ? "Crie sua conta e conheça seu impacto." : "Entre para acompanhar seu ambiente."}</p>
+    <h2 id="landing-login-title">{register ? "Solicitar cadastro" : "Bem-vindo(a)"}</h2>
+    <p>{register ? "Crie sua conta e conheça seu impacto." : "Entre para acompanhar seus serviços"}</p>
     <form onSubmit={submit} aria-busy={busy}>
       <fieldset disabled={busy}>
         {register && <div className="landing-field"><label htmlFor="landing-name">Nome</label><input id="landing-name" name="name" autoComplete="name" placeholder="Como podemos te chamar?" required maxLength={120} /></div>}
-        <div className="landing-field"><label htmlFor="landing-email">E-mail</label><input id="landing-email" name="email" type="email" autoComplete="username" placeholder="voce@empresa.com" required maxLength={254} /></div>
-        <div className="landing-field"><label htmlFor="landing-password">Senha</label><div className="landing-password"><input id="landing-password" name="password" type={showPassword ? "text" : "password"} autoComplete={register ? "new-password" : "current-password"} placeholder="Sua senha" required /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeSlashIcon size={20}/> : <EyeIcon size={20}/>}</button></div></div>
-        {!register && <label className="landing-remember"><input type="checkbox" name="remember"/> Lembrar de mim</label>}
+        <div className="landing-field"><label htmlFor="landing-email">E-mail</label><input id="landing-email" name="email" type="email" autoComplete="username" required maxLength={254} /></div>
+        <div className="landing-field"><label htmlFor="landing-password">Senha</label><div className="landing-password"><input id="landing-password" name="password" type={showPassword ? "text" : "password"} autoComplete={register ? "new-password" : "current-password"} required /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeSlashIcon size={18}/> : <EyeIcon size={18}/>}</button></div></div>
+        {!register && <div className="landing-login-options"><label className="landing-remember"><input type="checkbox" name="remember"/> Lembrar de mim</label><button className="landing-forgot" type="button" onClick={() => setSuccess("Para recuperar seu acesso, entre em contato com a equipe responsável pelo GreenER.")}>Esqueceu sua senha?</button></div>}
         {error && <p className="landing-form-error" role="alert">{error}</p>}
         {success && <p className="landing-form-success" role="status">{success}</p>}
-        <button className="landing-primary landing-submit" type="submit">{busy ? <><SpinnerGapIcon className="landing-spinner" size={20}/> Aguarde…</> : <>{register ? "Criar conta" : "Entrar"}<ArrowRightIcon size={19}/></>}</button>
+        <button className="landing-primary landing-submit" type="submit">{busy ? <><SpinnerGapIcon className="landing-spinner" size={20}/> Aguarde…</> : register ? "CRIAR CONTA" : "ENTRAR"}</button>
       </fieldset>
     </form>
-    <p className="landing-account-toggle">{register ? "Já faz parte?" : "Primeira vez por aqui?"} <button type="button" disabled={busy} onClick={() => { setRegister(!register); setError(""); setSuccess(""); }}>{register ? "Entrar na conta" : "Criar uma conta"}</button></p>
-    <span className="landing-login-note"><LockKeyIcon size={14}/> Seus dados, no seu controle.</span>
+    <button className="landing-register-button" type="button" disabled={busy} onClick={() => { setRegister(!register); setError(""); setSuccess(""); }}>{register ? "VOLTAR AO LOGIN" : "SOLICITAR CADASTRO"}</button>
   </section>;
 }

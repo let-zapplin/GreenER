@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDownIcon, ArrowRightIcon, ArrowsLeftRightIcon, ChartBarIcon, CheckIcon, CloudIcon, DatabaseIcon, FileTextIcon, LeafIcon, ListIcon, MapPinIcon, PulseIcon, ShieldCheckIcon, SparkleIcon, XIcon } from "@phosphor-icons/react";
 import logo from "../../assets/logo.png";
@@ -33,16 +33,32 @@ export function LandingHeader() {
 }
 
 export function Landing() {
+  const screen = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !screen.current) return;
+    const sections = screen.current.querySelectorAll("main > section, .landing-how, .landing-features, .landing-cta");
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) { entry.target.setAttribute("data-reveal", "visible"); observer.unobserve(entry.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(section => { section.setAttribute("data-reveal", "pending"); observer.observe(section); });
+    return () => { observer.disconnect(); sections.forEach(section => section.removeAttribute("data-reveal")); };
+  }, []);
   function focusLogin() { document.getElementById("landing-email")?.focus({ preventScroll: true }); }
-  return <div className="landing-screen" id="inicio">
+  return <div ref={screen} className="landing-screen" id="inicio">
     <main>
       <section className="landing-hero landing-container" aria-labelledby="landing-title">
-        <div className="landing-hero-copy"><span className="landing-eyebrow"><span/> TECNOLOGIA COM MENOS IMPACTO</span>
+        <div className="landing-hero-copy">
           <img className="landing-hero-logo" src={logo} alt="GreenER" width="300" height="200" fetchPriority="high"/>
           <h1 id="landing-title">Monitorando dados,<br/><span>adaptando</span> negócios.</h1>
-          <p>Seu software também deixa uma pegada. Acompanhe o consumo de energia e as emissões das suas aplicações e transforme dados em decisões mais sustentáveis.</p>
-          <a className="landing-text-link" href="#planeta">Entenda seu impacto<ArrowDownIcon size={18}/></a>
-          <div className="landing-hero-pillars"><span><PulseIcon size={21}/>Monitorar</span><span><LeafIcon size={21}/>Estimar</span><span><ArrowsLeftRightIcon size={21}/>Decidir</span></div>
+          <p>O <b>GreenER</b> acompanha suas aplicações, estima o consumo de energia e calcula a emissão de CO₂e, para sua empresa decidir com mais sustentabilidade.</p>
+          <div className="landing-hero-benefits">{[
+            { icon: LeafIcon, title: "Monitoramento contínuo", description: "Coletas automáticas" },
+            { icon: CloudIcon, title: "Consumo energético", description: "Estimado em kWh" },
+            { icon: PulseIcon, title: "Emissão de CO₂e", description: "Por serviço e região" },
+            { icon: ChartBarIcon, title: "Dados e insights", description: "Onde reduzir primeiro" },
+          ].map(({icon: Icon,title,description}) => <div className="landing-hero-benefit" key={title}><span className="landing-benefit-icon"><Icon size={25} weight="light"/></span><div><strong>{title}</strong><small>{description}</small></div></div>)}</div>
         </div>
         <LandingLogin/>
       </section>
@@ -51,13 +67,13 @@ export function Landing() {
 
       <section className="landing-planet landing-container" id="planeta" aria-labelledby="planet-title">
         <div className="landing-planet-visual"><Suspense fallback={<div className="landing-globe-loading" role="status">Preparando o planeta…</div>}><LandingGlobe/></Suspense></div>
-        <div className="landing-planet-copy"><span className="landing-eyebrow">UM MESMO PLANETA. IMPACTOS DIFERENTES.</span><h2 id="planet-title">Onde seu serviço roda<br/>faz toda a diferença.</h2><p>A mesma aplicação pode emitir mais ou menos carbono dependendo de onde está. Conheça a relação entre a localização dos seus serviços e a energia que eles consomem.</p><ul><li><MapPinIcon size={19}/> Localização e contexto de cada região</li><li><LeafIcon size={19}/> Intensidade de carbono da energia</li><li><DatabaseIcon size={19}/> Dados para orientar a próxima decisão</li></ul><Link to="/funcionamento" className="landing-secondary">Descubra como funciona<ArrowRightIcon size={18}/></Link></div>
+        <div className="landing-planet-copy"><span className="landing-eyebrow">UM MESMO PLANETA. IMPACTOS DIFERENTES.</span><h2 id="planet-title">A mesma energia.<br/>Um impacto diferente.</h2><p>Estimamos a energia consumida a partir das métricas de CPU, memória e disco. Depois, multiplicamos esse consumo pela intensidade de carbono da região onde o serviço roda.</p><div className="landing-calculation"><span>COMO CHEGAMOS AO RESULTADO</span><p><strong>Energia (kWh)</strong> × <strong>Carbono da região (gCO₂e/kWh)</strong> ÷ 1.000</p><strong className="landing-calculation-result">= emissão estimada em kg CO₂e</strong></div><p>Nos exemplos, o consumo é sempre de 100 kWh. O que muda é o fator de carbono da região — e, com ele, a emissão estimada.</p><p className="landing-demo-disclaimer">Demonstração com dados fictícios. Os valores não representam medições reais nem a intensidade de carbono atual dessas regiões. Passe o mouse, toque nos pontos ou escolha uma região para comparar.</p></div>
       </section>
 
       <div className="landing-light"><div className="landing-wave landing-wave-enter" aria-hidden="true"/>
         <div className="landing-container landing-light-content">
           <section className="landing-how" id="como-funciona" aria-labelledby="landing-how-title"><div className="landing-section-heading"><span className="landing-eyebrow">DO DADO À DECISÃO</span><h2 id="landing-how-title">Como funciona</h2><p>Do cadastro ao primeiro número em poucos minutos.</p></div><ol className="landing-steps">{steps.map(([title,text],index) => <li key={title}><span className="landing-number">{index + 1}</span><h3>{title}</h3><p>{text}</p></li>)}</ol></section>
-          <section className="landing-features" id="recursos" aria-labelledby="landing-features-title"><div className="landing-section-heading"><span className="landing-eyebrow">CADA DADO TEM UM PROPÓSITO</span><h2 id="landing-features-title">Tudo que sua equipe precisa.</h2><p>Do técnico ao gestor, cada pessoa encontra a resposta que procura.</p></div><div className="landing-feature-grid">{features.map(({icon: Icon,title,text}) => <article key={title}><span className="landing-feature-icon"><Icon size={23}/></span><h3>{title}</h3><p>{text}</p></article>)}</div><p className="landing-roadmap-note">Estamos construindo essa visão. Conheça o monitoramento já disponível e acompanhe a evolução do projeto.</p></section>
+          <section className="landing-features" id="recursos" aria-labelledby="landing-features-title"><div className="landing-section-heading"><span className="landing-eyebrow">CADA DADO TEM UM PROPÓSITO</span><h2 id="landing-features-title">Tudo que sua equipe precisa.</h2><p>Do técnico ao gestor, cada pessoa encontra a resposta que procura.</p></div><div className="landing-feature-grid">{features.map(({icon: Icon,title,text}) => <article key={title}><span className="landing-feature-icon"><Icon size={23}/></span><h3>{title}</h3><p>{text}</p></article>)}</div></section>
         </div><div className="landing-wave landing-wave-exit" aria-hidden="true"/>
       </div>
 

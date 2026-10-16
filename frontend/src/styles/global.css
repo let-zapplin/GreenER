@@ -4,6 +4,21 @@
 
 * {
     box-sizing: border-box;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    user-select: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+html { scroll-behavior: smooth; }
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
 }
 
 html, 
@@ -18,6 +33,16 @@ body {
     background:var(--background-page);
     color:#ffffff;
 }
+
+.app-shell-home {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell-home > .header-wrapper { flex-shrink: 0; }
+.app-shell-home > .home { flex: 1; min-width: 0; }
 
 h1, h2, h3, h4, h5, h6, strong, b,
 .app-nav a, .service-region-code,

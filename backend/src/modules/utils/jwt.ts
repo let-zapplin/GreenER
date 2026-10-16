@@ -1,6 +1,7 @@
 import path from "path";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import { parseJwtExpiration } from "./jwt-expiration.js";
 
 type TokenPayload = {
   sub: string
@@ -21,7 +22,7 @@ function getJwtSecret(): string {
 
 export function createToken(payload:TokenPayload) {
   return jwt.sign(payload, getJwtSecret(), {
-    expiresIn: Number(process.env.JWT_EXPIRES_IN),
+    expiresIn: parseJwtExpiration(process.env.JWT_EXPIRES_IN),
   });
 }
 

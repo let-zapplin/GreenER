@@ -1,5 +1,5 @@
 .home {
-  min-height: calc(100vh - 80px);
+  min-height: 0;
   padding: 72px 8% 48px;
 
   background:
