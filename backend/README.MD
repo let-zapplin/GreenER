@@ -45,20 +45,51 @@ Estrutura geral:
 ```
 backend/
 ├── Dockerfile
+├── package.json
+├── README.MD
+├── tsconfig.json
 └── src/
     ├── app.ts
     ├── server.ts
+    ├── config/
+    │   └── env.ts
     ├── db/
     │   └── connection.ts
     ├── integrations/
-    │   ├── metrics-api.ts
-    │   └── carbon-api.ts
-    └── modules/
-        └── <modulo>/
-            ├── <modulo>.routes.ts
-            ├── <modulo>.controller.ts
-            ├── <modulo>.service.ts
-            └── <modulo>.repository.ts
+    │   ├── carbon-api.ts
+    │   └── metrics-api.ts
+    ├── jobs/
+    │   └── service-sync.job.ts
+    ├── modules/
+    │   ├── auth/
+    │   │   ├── auth.controller.ts
+    │   │   ├── auth.repository.ts
+    │   │   ├── auth.routes.ts
+    │   │   └── auth.service.ts
+    │   ├── coletas/
+    │   │   ├── coleta.repository.ts
+    │   │   ├── coletas.controller.ts
+    │   │   ├── coletas.routes.ts
+    │   │   └── coletas.service.ts
+    │   ├── indicadores/
+    │   │   ├── indicadores.controller.ts
+    │   │   ├── indicadores.repository.ts
+    │   │   ├── indicadores.routes.ts
+    │   │   └── indicadores.service.ts
+    │   └── servicos/
+    │       ├── servicos.controller.ts
+    │       ├── servicos.repository.ts
+    │       ├── servicos.routes.ts
+    │       ├── servicos.service.test.ts
+    │       └── servicos.service.ts
+    └── shared/
+        ├── errors/
+        │   └── AppError.ts
+        ├── middlewares/
+        │   └── error.middleware.ts
+        └── utils/
+            ├── jwt.util.ts
+            └── password.util.ts
 ```
 
 <!-- Atualizar esta estrutura conforme os módulos forem criados -->
@@ -88,10 +119,16 @@ As variáveis ficam no arquivo `.env` na raiz do projeto. Use o [`.env.example`]
 
 | Variável                                                                                    | Descrição                                    |
 | -------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| POSTGRES_HOST<br />POSTGRES_PORT<br />POSTGRES_DB<br />POSTGRES_USER<br />POSTGRESS_PASSWORD | Dados de conexão com o PostgreSQL             |
-| <br />METRICS_API_URL<br />CARBON_API_URL                                                    | URLs das APIs auxiliares (métricas e carbono) |
-| <br />JWT_SECRET<br />JWT_EXPIRES_IN                                                         | Segredo usado na assinatura do JWT             |
-| CORS_ORIGIN<br />VITE_API_URL                                                                | Porta da API                                   |
+| `NODE_ENV` | Ambiente de execução da aplicação. |
+| `PORT` | Porta em que a API será executada. |
+| `POSTGRES_HOST`<br />`POSTGRES_PORT`<br />`POSTGRES_DB`<br />`POSTGRES_USER`<br />`POSTGRES_PASSWORD` | Dados de conexão com o PostgreSQL. |
+| `METRICS_API_URL`<br />`CARBON_API_URL` | URLs das APIs auxiliares de métricas e carbono. |
+| `JWT_SECRET` | Segredo usado na assinatura dos tokens JWT. |
+| `JWT_EXPIRES_IN` | Tempo de validade dos tokens JWT. |
+| `COLLECTION_INTERVAL_MS` | Tempo de espera entre o término de uma sincronização de serviços e o início da próxima, em milissegundos. |
+| `EXTERNAL_API_TIMEOUT_MS` | Tempo limite das requisições às APIs externas, em milissegundos. |
+| `CORS_ORIGIN` | Origem do frontend permitida pelo CORS. |
+| `VITE_API_URL` | URL da API utilizada pelo frontend. |
 
 ---
 
