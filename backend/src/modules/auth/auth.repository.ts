@@ -2,7 +2,7 @@
 import pool from "../../db/connection.js";
 import type { PoolClient } from "pg";
 import { randomBytes } from "crypto";
-import { hashPassword, verifyPassword } from "../utils/password.js";
+import { hashPassword, verifyPassword } from "../../shared/utils/password.util.js";
 
 export class UserRepository {
   private async insertUser(

@@ -1,4 +1,4 @@
-import { createToken } from "../utils/jwt.js";
+import { createToken } from "../../shared/utils/jwt.util.js";
 import { UserRepository } from "./auth.repository.js";
 
 export class AuthService {
