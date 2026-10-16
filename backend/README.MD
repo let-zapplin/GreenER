@@ -33,11 +33,11 @@ Voltar para o [README principal](../README.md).
 
 O backend é organizado em módulos, e cada módulo separa as responsabilidades em camadas:
 
-| Camada | Responsabilidade |
-| --- | --- |
-| `routes` | Define os endpoints do recurso |
-| `controllers` | Recebe as requisições e devolve as respostas |
-| `services` | Concentra as regras de negócio |
+| Camada           | Responsabilidade                                  |
+| ---------------- | ------------------------------------------------- |
+| `routes`       | Define os endpoints do recurso                    |
+| `controllers`  | Recebe as requisições e devolve as respostas    |
+| `services`     | Concentra as regras de negócio                   |
 | `repositories` | Acessa o PostgreSQL por meio de SQL parametrizado |
 
 Estrutura geral:
@@ -69,10 +69,10 @@ backend/
 
 ### APIs auxiliares da Unilaunch
 
-| API | Uso no backend | Documentação |
-| --- | --- | --- |
-| Agregador de Métricas | Descoberta dos serviços e coleta das métricas | [metrics.unilaunch.org/docs](https://metrics.unilaunch.org/docs) |
-| Serviço de Intensidade de Carbono | Consulta da intensidade de carbono para o cálculo das emissões | [carbon.unilaunch.org/docs](https://carbon.unilaunch.org/docs) |
+| API                                | Uso no backend                                                   | Documentação                                                  |
+| ---------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------- |
+| Agregador de Métricas             | Descoberta dos serviços e coleta das métricas                  | [metrics.unilaunch.org/docs](https://metrics.unilaunch.org/docs) |
+| Serviço de Intensidade de Carbono | Consulta da intensidade de carbono para o cálculo das emissões | [carbon.unilaunch.org/docs](https://carbon.unilaunch.org/docs)   |
 
 As chamadas a essas APIs ficam na pasta `src/integrations/`, separadas das regras de negócio. Falhas nas APIs auxiliares são tratadas para que não interrompam o funcionamento do restante da aplicação.
 
@@ -86,13 +86,12 @@ A conexão com o banco é configurada em `src/db/connection.ts` e utilizada apen
 
 As variáveis ficam no arquivo `.env` na raiz do projeto. Use o [`.env.example`](../.env.example) como modelo e nunca envie o `.env` para o repositório.
 
-| Variável | Descrição |
-| --- | --- |
-| _a definir_ | Dados de conexão com o PostgreSQL |
-| _a definir_ | URLs das APIs auxiliares (métricas e carbono) |
-| _a definir_ | Segredo usado na assinatura do JWT |
-| _a definir_ | Porta da API |
-
+| Variável                                                                                    | Descrição                                    |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| POSTGRES_HOST<br />POSTGRES_PORT<br />POSTGRES_DB<br />POSTGRES_USER<br />POSTGRESS_PASSWORD | Dados de conexão com o PostgreSQL             |
+| <br />METRICS_API_URL<br />CARBON_API_URL                                                    | URLs das APIs auxiliares (métricas e carbono) |
+| <br />JWT_SECRET<br />JWT_EXPIRES_IN                                                         | Segredo usado na assinatura do JWT             |
+| CORS_ORIGIN<br />VITE_API_URL                                                                | Porta da API                                   |
 
 ---
 
@@ -116,12 +115,12 @@ npm install
 npm run dev
 ```
 
-| Comando | Função |
-| --- | --- |
-| `npm run dev` | Executa `src/server.ts` com recarga ao salvar, usando `tsx` |
-| `npm run typecheck` | Verifica os tipos sem gerar arquivos |
-| `npm run build` | Compila os arquivos de `src/` para `dist/` |
-| `npm start` | Executa `dist/server.js` após o build |
+| Comando               | Função                                                       |
+| --------------------- | -------------------------------------------------------------- |
+| `npm run dev`       | Executa`src/server.ts` com recarga ao salvar, usando `tsx` |
+| `npm run typecheck` | Verifica os tipos sem gerar arquivos                           |
+| `npm run build`     | Compila os arquivos de`src/` para `dist/`                  |
+| `npm start`         | Executa`dist/server.js` após o build                        |
 
 ---
 
@@ -132,67 +131,5 @@ npm run dev
 - [`docs/calculos.md`](../docs/calculos.md): fórmulas e premissas do cálculo de energia e CO₂e
 - [`database/README.md`](../database/README.md): banco de dados
 - [`frontend/README.md`](../frontend/README.md): frontend
+- [`docs/testes/manual_teste_unitario.md`](../docs/testes/manual_teste_unitario.md): manual de execução de teste unitário
 
----
-
-## Testes unitários com Docker
-
-Os testes do backend utilizam Vitest. As chamadas à API externa e a dependência do repositório são simuladas, permitindo verificar o comportamento do serviço sem consultar a API real ou acessar o banco.
-
-### Como executar
-
-Com o Docker Desktop iniciado, abra um terminal na raiz do projeto, onde está o arquivo `compose.yaml`.
-
-1. Inicie os containers:
-
-   ```bash
-   docker compose up --build -d
-   ```
-
-2. Execute os testes dentro do container do backend:
-
-   ```bash
-   docker compose exec backend npm test
-   ```
-
-   Se os containers já estiverem rodando, basta executar o comando de teste.
-
-3. Para executar os testes automaticamente a cada alteração:
-
-   ```bash
-   docker compose exec backend npm run test:watch
-   ```
-
-   Pressione `Ctrl+C` para encerrar o acompanhamento. A aplicação continuará rodando.
-
-### Cenários cobertos
-
-O arquivo `src/modules/servicos/servicos.service.test.ts` verifica:
-
-- Retorno dos serviços com `location` e `metrics_path`.
-- Tratamento de resposta HTTP 500.
-- Tratamento de falha de conexão.
-- Cancelamento da requisição ao atingir o timeout.
-
-O teste de timeout utiliza um relógio simulado, sem esperar cinco segundos reais.
-
-As mensagens de erro exibidas nos cenários de falha são esperadas. Confira o resumo do Vitest: `4 passed` indica que os quatro testes passaram.
-
-### Se o Vitest não for encontrado
-
-Atualize as dependências dentro do container e execute novamente:
-
-```bash
-docker compose exec backend npm install
-docker compose exec backend npm test
-```
-
-### Como encerrar o ambiente
-
-Na pasta que contém o `compose.yaml`, execute:
-
-```bash
-docker compose down
-```
-
-Esse comando encerra os containers e preserva os dados armazenados no volume do PostgreSQL.
