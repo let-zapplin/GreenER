@@ -7,7 +7,6 @@ export class AuthService {
   private repo = new UserRepository();
 
   async register(name: string, email: string, password: string) {
-
     const emailAlreadyExists = await this.repo.emailExists(email);
 
     if (emailAlreadyExists) {
@@ -24,10 +23,13 @@ export class AuthService {
     if (!user) throw new UnauthorizedError("Credenciais inválidas");
 
     const valid_password = verifyPassword(password, user.password_hash);
-    if (!valid_password) throw new UnauthorizedError("Credenciais inválidas");  
+    if (!valid_password) throw new UnauthorizedError("Credenciais inválidas");
 
     const token = createToken({ sub: String(user.id_users) });
 
-    return { token };
+    return {
+      token,
+      user: { id: String(user.id_users), name: user.name, email: user.email },
+    };
   }
 }

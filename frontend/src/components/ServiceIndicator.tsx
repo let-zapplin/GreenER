@@ -14,15 +14,16 @@ type ServiceIndicatorProps = {
 };
 
 export function ServiceIndicator({ service, onSelect }: ServiceIndicatorProps) {
- return (
-  <div className="service-indicator-wrapper">
-    <button
-      type="button"
-      className={`service-indicator ${service.status}`}
-      aria-label={`${service.name}: ${statusLabels[service.status]}. Ver detalhes`}
-      onClick={() => onSelect(service.id)}
-    />
+  return (
+    <div className="service-indicator-wrapper">
+      <button
+        type="button"
+        className={`service-indicator ${service.status}`}
+        aria-label={`${service.name}: ${statusLabels[service.status]}. Ver detalhes`}
+        onClick={() => onSelect(service.id)}
+      />
 
-    <ServicePopover service={service} />
-  </div>
-);}
+      <ServicePopover service={service} />
+    </div>
+  );
+}

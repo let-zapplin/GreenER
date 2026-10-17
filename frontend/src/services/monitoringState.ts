@@ -10,6 +10,10 @@ export type MonitoringSnapshot = {
 // Retains successful discoveries while navigating within this tab.
 let snapshot: MonitoringSnapshot = { services: [], lastUpdated: null };
 
+export function clearMonitoringSnapshot() {
+  snapshot = { services: [], lastUpdated: null };
+}
+
 export function getMonitoringSnapshot(): MonitoringSnapshot {
   return snapshot;
 }
@@ -41,7 +45,7 @@ export function reconcileServices(
       return {
         ...service,
         status: "active",
-        lastConfirmedAt: new Date(now).toISOString(),
+        lastConfirmedAt: service.lastConfirmedAt ?? new Date(now).toISOString(),
       };
     }
 
@@ -51,7 +55,7 @@ export function reconcileServices(
         ...service,
         status: "new",
         statusExpiresAt: now + STATUS_HIGHLIGHT_MS,
-        lastConfirmedAt: new Date(now).toISOString(),
+        lastConfirmedAt: service.lastConfirmedAt ?? new Date(now).toISOString(),
       };
     }
 
@@ -61,7 +65,7 @@ export function reconcileServices(
         ...service,
         status: "returned",
         statusExpiresAt: now + STATUS_HIGHLIGHT_MS,
-        lastConfirmedAt: new Date(now).toISOString(),
+        lastConfirmedAt: service.lastConfirmedAt ?? new Date(now).toISOString(),
       };
     }
 
@@ -76,7 +80,7 @@ export function reconcileServices(
         ...service,
         status: previousService.status,
         statusExpiresAt: previousService.statusExpiresAt,
-        lastConfirmedAt: new Date(now).toISOString(),
+        lastConfirmedAt: service.lastConfirmedAt ?? new Date(now).toISOString(),
       };
     }
 
@@ -84,12 +88,14 @@ export function reconcileServices(
     return {
       ...service,
       status: "active",
-      lastConfirmedAt: new Date(now).toISOString(),
+      lastConfirmedAt: service.lastConfirmedAt ?? new Date(now).toISOString(),
     };
   });
 }
 
-export function recordDiscovery(current: MonitoredService[]): MonitoringSnapshot {
+export function recordDiscovery(
+  current: MonitoredService[],
+): MonitoringSnapshot {
   const now = Date.now();
   snapshot = {
     services: reconcileServices(

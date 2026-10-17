@@ -5,35 +5,28 @@ import type {
   MonitoredService,
 } from "../types/service";
 
-const API_URL = import.meta.env.VITE_API_URL;
+import { apiRequest } from "./api";
 
 export async function discoverServices(
   signal?: AbortSignal,
+  token?: string,
 ): Promise<DiscoverServicesResponse> {
-  const response = await fetch(`${API_URL}/api/servicos/discover`, {
-    signal,
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error("Não foi possível carregar os serviços");
-  }
-
-  return response.json();
+  return apiRequest<DiscoverServicesResponse>(
+    "/api/servicos/discover",
+    { signal, cache: "no-store" },
+    token,
+  );
 }
 
 export async function listServices(
   signal?: AbortSignal,
+  token?: string,
 ): Promise<ListServicesResponse> {
-  const response = await fetch(`${API_URL}/api/servicos`, {
-    signal,
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw new Error("Não foi possivel carregar os serviços armazenados");
-  }
-
-  return response.json();
+  return apiRequest<ListServicesResponse>(
+    "/api/servicos",
+    { signal, cache: "no-store" },
+    token,
+  );
 }
 
 export function storedServiceToService(
@@ -55,5 +48,6 @@ export function storedServiceToService(
     metrics_path: "",
 
     status: storedService.status,
+    lastConfirmedAt: storedService.last_seen_at ?? undefined,
   };
 }

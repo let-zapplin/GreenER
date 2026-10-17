@@ -92,16 +92,19 @@ describe("ServicosService.discoverServices", () => {
     let requestSignal: AbortSignal | undefined;
 
     // Simula uma requisição pendente que só falha quando é cancelada.
-    const fetchMock = vi.fn<typeof fetch>().mockImplementation((_url, options) => {
-      requestSignal = options?.signal ?? undefined;
-      return new Promise<Response>((_resolve, reject) => {
-        requestSignal?.addEventListener(
-          "abort",
-          () => reject(new DOMException("Requisição cancelada", "AbortError")),
-          { once: true },
-        );
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockImplementation((_url, options) => {
+        requestSignal = options?.signal ?? undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          requestSignal?.addEventListener(
+            "abort",
+            () =>
+              reject(new DOMException("Requisição cancelada", "AbortError")),
+            { once: true },
+          );
+        });
       });
-    });
     vi.stubGlobal("fetch", fetchMock);
 
     // Trata a rejeição antes de avançar o relógio para o timeout.

@@ -218,7 +218,21 @@ export function About() {
               {team.map((name, index) => (
                 <article className="about-card about-person" key={name}>
                   <div className="about-person-icon">
-                    <img src={[gustavoPhoto, igorPhoto, marcelloPhoto, patriciaPhoto, vitorPhoto][index]} alt={`Foto de ${name}`} width="72" height="72" loading="lazy" />
+                    <img
+                      src={
+                        [
+                          gustavoPhoto,
+                          igorPhoto,
+                          marcelloPhoto,
+                          patriciaPhoto,
+                          vitorPhoto,
+                        ][index]
+                      }
+                      alt={`Foto de ${name}`}
+                      width="72"
+                      height="72"
+                      loading="lazy"
+                    />
                   </div>
                   <h3>{name}</h3>
                 </article>
@@ -228,15 +242,16 @@ export function About() {
 
           <div className="about-waves about-waves-exit" aria-hidden="true" />
         </div>
-        <div className="about-ending"><section className="about-card about-cta">
-          <h2>Veja o GreenER em ação</h2>
-          <p>
-            Acompanhe serviços, regiões e emissões no painel de monitoramento.
-          </p>
-          <Link to="/monitoramento" className="about-button">
-            Ir para Monitoramento
-          </Link>
-        </section>
+        <div className="about-ending">
+          <section className="about-card about-cta">
+            <h2>Veja o GreenER em ação</h2>
+            <p>
+              Acompanhe serviços, regiões e emissões no painel de monitoramento.
+            </p>
+            <Link to="/monitoramento" className="about-button">
+              Ir para Monitoramento
+            </Link>
+          </section>
         </div>
       </main>
       <footer className="about-footer">
