@@ -47,11 +47,11 @@ Prototipação · Diagramas UML · Modelagem BD · Conexão API e BD · Teste un
 ---
 ## 📉 Burndown
 
-[Burndown Sprint 1] (colocar imagem)
+![Burndown Sprint 1](burning_down_sp1.jpeg)
 
 ---
 
 ## 🎬 Demonstração
 
 <!-- Adicione o link do vídeo quando disponível -->
-[Assistir vídeo da Sprint 1]()
+[![Assistir vídeo da Sprint 1](https://img.youtube.com/vi/pGdiciJxTPw/hqdefault.jpg)](https://youtu.be/pGdiciJxTPw)
