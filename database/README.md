@@ -8,18 +8,18 @@ Voltar para o [README principal](../README.md).
 
 ## 📋 Índice
 
-- 🛠 Tecnologias
-- 📂 Arquivos
-- 🧱 Modelo de Dados
-- ▶️ Como Aplicar os Scripts
-- 🔎 Onde Ficam as Consultas da Aplicação
-- 📚 Documentação Relacionada
+- [🛠 Tecnologias](#-tecnologias)
+- [📂 Arquivos](#-arquivos)
+- [🧱 Modelo de Dados](#-modelo-de-dados)
+- [▶️ Como Aplicar os Scripts](#️-como-aplicar-os-scripts)
+- [🔎 Onde Ficam as Consultas da Aplicação](#-onde-ficam-as-consultas-da-aplicação)
+- [📚 Documentação Relacionada](#-documentação-relacionada)
 
 ---
 
 ## 🛠 Tecnologias
 
-- PostgreSQL
+- PostgreSQL 17
 - Docker, com volume persistente para preservar os dados após reiniciar os containers
 
 ---
