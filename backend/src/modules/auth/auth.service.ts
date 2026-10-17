@@ -1,6 +1,6 @@
 import { createToken } from "../../shared/utils/jwt.util.js";
 import { UnauthorizedError } from "../../shared/errors/AppError.js";
-import { verifyPassword } from "../utils/password.js";
+import { verifyPassword } from "../../shared/utils/password.util.js";
 import { UserRepository } from "./auth.repository.js";
 
 export class AuthService {
