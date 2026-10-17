@@ -1,6 +1,4 @@
 .header-wrapper {
-  position: relative;
-  z-index: 50;
   width: 100%;
   padding: 20px 48px 0;
   box-sizing: border-box;
@@ -79,16 +77,6 @@
 
   gap: 12px;
 }
-
-.header-account { position: relative; }
-.header-sign-in { justify-self: end; padding: 12px 18px; min-height: 44px; border: 1px solid #426c60; border-radius: 10px; color: #a7c993; text-decoration: none; }
-.user-info { min-width: 0; }
-.user-info span, .user-info small { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-button.user-avatar { padding: 0; cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease; }
-button.user-avatar:hover, button.user-avatar[aria-expanded='true'] { background: #24534b; border-color: #87e46c; }
-.header-account-menu { position: absolute; top: calc(100% + 12px); right: 0; z-index: 30; min-width: 160px; padding: 6px; border: 1px solid #426c60; border-radius: 12px; background: #12383b; box-shadow: 0 12px 28px #0005; }
-.header-account-menu button { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: 100%; min-height: 44px; padding: 10px 14px; color: #f4f8f5; background: transparent; border: 0; border-radius: 7px; text-align: left; cursor: pointer; }
-.header-account-menu button:hover, .header-account-menu button:focus-visible { background: #24534b; color: #a7c993; }
 
 .notification,
 .user-avatar {

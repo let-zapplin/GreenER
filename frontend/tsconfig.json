@@ -4,7 +4,6 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "paths": { "maplibre-gl": ["./src/lib/maplibre-compat.ts"] },
     "jsx": "react-jsx",
     "types": ["vite/client", "node"],
     "strict": true,
