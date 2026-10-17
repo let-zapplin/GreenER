@@ -41,15 +41,31 @@ Estrutura geral:
 
 ```
 frontend/
+├── assets/
+│   ├── camadasFundo/
+│   ├── icones/
+│   ├── pfps/
+│   └── … imagens e ilustrações
+├── tests/
 ├── Dockerfile
+├── index.html
+├── package.json
+├── package-lock.json
+├── README.md
+├── tsconfig.json
+├── vite.config.ts
 └── src/
     ├── components/
+    ├── contexts/
+    ├── hooks/
     ├── pages/
+    ├── providers/
     ├── services/
+    ├── styles/
     ├── types/
-    └── styles/
+    ├── App.tsx
+    └── main.tsx
 ```
-
 
 ---
 
@@ -66,7 +82,7 @@ frontend/
 | Login | Acesso à área de configuração | ⏳ Planejada |
 | Configuração | Ajustes do monitoramento, com acesso protegido | ⏳ Planejada |
 
-O monitoramento consulta `/api/servicos/discover` imediatamente ao abrir a tela e verifica a cada 1 segundo se pode iniciar uma nova consulta. Se a anterior ainda estiver em andamento, aguarda o próximo ciclo, sem sobrepor requisições. O timeout do frontend é de 15 segundos, superior aos 10 segundos configurados para a API externa no `.env.example`. Se o timeout do backend for aumentado, ajuste também `REQUEST_TIMEOUT_MS` em `src/pages/Monitoring.tsx`.
+O monitoramento consulta /api/servicos imediatamente ao abrir a tela para obter os serviços armazenados no backend e seus status. A cada 1 segundo, verifica se pode iniciar uma nova consulta; se a anterior ainda estiver em andamento, aguarda o próximo ciclo, sem sobrepor requisições. O timeout de cada consulta no frontend é de 15 segundos, definido por REQUEST_TIMEOUT_MS em src/pages/Monitoring.tsx.
 
 A tela informa a última atualização bem-sucedida e sinaliza dados desatualizados quando uma consulta falha. Ao voltar à página, o cabeçalho indica que os dados estão sendo atualizados, sem exibir um aviso de falha. O histórico de serviços permanece disponível durante a navegação na mesma aba; recarregar a aplicação reinicia esse histórico. Uma primeira resposta vazia também conta como consulta bem-sucedida, permitindo detectar como novos os serviços que surgirem depois.
 
