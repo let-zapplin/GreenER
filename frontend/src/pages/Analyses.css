@@ -17,7 +17,11 @@
     url("../../assets/camadasFundo/Vector 6.png"),
     url("../../assets/camadasFundo/Vector 5.png");
   background-repeat: no-repeat;
-  background-position: center 95px, center 65px, center 35px, center 0;
+  background-position:
+    center 95px,
+    center 65px,
+    center 35px,
+    center 0;
   background-size: 100% 260px;
 }
 
@@ -33,20 +37,97 @@
   color: #f4f8f5;
 }
 
-.analyses-coming-soon { width: 100%; max-width: 720px; padding: 48px 32px; text-align: center; }
-.analyses-icon { display: grid; place-items: center; width: 72px; height: 72px; margin: 0 auto 28px; border: 1px solid #426c60; border-radius: 18px; background: #12383b; color: #87e46c; }
-.analyses-icon svg { width: 36px; height: 36px; }
-.analyses-eyebrow { margin: 0 0 16px; color: #87e46c; font-size: 12px; font-weight: 600; letter-spacing: .14em; }
-.analyses-coming-soon h1 { margin: 0; font-size: clamp(32px, 4.4vw, 52px); font-weight: 600; letter-spacing: -.04em; line-height: 1.16; }
-.analyses-coming-soon h1 span { color: #87e46c; }
-.analyses-description { max-width: 530px; margin: 24px auto 32px; color: #a2bcbb; font-size: 16px; line-height: 1.7; }
-.analyses-link { display: inline-flex; align-items: center; justify-content: center; gap: 14px; padding: 14px 24px; background: #69d337; color: #062f32; border-radius: 12px; text-decoration: none; font-family: "IBM Plex Mono", monospace; font-size: 14px; font-weight: 600; }
-.analyses-link:hover { background: #87e46c; }
+.analyses-coming-soon {
+  width: 100%;
+  max-width: 720px;
+  padding: 48px 32px;
+  text-align: center;
+}
+.analyses-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 28px;
+  border: 1px solid #426c60;
+  border-radius: 18px;
+  background: #12383b;
+  color: #87e46c;
+}
+.analyses-icon svg {
+  width: 36px;
+  height: 36px;
+}
+.analyses-eyebrow {
+  margin: 0 0 16px;
+  color: #87e46c;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+.analyses-coming-soon h1 {
+  margin: 0;
+  font-size: clamp(32px, 4.4vw, 52px);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.16;
+}
+.analyses-coming-soon h1 span {
+  color: #87e46c;
+}
+.analyses-description {
+  max-width: 530px;
+  margin: 24px auto 32px;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+.analyses-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px 24px;
+  background: #69d337;
+  color: #062f32;
+  border-radius: 12px;
+  text-decoration: none;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 600;
+}
+.analyses-link:hover {
+  background: #87e46c;
+}
 
 @media (max-width: 700px) {
-  .analyses-page { padding: 36px 20px 148px; }
-  .analyses-waves { height: 132px; background-position: center 70px, center 48px, center 24px, center 0; background-size: 160% 190px; }
-  .analyses-coming-soon { padding: 32px 0; }
-  .analyses-description { font-size: 14px; }
-  .analyses-link { width: 100%; font-size: 12px; padding: 14px 16px; }
+  .analyses-page {
+    padding: 36px 20px 148px;
+  }
+  .analyses-waves {
+    height: 132px;
+    background-position:
+      center 70px,
+      center 48px,
+      center 24px,
+      center 0;
+    background-size: 160% 190px;
+  }
+  .analyses-coming-soon {
+    padding: 32px 0;
+  }
+  .analyses-description {
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+    font-weight: 500;
+  }
+  .analyses-link {
+    width: 100%;
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+    font-weight: 500;
+    padding: 14px 16px;
+  }
 }

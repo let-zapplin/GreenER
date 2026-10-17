@@ -109,7 +109,11 @@ npm install
 npm run dev
 ```
 
-Acesse `http://localhost:5173` para a Home ou `http://localhost:5173/monitoramento` para acompanhar os serviços.
+Acesse `http://localhost:5173` para a landing page. Após o login, a Home fica em `/home`, e os serviços em `/monitoramento`.
+
+O `AuthProvider` compartilha a sessão pelo `useAuth`. O formulário usa `useAuthForm`, e as consultas autenticadas ficam no `useMonitoring`. As rotas `/home`, `/monitoramento` e `/analises` exigem uma sessão no frontend; a autorização dos endpoints continua sendo responsabilidade do backend.
+
+O globo usa `@maptiler/sdk` e cartografia local. Para imagens de satélite, configure `VITE_MAPTILER_API_KEY` no `.env` da raiz e reinicie o frontend.
 
 | Comando | Função |
 | --- | --- |

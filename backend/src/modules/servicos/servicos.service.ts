@@ -96,7 +96,11 @@ export class ServicosService {
   // ========================================================
   // US02: Salvar serviços no banco (evitar duplicação)
   // ========================================================
-  async saveServices(): Promise<{ created: number; updated: number; unavailable: number; }> {
+  async saveServices(): Promise<{
+    created: number;
+    updated: number;
+    unavailable: number;
+  }> {
     console.log("💾 Salvando serviços no banco...");
 
     // 1. Descobrir serviços (US01)
@@ -146,13 +150,13 @@ export class ServicosService {
       }
     }
 
-   const unavailable =
-  await this.repository.markUnavailableExcept(
-    activeExternalIds,
-  );
-    console.log( `✅ ${created} criados, ${updated} atualizados, ${unavailable} indisponíveis`,);
+    const unavailable =
+      await this.repository.markUnavailableExcept(activeExternalIds);
+    console.log(
+      `✅ ${created} criados, ${updated} atualizados, ${unavailable} indisponíveis`,
+    );
 
-    return { created, updated, unavailable, };
+    return { created, updated, unavailable };
   }
   // ========================================================
   // US03: Listar todos os serviços armazenados no banco

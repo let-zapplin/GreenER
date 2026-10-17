@@ -14,15 +14,9 @@ export async function startServiceSync(): Promise<void> {
         `✅ Sincronização concluída: ${result.created} criados e ${result.updated} atualizados`,
       );
     } catch (error) {
-      console.error(
-        "❌ Falha na sincronização automática de serviços:",
-        error,
-      );
+      console.error("❌ Falha na sincronização automática de serviços:", error);
     } finally {
-      setTimeout(
-        syncServices,
-        env.collectionIntervalMs,
-      );
+      setTimeout(syncServices, env.collectionIntervalMs);
     }
   }
 

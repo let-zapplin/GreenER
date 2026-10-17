@@ -28,7 +28,7 @@ export function Home() {
       const button = event.currentTarget;
       const rect = button.getBoundingClientRect();
       /* Esse trecho é o que faz a transição ocorrer atráves dos botões visualmente, ele localiza o centro dos botões*/
-       const home = button.closest(".home");
+      const home = button.closest(".home");
 
       // Segurança: se não encontrar a Home, interrompe
       if (!home) return;
@@ -38,14 +38,10 @@ export function Home() {
 
       // . Calcula o centro do botão dentro da Home
       const x =
-        ((rect.left + rect.width / 2 - homeRect.left) /
-          homeRect.width) *
-        100;
+        ((rect.left + rect.width / 2 - homeRect.left) / homeRect.width) * 100;
 
       const y =
-        ((rect.top + rect.height / 2 - homeRect.top) /
-          homeRect.height) *
-        100;
+        ((rect.top + rect.height / 2 - homeRect.top) / homeRect.height) * 100;
 
       // 6. Guarda essa posição
       setWavePosition({ x, y });
@@ -59,7 +55,6 @@ export function Home() {
       }, 700);
     }
   }
-
 
   return (
     /*esse trecho da primeira linha é o que muda automaticamente o estado conforme o click */

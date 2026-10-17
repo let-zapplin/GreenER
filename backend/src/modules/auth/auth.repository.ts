@@ -2,7 +2,10 @@
 import pool from "../../db/connection.js";
 import type { PoolClient } from "pg";
 import { randomBytes } from "crypto";
-import { hashPassword, verifyPassword } from "../../shared/utils/password.util.js";
+import {
+  hashPassword,
+  verifyPassword,
+} from "../../shared/utils/password.util.js";
 
 export class UserRepository {
   private async insertUser(
@@ -83,12 +86,12 @@ export class UserRepository {
       [email],
     );
     const user = result.rows[0];
-    
+
     return {
       id_users: user.id_users,
       name: user.name,
       email: user.email,
-      password_hash: user.password_hash
+      password_hash: user.password_hash,
     };
   }
 }

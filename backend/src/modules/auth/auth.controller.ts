@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import { AuthService } from './auth.service.js';
+import { Request, Response } from "express";
+import { AuthService } from "./auth.service.js";
 
 export class AuthController {
   private service = new AuthService();
