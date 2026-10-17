@@ -1,17 +1,43 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
-import { clearSessionStorage, createSession, readSession, saveSession, SESSION_KEY, tokenMetadata } from "../src/services/authSession.ts";
+import {
+  clearSessionStorage,
+  createSession,
+  readSession,
+  saveSession,
+  SESSION_KEY,
+  tokenMetadata,
+} from "../src/services/authSession.ts";
 
 function memoryStorage(): Storage {
   const values = new Map<string, string>();
-  return { get length() { return values.size; }, clear: () => values.clear(), getItem: key => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value); }, removeItem: key => { values.delete(key); }, key: index => [...values.keys()][index] ?? null };
+  return {
+    get length() {
+      return values.size;
+    },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+    removeItem: (key) => {
+      values.delete(key);
+    },
+    key: (index) => [...values.keys()][index] ?? null,
+  };
 }
 function token(exp = Math.floor(Date.now() / 1000) + 3600) {
   return `header.${Buffer.from(JSON.stringify({ sub: "42", exp })).toString("base64url")}.signature`;
 }
 beforeEach(() => {
-  Object.defineProperty(globalThis, "localStorage", { value: memoryStorage(), configurable: true });
-  Object.defineProperty(globalThis, "sessionStorage", { value: memoryStorage(), configurable: true });
+  Object.defineProperty(globalThis, "localStorage", {
+    value: memoryStorage(),
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "sessionStorage", {
+    value: memoryStorage(),
+    configurable: true,
+  });
 });
 
 test("rejeita tokens inválidos ou expirados", () => {
@@ -20,7 +46,11 @@ test("rejeita tokens inválidos ou expirados", () => {
   assert.throws(() => createSession("invalid"), /inválida/);
 });
 test("restaura a identidade e expiração a partir da sessão salva", () => {
-  const session = createSession(token(), { id: "42", name: "Igor", email: "igor@example.com" });
+  const session = createSession(token(), {
+    id: "42",
+    name: "Igor",
+    email: "igor@example.com",
+  });
   saveSession(session, false);
   assert.deepEqual(readSession(), session);
   assert.equal(localStorage.getItem(SESSION_KEY), null);
@@ -53,7 +83,12 @@ test("migra o token válido salvo pela implementação anterior", () => {
   assert.ok(sessionStorage.getItem(SESSION_KEY));
 });
 test("logout remove a sessão e os tokens legados dos dois armazenamentos", () => {
-  for (const storage of [localStorage, sessionStorage]) { storage.setItem(SESSION_KEY, "session"); storage.setItem("greener.accessToken", "legacy"); }
+  for (const storage of [localStorage, sessionStorage]) {
+    storage.setItem(SESSION_KEY, "session");
+    storage.setItem("greener.accessToken", "legacy");
+  }
   clearSessionStorage();
-  for (const storage of [localStorage, sessionStorage]) { assert.equal(storage.length, 0); }
+  for (const storage of [localStorage, sessionStorage]) {
+    assert.equal(storage.length, 0);
+  }
 });

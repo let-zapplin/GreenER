@@ -6,5 +6,8 @@
 }
 
 @media (max-width: 700px) {
-  .service-list { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .service-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
 }

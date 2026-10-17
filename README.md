@@ -14,6 +14,7 @@ O GreenER é um sistema que monitora aplicações e serviços de uma infraestrut
 - 🚀 Como Funciona
 - 📂 Organização do Repositório
 - ▶️ Como Executar
+- ✅ Como testar e validar
 - 📚 Documentação
 - 🗓 Sprints
 - 👥 Equipe
@@ -209,6 +210,16 @@ Para instruções específicas de cada parte, consulte os READMEs do [frontend](
 
 ---
 
+## ✅ Como testar e validar
+
+Para fazer testes unitários 
+
+- [`docs/testes/manual_teste_unitario.md`](docs/testes/manual_teste_unitario.md) - Manual com instruções para testes unitários
+
+- [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md) - Manual de validação de fluxo de Metrics API ao React
+
+---
+
 ## 📚 Documentação
 
 | Documento | Conteúdo |
@@ -229,11 +240,13 @@ Materiais do desafio:
 
 O projeto é desenvolvido em três sprints. O registro de cada uma (objetivo, itens concluídos e pendentes, decisões da Sprint Review) fica em `docs/sprints/`.
 
-| Sprint | Registro | Situação |
-| --- | --- | --- |
-| Sprint 1 | [`docs/sprints/sprint-1.md`](docs/sprints/sprint-1.md) | 🔄 Em andamento |
-| Sprint 2 | [`docs/sprints/sprint-2.md`](docs/sprints/sprint-2.md) | ⏳ Planejada |
-| Sprint 3 | [`docs/sprints/sprint-3.md`](docs/sprints/sprint-3.md) | ⏳ Planejada |
+| Sprint | Período | Principais Entregas | Status |
+|--------|---------|---------------------|--------|
+| [**Sprint 1**](./docs/sprints/sprint-1.md) | 28/09 — 19/10/2026 | Prototipação · Diagramas UML · Modelagem BD · Conexão API e BD · Teste unitário e validação | ✔️ Finalizada |
+| [**Sprint 2**](./docs/sprints/sprint-2.md) | 20/10 — 09/11/2026 | A ser definido | ⏳ |
+| [**Sprint 3**](./docs/sprints/sprint-3.md) | 10/11 — 23/11/2026 | A ser definido | ⏳ |
+
+
 
 ---
 
@@ -245,7 +258,7 @@ O projeto é desenvolvido em três sprints. O registro de cada uma (objetivo, it
 | Gustavo Koiti | Product Owner | [@gustavokoitiyoshimura](https://github.com/gustavokoitiyoshimura) |
 | Igor Souza | Desenvolvedor | [@igorcsouzaa](https://github.com/igorcsouzaa) |
 | Marcello Campbell | Desenvolvedor | [@mparise28-dev](https://github.com/mparise28-dev) |
-| Patrícia Maidana | Desenvolvedor | [@PatyMaidana](https://github.com/PatyMaidana) |
+| Patricia R. Maidana | Desenvolvedor | [@PatyMaidana](https://github.com/PatyMaidana) |
 
 **Instituição:** FATEC Jacareí, curso de Desenvolvimento de Software Multiplataforma (DSM)
 **Parceiro:** Unilaunch

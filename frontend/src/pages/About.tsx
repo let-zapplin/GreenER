@@ -1,5 +1,10 @@
 import { Link } from "react-router-dom";
 import logo from "../../assets/logo.png";
+import gustavoPhoto from "../../assets/pfps/gustavo.jpg";
+import igorPhoto from "../../assets/pfps/igor.jpg";
+import marcelloPhoto from "../../assets/pfps/marcello.jpg";
+import patriciaPhoto from "../../assets/pfps/patricia.jpg";
+import vitorPhoto from "../../assets/pfps/vitor.jpg";
 import "./About.css";
 
 const actions = [
@@ -210,13 +215,26 @@ export function About() {
               As pessoas por trás do projeto.
             </p>
             <div className="about-team">
-              {team.map((name) => (
+              {team.map((name, index) => (
                 <article className="about-card about-person" key={name}>
                   <div className="about-person-icon">
-                    <AboutIcon kind="person" />
+                    <img
+                      src={
+                        [
+                          gustavoPhoto,
+                          igorPhoto,
+                          marcelloPhoto,
+                          patriciaPhoto,
+                          vitorPhoto,
+                        ][index]
+                      }
+                      alt={`Foto de ${name}`}
+                      width="72"
+                      height="72"
+                      loading="lazy"
+                    />
                   </div>
                   <h3>{name}</h3>
-                  <p>Integrante do time</p>
                 </article>
               ))}
             </div>
@@ -224,15 +242,17 @@ export function About() {
 
           <div className="about-waves about-waves-exit" aria-hidden="true" />
         </div>
-        <section className="about-card about-cta">
-          <h2>Veja o GreenER em ação</h2>
-          <p>
-            Acompanhe serviços, regiões e emissões no painel de monitoramento.
-          </p>
-          <Link to="/monitoramento" className="about-button">
-            Ir para Monitoramento
-          </Link>
-        </section>
+        <div className="about-ending">
+          <section className="about-card about-cta">
+            <h2>Veja o GreenER em ação</h2>
+            <p>
+              Acompanhe serviços, regiões e emissões no painel de monitoramento.
+            </p>
+            <Link to="/monitoramento" className="about-button">
+              Ir para Monitoramento
+            </Link>
+          </section>
+        </div>
       </main>
       <footer className="about-footer">
         GreenER. Mais tecnologia, menos impacto.

@@ -1,60 +1,98 @@
 :root {
-    --background-page: #0c282b;
+  --background-page: #0c282b;
+  --font-size-small: 0.9375rem;
+  --text-muted: #c1d5cf;
+}
+
+small {
+  font-size: var(--font-size-small);
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 * {
-    box-sizing: border-box;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    user-select: none;
+  box-sizing: border-box;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  user-select: none;
 }
 
 *::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+}
 
 @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
+  html {
+    scroll-behavior: auto;
+  }
 }
 
-html, 
+html,
 body,
 #root {
-    margin:0;
-    min-height:100%;
+  margin: 0;
+  min-height: 100%;
 }
 
 body {
-    font-family: "IBM Plex Sans", sans-serif;
-    background:var(--background-page);
-    color:#ffffff;
+  font-family: "IBM Plex Sans", sans-serif;
+  background: var(--background-page);
+  color: #ffffff;
 }
 
-.app-shell-home {
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
-.app-shell-home > .header-wrapper { flex-shrink: 0; }
-.app-shell-home > .home { flex: 1; min-width: 0; }
+.header-wrapper {
+  flex-shrink: 0;
+}
+.app-content {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.app-content > * {
+  flex: 1;
+  min-width: 0;
+}
+.analyses-screen {
+  display: flex;
+  flex-direction: column;
+}
 
-h1, h2, h3, h4, h5, h6, strong, b,
-.app-nav a, .service-region-code,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong,
+b,
+.app-nav a,
+.service-region-code,
 .service-card-location p:first-child {
-    font-family: "IBM Plex Mono", monospace;
+  font-family: "IBM Plex Mono", monospace;
 }
 
-button, input, select, textarea {
-    font: inherit;
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
-a:focus-visible, button:focus-visible {
-    outline: 2px solid #d9e43f;
-    outline-offset: 5px;
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid #d9e43f;
+  outline-offset: 5px;
 }

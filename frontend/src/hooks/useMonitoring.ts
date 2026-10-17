@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
 import { ApiError } from "../services/api";
-import { discoverServices } from "../services/serviceApi";
-import { getMonitoringSnapshot, recordDiscovery } from "../services/monitoringState";
+import { listServices, storedServiceToService } from "../services/serviceApi";
+import {
+  getMonitoringSnapshot,
+  recordDiscovery,
+} from "../services/monitoringState";
 
 export function useMonitoring() {
   const { token, logout } = useAuth();
@@ -15,7 +18,9 @@ export function useMonitoring() {
     let disposed = false;
     let requestInFlight = false;
     let controller: AbortController | null = null;
-    setSnapshot(getMonitoringSnapshot()); setLoading(true); setError(null);
+    setSnapshot(getMonitoringSnapshot());
+    setLoading(true);
+    setError(null);
     async function loadServices() {
       if (disposed || requestInFlight) return;
       requestInFlight = true;
@@ -23,14 +28,21 @@ export function useMonitoring() {
       controller = requestController;
       const requestTimeout = setTimeout(() => requestController.abort(), 15000);
       try {
-        const data = await discoverServices(requestController.signal, token!);
+        const data = await listServices(requestController.signal, token!);
         if (disposed) return;
-        setSnapshot(recordDiscovery(data.services));
+        setSnapshot(recordDiscovery(data.services.map(storedServiceToService)));
         setError(null);
       } catch (error) {
         if (disposed) return;
-        if (error instanceof ApiError && error.status === 401) { logout(); return; }
-        setError(requestController.signal.aborted ? "A consulta excedeu o tempo de espera" : "Erro ao carregar os serviços");
+        if (error instanceof ApiError && error.status === 401) {
+          logout();
+          return;
+        }
+        setError(
+          requestController.signal.aborted
+            ? "A consulta excedeu o tempo de espera"
+            : "Erro ao carregar os serviços",
+        );
       } finally {
         clearTimeout(requestTimeout);
         requestInFlight = false;
@@ -39,7 +51,11 @@ export function useMonitoring() {
     }
     void loadServices();
     const refreshTimer = setInterval(() => void loadServices(), 1000);
-    return () => { disposed = true; clearInterval(refreshTimer); controller?.abort(); };
+    return () => {
+      disposed = true;
+      clearInterval(refreshTimer);
+      controller?.abort();
+    };
   }, [token, logout]);
 
   return { snapshot, loading, error };

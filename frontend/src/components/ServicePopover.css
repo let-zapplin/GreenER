@@ -1,0 +1,127 @@
+.service-popover {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 14px);
+
+  width: 260px;
+  padding: 16px;
+
+  color: #f4f8f5;
+  background: #103335;
+
+  border: 1px solid #426c60;
+  border-radius: 14px;
+
+  box-shadow: 0 12px 28px #0005;
+
+  opacity: 0;
+  visibility: hidden;
+
+  transform: translateX(-50%) translateY(6px);
+
+  transition:
+    opacity 160ms ease,
+    visibility 160ms ease,
+    transform 160ms ease;
+
+  pointer-events: none;
+
+  z-index: 30;
+}
+
+.service-popover::after {
+  content: "";
+
+  position: absolute;
+  top: 100%;
+  left: 50%;
+
+  width: 10px;
+  height: 10px;
+
+  background: #103335;
+
+  border-right: 1px solid #426c60;
+  border-bottom: 1px solid #426c60;
+
+  transform: translate(-50%, -5px) rotate(45deg);
+}
+
+.service-popover-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 14px;
+}
+
+.service-popover-header strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.service-popover-status {
+  flex-shrink: 0;
+
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 600;
+
+  text-transform: uppercase;
+}
+
+.service-popover-status.active {
+  color: #87e46c;
+  background: #87e46c16;
+}
+
+.service-popover-status.new {
+  color: #e5e65d;
+  background: #e5e65d16;
+}
+
+.service-popover-status.returned {
+  color: #7dd3fc;
+  background: #7dd3fc16;
+}
+
+.service-popover-status.unavailable {
+  color: #fca5a5;
+  background: #fca5a516;
+}
+
+.service-popover-location {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  color: var(--text-muted);
+
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.service-popover-location span:first-child {
+  color: #e2ece6;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.service-popover-location small {
+  margin-top: 5px;
+
+  color: #87e46c;
+
+  font-family: "IBM Plex Mono", monospace;
+}

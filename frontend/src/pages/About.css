@@ -1,451 +1,537 @@
 .about-screen {
-    user-select: none;
+  user-select: none;
 }
 .about-screen {
-    position: relative;
-    isolation: isolate;
-    overflow: clip;
-    background: var(--background-page);
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: var(--background-page);
 }
 .about-page {
-    --about-accent: #69d337;
-    --about-muted: #a2bcbb;
-    width: 100%;
-    max-width: 1328px;
-    margin: 0 auto;
-    padding: 72px 64px 0;
-    color: #f4f8f5;
+  --about-accent: #69d337;
+  --about-muted: var(--text-muted);
+  width: 100%;
+  max-width: 1328px;
+  margin: 0 auto;
+  padding: 72px 64px 0;
+  color: #f4f8f5;
 }
 
 .about-middle {
-    position: relative;
-    isolation: isolate;
-    margin-top: 64px;
-    padding-top: 210px;
-    padding-bottom: 230px;
-    color: #0c282b;
+  position: relative;
+  isolation: isolate;
+  margin-top: 64px;
+  padding-top: 210px;
+  padding-bottom: 230px;
+  color: #0c282b;
 }
 .about-middle::before {
-    content: "";
-    position: absolute;
-    z-index: -2;
-    top: 210px;
-    bottom: 230px;
-    left: calc(50% - 50vw);
-    width: 100vw;
-    background: linear-gradient(160deg, #7cba8e 5%, #a7c993 75%);
+  content: "";
+  position: absolute;
+  z-index: -2;
+  top: 210px;
+  bottom: 230px;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  background: linear-gradient(160deg, #7cba8e 5%, #a7c993 75%);
 }
 .about-waves {
-    position: absolute;
-    left: calc(50% - 50vw);
-    width: 100vw;
-    height: 260px;
-    z-index: -1;
-    pointer-events: none;
-    background-repeat: no-repeat;
+  position: absolute;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  height: 260px;
+  z-index: -1;
+  pointer-events: none;
+  background-repeat: no-repeat;
 }
 .about-waves-enter {
-    top: 0;
-    background-image:
-        url("../../assets/camadasFundo/Vector 8.png"),
-        url("../../assets/camadasFundo/Vector 7.png"),
-        url("../../assets/camadasFundo/Vector 6.png"),
-        url("../../assets/camadasFundo/Vector 5.png");
-    background-position:
-        center 115px,
-        center 75px,
-        center 35px,
-        center 0;
-    background-size: 100% 350px;
+  top: 0;
+  background-image:
+    url("../../assets/camadasFundo/Vector 8.png"),
+    url("../../assets/camadasFundo/Vector 7.png"),
+    url("../../assets/camadasFundo/Vector 6.png"),
+    url("../../assets/camadasFundo/Vector 5.png");
+  background-position:
+    center 115px,
+    center 75px,
+    center 35px,
+    center 0;
+  background-size: 100% 350px;
 }
 .about-waves-exit {
-    bottom: 0;
-    background-color: #a7c993;
-    background-image:
-        url("../../assets/camadasFundo/Vector 12.png"),
-        url("../../assets/camadasFundo/Vector 11.png"),
-        url("../../assets/camadasFundo/Vector 10.png"),
-        url("../../assets/camadasFundo/Vector 9.png");
-    background-position:
-        center 100px,
-        center 55px,
-        center 10px,
-        center -35px;
-    background-size: 100% 350px;
+  bottom: 0;
+  background-color: #a7c993;
+  background-image:
+    url("../../assets/camadasFundo/Vector 12.png"),
+    url("../../assets/camadasFundo/Vector 11.png"),
+    url("../../assets/camadasFundo/Vector 10.png"),
+    url("../../assets/camadasFundo/Vector 9.png");
+  background-position:
+    center 100px,
+    center 55px,
+    center 10px,
+    center -35px;
+  background-size: 100% 350px;
 }
 .about-middle .about-section:first-of-type {
-    margin-top: 0;
+  margin-top: 0;
 }
 .about-middle .about-section-copy,
 .about-middle .about-journey p {
-    color: #173e39;
+  color: #173e39;
 }
 .about-middle .about-card {
-    color: #f4f8f5;
-    border-color: #527f70;
+  color: #f4f8f5;
+  border-color: #527f70;
 }
 .about-middle .about-journey::before {
-    background: #527f70;
+  background: #527f70;
 }
 .about-cta {
-    position: relative;
+  position: relative;
 }
-.about-cta::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    top: -80px;
-    bottom: -140px;
-    left: calc(50% - 50vw);
-    width: 100vw;
-    background: #153e43;
+.about-ending {
+  position: relative;
+  isolation: isolate;
+  padding-top: 79px;
+}
+.about-ending::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  background: #153e43;
 }
 .about-footer {
-    position: relative;
-    background: #153e43;
+  position: relative;
+  background: #153e43;
 }
 .about-page h1,
 .about-page h2,
 .about-page h3,
 .about-page p {
-    margin: 0;
+  margin: 0;
 }
 .about-page h2 {
-    font-size: clamp(22px, 2.2vw, 28px);
-    line-height: 1.35;
+  font-size: clamp(22px, 2.2vw, 28px);
+  line-height: 1.35;
 }
 .about-page h3 {
-    font-size: 17px;
-    line-height: 1.4;
+  font-size: 17px;
+  line-height: 1.4;
 }
 .about-page p {
-    color: var(--about-muted);
-    line-height: 1.6;
+  color: var(--about-muted);
+  line-height: 1.6;
 }
 .about-page .about-eyebrow {
-    margin-bottom: 16px;
-    color: var(--about-accent);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
+  margin-bottom: 16px;
+  color: var(--about-accent);
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 600;
+  letter-spacing: 0.12em;
 }
 .about-hero {
-    display: grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap: 64px;
-    align-items: center;
-    margin-bottom: 80px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 64px;
+  align-items: center;
+  margin-bottom: 80px;
 }
 .about-hero h1 {
-    max-width: 620px;
-    font-size: clamp(32px, 4.5vw, 56px);
-    line-height: 1.12;
-    letter-spacing: -0.04em;
+  max-width: 620px;
+  font-size: clamp(32px, 4.5vw, 56px);
+  line-height: 1.12;
+  letter-spacing: -0.04em;
 }
 .about-description {
-    max-width: 550px;
-    margin-top: 28px !important;
-    font-size: 16px;
+  max-width: 550px;
+  margin-top: 28px !important;
+  font-size: 16px;
 }
 .about-logo {
-    display: block;
-    width: 100%;
-    max-width: 430px;
-    height: auto;
-    justify-self: center;
+  display: block;
+  width: 100%;
+  max-width: 430px;
+  height: auto;
+  justify-self: center;
 }
 .about-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
 }
 .about-card {
-    min-width: 0;
-    padding: 24px;
-    background: #123f42;
-    border: 1px solid #8fbf87;
-    border-radius: 18px;
+  min-width: 0;
+  padding: 24px;
+  background: #123f42;
+  border: 1px solid #8fbf87;
+  border-radius: 18px;
 }
 .about-card {
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
 }
 .about-card p {
-    margin-top: 10px;
-    font-size: 14px;
+  margin-top: 10px;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 500;
 }
 .about-facts h2 {
-    color: var(--about-accent);
-    font-size: clamp(22px, 2.2vw, 28px);
+  color: var(--about-accent);
+  font-size: clamp(22px, 2.2vw, 28px);
 }
 .about-proposal {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
-    align-items: start;
-    margin: 72px 0 56px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+  margin: 72px 0 56px;
 }
 .about-proposal > div > p {
-    margin-top: 18px;
+  margin-top: 18px;
 }
 .about-quote {
-    min-height: 220px;
-    padding: 32px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+  min-height: 220px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .about-quote span {
-    color: #a8cd8d;
+  color: #a8cd8d;
 }
 .about-number {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    margin-bottom: 14px;
-    border-radius: 50%;
-    background:  #062f32;
-    color: var(--about-accent);
-    font-family: "IBM Plex Mono", monospace;
-    font-weight: 700;
-    font-size: 20px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #062f32;
+  color: var(--about-accent);
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 700;
+  font-size: 20px;
 }
 .about-section {
-    margin-top: 80px;
+  margin-top: 80px;
 }
 .about-section-copy {
-    max-width: 840px;
-    margin: 12px 0 28px !important;
+  max-width: 840px;
+  margin: 12px 0 28px !important;
 }
 .about-challenge-icon {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    margin-bottom: 14px;
-    background: #062f32;
-    color: var(--about-accent);
-    border-radius: 10px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 14px;
+  background: #062f32;
+  color: var(--about-accent);
+  border-radius: 10px;
 }
 .about-challenge-icon svg {
-    width: 22px;
-    height: 22px;
+  width: 22px;
+  height: 22px;
 }
 .about-journey {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 24px;
-    padding: 0;
-    margin: 40px 0 0;
-    list-style: none;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  padding: 0;
+  margin: 40px 0 0;
+  list-style: none;
 }
 .about-journey::before {
-    content: "";
-    position: absolute;
-    top: 19px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #345c5c;
+  content: "";
+  position: absolute;
+  top: 19px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #345c5c;
 }
 .about-journey li {
-    position: relative;
-    min-width: 0;
+  position: relative;
+  min-width: 0;
 }
 .about-journey p {
-    margin-top: 10px;
-    font-size: 14px;
+  margin-top: 10px;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 500;
 }
 .about-team {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 18px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
 }
 .about-person {
-    padding: 26px 12px;
-    text-align: center;
+  padding: 26px 12px;
+  text-align: center;
 }
 .about-person h3 {
-    font-size: 14px;
-    overflow-wrap: anywhere;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .about-person p {
-    font-size: 13px;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 500;
 }
 .about-person-icon {
-    display: grid;
-    place-items: center;
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 20px;
-    border-radius: 50%;
-    border: 1px solid #8fbf87;
-    background: #062f32;
-    color: var(--about-accent);
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  border: 1px solid #8fbf87;
+  background: #062f32;
+  color: var(--about-accent);
 }
 .about-person-icon svg {
-    width: 32px;
-    height: 32px;
-}
-.about-cta {
-    margin-top: 79px;
-    padding: 36px 24px;
-    border-radius: 24px;
-    text-align: center;
-}
-.about-cta p {
-    font-size: 16px;
-}
-.about-button {
-    display: inline-block;
-    margin-top: 24px;
-    padding: 14px 32px;
-    color: #062f32;
-    background: var(--about-accent);
-    border-radius: 12px;
-    text-decoration: none;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 16px;
-    font-weight: 700;
-    transition: background-color 180ms ease;
-}
-.about-button:hover {
-    background: #87e46c;
-}
-.about-button {
-    transition:
-        background-color 180ms ease,
-        transform 180ms ease,
-        box-shadow 180ms ease;
-}
-.about-button:active {
-    transform: scale(0.98);
-}
-.about-card {
-    transition:
-        transform 220ms ease,
-        box-shadow 220ms ease;
+  width: 32px;
+  height: 32px;
 }
 .about-person-icon {
-    transition:
-        border-color 220ms ease,
-        transform 220ms ease;
+  overflow: hidden;
+}
+.about-person-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.about-cta {
+  margin-top: 0;
+  padding: 36px 24px;
+  border-radius: 24px;
+  text-align: center;
+}
+
+.about-cta p {
+  font-size: 16px;
+}
+.about-button {
+  display: inline-block;
+  margin-top: 24px;
+  padding: 14px 32px;
+  color: #062f32;
+  background: var(--about-accent);
+  border-radius: 12px;
+  text-decoration: none;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 16px;
+  font-weight: 700;
+  transition: background-color 180ms ease;
+}
+.about-button:hover {
+  background: #87e46c;
+}
+.about-button {
+  transition:
+    background-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+.about-button:active {
+  transform: scale(0.98);
+}
+.about-card {
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease;
+}
+.about-person-icon {
+  transition:
+    border-color 220ms ease,
+    transform 220ms ease;
 }
 @media (hover: hover) and (pointer: fine) {
-    .about-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px #0003;
-    }
-    .about-card:not(.about-cta):hover {
-        transform: translateY(-3px);
-        box-shadow: 0 14px 28px #0003;
-    }
-    .about-person:hover .about-person-icon {
-        transform: scale(1.04);
-        border-color: #69d337;
-    }
+  .about-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px #0003;
+  }
+  .about-card:not(.about-cta):hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 28px #0003;
+  }
+  .about-person:hover .about-person-icon {
+    transform: scale(1.04);
+    border-color: #69d337;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-    .about-screen *,
-    .about-screen *::before,
-    .about-screen *::after {
-        animation: none !important;
-        transition: none !important;
-    }
-    .about-screen .about-card:hover,
-    .about-screen .about-button:hover,
-    .about-screen .about-button:active,
-    .about-screen .about-person-icon {
-        transform: none;
-    }
+  .about-screen *,
+  .about-screen *::before,
+  .about-screen *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .about-screen .about-card:hover,
+  .about-screen .about-button:hover,
+  .about-screen .about-button:active,
+  .about-screen .about-person-icon {
+    transform: none;
+  }
 }
 .about-footer {
-    padding: 40px 20px 28px;
-    text-align: center;
-    color: #a2bcbb;
-    font-size: 13px;
+  padding: 40px 20px 28px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 500;
 }
 @media (max-width: 1000px) {
-    .about-page {
-        padding: 56px 32px 0;
-    }
-    .about-hero {
-        gap: 32px;
-        margin-bottom: 56px;
-    }
-    .about-grid {
-        gap: 16px;
-    }
-    .about-proposal {
-        gap: 24px;
-    }
-    .about-team {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .about-journey {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        row-gap: 32px;
-    }
-    .about-journey::before {
-        display: none;
-    }
+  .about-page {
+    padding: 56px 32px 0;
+  }
+  .about-hero {
+    gap: 32px;
+    margin-bottom: 56px;
+  }
+  .about-grid {
+    gap: 16px;
+  }
+  .about-proposal {
+    gap: 24px;
+  }
+  .about-team {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .about-journey {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 32px;
+  }
+  .about-journey::before {
+    display: none;
+  }
 }
 @media (max-width: 700px) {
-    .about-page {
-        padding: 40px 20px 0;
-    }
-    .about-hero {
-        grid-template-columns: 1fr;
-        gap: 28px;
-        margin-bottom: 40px;
-    }
-    .about-hero h1 {
-        font-size: clamp(32px, 8vw, 44px);
-    }
-    .about-logo {
-        width: min(80%, 300px);
-    }
-    .about-grid,
-    .about-proposal {
-        grid-template-columns: 1fr;
-    }
-    .about-card {
-        padding: 20px;
-    }
-    .about-proposal {
-        margin: 48px 0 36px;
-    }
-    .about-quote {
-        min-height: 180px;
-        padding: 28px;
-    }
-    .about-section {
-        margin-top: 52px;
-    }
-    .about-team {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-    }
-    .about-journey {
-        grid-template-columns: 1fr;
-        gap: 28px;
-    }
-    .about-journey li {
-        padding-left: 54px;
-    }
-    .about-journey .about-number {
-        position: absolute;
-        top: 0;
-        left: 0;
-    }
-    .about-cta {
-        margin-top: 52px;
-        padding: 28px 20px;
-    }
-    .about-button {
-        width: 100%;
-        padding: 14px 12px;
-        font-size: 14px;
-    }
+  .about-page {
+    padding: 40px 20px 0;
+  }
+  .about-hero {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    margin-bottom: 40px;
+  }
+  .about-hero h1 {
+    font-size: clamp(32px, 8vw, 44px);
+  }
+  .about-logo {
+    width: min(80%, 300px);
+  }
+  .about-grid,
+  .about-proposal {
+    grid-template-columns: 1fr;
+  }
+  .about-card {
+    padding: 20px;
+  }
+  .about-proposal {
+    margin: 48px 0 36px;
+  }
+  .about-quote {
+    min-height: 180px;
+    padding: 28px;
+  }
+  .about-section {
+    margin-top: 52px;
+  }
+  .about-team {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .about-journey {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .about-journey li {
+    padding-left: 54px;
+  }
+  .about-journey .about-number {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .about-cta {
+    margin-top: 0;
+    padding: 28px 20px;
+  }
+  .about-ending {
+    padding-top: 40px;
+  }
+  .about-middle {
+    margin-top: 40px;
+    padding-top: 120px;
+    padding-bottom: 130px;
+  }
+  .about-middle::before {
+    top: 120px;
+    bottom: 130px;
+  }
+  .about-waves {
+    height: 150px;
+    background-size: 100% 200px;
+  }
+  .about-waves-enter {
+    background-position:
+      center 65px,
+      center 43px,
+      center 20px,
+      center 0;
+  }
+  .about-waves-exit {
+    background-position:
+      center 57px,
+      center 31px,
+      center 6px,
+      center -20px;
+  }
+  .about-button {
+    width: 100%;
+    padding: 14px 12px;
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 480px) {
+  .about-team {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .about-person {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    column-gap: 16px;
+    align-items: center;
+    text-align: left;
+  }
+  .about-person-icon {
+    grid-row: 1 / 3;
+    margin: 0;
+  }
+  .about-person h3 {
+    align-self: end;
+    overflow-wrap: normal;
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+    font-weight: 600;
+  }
+  .about-person p {
+    align-self: start;
+    margin-top: 6px;
+  }
 }

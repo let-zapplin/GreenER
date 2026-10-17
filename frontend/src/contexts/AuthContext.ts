@@ -1,5 +1,9 @@
 import { createContext } from "react";
-import type { AuthSession, LoginCredentials, RegisterCredentials } from "../types/auth";
+import type {
+  AuthSession,
+  LoginCredentials,
+  RegisterCredentials,
+} from "../types/auth";
 
 export type AuthContextValue = {
   session: AuthSession | null;
@@ -11,4 +15,6 @@ export type AuthContextValue = {
   logout: () => void;
 };
 
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | undefined>(
+  undefined,
+);

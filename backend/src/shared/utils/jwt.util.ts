@@ -4,8 +4,8 @@ import jwt from "jsonwebtoken";
 import { parseJwtExpiration } from "./jwt-expiration.js";
 
 type TokenPayload = {
-  sub: string
-}
+  sub: string;
+};
 
 dotenv.config({
   quiet: true,
@@ -20,12 +20,12 @@ function getJwtSecret(): string {
   return secret;
 }
 
-export function createToken(payload:TokenPayload) {
+export function createToken(payload: TokenPayload) {
   return jwt.sign(payload, getJwtSecret(), {
     expiresIn: parseJwtExpiration(process.env.JWT_EXPIRES_IN),
   });
 }
 
-export function verifyToken(token:string) {
+export function verifyToken(token: string) {
   return jwt.verify(token, getJwtSecret());
 }

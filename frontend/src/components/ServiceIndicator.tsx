@@ -1,4 +1,5 @@
 import type { MonitoredService } from "../types/service";
+import { ServicePopover } from "./ServicePopover";
 
 const statusLabels = {
   active: "Ativo",
@@ -14,11 +15,15 @@ type ServiceIndicatorProps = {
 
 export function ServiceIndicator({ service, onSelect }: ServiceIndicatorProps) {
   return (
-    <button
-      type="button"
-      className={`service-indicator ${service.status}`}
-      aria-label={`${service.name}: ${statusLabels[service.status]}. Ver detalhes`}
-      onClick={() => onSelect(service.id)}
-    />
+    <div className="service-indicator-wrapper">
+      <button
+        type="button"
+        className={`service-indicator ${service.status}`}
+        aria-label={`${service.name}: ${statusLabels[service.status]}. Ver detalhes`}
+        onClick={() => onSelect(service.id)}
+      />
+
+      <ServicePopover service={service} />
+    </div>
   );
 }

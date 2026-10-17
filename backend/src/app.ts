@@ -6,7 +6,6 @@ import { errorMiddleware } from "./shared/middlewares/error.middleware.js";
 
 const app = express();
 
-
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
