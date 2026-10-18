@@ -1,44 +1,116 @@
-# 📌 Sprint 1 — GreenER
+<div align="center">
 
-> **Período:**28/09 — 19/10/2026 · **Status:** ✔️ Finalizada
->
-> Voltar para o [README](../../README.md).
+# 🌿 GreenER — Sprint 1
+
+### Da concepção ao primeiro fluxo funcional
+
+**28 de setembro → 19 de outubro de 2026**
+
+[← Voltar ao projeto](../../README.md) · [Plano de entregas](../plano-de-entregas.md) · [Arquitetura](../arquitetura.md)
+
+</div>
 
 ---
-## Objetivo da sprint
-Entregar a fundação técnica e um primeiro incremento funcional capaz de descobrir serviços em uma API externa, sincronizá-los com o PostgreSQL e apresentá-los na interface React.
 
-## Incremento funcional
+## 01 · O desafio
+
+Como construir uma base confiável para medir o impacto ambiental de serviços de software, antes de iniciar os cálculos de consumo energético e emissões?
+
+Nesta primeira sprint, o foco foi **estruturar a aplicação e validar sua comunicação ponta a ponta**: descobrir serviços em uma API externa, armazenar suas informações no PostgreSQL e disponibilizá-las para visualização no frontend.
+
+> **Objetivo da Sprint 1:** entregar a fundação técnica do GreenER e demonstrar a descoberta, sincronização e listagem de serviços integradas.
+
+## 02 · Da ideia ao planejamento
+
+A equipe iniciou com a definição dos fluxos, a modelagem de dados e a prototipação das interfaces. Esses materiais orientaram a implementação das camadas do sistema.
+
+<div align="center">
+
+<img src="../prototipos/01-home.png" alt="Protótipo da página inicial do GreenER" width="72%" />
+
+*Protótipo da experiência inicial do GreenER.*
+
+</div>
+
+| Artefato | O que orientou |
+| :--- | :--- |
+| [Casos de uso](../uml/UseCase.png) | Interações e funcionalidades previstas |
+| [Diagrama de sequência](../uml/Sequence%20Diagram0.png) | Comunicação entre componentes |
+| [Diagrama de classes](../uml/Class%20Diagram0.png) | Organização inicial dos elementos de domínio |
+| [Modelo lógico do banco](../bd_models/logical-model-greener.png) | Entidades e relacionamentos para persistência |
+| [Protótipos de interface](../prototipos/) | Navegação, hierarquia visual e telas previstas |
+
+## 03 · Construção da base tecnológica
+
+A equipe preparou uma estrutura com serviços separados para facilitar o desenvolvimento, a integração e os testes.
+
 ```mermaid
-flowchart LR
- A[Metrics Aggregator /services] --> B[Backend: descoberta]
- B --> C[Sincronização]
- C --> D[(PostgreSQL)]
- D --> E[API interna /api/servicos]
- E --> F[Frontend: listagem e estados]
+flowchart TD
+    A[Frontend<br/>React + TypeScript] -->|HTTP / JSON| B[Backend<br/>Node.js + Express + TypeScript]
+    B -->|SQL| C[(PostgreSQL)]
+    D[Metrics Aggregator API] -->|/services| B
+    E[Docker Compose] -. executa .-> A
+    E -. executa .-> B
+    E -. executa .-> C
 ```
 
-## Entregas registradas
-- **Estrutura e infraestrutura:** repositório, padrões, Docker Compose, PostgreSQL, backend Node/TypeScript e frontend React/TypeScript.
-- **Análise e design:** protótipos, modelo de dados, casos de uso e diagramas de arquitetura/fluxo.
-- **Integração:** descoberta de serviços, sincronização sem duplicação e listagem por API interna.
-- **Interface:** listagem de serviços, navegação, responsividade inicial e estados de carregamento, vazio e erro.
-- **Segurança inicial:** rotas de registro e login; conferir proteção de recursos específicos.
-- **Qualidade:** testes unitários e evidência de validação ponta a ponta.
+**Fundamentos entregues:** organização do repositório, backend e frontend iniciais, banco de dados, ambiente Docker, autenticação inicial e estrutura modular de serviços. A integração com a API externa tornou possível realizar o primeiro fluxo funcional do produto.
 
-## Evidências e artefatos
-- Backlog completo e responsáveis: manter a tabela original da sprint abaixo deste resumo, sem eliminar rastreabilidade.
-- [Modelo de banco](../../database/README.md)
-- [Manual de testes unitários](../testes/manual_teste_unitario.md)
-- [Manual de validação](../testes/manualdevalidacao.md)
-- [Plano de entregas](../plano-de-entregas.md)
-- [Arquitetura](../arquitetura.md)
-- [Burndown](burning_down_sp1.jpeg)
-- [Vídeo de demonstração](https://youtu.be/pGdiciJxTPw)
+> **Escopo desta etapa:** os cálculos de energia e CO₂e, as coletas periódicas e os painéis analíticos pertencem às evoluções planejadas para as próximas sprints.
 
-## Sprint Backlog
+## 04 · O primeiro incremento funcional
 
-[![Projects](https://img.shields.io/badge/Projects-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/orgs/let-zapplin/projects/2)
+O núcleo da Sprint 1 foi fazer dados reais de serviços percorrerem o sistema:
+
+```mermaid
+flowchart LR
+    A[1. Descobrir<br/>/services] --> B[2. Processar<br/>Backend]
+    B --> C[3. Sincronizar<br/>PostgreSQL]
+    C --> D[4. Consultar<br/>API interna]
+    D --> E[5. Exibir<br/>React]
+```
+
+A implementação incluiu descoberta de serviços, atualização de registros sem duplicação, disponibilização pela API interna e primeira listagem no frontend, com tratamento dos estados de carregamento, ausência de dados e erro.
+
+<div align="center">
+
+<img src="../prototipos/03-monitoramento.png" alt="Protótipo da tela de monitoramento" width="78%" />
+
+*Visão de interface proposta para o monitoramento — protótipo, não captura da implementação final.*
+
+</div>
+
+## 05 · Como validamos
+
+A sprint incluiu testes automatizados iniciais e uma verificação de integração entre API externa, backend, banco e interface. As imagens a seguir registram evidências armazenadas no repositório.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="../testes/log_teste_unit%C3%A1rio_1sprint.jpg" alt="Registro de execução de testes unitários" width="100%" /><br/><sub>Testes unitários</sub></td>
+<td align="center" width="50%"><img src="../testes/validacao_fluxo_1sprint.jpg" alt="Registro de validação do fluxo integrado" width="100%" /><br/><sub>Validação da integração</sub></td>
+</tr>
+</table>
+
+**Registros técnicos:** [manual de testes unitários](../testes/manual_teste_unitario.md) · [manual de validação](../testes/manualdevalidacao.md)
+
+## 06 · Acompanhamento da sprint
+
+O burndown registra a evolução das atividades ao longo do período. O detalhamento completo das tarefas, responsáveis, prioridades e requisitos permanece acessível abaixo.
+
+<div align="center">
+
+<img src="burning_down_sp1.jpeg" alt="Gráfico burndown da Sprint 1" width="82%" />
+
+*Burndown — Sprint 1.*
+
+</div>
+
+<details>
+<summary><strong>📋 Consultar backlog completo da Sprint 1 (19 atividades)</strong></summary>
+
+<br/>
+
+[Ver quadro no GitHub Projects](https://github.com/orgs/let-zapplin/projects/2)
 
 | Tarefa | Dificuldade | Responsável | Requisitos | Prioridade | Área | Objetivo / Entrega esperada | Concluída |
 | -------- | :---------: | :------------ | :----------: | :----------: | :---- | :--------------------------- | :---------: |
@@ -62,34 +134,40 @@ flowchart LR
 | Configurar testes automatizados iniciais (unitario) | 8 | Patricia | `Qualidade` | Baixa | Backend / Frontend | Configurar a ferramenta de testes do projeto e criar pelo menos um teste automatizado para validar um fluxo crítico da Sprint 1 | ✔️ |
 | Validar integração ponta a ponta | 5 | Patricia | `RF01` `RP01–RP04` | Média | Geral | Validar o fluxo Metrics API → Backend → PostgreSQL → API GreenER → React | ✔️ |
 ---
-## 📁 Documentações
 
-[Ata Sprint 1](https://docs.google.com/document/d/1X6rmJBm1bTjtur5AG_jwcQY1v6v7jn2c4BwI4HIcfgg/edit?tab=t.0)
+</details>
 
-[Sprint Retrospective](https://docs.google.com/document/d/1X6rmJBm1bTjtur5AG_jwcQY1v6v7jn2c4BwI4HIcfgg/edit?tab=t.xxxrd1bjaza0)
+## 07 · Demonstração do incremento
+
+Nesta demonstração, apresentamos a evolução da equipe desde a estruturação inicial até o fluxo de dados entre os serviços externos, o backend, o banco e o frontend.
+
+<div align="center">
+
+<a href="https://youtu.be/pGdiciJxTPw">
+  <img src="https://img.youtube.com/vi/pGdiciJxTPw/hqdefault.jpg" width="560" alt="Assistir à demonstração da Sprint 1 no YouTube" />
+</a>
+
+**[▶ Assistir à demonstração da Sprint 1](https://youtu.be/pGdiciJxTPw)**
+
+</div>
+
+## 08 · Resultados e continuidade
+
+Ao final da Sprint 1, o projeto já conta com sua **base de execução, persistência e comunicação entre camadas**, além de um primeiro incremento demonstrável. Esse resultado estabelece as condições para avançar da identificação dos serviços para a análise de seu impacto ambiental.
+
+**Próximo capítulo — Sprint 2:** coleta periódica de métricas, histórico, indicadores de energia e CO₂e e primeiros componentes do dashboard.
+
+### Registros da equipe
+
+- [Ata da Sprint 1](https://docs.google.com/document/d/1X6rmJBm1bTjtur5AG_jwcQY1v6v7jn2c4BwI4HIcfgg/edit?tab=t.0)
+- [Retrospectiva da Sprint 1](https://docs.google.com/document/d/1X6rmJBm1bTjtur5AG_jwcQY1v6v7jn2c4BwI4HIcfgg/edit?tab=t.xxxrd1bjaza0)
 
 ---
-## 📉 Burndown
 
-![Burndown Sprint 1](burning_down_sp1.jpeg)
+<div align="center">
 
----
+**GreenER · Sprint 1** — Fundação técnica e primeiro incremento funcional
 
-## 🎬 Demonstração
+[← Voltar ao README](../../README.md)
 
-[![Assistir vídeo da Sprint 1](https://img.youtube.com/vi/pGdiciJxTPw/hqdefault.jpg)](https://youtu.be/pGdiciJxTPw)
-
-## Critérios de aceite e validação
-| Critério | Evidência a conferir |
-|---|---|
-| Serviços retornam da API externa | Resultado de `/api/servicos/discover` |
-| Serviços persistem no banco | Resultado da sincronização e consulta SQL |
-| Frontend apresenta serviços | Tela integrada com `/api/servicos` |
-| Erros são tratados | Testes e cenários de falha |
-| Ambiente sobe de forma reproduzível | `docker compose up --build` e healthchecks |
-
-## Retrospectiva e pendências
-Inserir decisões da Sprint Review, dificuldades encontradas, ações de melhoria e responsáveis. 
-
-## Próximos passos
-Implementar coletas periódicas, histórico, cálculo de energia e CO₂e e dashboard da Sprint 2.
+</div>
