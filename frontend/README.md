@@ -41,15 +41,31 @@ Estrutura geral:
 
 ```
 frontend/
+├── assets/
+│   ├── camadasFundo/
+│   ├── icones/
+│   ├── pfps/
+│   └── … imagens e ilustrações
+├── tests/
 ├── Dockerfile
+├── index.html
+├── package.json
+├── package-lock.json
+├── README.md
+├── tsconfig.json
+├── vite.config.ts
 └── src/
     ├── components/
+    ├── contexts/
+    ├── hooks/
     ├── pages/
+    ├── providers/
     ├── services/
+    ├── styles/
     ├── types/
-    └── styles/
+    ├── App.tsx
+    └── main.tsx
 ```
-
 
 ---
 
@@ -63,18 +79,18 @@ frontend/
 | Monitoramento | Descoberta de serviços, localização e mudanças na lista | Implementada |
 | Análises | Aviso “Coming soon” e acesso ao monitoramento | Página provisória |
 | Dashboard | Apresentação dos dados dos serviços, do consumo de energia e das emissões de CO₂e | ⏳ Planejada |
-| Login | Acesso à área de configuração | ⏳ Planejada |
+| Login | Autenticação pela landing page e acesso às rotas protegidas | Implementada |
 | Configuração | Ajustes do monitoramento, com acesso protegido | ⏳ Planejada |
 
-O monitoramento consulta `/api/servicos/discover` imediatamente ao abrir a tela e verifica a cada 1 segundo se pode iniciar uma nova consulta. Se a anterior ainda estiver em andamento, aguarda o próximo ciclo, sem sobrepor requisições. O timeout do frontend é de 15 segundos, superior aos 10 segundos configurados para a API externa no `.env.example`. Se o timeout do backend for aumentado, ajuste também `REQUEST_TIMEOUT_MS` em `src/pages/Monitoring.tsx`.
+O monitoramento consulta `/api/servicos` imediatamente ao abrir a tela, com uma sessão autenticada, para obter os serviços armazenados no backend e seus status. A cada 1 segundo, verifica se pode iniciar uma nova consulta; se a anterior ainda estiver em andamento, aguarda o próximo ciclo, sem sobrepor requisições. O timeout de cada consulta no frontend é de 15 segundos, definido em `src/hooks/useMonitoring.ts`.
 
 A tela informa a última atualização bem-sucedida e sinaliza dados desatualizados quando uma consulta falha. Ao voltar à página, o cabeçalho indica que os dados estão sendo atualizados, sem exibir um aviso de falha. O histórico de serviços permanece disponível durante a navegação na mesma aba; recarregar a aplicação reinicia esse histórico. Uma primeira resposta vazia também conta como consulta bem-sucedida, permitindo detectar como novos os serviços que surgirem depois.
 
-Os status refletem presença, ausência e retorno na lista de descoberta. A coleta de métricas, a verificação individual de disponibilidade e os indicadores ambientais ainda não estão implementados. Os indicadores têm legenda e acesso por teclado; ao clicar ou ativar um indicador, a página rola até o card correspondente e destaca apenas o serviço. Clicar fora do card ou pressionar Escape remove a seleção.
+Os status exibidos combinam a disponibilidade informada pelo backend com os destaques temporários “Novo” e “Retornou”, definidos pelo frontend. O status “Indisponível” depende do valor enviado pelo backend; a ausência de um serviço na resposta apenas o remove da lista exibida. A coleta de métricas e os indicadores ambientais ainda não estão implementados. Os indicadores têm legenda e acesso por teclado; ao clicar ou ativar um indicador, a página rola até o card correspondente e destaca o serviço. Clicar fora do card ou pressionar Escape remove a seleção.
 
 Os cards mostram nome, região, status e localização. As informações de atualização do ambiente ficam recolhidas no cabeçalho e podem ser abertas manualmente; recolher esse painel não interrompe as consultas automáticas.
 
-Os destaques “Novo” e “Retornou” permanecem por 3 segundos a partir da detecção, sem renovar esse prazo nas consultas seguintes. Depois desse período, a próxima consulta bem-sucedida que confirmar sua presença muda o serviço para “Ativo”. Se ele desaparecer da lista antes disso, muda imediatamente para “Indisponível”; um novo retorno inicia outro período de 3 segundos.
+Os destaques “Novo” e “Retornou” têm prazo de 3 segundos a partir da detecção, sem renovar esse prazo nas consultas seguintes. Depois desse período, a próxima consulta bem-sucedida que confirmar o serviço como disponível muda seu status para “Ativo”. Se uma consulta retornar o status “Indisponível”, esse status substitui imediatamente o destaque. Se uma consulta posterior informar que o serviço está disponível novamente, ele recebe o destaque “Retornou”, iniciando outro período de 3 segundos.
 
 ---
 
