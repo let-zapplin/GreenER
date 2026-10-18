@@ -1,165 +1,0 @@
-[33mcommit b6bff1ce84c417cae85dabbc9ea94bd5c53092a8[m
-Author: Patricia Maidana <patricia.rmaidana@gmail.com>
-Date:   Thu Oct 15 18:16:01 2026 -0300
-
-    aatualicação readme e manuais
-
-[1mdiff --git a/README.md b/README.md[m
-[1mindex f224512..34ab77d 100644[m
-[1m--- a/README.md[m
-[1m+++ b/README.md[m
-[36m@@ -14,6 +14,7 @@[m [mO GreenER é um sistema que monitora aplicações e serviços de uma infraestrut[m
- - 🚀 Como Funciona[m
- - 📂 Organização do Repositório[m
- - ▶️ Como Executar[m
-[32m+[m[32m- ✅ Como testar e validar[m[41m[m
- - 📚 Documentação[m
- - 🗓 Sprints[m
- - 👥 Equipe[m
-[36m@@ -209,6 +210,16 @@[m [mPara instruções específicas de cada parte, consulte os READMEs do [frontend]([m
- [m
- ---[m
- [m
-[32m+[m[32m## ✅ Como testar e validar[m[41m[m
-[32m+[m[41m[m
-[32m+[m[32mPara fazer testes unitários[m[41m [m
-[32m+[m[41m[m
-[32m+[m[32m- [`docs/testes/manual_teste_unitario.md`](docs/testes/manual_teste_unitario.md) - Manual com instruções para testes unitários[m[41m[m
-[32m+[m[41m[m
-[32m+[m[32m- [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md) - Manual de validação de fluxo de Metrics API ao React[m[41m[m
-[32m+[m[41m[m
-[32m+[m[32m---[m[41m[m
-[32m+[m[41m[m
- ## 📚 Documentação[m
- [m
- | Documento | Conteúdo |[m
-[36m@@ -229,11 +240,13 @@[m [mMateriais do desafio:[m
- [m
- O projeto é desenvolvido em três sprints. O registro de cada uma (objetivo, itens concluídos e pendentes, decisões da Sprint Review) fica em `docs/sprints/`.[m
- [m
-[31m-| Sprint | Registro | Situação |[m
-[31m-| --- | --- | --- |[m
-[31m-| Sprint 1 | [`docs/sprints/sprint-1.md`](docs/sprints/sprint-1.md) | 🔄 Em andamento |[m
-[31m-| Sprint 2 | [`docs/sprints/sprint-2.md`](docs/sprints/sprint-2.md) | ⏳ Planejada |[m
-[31m-| Sprint 3 | [`docs/sprints/sprint-3.md`](docs/sprints/sprint-3.md) | ⏳ Planejada |[m
-[32m+[m[32m| Sprint | Período | Principais Entregas | Status |[m[41m[m
-[32m+[m[32m|--------|---------|---------------------|--------|[m[41m[m
-[32m+[m[32m| [**Sprint 1**](./docs/sprints/sprint-1.md) | 28/09 — 19/10/2026 | Prototipação · Diagramas UML · Modelagem BD · Conexão API e BD · Teste unitário e validação | ✔️ Finalizada |[m[41m[m
-[32m+[m[32m| [**Sprint 2**](./docs/sprints/sprint-2.md) | 20/10 — 09/11/2026 | A ser definido | ⏳ |[m[41m[m
-[32m+[m[32m| [**Sprint 3**](./docs/sprints/sprint-3.md) | 10/11 — 23/11/2026 | A ser definido | ⏳ |[m[41m[m
-[32m+[m[41m[m
-[32m+[m[41m[m
- [m
- ---[m
- [m
-[36m@@ -245,7 +258,7 @@[m [mO projeto é desenvolvido em três sprints. O registro de cada uma (objetivo, it[m
- | Gustavo Koiti | Product Owner | [@gustavokoitiyoshimura](https://github.com/gustavokoitiyoshimura) |[m
- | Igor Souza | Desenvolvedor | [@igorcsouzaa](https://github.com/igorcsouzaa) |[m
- | Marcello Campbell | Desenvolvedor | [@mparise28-dev](https://github.com/mparise28-dev) |[m
-[31m-| Patrícia Maidana | Desenvolvedor | [@PatyMaidana](https://github.com/PatyMaidana) |[m
-[32m+[m[32m| Patricia R. Maidana | Desenvolvedor | [@PatyMaidana](https://github.com/PatyMaidana) |[m[41m[m
- [m
- **Instituição:** FATEC Jacareí, curso de Desenvolvimento de Software Multiplataforma (DSM)[m
- **Parceiro:** Unilaunch[m
-[1mdiff --git a/backend/README.MD b/backend/README.MD[m
-[1mindex 060ab4a..879f83d 100644[m
-[1m--- a/backend/README.MD[m
-[1m+++ b/backend/README.MD[m
-[36m@@ -132,67 +132,5 @@[m [mnpm run dev[m
- - [`docs/calculos.md`](../docs/calculos.md): fórmulas e premissas do cálculo de energia e CO₂e[m
- - [`database/README.md`](../database/README.md): banco de dados[m
- - [`frontend/README.md`](../frontend/README.md): frontend[m
-[32m+[m[32m- [`docs/testes/manual_teste_unitario.md`](../docs/testes/manual_teste_unitario.md): manual de execução de teste unitário[m
- [m
-[31m----[m
-[31m-[m
-[31m-## Testes unitários com Docker[m
-[31m-[m
-[31m-Os testes do backend utilizam Vitest. As chamadas à API externa e a dependência do repositório são simuladas, permitindo verificar o comportamento do serviço sem consultar a API real ou acessar o banco.[m
-[31m-[m
-[31m-### Como executar[m
-[31m-[m
-[31m-Com o Docker Desktop iniciado, abra um terminal na raiz do projeto, onde está o arquivo `compose.yaml`.[m
-[31m-[m
-[31m-1. Inicie os containers:[m
-[31m-[m
-[31m-   ```bash[m
-[31m-   docker compose up --build -d[m
-[31m-   ```[m
-[31m-[m
-[31m-2. Execute os testes dentro do container do backend:[m
-[31m-[m
-[31m-   ```bash[m
-[31m-   docker compose exec backend npm test[m
-[31m-   ```[m
-[31m-[m
-[31m-   Se os containers já estiverem rodando, basta executar o comando de teste.[m
-[31m-[m
-[31m-3. Para executar os testes automaticamente a cada alteração:[m
-[31m-[m
-[31m-   ```bash[m
-[31m-   docker compose exec backend npm run test:watch[m
-[31m-   ```[m
-[31m-[m
-[31m-   Pressione `Ctrl+C` para encerrar o acompanhamento. A aplicação continuará rodando.[m
-[31m-[m
-[31m-### Cenários cobertos[m
-[31m-[m
-[31m-O arquivo `src/modules/servicos/servicos.service.test.ts` verifica:[m
-[31m-[m
-[31m-- Retorno dos serviços com `location` e `metrics_path`.[m
-[31m-- Tratamento de resposta HTTP 500.[m
-[31m-- Tratamento de falha de conexão.[m
-[31m-- Cancelamento da requisição ao atingir o timeout.[m
-[31m-[m
-[31m-O teste de timeout utiliza um relógio simulado, sem esperar cinco segundos reais.[m
-[31m-[m
-[31m-As mensagens de erro exibidas nos cenários de falha são esperadas. Confira o resumo do Vitest: `4 passed` indica que os quatro testes passaram.[m
-[31m-[m
-[31m-### Se o Vitest não for encontrado[m
-[31m-[m
-[31m-Atualize as dependências dentro do container e execute novamente:[m
-[31m-[m
-[31m-```bash[m
-[31m-docker compose exec backend npm install[m
-[31m-docker compose exec backend npm test[m
-[31m-```[m
-[31m-[m
-[31m-### Como encerrar o ambiente[m
-[31m-[m
-[31m-Na pasta que contém o `compose.yaml`, execute:[m
-[31m-[m
-[31m-```bash[m
-[31m-docker compose down[m
-[31m-```[m
-[31m-[m
-[31m-Esse comando encerra os containers e preserva os dados armazenados no volume do PostgreSQL.[m
-[1mdiff --git a/docs/sprints/sprint-1.md b/docs/sprints/sprint-1.md[m
-[1mindex e69de29..da23556 100644[m
-[1m--- a/docs/sprints/sprint-1.md[m
-[1m+++ b/docs/sprints/sprint-1.md[m
-[36m@@ -0,0 +1,57 @@[m
-[32m+[m[32m# 📌 Sprint 1 — GreenER[m
-[32m+[m
-[32m+[m[32m> **Período:**28/09 — 19/10/2026 · **Status:** ✔️ Finalizada[m
-[32m+[m[32m>[m
-[32m+[m[32m> Voltar para o [README](../../README.md).[m
-[32m+[m
-[32m+[m[32m---[m
-[32m+[m
-[32m+[m[32m## Entregas[m
-[32m+[m
-[32m+[m[32mPrototipação · Diagramas UML · Modelagem BD · Conexão API e BD · Teste unitário e validação[m
-[32m+[m
-[32m+[m[32m---[m
-[32m+[m
-[32m+[m[32m## Backlog[m
-[32m+[m
-[32m+[m[32m[![Projects](https://img.shields.io/badge/Projects-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/orgs/let-zapplin/projects/2)[m
-[32m+[m
-[32m+[m[32m| Tarefa | Dificuldade | Responsável | Requisitos | Prioridade | Área | Objetivo / Entrega esperada | Concluída |[m
-[32m+[m[32m| -------- | :---------: | :------------ | :----------: | :----------: | :---- | :--------------------------- | :---------: |[m
-[32m+[m[32m| Estruturar repositório e padrões do projeto | 3 | Vitor, Igor, Gustavo | `RNF05` `RP07` | Alta | Geral | Organizar pastas, padrões de commit, branches, .env.example e README inicial para que toda a equipe consiga trabalhar no projeto | ✔️ |[m
-[32m+[m[32m| Modelagem inicial do banco de dados | 5 | Patricia, Gustavo | `RF10` `RP03` | Alta | Backend / DB | Definir entidades, atributos e relacionamentos necessários ao MVP e produzir o modelo de dados inicial | ✔️ |[m
-[32m+[m[32m| Diagrama de casos de uso | 2 | Marcelo | `RNF05` | Alta | Geral | Representar de forma clara os atores e principais funcionalidades do sistema | ✔️ |[m
-[32m+[m[
