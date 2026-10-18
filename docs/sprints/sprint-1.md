@@ -95,7 +95,7 @@ A sprint incluiu testes automatizados iniciais e uma verificação de integraç�
 
 ## 06 · Acompanhamento da sprint
 
-O burndown registra a evolução das atividades ao longo do período. O detalhamento completo das tarefas, responsáveis, prioridades e requisitos permanece acessível abaixo.
+O burndown registra a evolução das atividades ao longo do período, foi definido 16 dias úteis de trabalho para a primeira sprint, com atualizações a cada 2 dias. O detalhamento completo das tarefas, responsáveis, prioridades e requisitos permanece acessível abaixo.
 
 <div align="center">
 
