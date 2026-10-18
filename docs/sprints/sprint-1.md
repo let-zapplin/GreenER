@@ -5,14 +5,38 @@
 > Voltar para o [README](../../README.md).
 
 ---
+## Objetivo da sprint
+Entregar a fundação técnica e um primeiro incremento funcional capaz de descobrir serviços em uma API externa, sincronizá-los com o PostgreSQL e apresentá-los na interface React.
 
-## Entregas
+## Incremento funcional
+```mermaid
+flowchart LR
+ A[Metrics Aggregator /services] --> B[Backend: descoberta]
+ B --> C[Sincronização]
+ C --> D[(PostgreSQL)]
+ D --> E[API interna /api/servicos]
+ E --> F[Frontend: listagem e estados]
+```
 
-Prototipação · Diagramas UML · Modelagem BD · Conexão API e BD · Teste unitário e validação
+## Entregas registradas
+- **Estrutura e infraestrutura:** repositório, padrões, Docker Compose, PostgreSQL, backend Node/TypeScript e frontend React/TypeScript.
+- **Análise e design:** protótipos, modelo de dados, casos de uso e diagramas de arquitetura/fluxo.
+- **Integração:** descoberta de serviços, sincronização sem duplicação e listagem por API interna.
+- **Interface:** listagem de serviços, navegação, responsividade inicial e estados de carregamento, vazio e erro.
+- **Segurança inicial:** rotas de registro e login; conferir proteção de recursos específicos.
+- **Qualidade:** testes unitários e evidência de validação ponta a ponta.
 
----
+## Evidências e artefatos
+- Backlog completo e responsáveis: manter a tabela original da sprint abaixo deste resumo, sem eliminar rastreabilidade.
+- [Modelo de banco](../../database/README.md)
+- [Manual de testes unitários](../testes/manual_teste_unitario.md)
+- [Manual de validação](../testes/manualdevalidacao.md)
+- [Plano de entregas](../plano-de-entregas.md)
+- [Arquitetura](../arquitetura.md)
+- [Burndown](burning_down_sp1.jpeg)
+- [Vídeo de demonstração](https://youtu.be/pGdiciJxTPw)
 
-## Backlog
+## Sprint Backlog
 
 [![Projects](https://img.shields.io/badge/Projects-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/orgs/let-zapplin/projects/2)
 
@@ -53,5 +77,19 @@ Prototipação · Diagramas UML · Modelagem BD · Conexão API e BD · Teste un
 
 ## 🎬 Demonstração
 
-<!-- Adicione o link do vídeo quando disponível -->
 [![Assistir vídeo da Sprint 1](https://img.youtube.com/vi/pGdiciJxTPw/hqdefault.jpg)](https://youtu.be/pGdiciJxTPw)
+
+## Critérios de aceite e validação
+| Critério | Evidência a conferir |
+|---|---|
+| Serviços retornam da API externa | Resultado de `/api/servicos/discover` |
+| Serviços persistem no banco | Resultado da sincronização e consulta SQL |
+| Frontend apresenta serviços | Tela integrada com `/api/servicos` |
+| Erros são tratados | Testes e cenários de falha |
+| Ambiente sobe de forma reproduzível | `docker compose up --build` e healthchecks |
+
+## Retrospectiva e pendências
+Inserir decisões da Sprint Review, dificuldades encontradas, ações de melhoria e responsáveis. 
+
+## Próximos passos
+Implementar coletas periódicas, histórico, cálculo de energia e CO₂e e dashboard da Sprint 2.
