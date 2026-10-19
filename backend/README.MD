@@ -158,6 +158,7 @@ npm run dev
 | `npm run typecheck` | Verifica os tipos sem gerar arquivos                           |
 | `npm run build`     | Compila os arquivos de`src/` para `dist/`                  |
 | `npm start`         | Executa`dist/server.js` após o build                        |
+| `npm run test`       | Roda os testes unitários com Vitest                          |
 
 ---
 
