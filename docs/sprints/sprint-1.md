@@ -24,13 +24,6 @@ Nesta primeira sprint, o foco foi **estruturar a aplicação e validar sua comun
 
 A equipe iniciou com a definição dos fluxos, a modelagem de dados e a prototipação das interfaces. Esses materiais orientaram a implementação das camadas do sistema.
 
-<div align="center">
-
-<img src="../prototipos/01-home.png" alt="Protótipo da página inicial do GreenER" width="72%" />
-
-*Protótipo da experiência inicial do GreenER.*
-
-</div>
 
 | Artefato | O que orientou |
 | :--- | :--- |
@@ -71,14 +64,6 @@ flowchart LR
 ```
 
 A implementação incluiu descoberta de serviços, atualização de registros sem duplicação, disponibilização pela API interna e primeira listagem no frontend, com tratamento dos estados de carregamento, ausência de dados e erro.
-
-<div align="center">
-
-<img src="../prototipos/03-monitoramento.png" alt="Protótipo da tela de monitoramento" width="78%" />
-
-*Visão de interface proposta para o monitoramento — protótipo, não captura da implementação final.*
-
-</div>
 
 ## 05 · Como validamos
 
@@ -151,7 +136,76 @@ Nesta demonstração, apresentamos a evolução da equipe desde a estruturação
 
 </div>
 
-## 08 · Resultados e continuidade
+## 08. Retrospectiva da Sprint
+
+### Da organização à integração
+
+A retrospectiva da primeira sprint reuniu as percepções dos cinco integrantes da equipe, permitindo avaliar os resultados alcançados, identificar desafios e estabelecer oportunidades de melhoria para as próximas etapas do desenvolvimento.
+
+### Principais percepções
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>✅ O que funcionou bem</h4>
+      A organização das tarefas foi destacada unanimemente como um dos principais fatores de sucesso. A distribuição de responsabilidades, a comunicação e o comprometimento contribuíram para o cumprimento do planejamento e permitiram antecipar atividades futuras.
+    </td>
+    <td width="50%" valign="top">
+      <h4>⚠️ Desafios identificados</h4>
+      A conciliação com compromissos externos impactou pontualmente o desenvolvimento. Também foram identificadas oportunidades de melhoria na integração entre frontend e backend e na resolução colaborativa de conflitos de merge.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>💡 Aprendizados</h4>
+      A equipe reconheceu a importância da organização, da responsabilidade individual, da confiança e da comunicação. A experiência também evidenciou a necessidade de compartilhar conhecimentos e reconhecer limitações individuais.
+    </td>
+    <td width="50%" valign="top">
+      <h4>🚀 Oportunidades de evolução</h4>
+      Fortalecer a integração técnica entre as diferentes frentes, aprimorar a documentação das alterações, incentivar revisões colaborativas e antecipar possíveis impedimentos.
+    </td>
+  </tr>
+</table>
+
+### Direcionamentos para a Sprint 2
+
+A partir dos aprendizados da primeira sprint, foram propostas as seguintes ações:
+
+| Diretriz | Ação proposta |
+|---|---|
+| ✅ **Continuar** | Manter a organização do backlog, a divisão clara de responsabilidades, a comunicação transparente e o comprometimento com as entregas. |
+| 🚀 **Começar** | Promover maior integração entre frontend e backend, revisões colaborativas de código e documentação mais detalhada das alterações. |
+| 🛑 **Evitar** | Integrações sem validação suficiente, concentração excessiva de conhecimento e retrabalho decorrente de falhas de comunicação. |
+| 🔧 **Aprimorar** | Planejamento da disponibilidade dos integrantes e acompanhamento antecipado de possíveis impedimentos. |
+
+### Plano de melhoria para a Sprint 2
+
+| Ação | Critério de acompanhamento |
+|---|---|
+| Melhorar as descrições dos Pull Requests | Registrar o que foi alterado, os módulos afetados e como validar as mudanças. |
+| Incentivar revisões cruzadas | Realizar ao menos uma revisão ou sessão de compartilhamento técnico entre frontend e backend. |
+| Antecipar impedimentos | Comunicar dificuldades e indisponibilidades durante o acompanhamento das tarefas. |
+
+> **Principal aprendizado**
+>
+> A Sprint 1 consolidou uma base organizacional sólida para o GreenER. O principal desafio para a próxima etapa será transformar essa organização em maior integração técnica, preservando a produtividade e ampliando o domínio coletivo sobre o sistema.
+
+<details>
+<summary><strong>📋 Sobre a retrospectiva</strong></summary>
+
+<br>
+
+A síntese foi elaborada a partir das respostas dos cinco integrantes da equipe: Gustavo, Patrícia, Vitor, Marcelo e Igor.
+
+As avaliações individuais foram consolidadas em temas recorrentes, preservando os principais consensos e as oportunidades de melhoria identificadas.
+
+Os direcionamentos apresentados são propostas derivadas da retrospectiva, a serem acompanhadas durante a Sprint 2.
+
+</details>
+
+---
+
+## 09 · Resultados e continuidade
 
 Ao final da Sprint 1, o projeto já conta com sua **base de execução, persistência e comunicação entre camadas**, além de um primeiro incremento demonstrável. Esse resultado estabelece as condições para avançar da identificação dos serviços para a análise de seu impacto ambiental.
 
