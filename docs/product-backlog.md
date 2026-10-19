@@ -19,28 +19,28 @@
 
 ## Histórias de Usuário
 
-| ID   | Como...                       | Quero...                                                                                              | Para...                                                                            | Prioridade | Sprint | Status                    |
-| ---- | ----------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------- | ------ | ------------------------- |
-| US01 | usuário da plataforma        | que o sistema identifique automaticamente os serviços disponíveis no Agregador de Métricas         | acompanhar os serviços existentes sem cadastrá-los manualmente                   | 🔴 Alta    | S1     | ⏳ em desenvolvimento     |
-| US02 | usuário da plataforma        | que o sistema reconheça quando serviços são adicionados, removidos ou ficam indisponíveis         | que o painel represente o estado atual do ambiente monitorado                      | 🔴 Alta    | S1     | ⏳ em desenvolvimento     |
-| US03 | usuário da plataforma        | que as métricas de cada serviço sejam coletadas periodicamente                                      | acompanhar seu comportamento ao longo do tempo                                     | 🟡 Média  | S2     | 🔜 desenvolvimento futuro |
-| US04 | usuário da plataforma        | que novas métricas sejam consideradas a cada coleta                                                  | que as informações exibidas representem as alterações do ambiente monitorado   | 🟡 Média  | S2     | 🔜 desenvolvimento futuro |
-| US05 | usuário da plataforma        | ser informado quando um serviço não responder ou estiver indisponível                              | saber quais serviços não estão sendo monitorados em tempo real                  | 🔴 Alta    | S1     | ⏳ em desenvolvimento     |
-| US06 | usuário da plataforma        | saber quando um serviço continua ativo mas deixa de fornecer métricas                               | diferenciar uma ausência de dados de uma indisponibilidade do serviço            | 🔴 Alta    | S1     | ⏳ em desenvolvimento     |
-| US07 | usuário da plataforma        | visualizar o consumo energético e a emissão estimada de CO₂e de cada serviço                      | compreender seu impacto ambiental individual                                       | 🟡 Média  | S2     | 🔜 desenvolvimento futuro |
-| US08 | usuário da plataforma        | visualizar indicadores consolidados do ambiente                                                       | compreender rapidamente a situação geral das aplicações monitoradas            | 🟡 Média  | S2     | 🔜 desenvolvimento futuro |
-| US09 | usuário da plataforma        | visualizar um dashboard com informações dos serviços monitorados                                   | acompanhar os indicadores em um único lugar                                      | 🟡 Média  | S2     | 🔜 desenvolvimento futuro |
-| US10 | usuário da plataforma        | que o dashboard seja atualizado automaticamente                                                       | acompanhar o ambiente sem precisar recarregar a página manualmente                | 🟡 Média  | S2     | 🔜 desenvolvimento futuro |
-| US11 | usuário da plataforma        | consultar o histórico das coletas realizadas                                                         | analisar como as métricas e os indicadores ambientais mudaram ao longo do tempo   | 🟡 Média  | S2     | 🔜 desenvolvimento futuro |
-| US12 | usuário da plataforma        | visualizar onde cada serviço está hospedado                                                         | relacionar sua localização aos indicadores apresentados                          | 🟡 Média  | S3     | 🔜 desenvolvimento futuro |
-| US13 | usuário da plataforma        | visualizar geograficamente os serviços que possuem coordenadas disponíveis                          | entender sua distribuição espacial                                               | 🟢 Baixa   | S3     | 🔜 desenvolvimento futuro |
-| US14 | usuário da plataforma        | ordenar os serviços pelo impacto ambiental estimado                                                  | identificar quais apresentam maior ou menor impacto no período analisado          | 🟡 Média  | S3     | 🔜 desenvolvimento futuro |
-| US15 | usuário da plataforma        | selecionar dois ou mais serviços e comparar suas métricas e indicadores ambientais                  | compreender suas diferenças de impacto                                            | 🟡 Média  | S3     | 🔜 desenvolvimento futuro |
-| US16 | usuário autorizado           | me autenticar antes de acessar a área de configuração                                              | impedir acesso não autorizado às configurações da plataforma                   | 🟡 Média  | S1     | ⏳ em desenvolvimento     |
-| TS01 | usuário                      | utilizar a plataforma em diferentes tamanhos de tela                                                  | conseguir acompanhar os dados tanto em computadores quanto em dispositivos móveis | 🔴 Alta    | S1     | ⏳ em desenvolvimento     |
-| TS02 | usuário                      | que o GreenER continue funcionando mesmo quando um serviço ou uma API auxiliar estiver indisponível | que uma falha isolada não impeça o acompanhamento de todo o ambiente             | 🟡 Média  | S3     | 🔜 desenvolvimento futuro |
-| TS03 | usuário                      | que a interface responda em tempo adequado                                                            | conseguir acompanhar continuamente o ambiente monitorado                           | 🟢 Baixa   | S3     | 🔜 desenvolvimento futuro |
-| TS04 | integrante da equipe técnica | encontrar instruções e documentação do projeto                                                    | conseguir executar, entender e manter a aplicação corretamente                   | 🔴 Alta    | S1     | ⏳ em desenvolvimento     |
+| ID   | Como...                       | Quero...                                                                                              | Para...                                                                            | Prioridade | Sprint | Status                              |
+| ---- | ----------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------- | ------ | ----------------------------------- |
+| US01 | usuário da plataforma        | que o sistema identifique automaticamente os serviços disponíveis no Agregador de Métricas         | acompanhar os serviços existentes sem cadastrá-los manualmente                   | 🔴 Alta    | S1     | ✅ concluído                      |
+| US02 | usuário da plataforma        | que o sistema reconheça quando serviços são adicionados, removidos ou ficam indisponíveis         | que o painel represente o estado atual do ambiente monitorado                      | 🔴 Alta    | S1     | ✅ concluído                      |
+| US03 | usuário da plataforma        | que as métricas de cada serviço sejam coletadas periodicamente                                      | acompanhar seu comportamento ao longo do tempo                                     | 🟡 Média  | S2     | ⏳ em desenvolvimento               |
+| US04 | usuário da plataforma        | que novas métricas sejam consideradas a cada coleta                                                  | que as informações exibidas representem as alterações do ambiente monitorado   | 🟡 Média  | S2     | ⏳ em desenvolvimento               |
+| US05 | usuário da plataforma        | ser informado quando um serviço não responder ou estiver indisponível                              | saber quais serviços não estão sendo monitorados em tempo real                  | 🔴 Alta    | S1     | ✅ concluído                      |
+| US06 | usuário da plataforma        | saber quando um serviço continua ativo mas deixa de fornecer métricas                               | diferenciar uma ausência de dados de uma indisponibilidade do serviço            | 🔴 Alta    | S1     | ✅ concluído                      |
+| US07 | usuário da plataforma        | visualizar o consumo energético e a emissão estimada de CO₂e de cada serviço                      | compreender seu impacto ambiental individual                                       | 🟡 Média  | S2     | ⏳ em desenvolvimento               |
+| US08 | usuário da plataforma        | visualizar indicadores consolidados do ambiente                                                       | compreender rapidamente a situação geral das aplicações monitoradas            | 🟡 Média  | S2     | ⏳ em desenvolvimento               |
+| US09 | usuário da plataforma        | visualizar um dashboard com informações dos serviços monitorados                                   | acompanhar os indicadores em um único lugar                                      | 🟡 Média  | S2     | ⏳ em desenvolvimento               |
+| US10 | usuário da plataforma        | que o dashboard seja atualizado automaticamente                                                       | acompanhar o ambiente sem precisar recarregar a página manualmente                | 🟡 Média  | S2     | ⏳ em desenvolvimento               |
+| US11 | usuário da plataforma        | consultar o histórico das coletas realizadas                                                         | analisar como as métricas e os indicadores ambientais mudaram ao longo do tempo   | 🟡 Média  | S2     | ⏳ em desenvolvimento               |
+| US12 | usuário da plataforma        | visualizar onde cada serviço está hospedado                                                         | relacionar sua localização aos indicadores apresentados                          | 🟡 Média  | S3     | 🔜 desenvolvimento futuro           |
+| US13 | usuário da plataforma        | visualizar geograficamente os serviços que possuem coordenadas disponíveis                          | entender sua distribuição espacial                                               | 🟢 Baixa   | S3     | 🔜 desenvolvimento futuro           |
+| US14 | usuário da plataforma        | ordenar os serviços pelo impacto ambiental estimado                                                  | identificar quais apresentam maior ou menor impacto no período analisado          | 🟡 Média  | S3     | 🔜 desenvolvimento futuro           |
+| US15 | usuário da plataforma        | selecionar dois ou mais serviços e comparar suas métricas e indicadores ambientais                  | compreender suas diferenças de impacto                                            | 🟡 Média  | S3     | 🔜 desenvolvimento futuro           |
+| US16 | usuário autorizado           | me autenticar antes de acessar a área de configuração                                              | impedir acesso não autorizado às configurações da plataforma                   | 🟡 Média  | S1     | ⚠️ concluído parcialmente        |
+| TS01 | usuário                      | utilizar a plataforma em diferentes tamanhos de tela                                                  | conseguir acompanhar os dados tanto em computadores quanto em dispositivos móveis | 🔴 Alta    | S1     | 🔄️ em desenvolvimento continuado |
+| TS02 | usuário                      | que o GreenER continue funcionando mesmo quando um serviço ou uma API auxiliar estiver indisponível | que uma falha isolada não impeça o acompanhamento de todo o ambiente             | 🟡 Média  | S3     | 🔜 desenvolvimento futuro           |
+| TS03 | usuário                      | que a interface responda em tempo adequado                                                            | conseguir acompanhar continuamente o ambiente monitorado                           | 🟢 Baixa   | S3     | 🔜 desenvolvimento futuro           |
+| TS04 | integrante da equipe técnica | encontrar instruções e documentação do projeto                                                    | conseguir executar, entender e manter a aplicação corretamente                   | 🔴 Alta    | S1     | 🔄️ em desenvolvimento continuado |
 
 ---
 
@@ -52,9 +52,9 @@
 
 > **Como** usuário da plataforma, **quero** que o sistema identifique automaticamente os serviços disponíveis no Agregador de Métricas, **para** que eu possa acompanhar os serviços existentes sem cadastrá-los manualmente.
 
-- [ ] O sistema deve consultar o Agregador de Métricas
-- [ ] Os serviços retornados devem ser identificados pela aplicação
-- [ ] Novos serviços disponibilizados pelo agregador devem aparecer no sistema
+- [X] O sistema deve consultar o Agregador de Métricas
+- [X] Os serviços retornados devem ser identificados pela aplicação
+- [X] Novos serviços disponibilizados pelo agregador devem aparecer no sistema
 
 **RF relacionado:** RF01 | **Aceito por:** Product Owner (validar na Sprint Review)
 
@@ -64,10 +64,10 @@
 
 > **Como** usuário da plataforma, **quero** que o sistema reconheça quando serviços são adicionados, removidos ou ficam indisponíveis, **para** que o painel represente o estado atual do ambiente monitorado.
 
-- [ ] Um novo serviço deve ser identificado durante a execução
-- [ ] Um serviço removido deve deixar de ser tratado como disponível
-- [ ] Um serviço indisponível deve ter seu estado atualizado
-- [ ] Quando um serviço retornar, seu estado deve ser atualizado novamente
+- [X] Um novo serviço deve ser identificado durante a execução
+- [X] Um serviço removido deve deixar de ser tratado como disponível
+- [X] Um serviço indisponível deve ter seu estado atualizado
+- [X] Quando um serviço retornar, seu estado deve ser atualizado novamente
 
 **RF relacionado:** RF02 | **Aceito por:** Product Owner (validar na Sprint Review)
 
@@ -77,8 +77,8 @@
 
 > **Como** usuário da plataforma, **quero** que as métricas de cada serviço sejam coletadas periodicamente, **para** que eu possa acompanhar seu comportamento ao longo do tempo.
 
-- [ ] O sistema deve consultar `/metrics/{id_servico}`
-- [ ] A consulta deve ocorrer para cada serviço disponível
+- [X] O sistema deve consultar `/metrics/{id_servico}`
+- [X] A consulta deve ocorrer para cada serviço disponível
 - [ ] A coleta deve ocorrer periodicamente
 
 **RF relacionado:** RF03 | **Aceito por:** Product Owner (validar na Sprint Review)
@@ -158,9 +158,9 @@
 
 Para cada serviço, o dashboard deve apresentar:
 
-- [ ] Estado de monitoramento
-- [ ] Localização
-- [ ] Métricas disponíveis
+- [X] Estado de monitoramento
+- [X] Localização
+- [X] Métricas disponíveis
 - [ ] Consumo energético estimado
 - [ ] Emissão estimada de CO₂
 
@@ -172,8 +172,8 @@ Para cada serviço, o dashboard deve apresentar:
 
 > **Como** usuário da plataforma, **quero** que o dashboard seja atualizado automaticamente, **para** acompanhar o ambiente sem precisar recarregar a página manualmente.
 
-- [ ] As informações devem ser atualizadas periodicamente
-- [ ] Não deve ser necessário atualizar manualmente a página
+- [X] As informações devem ser atualizadas periodicamente
+- [X] Não deve ser necessário atualizar manualmente a página
 - [ ] A aplicação deve informar a data e hora da última atualização
 - [ ] O intervalo utilizado para atualização deve ser definido pela aplicação
 
@@ -213,7 +213,7 @@ O sistema deve apresentar:
 
 > **Como** usuário da plataforma, **quero** visualizar geograficamente os serviços que possuem coordenadas disponíveis, **para** entender sua distribuição espacial.
 
-- [ ] Serviços com latitude e longitude poderão ser apresentados no mapa
+- [X] Serviços com latitude e longitude poderão ser apresentados no mapa
 - [ ] A ausência de coordenadas não pode impedir a visualização das demais informações
 - [ ] Serviços sem coordenadas devem continuar disponíveis nas outras visualizações
 
@@ -255,10 +255,10 @@ O sistema deve apresentar:
 
 > **Como** usuário autorizado, **quero** me autenticar antes de acessar a área de configuração, **para** impedir acesso não autorizado às configurações da plataforma.
 
-- [ ] O processo de autenticação deve ocorrer pelo backend
+- [X] O processo de autenticação deve ocorrer pelo backend
 - [ ] Após autenticação válida, deve ser utilizado JWT
 - [ ] Usuários não autenticados não devem acessar recursos protegidos da área de configuração
-- [ ] Apenas esconder a interface no frontend não deve ser considerado controle de acesso
+- [X] Apenas esconder a interface no frontend não deve ser considerado controle de acesso
 
 **Aceito por:** Product Owner (validar na Sprint Review)
 
@@ -270,10 +270,10 @@ O sistema deve apresentar:
 
 > **Como** usuário, **quero** utilizar a plataforma em diferentes tamanhos de tela, **para** conseguir acompanhar os dados tanto em computadores quanto em dispositivos móveis.
 
-- [ ] Interface simples
-- [ ] Clara
-- [ ] Responsiva
-- [ ] Utilizável em navegadores e dispositivos móveis
+- [X] Interface simples
+- [X] Clara
+- [X] Responsiva
+- [X] Utilizável em navegadores e dispositivos móveis
 
 **RNF relacionado:** — | **Aceito por:** Product Owner (validar na Sprint Review)
 
@@ -307,11 +307,11 @@ O sistema deve apresentar:
 
 A documentação deve conter:
 
-- [ ] Instruções de execução
-- [ ] Arquitetura
-- [ ] Modelo de dados
-- [ ] Endpoints criados pela equipe
-- [ ] Configuração do acesso às APIs auxiliares
+- [X] Instruções de execução
+- [X] Arquitetura
+- [X] Modelo de dados
+- [X] Endpoints criados pela equipe
+- [X] Configuração do acesso às APIs auxiliares
 
 **RNF relacionado:** RNF05 | **Aceito por:** Product Owner (validar na Sprint Review)
 
@@ -322,6 +322,7 @@ A documentação deve conter:
 | Data       | Alteração                  | Responsável   |
 | ---------- | ---------------------------- | -------------- |
 | 29/09/2026 | Criação inicial do backlog | Gustavo (P.O.) |
+| 18/10/2026 | Atualização da Sprint 1    | Gustavo (P.O.) |
 
 ---
 
