@@ -8,24 +8,15 @@ O GreenER é um sistema que monitora aplicações e serviços de uma infraestrut
 
 ## 🧭 Navegação
 
-<div align="center">
-
-[_Sobre o Projeto_](#-sobre-o-projeto) •
-[_Funcionalidades_](#-funcionalidades) •
-[_Tecnologias_](#-tecnologias-utilizadas) •
-[_Como Executar_](#️-como-executar-o-ambiente-com-docker) •
-[_Documentação_](#-documentação) •
-[_Equipe_](#-equipe)
+[_Sobre o Projeto_](#-sobre-o-projeto) • [_Funcionalidades_](#-funcionalidades) • [_Tecnologias_](#-tecnologias-utilizadas) • [_Como Executar_](#️-como-executar-o-ambiente-com-docker) • [_Documentação_](#-documentação) • [_Equipe_](#-equipe)
 
 ### 🚀 Acompanhe a evolução do GreenER
 
-|                    Sprint 01                    |                  Sprint 02                  |                  Sprint 03                  |
-| :---------------------------------------------: | :-----------------------------------------: | :-----------------------------------------: |
-|                  ✅ Concluída                   |                ⏳ Planejada                 |                ⏳ Planejada                 |
-|   [📄 Documentação](docs/sprints/sprint-1.md)   | [📄 Documentação](docs/sprints/sprint-2.md) | [📄 Documentação](docs/sprints/sprint-3.md) |
-| [▶️ Demonstração](https://youtu.be/pGdiciJxTPw) |                  Em breve                   |                  Em breve                   |
-
-</div>
+| Sprint 01 | Sprint 02 | Sprint 03 |
+| :---: | :---: | :---: |
+| ✅ Concluída | ⏳ Planejada | ⏳ Planejada |
+| [📄 Documentação](docs/sprints/sprint-1.md) | [📄 Documentação](docs/sprints/sprint-2.md) | [📄 Documentação](docs/sprints/sprint-3.md) |
+| [▶️ Demonstração](https://youtu.be/pGdiciJxTPw) | Em breve | Em breve |
 
 ---
 
