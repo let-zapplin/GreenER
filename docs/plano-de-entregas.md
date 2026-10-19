@@ -142,3 +142,13 @@ Uma entrega é considerada **pronta para aceite** quando, conforme aplicável:
 > Esta é a **definição de pronto proposta para o projeto**. Sua aplicação deve ser proporcional ao tipo de tarefa e validada pela equipe.
 
 
+## 08. Controle de mudanças
+
+Se surgir uma alteração relevante em prazo, escopo ou critério de aceite:
+
+1. Registrar e discutir a mudança na planning ou no refinamento do backlog.
+2. Atualizar o [Product Backlog](product-backlog.md) e as tarefas do [GitHub Projects](https://github.com/orgs/let-zapplin/projects/2).
+3. Atualizar **este plano apenas se mudar o marco, a entrega ou a dependência**.
+4. Registrar no documento da sprint o resultado efetivo e eventuais desvios.
+
+Assim, o plano permanece enxuto e confiável, enquanto cada sprint preserva o histórico detalhado do desenvolvimento.
