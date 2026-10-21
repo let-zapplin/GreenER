@@ -1,7 +1,7 @@
 # Documentação da API — GreenER
 
-> **Referência técnica | Sprint 1**  
-> Esta documentação descreve a API implementada no código do projeto analisado em 18/10/2026. Exemplos de dados são ilustrativos e não representam respostas de uma instância em execução.
+> **Referência técnica | Base entregue na Sprint 1 / início da Sprint 2**  
+> Esta documentação separa endpoints **já implementados** de endpoints **planejados**. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução.
 
 ## 01. Visão geral
 
@@ -29,9 +29,9 @@ flowchart LR
 | `POST` | `/auth/login` | Autenticar usuário e receber token JWT | Autenticação |
 | `GET` | `/api/servicos/discover` | Buscar serviços diretamente na API externa | US01 |
 | `POST` | `/api/servicos/sync` | Sincronizar serviços externos com o banco | US02 |
-| `GET` | `/api/servicos` | Listar serviços persistidos no banco | US03 |
+| `GET` | `/api/servicos` | Listar serviços persistidos no banco | RF01 / RF02 / apoio ao monitoramento |
 
-**Situação de acesso:** na versão inspecionada, os endpoints acima não utilizam middleware de proteção JWT. O login emite um token, mas isso **não significa** que as demais rotas já estejam protegidas. Não exponha esse backend publicamente como uma API autenticada sem implementar e validar a autorização.
+**Situação de acesso:** cadastro/login e emissão de JWT existem, mas a proteção efetiva das rotas no backend permanece pendente na **TEC29 da Sprint 2**. Até essa implementação ser validada, não considerar os endpoints de serviços como protegidos apenas porque o frontend possui sessão.
 
 ---
 
@@ -252,9 +252,9 @@ flowchart TD
   G --> H[Retornar created, updated, unavailable]
 ```
 
-> **Sincronização automática:** além deste endpoint manual, `server.ts` inicia o job `startServiceSync()` quando o backend sobe. O job usa `COLLECTION_INTERVAL_MS` entre execuções. Essa variável controla a **sincronização dos cadastros de serviços** no estado atual, não uma coleta de métricas implementada.
+> **Sincronização automática:** além deste endpoint manual, `server.ts` inicia o job `startServiceSync()` quando o backend sobe. Na versão atual, a variável de intervalo está associada à **sincronização do catálogo**, não à futura coleta de métricas. A Sprint 2 deve separar claramente os intervalos de sincronização, coleta e atualização do frontend.
 
-### `GET /api/servicos` — US03
+### `GET /api/servicos` — listagem persistida
 
 Lista os serviços armazenados no PostgreSQL, com localização e status. Não consulta a API externa durante esta chamada.
 
@@ -350,7 +350,19 @@ Os endpoints de serviços utilizam um middleware global para tratamento de erros
 
 ---
 
-## 07. Integrações e funcionalidades futuras
+## 07. Endpoints planejados para a Sprint 2
+
+Os recursos abaixo fazem parte do planejamento, mas **não devem ser considerados endpoints ativos até aparecerem no código, testes e documentação de resposta**:
+
+- coleta de métricas por serviço;
+- histórico de coletas por serviço/período;
+- dados consolidados do dashboard;
+- indicadores ambientais;
+- recursos protegidos por middleware JWT.
+
+Ao implementar um endpoint novo, registrar nesta documentação: método, URL, parâmetros, autenticação, resposta de sucesso, erros esperados e exemplo de verificação.
+
+## 08. Integrações e funcionalidades futuras
 
 A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização. O campo `metrics_path` retornado por ela indica onde consultar métricas de cada serviço, mas **não existe ainda um endpoint interno registrado no Express para expor essas coletas** na versão analisada.
 
@@ -369,7 +381,7 @@ A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sinc
 
 ---
 
-## 08. Onde encontrar os endpoints no projeto
+## 09. Onde encontrar os endpoints no projeto
 
 ```text
 backend/src/
@@ -397,7 +409,7 @@ backend/src/
 
 ---
 
-## 09. Manutenção desta documentação
+## 10. Manutenção desta documentação
 
 Sempre que um endpoint for criado ou alterado, atualizar:
 

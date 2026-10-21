@@ -1,49 +1,51 @@
-# Manual de validação do fluxo de dados
+# Manual de validação do fluxo de dados — GreenER
 
-## Objetivo e situação atual
+← [Voltar ao índice da documentação](../../README.md)
 
-Verificar o caminho dos serviços desde a Metrics API até sua persistência no PostgreSQL, sua consulta pela API GreenER e sua exibição no React.
+## Objetivo
+
+Validar o fluxo funcional consolidado ao final da Sprint 1 e fornecer uma base para ampliar as verificações durante a Sprint 2.
+
+Fluxo validado atualmente:
 
 ```text
-Metrics API → Backend → PostgreSQL → API GreenER → React
+Metrics API /services
+      ↓
+Backend
+      ↓
+PostgreSQL
+      ↓
+GET /api/servicos
+      ↓
+React
 ```
 
-O backend e a API GreenER pertencem à mesma aplicação: ela busca e armazena dados e também oferece endpoints para consultá-los.
+> Este manual não considera coleta de métricas, energia, CO₂e ou histórico como concluídos. Esses cenários devem ser adicionados conforme as respectivas tarefas da Sprint 2 forem implementadas.
 
-Na implementação consultada para este manual:
-
-- `GET /api/servicos/discover` busca serviços na Metrics API.
-- `POST /api/servicos/sync` busca e salva os serviços e suas localizações no PostgreSQL.
-- `GET /api/servicos` lista os serviços armazenados no PostgreSQL.
-- A tela de monitoramento ainda consulta `/api/servicos/discover`. Portanto, sua exibição não comprova a leitura do banco pelo React.
-- Os arquivos do módulo `coletas` estão vazios. Este roteiro valida serviços e localizações; a coleta de CPU, memória, disco e rede ainda precisa ser implementada e validada.
+---
 
 ## 1. Iniciar o ambiente
 
-Pré-requisitos: Docker Desktop em execução, arquivo `.env` configurado e acesso à rede para consultar a Metrics API.
+Pré-requisitos:
 
-Abra um terminal na pasta que contém `compose.yaml`. A partir da pasta externa deste repositório, entre na pasta interna:
+- Docker Desktop/Engine em execução;
+- `.env` configurado a partir de `.env.example`;
+- acesso de rede à Metrics Aggregator API.
 
-```bat
-cd GreenER
-```
+Na pasta que contém `compose.yaml`:
 
-Se já estiver na pasta que contém `compose.yaml`, não execute esse `cd` novamente.
-
-Inicie o ambiente e confira os containers:
-
-```bat
+```bash
 docker compose up -d --build
 docker compose ps
 ```
 
-Resultado esperado: `postgres`, `backend` e `frontend` em execução, com PostgreSQL e backend saudáveis (`healthy`).
+Resultado esperado: `postgres`, `backend` e `frontend` em execução, com os healthchecks configurados sem falha.
 
-Os comandos HTTP deste manual usam `curl.exe`, disponível no Windows e utilizável tanto no CMD quanto no PowerShell. `Invoke-RestMethod` é exclusivo do PowerShell.
+---
 
-## 2. Verificar a resposta do backend
+## 2. Validar saúde do backend
 
-```bat
+```bash
 curl.exe -i http://localhost:3000/health
 ```
 
@@ -56,95 +58,69 @@ Resultado esperado: HTTP `200` e corpo semelhante a:
 }
 ```
 
-Esse endpoint verifica a resposta do backend. Ele não comprova a conexão com o banco nem com a Metrics API.
+Essa rota confirma apenas a resposta HTTP do backend.
 
-## 3. Descobrir serviços na Metrics API
+---
 
-```bat
+## 3. Validar descoberta externa
+
+```bash
 curl.exe -i http://localhost:3000/api/servicos/discover
 ```
 
-Resultado esperado: HTTP `200`, mensagem e lista no campo `services`, contendo identificadores (`id`), nomes e localizações. Registre alguns serviços para comparar com as próximas etapas.
+Verificar:
 
-Uma lista vazia deve ser registrada como tal: sem serviços disponíveis, não é possível comprovar a gravação de um serviço novo neste teste.
+- HTTP `200`;
+- lista em `services`;
+- `id`, `name`, `location` e `metrics_path` quando fornecidos pela API.
 
-**Trecho verificado:** Metrics API → Backend → resposta da API GreenER.
+**Trecho validado:** Metrics API → Backend.
 
-## 4. Sincronizar os serviços com o banco
+---
 
-Este comando grava ou atualiza os serviços no PostgreSQL:
+## 4. Validar sincronização e persistência
 
-```bat
+Executar:
+
+```bash
 curl.exe -i -X POST http://localhost:3000/api/servicos/sync
 ```
 
-Resultado esperado: HTTP `200` e resposta semelhante a:
+Resposta esperada semelhante a:
 
 ```json
 {
   "message": "Serviços sincronizados com sucesso",
-  "created": 8,
-  "updated": 0
+  "created": 0,
+  "updated": 8,
+  "unavailable": 0
 }
 ```
 
-Os números são ilustrativos. Se já houver registros no banco, a primeira execução deste roteiro também poderá retornar serviços atualizados.
+Os números dependem do estado do banco e da resposta externa.
 
-## 5. Conferir a persistência no DBeaver
-
-Crie uma conexão PostgreSQL:
-
-| Campo | Valor |
-| --- | --- |
-| Host | `127.0.0.1` |
-| Porta | `5433` |
-| Banco de dados | Valor de `POSTGRES_DB` no `.env` |
-| Usuário | Valor de `POSTGRES_USER` no `.env` |
-| Senha | Senha definida na inicialização do banco |
-
-Para o banco `greener`, a URL é:
-
-```text
-jdbc:postgresql://127.0.0.1:5433/greener
-```
-
-O backend usa `postgres:5432` dentro da rede Docker. O DBeaver acessa o container pela porta publicada no Windows, `5433`. Não altere o `.env` para configurar o DBeaver.
-
-No editor SQL do DBeaver, execute:
+No PostgreSQL/DBeaver, consultar:
 
 ```sql
 SELECT
-    s.id,
+    s.id_service,
+    s.id AS external_id,
     s.name,
+    s.status,
+    s.last_seen_at,
     l.region_code,
-    l.city
+    l.country,
+    l.region,
+    l.city,
+    l.latitude,
+    l.longitude
 FROM service s
 JOIN location l
     ON l.id_location = s.location_id_location
-ORDER BY s.id;
+ORDER BY s.id_service;
 ```
 
-Compare IDs, nomes e localizações com a descoberta. A fonte externa pode mudar entre requisições; registre divergências e o horário de cada consulta antes de classificá-las como falha.
-
-**Trecho verificado:** Metrics API → Backend → PostgreSQL.
-
-### Verificar ausência de duplicação
-
-Registre a quantidade inicial:
-
-```sql
-SELECT COUNT(*) AS total_servicos FROM service;
-```
-
-Execute novamente, no terminal, o mesmo comando de sincronização:
-
-```bat
-curl.exe -i -X POST http://localhost:3000/api/servicos/sync
-```
-
-Repita a contagem no DBeaver. Se a lista externa permanecer igual, espera-se `created: 0` e a mesma quantidade de serviços no banco. O campo `updated` contabiliza os serviços já existentes processados pela sincronização, mesmo que seus valores não tenham mudado.
-
-Confira também os identificadores repetidos:
+Verificar ausência de duplicação indevida:
 
 ```sql
 SELECT id, COUNT(*) AS quantidade
@@ -153,94 +129,153 @@ GROUP BY id
 HAVING COUNT(*) > 1;
 ```
 
-Resultado esperado: nenhuma linha retornada.
+Resultado esperado: nenhuma linha.
 
-## 6. Consultar os dados persistidos pela API GreenER
+---
 
-```bat
+## 5. Validar listagem persistida pela API interna
+
+```bash
 curl.exe -i http://localhost:3000/api/servicos
 ```
 
-Resultado esperado: HTTP `200` e serviços compatíveis com a consulta SQL. Nessa resposta, o identificador externo aparece como `external_id`; na descoberta e na tabela `service`, ele se chama `id`. Compare os registros por esse identificador, sem depender da ordem da lista.
+Comparar a resposta com os registros consultados no PostgreSQL.
 
-**Trecho verificado:** PostgreSQL → API GreenER.
+**Trecho validado:** PostgreSQL → API GreenER.
 
-## 7. Conferir a exibição no React
+---
 
-Acesse:
+## 6. Validar consumo pelo frontend
+
+1. autentique-se pela interface;
+2. acesse `http://localhost:5173/monitoramento`;
+3. abra `F12 → Network/Rede → Fetch/XHR`;
+4. localize a chamada a `GET /api/servicos`;
+5. compare nomes, localização e status com a resposta da API;
+6. aguarde novas atualizações automáticas e confirme que a página não exige reload manual.
+
+Resultado esperado: o React consome a **listagem persistida** do GreenER e representa os dados retornados pelo backend.
+
+> O intervalo de atualização deve ser conferido no código/configuração da versão testada e documentado em `docs/api.md` ou `docs/arquitetura.md` quando estabilizado.
+
+---
+
+## 7. Validar indisponibilidade e retorno do catálogo
+
+Quando a Metrics API apresentar mudança real no catálogo, observar:
 
 ```text
-http://localhost:5173/monitoramento
+serviço presente
+    ↓
+serviço deixa /services
+    ↓
+backend marca unavailable
+    ↓
+frontend sinaliza indisponibilidade
+    ↓
+serviço retorna
+    ↓
+backend volta para active
+    ↓
+frontend sinaliza retorno temporariamente
 ```
 
-1. Abra as ferramentas do navegador com `F12`.
-2. Selecione a aba **Network/Rede** e filtre por **Fetch/XHR**.
-3. Recarregue a página.
-4. Confira a URL da requisição de serviços, seu status e seu corpo de resposta.
-5. Compare os nomes e localizações da resposta com os cartões exibidos.
-6. Aguarde uma nova consulta automática. A tela está configurada para aguardar 10 segundos após o término de cada tentativa.
+Consultar o banco para confirmar que o registro não é apagado e que `last_seen_at` representa a última vez em que o serviço foi efetivamente observado.
 
-Resultado esperado: requisição bem-sucedida e dados exibidos de acordo com a resposta recebida.
+> Esse cenário não substitui a validação futura de **RF05 durante coleta individual** nem de **RF06 serviço ativo sem métricas**.
 
-**Limitação atual:** a tela usa `/api/servicos/discover`, que consulta a Metrics API novamente. Isso verifica a integração da tela com o backend, mas não fecha o trecho PostgreSQL → API GreenER → React. Para concluir esse fluxo, o frontend precisa consumir a listagem persistida e tratar o formato retornado por ela.
+---
 
-## 8. Registrar as evidências e a conclusão
+## 8. Validar persistência após reinicialização
 
-Guarde as respostas HTTP, resultados SQL e capturas da tela e da aba Network/Rede. Para cada execução, registre data, versão ou commit testado, resultado observado e eventuais erros.
+Essa verificação é importante para a evolução do histórico.
 
-| Verificação | Resultado esperado | Resultado observado |
-| --- | --- | --- |
-| Saúde do backend | HTTP 200 e `status: ok` | Preencher |
-| Descoberta externa | HTTP 200 e lista de serviços | Preencher |
-| Sincronização | HTTP 200 e contadores de criação/atualização | Preencher |
-| Persistência | Serviços e localizações presentes no SQL | Preencher |
-| Nova sincronização | Sem duplicar serviços | Preencher |
-| Listagem pelo banco | API compatível com o SQL | Preencher |
-| Exibição React | Cartões compatíveis com a resposta HTTP | Preencher |
-| Leitura do banco pelo React | Tela consumindo a listagem persistida | Pendente na implementação atual |
+1. registre a quantidade de serviços:
 
-Não registre o fluxo completo como aprovado apenas porque os cartões aparecem. A aprovação completa exige comprovar que a tela recebeu os dados consultados no PostgreSQL.
+```sql
+SELECT COUNT(*) FROM service;
+```
+
+2. pare os containers **sem remover volumes**:
+
+```bash
+docker compose down
+```
+
+3. suba novamente:
+
+```bash
+docker compose up -d
+```
+
+4. execute a mesma consulta SQL.
+
+Resultado esperado: os registros persistidos anteriormente continuam disponíveis.
+
+> Não utilizar `docker compose down -v` neste teste. `-v` remove o volume do PostgreSQL.
+
+---
+
+## 9. Cenários de loading, vazio e erro
+
+Confirmar no frontend:
+
+- estado de carregamento antes da resposta;
+- estado vazio quando não houver serviços;
+- mensagem de erro quando a chamada ao backend falhar;
+- recuperação do fluxo após nova tentativa/atualização bem-sucedida.
+
+Não manter alterações artificiais de teste no código após a validação.
+
+---
+
+## 10. Evidências da Sprint 1
+
+| Verificação | Resultado esperado | Situação |
+|---|---|---|
+| Backend | `/health` retorna 200 | Validado na Sprint 1 |
+| Descoberta | `/discover` consulta API externa | Validado na Sprint 1 |
+| Sincronização | serviços persistidos/atualizados | Validado na Sprint 1 |
+| Listagem persistida | `/api/servicos` compatível com PostgreSQL | Validado na Sprint 1 |
+| React lê API interna | monitoramento consome `/api/servicos` | Validado na Sprint 1 |
+| Loading / erro / vazio | estados tratados | Validado na Sprint 1 |
+| Mudança de catálogo | indisponível/retorno representados | Validado durante evolução da Sprint 1 |
+| Persistência após restart | registros permanecem sem `-v` | Revalidar e registrar evidência na Sprint 2 |
+
+---
+
+## 11. Extensão deste manual durante a Sprint 2
+
+Adicionar seções somente após implementação para:
+
+- coleta real de `/metrics/{id_servico}`;
+- múltiplas coletas e variação de métricas;
+- serviço indisponível durante a coleta;
+- serviço ativo sem métricas;
+- persistência do histórico;
+- Carbon Intensity API;
+- cálculo de energia e CO₂e;
+- endpoint consolidado de indicadores;
+- gráfico histórico;
+- JWT validado no backend.
+
+Cada seção nova deve registrar comando/cenário, resultado esperado, evidência e versão/commit testado.
+
+---
 
 ## Solução de problemas
 
-### Backend ou frontend sem resposta
+### Ver logs
 
-Confira o estado e os logs:
-
-```bat
+```bash
 docker compose ps
-docker compose logs --tail 50 backend
-docker compose logs --tail 50 frontend
+docker compose logs --tail=50 backend
+docker compose logs --tail=50 frontend
+docker compose logs --tail=50 postgres
 ```
 
-### Falha na descoberta ou sincronização
+### Conferir conexão PostgreSQL pelo host
 
-Confira os logs do backend e do banco e a configuração de `METRICS_API_URL` no `.env`:
+O Compose publica o banco em `127.0.0.1:5433` para ferramentas como DBeaver. O backend utiliza `postgres:5432` dentro da rede Docker.
 
-```bat
-docker compose logs --tail 50 backend
-docker compose logs --tail 50 postgres
-```
-
-### DBeaver apresenta erro de conexão ou senha
-
-Confirme host `127.0.0.1`, porta `5433` e as credenciais do banco inicializado. Alterar `POSTGRES_PASSWORD` no `.env` não altera a senha de um volume já inicializado. A conexão pelo CLI dentro do container pode não exigir senha e não comprova a autenticação usada pelo DBeaver.
-
-Também pode existir um PostgreSQL instalado no Windows ocupando a mesma porta. No PowerShell, identifique os processos:
-
-```powershell
-Get-NetTCPConnection -State Listen -LocalPort 5433 |
-    Select-Object LocalAddress, LocalPort, OwningProcess
-
-Get-Process -Id <PID_ENCONTRADO>
-```
-
-Substitua `<PID_ENCONTRADO>` pelo número retornado. Se confirmar que o serviço local `postgresql-x64-18` está ocupando a porta e puder interrompê-lo, execute no **PowerShell como administrador**:
-
-```powershell
-Stop-Service -Name postgresql-x64-18
-```
-
-Teste novamente no DBeaver. Essa ação interrompe o banco local; não apaga seus dados nem altera o Compose.
-
-Não execute `docker compose down -v` para resolver a conexão: esse comando remove os volumes e os dados persistidos.
+Alterar uma senha no `.env` não modifica automaticamente as credenciais de um volume PostgreSQL já inicializado.
