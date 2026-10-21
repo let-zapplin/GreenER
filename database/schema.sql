@@ -34,6 +34,43 @@ CREATE TABLE service (
       ON UPDATE NO ACTION
 );
 
+CREATE TABLE collection (
+  id_collection BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  service_id_service INTEGER NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  failure_reason VARCHAR(100),
+  http_status SMALLINT,
+  attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  FOREIGN KEY (service_id_service)
+    REFERENCES service(id_service)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT chk_collection_status
+    CHECK (
+        status IN (
+          'success',
+          'no_metrics',
+          'unavailable',
+          'error'
+        )
+    ),
+
+    CONSTRAINT chk_collection_failure_reason
+    CHECK (
+      (status = 'success' AND failure_reason IS NULL)
+      OR status <> 'success'
+    ),
+
+  CONSTRAINT chk_collection_http_status
+    CHECK (
+        http_status IS NULL
+        OR http_status BETWEEN 100 AND 599
+    )
+);
+
+CREATE INDEX idx_collection_service_attempted
+  ON collection (service_id_service, attempted_at DESC);
+
 CREATE TABLE carbon_intensity (
   id_carbon_intensity INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   location_id_location INTEGER NOT NULL,
@@ -48,14 +85,14 @@ CREATE TABLE carbon_intensity (
 
 CREATE TABLE metrics (
   id_metrics BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  service_id_service INTEGER NOT NULL,
+  collection_id_collection BIGINT NOT NULL UNIQUE,
   cpu_percent DECIMAL(5,2) NOT NULL,
   memory_gb DOUBLE PRECISION NOT NULL,
   disk_gb DOUBLE PRECISION NOT NULL,
   network_gb DOUBLE PRECISION NOT NULL,
   recorded_at TIMESTAMPTZ NOT NULL,
-  FOREIGN KEY(service_id_service)
-    REFERENCES service(id_service)
+  FOREIGN KEY(collection_id_collection)
+    REFERENCES collection(id_collection)
       ON DELETE NO ACTION
       ON UPDATE NO ACTION
 );
