@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { authRoutes } from "./modules/auth/auth.routes.js";
+import authRoutes from "./modules/auth/auth.routes.js"; // <-- Sem chaves!
 import servicosRoutes from "./modules/servicos/servicos.routes.js";
 import { errorMiddleware } from "./shared/middlewares/error.middleware.js";
 
