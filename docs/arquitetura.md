@@ -2,7 +2,7 @@
 
 ← [Voltar ao índice da documentação](../README.md)
 
-> Este documento separa a **arquitetura já implementada** da **evolução planejada**. Recursos da Sprint 2 e 3 não devem ser apresentados como concluídos antes de sua integração e validação.
+> Este documento separa a **arquitetura já implementada** da **evolução planejada**. Recursos das Sprints 2 e 3 não devem ser apresentados como concluídos antes de sua integração e validação.
 
 ---
 
@@ -10,7 +10,7 @@
 
 O GreenER utiliza arquitetura web cliente-servidor, com frontend em React + TypeScript, backend em Node.js + Express + TypeScript, persistência PostgreSQL e execução por Docker Compose.
 
-### Estado atual
+### Estado atual da aplicação
 
 ```mermaid
 flowchart TD
@@ -20,7 +20,7 @@ flowchart TD
     B -->|GET /services| M[Metrics Aggregator API]
 ```
 
-O fluxo funcional validado na Sprint 1 é:
+O fluxo funcional validado na Sprint 1 continua sendo:
 
 ```text
 Metrics Aggregator /services
@@ -34,20 +34,44 @@ GET /api/servicos
 Frontend React
 ```
 
+A Sprint 2 iniciou a evolução da camada de persistência. O banco já possui estrutura para representar tentativas de coleta e relacioná-las às métricas, embora o fluxo automático de consulta de `/metrics/{id}` ainda dependa das próximas entregas da Sprint.
+
 ### Evolução planejada
 
 ```mermaid
 flowchart LR
     M[Metrics Aggregator API] -->|/services| S[Sincronização de serviços]
     M -->|/metrics/:id| C[Coleta periódica]
+
     S --> DB[(PostgreSQL)]
     C --> DB
+
     CI[Carbon Intensity API] --> CALC[Cálculos ambientais]
     DB --> CALC
-    CALC --> DB
-    DB --> API[API GreenER]
+
+    CALC --> API[API GreenER]
+    DB --> API
+
     API --> DASH[Dashboard / Histórico]
     API --> ANA[Mapa / Ranking / Comparação]
+```
+
+O objetivo da Sprint 2 é transformar o fluxo já existente de descoberta de serviços em um ciclo completo de:
+
+```text
+descoberta
+    ↓
+coleta
+    ↓
+persistência
+    ↓
+histórico
+    ↓
+cálculo ambiental
+    ↓
+indicadores
+    ↓
+dashboard
 ```
 
 ---
@@ -55,14 +79,14 @@ flowchart LR
 ## 2. Responsabilidades por camada
 
 | Camada | Responsabilidade |
-|---|---|
+| --- | --- |
 | **Frontend** | Navegação, autenticação de interface, apresentação dos serviços, estados de consulta e visualizações analíticas. |
 | **Routes** | Definir recursos e métodos HTTP e encaminhar chamadas para controllers. |
 | **Controllers** | Tratar entrada/saída HTTP, códigos de resposta e delegar regras de negócio. |
 | **Services** | Implementar regras de negócio, orquestração de integrações, cálculos e estados. |
 | **Repositories** | Concentrar SQL explícito e parametrizado de acesso ao PostgreSQL. |
 | **Jobs** | Executar processos recorrentes sem ação manual, como sincronização e futuras coletas. |
-| **PostgreSQL** | Persistir usuários, serviços, localizações e, após Sprint 2, coletas/histórico e dados ambientais. |
+| **PostgreSQL** | Persistir usuários, serviços, localizações, estrutura de coletas, métricas e demais dados históricos utilizados pela aplicação. |
 | **Metrics Aggregator API** | Fornecer catálogo de serviços e métricas por serviço. |
 | **Carbon Intensity API** | Fornecer intensidade de carbono por região para cálculo de CO₂e. |
 
@@ -100,59 +124,106 @@ ServicosRepository.listAll()
 PostgreSQL
 ```
 
-A Sprint 2 deve preservar esse padrão para o módulo de coletas e para endpoints de indicadores.
+A Sprint 2 deve preservar esse padrão para o módulo de coletas e para os futuros endpoints de histórico e indicadores.
+
+A estrutura reservada para o módulo de coletas é:
+
+```text
+modules/coletas/
+├── coletas.routes.ts
+├── coletas.controller.ts
+├── coletas.service.ts
+└── coleta.repository.ts
+```
+
+A existência desses arquivos não significa que o fluxo de coleta já esteja implementado. Sua implementação será realizada pelas tarefas específicas da Sprint 2.
 
 ---
 
 ## 4. Sincronização automática de serviços
 
-Ao iniciar, o backend dispara um job de sincronização do catálogo de serviços. O job consulta `/services`, cria/atualiza registros e marca como `unavailable` serviços persistidos que deixaram de aparecer na resposta externa.
+Ao iniciar, o backend dispara um job de sincronização do catálogo de serviços.
+
+O job consulta `/services`, cria ou atualiza registros e marca como `unavailable` serviços persistidos que deixaram de aparecer na resposta externa.
 
 ```mermaid
 flowchart TD
     J[Job de sincronização] --> D[GET /services]
     D --> E{Serviço existe?}
+
     E -->|Não| I[INSERT]
     E -->|Sim| U[UPDATE + last_seen_at]
+
     I --> A[Comparar IDs ativos]
     U --> A
+
     A --> X[Marcar ausentes como unavailable]
     X --> W[Esperar próximo intervalo]
     W --> J
 ```
 
-> O intervalo usado por esse job deve ser distinguido do futuro intervalo de **coleta de métricas**. Na Sprint 2, a nomenclatura/configuração dos intervalos deve ser revisada para evitar ambiguidade.
+> O intervalo usado por esse job deve ser distinguido do intervalo de **coleta de métricas**. Na Sprint 2, a nomenclatura e a configuração desses intervalos devem permanecer separadas para evitar ambiguidade.
 
 ---
 
-## 5. Estados dos serviços
+## 5. Estados dos serviços e das coletas
 
-### Estado persistido
+A arquitetura passa a distinguir dois conceitos diferentes:
 
-O backend/banco é a fonte de verdade para o estado estrutural do serviço, atualmente com foco em:
+```text
+estado atual do serviço
+≠
+resultado de uma tentativa de coleta
+```
+
+### Estado atual do serviço
+
+A tabela `service` mantém informações relacionadas ao estado atual conhecido do serviço, utilizando principalmente:
+
+```text
+service.status
+service.last_seen_at
+```
+
+Os estados persistidos atualmente têm foco em:
 
 - `active`;
 - `unavailable`.
 
-### Estado transitório da interface
+Esses dados permitem consultas rápidas sobre a situação atual do catálogo.
 
-O frontend pode representar transições visuais temporárias, como:
+### Estados transitórios da interface
+
+O frontend pode representar estados visuais temporários, como:
 
 - `new`;
 - `returned`.
 
-Esses estados não substituem o estado persistido do backend.
+Esses estados não substituem o estado persistido no backend.
 
-### Evolução prevista na Sprint 2
+### Estado da coleta
 
-A ausência de métricas não deve ser confundida com indisponibilidade. O planejamento deve permitir distinguir, por exemplo:
+A partir da TEC02, cada tentativa de coleta pode possuir um dos seguintes estados no banco:
+
+| Estado | Significado |
+| --- | --- |
+| `success` | A consulta retornou métricas válidas |
+| `no_metrics` | O serviço está disponível, mas não forneceu métricas válidas |
+| `unavailable` | Não foi possível consultar o serviço |
+| `error` | Ocorreu erro durante o processamento da coleta |
+
+Isso permite representar, por exemplo:
 
 ```text
 serviço: active
 última coleta: no_metrics
 ```
 
-A definição final deve ser refletida no modelo de dados, nos contratos TypeScript e na documentação da API.
+sem confundir ausência de métricas com indisponibilidade do serviço.
+
+A causa técnica de uma falha pode ser registrada separadamente em `collection.failure_reason`, enquanto `http_status` pode armazenar o código HTTP quando houver resposta.
+
+A interpretação desses estados pelo backend será implementada junto ao fluxo efetivo de coleta.
 
 ---
 
@@ -164,11 +235,13 @@ A definição final deve ser refletida no modelo de dados, nos contratos TypeScr
 - hash de senha;
 - login;
 - geração de JWT;
-- sessão/proteção de navegação no frontend.
+- sessão e proteção de navegação no frontend.
 
 ### Pendente para Sprint 2
 
-O backend ainda precisa validar o token nas rotas protegidas. O fluxo esperado é:
+O backend ainda precisa validar o token nas rotas protegidas.
+
+O fluxo esperado é:
 
 ```text
 requisição
@@ -190,26 +263,281 @@ A autenticação só deverá ser documentada como concluída após esse fluxo es
 
 ---
 
-## 7. Persistência e histórico — decisão prioritária da Sprint 2
+## 7. Persistência e histórico
 
-A Sprint Review 1 reforçou a necessidade de revisar o banco antes de implementar as coletas. O modelo deve sustentar, no mínimo:
+A revisão da modelagem do banco foi iniciada pela TEC02 antes da implementação da coleta periódica.
 
-- múltiplas coletas do mesmo serviço sem sobrescrever histórico;
-- timestamp de cada tentativa;
-- associação da coleta ao serviço;
-- diferenciação entre sucesso, ausência de métricas e falha;
-- dados necessários ao cálculo de energia e CO₂e;
-- consultas por período;
-- persistência após reinicialização dos containers.
+O objetivo foi garantir que o modelo consiga preservar o histórico das tentativas de coleta sem criar registros vazios em `metrics`.
 
-A estrutura final deve ser refletida em `database/schema.sql`, no modelo de dados e em `database/README.md`.
+### Modelo implementado
+
+O relacionamento anterior:
+
+```text
+service
+   ↓
+metrics
+```
+
+foi substituído por:
+
+```text
+service
+   │
+   │ 1:N
+   ▼
+collection
+   │
+   │ 1:0..1
+   ▼
+metrics
+```
+
+A tabela `collection` representa o **evento de coleta**.
+
+A tabela `metrics` representa os **dados válidos obtidos naquela coleta**.
+
+Essa separação é importante porque uma tentativa pode existir mesmo quando nenhuma métrica válida é retornada.
+
+### Collection
+
+Cada registro em `collection` contém:
+
+```text
+id_collection
+service_id_service
+status
+failure_reason
+http_status
+attempted_at
+```
+
+A entidade registra:
+
+- qual serviço foi consultado;
+- quando a tentativa ocorreu;
+- qual foi o resultado da tentativa;
+- qual foi o motivo da falha, quando aplicável;
+- qual código HTTP foi retornado, quando aplicável.
+
+Um serviço pode possuir múltiplas coletas:
+
+```text
+Billing API
+    │
+    ├── collection #1 → success
+    ├── collection #2 → success
+    ├── collection #3 → no_metrics
+    └── collection #4 → unavailable
+```
+
+Isso preserva eventos que anteriormente não poderiam ser registrados apenas na tabela `metrics`.
+
+### Metrics
+
+A tabela `metrics` armazena somente dados válidos.
+
+Seu relacionamento com o serviço passa a ser indireto:
+
+```text
+metrics
+   ↓
+collection
+   ↓
+service
+```
+
+A referência direta anterior entre `metrics` e `service` foi removida para evitar redundância.
+
+Cada registro de `metrics` possui:
+
+```text
+collection_id_collection
+```
+
+como chave estrangeira para a coleta correspondente.
+
+A restrição `UNIQUE` aplicada a essa referência garante a cardinalidade:
+
+```text
+collection 1 → 0..1 metrics
+```
+
+Assim:
+
+```text
+success
+    ↓
+collection + metrics
+```
+
+enquanto:
+
+```text
+no_metrics
+unavailable
+error
+    ↓
+collection sem metrics
+```
+
+### Integridade do modelo
+
+O banco utiliza restrições para proteger o domínio.
+
+O campo `collection.status` aceita somente:
+
+```text
+success
+no_metrics
+unavailable
+error
+```
+
+Também são validados:
+
+- códigos HTTP entre `100` e `599`, quando existentes;
+- impossibilidade de uma coleta `success` possuir `failure_reason`;
+- associação obrigatória da coleta a um serviço;
+- associação obrigatória de uma métrica à coleta que a originou;
+- no máximo um conjunto de métricas por coleta.
+
+### Consultas históricas
+
+O índice:
+
+```text
+(service_id_service, attempted_at DESC)
+```
+
+foi criado para favorecer consultas como:
+
+```text
+histórico de determinado serviço
+ordenado da coleta mais recente para a mais antiga
+```
+
+A estrutura também prepara consultas futuras por período utilizadas em:
+
+- histórico temporal;
+- gráficos;
+- ranking;
+- comparação entre serviços.
+
+### Cálculos ambientais
+
+Os resultados calculados de energia e CO₂e **não são persistidos em `collection` nesta etapa**.
+
+A TEC02 preserva a estrutura necessária para o histórico de coleta, enquanto a estratégia de cálculo e sua associação temporal com `carbon_intensity` será definida na implementação específica do cálculo ambiental.
+
+Essa decisão evita antecipar regras pertencentes à US07.
 
 ---
 
-## 8. Endpoints confirmados na versão atual
+## 8. Evolução do schema e migrations
+
+O arquivo:
+
+```text
+database/schema.sql
+```
+
+representa o estado completo atual do banco e foi validado através da criação de um PostgreSQL vazio.
+
+Para atualizar bancos que já utilizavam o modelo anterior, foi criada:
+
+```text
+database/migrations/001_add_collection.sql
+```
+
+A migration transforma:
+
+```text
+service → metrics
+```
+
+em:
+
+```text
+service → collection → metrics
+```
+
+sem exigir a exclusão do volume PostgreSQL.
+
+Caso existam métricas anteriores à alteração, a migration cria uma coleta de estado `success` para cada registro antigo e utiliza `metrics.recorded_at` como referência temporal disponível durante a conversão.
+
+Uma coluna temporária:
+
+```text
+legacy_metrics_id
+```
+
+é utilizada somente durante a migration para relacionar registros antigos às novas coletas e é removida antes do `COMMIT`.
+
+A migration é executada dentro de uma transação para evitar que o banco permaneça parcialmente atualizado caso alguma operação falhe.
+
+### Validações realizadas na TEC02
+
+Foram verificados:
+
+- criação do `schema.sql` em PostgreSQL vazio;
+- criação da tabela `collection`;
+- relacionamento `service → collection`;
+- relacionamento `collection → metrics`;
+- PKs e FKs;
+- restrições `CHECK`;
+- restrição `UNIQUE` entre coleta e métricas;
+- índice para consultas históricas;
+- cenário de coleta `success`;
+- cenário `no_metrics`;
+- cenário `unavailable`;
+- rejeição de estado inválido;
+- rejeição de `success` associado a `failure_reason`;
+- aplicação da migration no banco existente;
+- persistência após reinicialização do PostgreSQL;
+- inicialização do backend após alteração do schema;
+- execução da suíte automatizada existente com **20 de 20 testes aprovados**.
+
+---
+
+## 9. Integrações externas
+
+### Metrics Aggregator API
+
+Atualmente é utilizada para descoberta dos serviços através de:
+
+```text
+GET /services
+```
+
+A Sprint 2 adicionará o fluxo de coleta individual:
+
+```text
+GET /metrics/{id_servico}
+```
+
+O módulo de integração deverá tratar:
+
+- timeout;
+- erro HTTP;
+- ausência de métricas;
+- resposta válida;
+- falhas individuais sem interromper a coleta dos demais serviços.
+
+### Carbon Intensity API
+
+Será responsável por fornecer os fatores ambientais necessários ao cálculo de CO₂e.
+
+A localização persistida para cada serviço permitirá associar o serviço à região utilizada no cálculo.
+
+A forma definitiva de relacionar temporalmente uma coleta ao registro de intensidade de carbono será definida durante a implementação do cálculo ambiental.
+
+---
+
+## 10. Endpoints confirmados na versão atual
 
 | Método | Rota | Finalidade |
-|---|---|---|
+| --- | --- | --- |
 | `GET` | `/health` | Saúde básica do backend |
 | `POST` | `/auth/register` | Cadastro de usuário |
 | `POST` | `/auth/login` | Login e emissão de JWT |
@@ -217,11 +545,11 @@ A estrutura final deve ser refletida em `database/schema.sql`, no modelo de dado
 | `POST` | `/api/servicos/sync` | Sincronização manual do catálogo |
 | `GET` | `/api/servicos` | Listagem persistida de serviços |
 
-Endpoints de coletas, histórico e indicadores devem ser adicionados aqui somente quando estiverem realmente implementados.
+Endpoints de coletas, histórico e indicadores devem ser adicionados somente quando estiverem realmente implementados.
 
 ---
 
-## 9. Execução local
+## 11. Execução local
 
 O `compose.yaml` executa:
 
@@ -229,21 +557,60 @@ O `compose.yaml` executa:
 - `backend` — Node.js + TypeScript;
 - `frontend` — React + TypeScript.
 
-O volume do PostgreSQL preserva dados quando os containers são reiniciados com `docker compose down` / `docker compose up`. `docker compose down -v` remove o volume e, portanto, não deve ser utilizado em testes de persistência.
+O volume do PostgreSQL preserva os registros quando os containers são reiniciados com:
+
+```text
+docker compose down
+docker compose up
+```
+
+O comando:
+
+```text
+docker compose down -v
+```
+
+remove o volume e, portanto, não deve ser utilizado em testes cujo objetivo seja validar persistência.
+
+Alterações incrementais no modelo de um banco já inicializado devem utilizar as migrations disponíveis em:
+
+```text
+database/migrations/
+```
+
+em vez de depender da recriação do volume.
 
 ---
 
-## 10. Decisões arquiteturais a registrar durante a Sprint 2
+## 12. Decisões arquiteturais da Sprint 2
 
-- modelo definitivo da entidade de coleta;
-- política de estados da coleta (`success`, `no_metrics`, falha etc.);
+### Decisões já registradas
+
+- adoção da entidade `collection`;
+- separação entre tentativa de coleta e métricas válidas;
+- relacionamento `service → collection → metrics`;
+- cardinalidade de zero ou um registro de métricas por coleta;
+- estados de coleta:
+  - `success`;
+  - `no_metrics`;
+  - `unavailable`;
+  - `error`;
+- `service.status` e `service.last_seen_at` permanecem responsáveis pelo estado atual conhecido do serviço;
+- `collection` preserva o histórico das tentativas;
+- falhas não geram registros vazios em `metrics`;
+- evolução do schema realizada por migration;
+- energia e CO₂e não são persistidos na entidade `collection` nesta etapa.
+
+### Decisões ainda pendentes
+
 - intervalo de sincronização do catálogo;
 - intervalo de coleta de métricas;
 - intervalo de atualização do frontend;
-- política de retries/timeouts;
-- forma de associação da intensidade de carbono à coleta;
-- fórmulas e unidades de energia/CO₂e;
+- política definitiva de retries e timeouts;
+- regras operacionais para classificar cada resposta externa como `no_metrics`, `unavailable` ou `error`;
+- forma de associação temporal da intensidade de carbono à coleta;
+- fórmulas e unidades de energia e CO₂e;
 - endpoints de histórico e indicadores;
 - proteção JWT das rotas configuráveis.
 
-Essas decisões devem ser documentadas quando forem implementadas, evitando anunciar comportamento ainda não validado.
+Essas decisões devem ser documentadas conforme forem implementadas e validadas, evitando apresentar comportamento planejado como funcionalidade concluída.
