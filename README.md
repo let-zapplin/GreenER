@@ -6,17 +6,17 @@ O GreenER é um sistema que monitora aplicações e serviços de uma infraestrut
 
 ---
 
-## 📋 Índice
+## 🧭 Navegação
 
-- 📌 Sobre o Projeto
-- ✨ Funcionalidades
-- 🛠 Tecnologias Utilizadas
-- 🚀 Como Funciona
-- 📂 Organização do Repositório
-- ▶️ Como Executar
-- 📚 Documentação
-- 🗓 Sprints
-- 👥 Equipe
+[_Sobre o Projeto_](#-sobre-o-projeto) • [_Funcionalidades_](#-funcionalidades) • [_Tecnologias_](#-tecnologias-utilizadas) • [_Como Executar_](#️-como-executar-o-ambiente-com-docker) • [_Documentação_](#-documentação) • [_Equipe_](#-equipe)
+
+### 🚀 Acompanhe a evolução do GreenER
+
+| Sprint 01 | Sprint 02 | Sprint 03 |
+| :---: | :---: | :---: |
+| ✅ Concluída | ⏳ Planejada | ⏳ Planejada |
+| [📄 Documentação](docs/sprints/sprint-1.md) | [📄 Documentação](docs/sprints/sprint-2.md) | [📄 Documentação](docs/sprints/sprint-3.md) |
+| [▶️ Demonstração](https://youtu.be/pGdiciJxTPw) | Em breve | Em breve |
 
 ---
 
@@ -28,10 +28,10 @@ O GreenER busca preencher essa lacuna: a partir das métricas dos serviços moni
 
 O projeto consome duas APIs auxiliares fornecidas pela Unilaunch:
 
-| API | Para que serve | Documentação |
-| --- | --- | --- |
-| Agregador de Métricas | Descoberta dos serviços e coleta das métricas de cada um | [metrics.unilaunch.org/docs](https://metrics.unilaunch.org/docs) |
-| Serviço de Intensidade de Carbono | Consulta da intensidade de carbono para o cálculo das emissões | [carbon.unilaunch.org/docs](https://carbon.unilaunch.org/docs) |
+| API                               | Para que serve                                                 | Documentação                                                     |
+| --------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Agregador de Métricas             | Descoberta dos serviços e coleta das métricas de cada um       | [metrics.unilaunch.org/docs](https://metrics.unilaunch.org/docs) |
+| Serviço de Intensidade de Carbono | Consulta da intensidade de carbono para o cálculo das emissões | [carbon.unilaunch.org/docs](https://carbon.unilaunch.org/docs)   |
 
 ---
 
@@ -77,32 +77,130 @@ O fluxo completo está descrito em [`docs/arquitetura.md`](docs/arquitetura.md).
 
 ## 📂 Organização do Repositório
 
-| Pasta / Arquivo | O que contém |
-| --- | --- |
-| [`frontend/`](frontend/README.md) | Aplicação web (dashboard e telas) |
-| [`backend/`](backend/README.md) | API, regras de negócio e integração com as APIs auxiliares |
-| [`database/`](database/README.md) | Scripts SQL do banco de dados |
-| [`docs/`](docs/) | Planejamento, arquitetura, cálculos, API e registro das sprints |
-| [`compose.yaml`](compose.yaml) | Execução do projeto com Docker |
-| [`.env.example`](.env.example) | Modelo das variáveis de ambiente |
+| Pasta / Arquivo                   | O que contém                                                    |
+| --------------------------------- | --------------------------------------------------------------- |
+| [`frontend/`](frontend/README.md) | Aplicação web (dashboard e telas)                               |
+| [`backend/`](backend/README.md)   | API, regras de negócio e integração com as APIs auxiliares      |
+| [`database/`](database/README.md) | Scripts SQL do banco de dados                                   |
+| [`docs/`](docs/)                  | Planejamento, arquitetura, cálculos, API e registro das sprints |
+| [`compose.yaml`](compose.yaml)    | Execução do projeto com Docker                                  |
+| [`.env.example`](.env.example)    | Modelo das variáveis de ambiente                                |
 
 ---
 
-## ▶️ Como Executar
+## ▶️ Como Executar o Ambiente com Docker
 
-1. Clone o repositório
-   ```bash
-   git clone https://github.com/LetzApplin/GreenER.git
-   cd greener
-   ```
-2. Crie o arquivo de variáveis de ambiente a partir do modelo
-   ```bash
-   cp .env.example .env
-   ```
-3. Suba a aplicação
-   ```bash
-   docker compose up --build
-   ```
+O GreenER utiliza Docker Compose para executar os principais serviços da aplicação:
+
+- Frontend em React + TypeScript
+- Backend em Node.js + TypeScript + Express
+- Banco de dados PostgreSQL
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/LetzApplin/GreenER.git
+cd GreenER
+```
+
+### 2. Crie o arquivo de variáveis de ambiente
+
+Crie o arquivo `.env` a partir do modelo disponível no projeto:
+
+```bash
+cp .env.example .env
+```
+
+Revise os valores do arquivo `.env` e ajuste-os caso necessário.
+
+### 3. Suba a aplicação com Docker
+
+Na raiz do projeto, execute:
+
+```bash
+docker compose up --build
+```
+
+Esse comando irá construir e iniciar os containers do:
+
+- PostgreSQL
+- Backend
+- Frontend
+
+### 4. Acesse os serviços
+
+Após a inicialização dos containers:
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3000`
+- Healthcheck do backend: `http://localhost:3000/health`
+- PostgreSQL no host: `localhost:5433`
+
+Internamente, o backend acessa o PostgreSQL através de:
+
+```text
+postgres:5432
+```
+
+A porta `5433` é utilizada apenas para acesso ao banco a partir da máquina host.
+
+### 5. Executar em segundo plano
+
+Para subir os containers sem manter os logs no terminal:
+
+```bash
+docker compose up -d
+```
+
+### 6. Verificar o status dos containers
+
+```bash
+docker compose ps
+```
+
+### 7. Encerrar o ambiente
+
+```bash
+docker compose down
+```
+
+Os dados do PostgreSQL permanecem armazenados no volume Docker após o encerramento dos containers.
+
+Para remover também os volumes:
+
+```bash
+docker compose down -v
+```
+
+> ⚠️ O comando acima remove os dados persistidos do PostgreSQL.
+
+## 🔄 Hot Reload
+
+O ambiente de desenvolvimento foi configurado para refletir alterações no código automaticamente.
+
+Alterações em arquivos como:
+
+```text
+.ts
+.tsx
+.css
+```
+
+não exigem reconstrução das imagens.
+
+Já alterações em arquivos como:
+
+```text
+package.json
+package-lock.json
+Dockerfile
+```
+
+podem exigir uma nova construção:
+
+```bash
+docker compose up --build
+```
 
 <!-- Confirmar comandos e portas de acesso quando o Docker estiver pronto -->
 
@@ -110,14 +208,24 @@ Para instruções específicas de cada parte, consulte os READMEs do [frontend](
 
 ---
 
+## ✅ Como testar e validar
+
+Para fazer testes unitários
+
+- [`docs/testes/manual_teste_unitario.md`](docs/testes/manual_teste_unitario.md) - Manual com instruções para testes unitários
+
+- [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md) - Manual de validação de fluxo de Metrics API ao React
+
+---
+
 ## 📚 Documentação
 
-| Documento | Conteúdo |
-| --- | --- |
+| Documento                                                | Conteúdo                                                           |
+| -------------------------------------------------------- | ------------------------------------------------------------------ |
 | [`docs/plano-de-entregas.md`](docs/plano-de-entregas.md) | Planejamento das três sprints, entregas, responsáveis e evidências |
-| [`docs/arquitetura.md`](docs/arquitetura.md) | Partes da aplicação e fluxo dos dados |
-| [`docs/calculos.md`](docs/calculos.md) | Fórmulas e premissas do cálculo de energia e CO₂e |
-| [`docs/api.md`](docs/api.md) | Endpoints da API do projeto |
+| [`docs/arquitetura.md`](docs/arquitetura.md)             | Partes da aplicação e fluxo dos dados                              |
+| [`docs/calculos.md`](docs/calculos.md)                   | Fórmulas e premissas do cálculo de energia e CO₂e                  |
+| [`docs/api.md`](docs/api.md)                             | Endpoints da API do projeto                                        |
 
 Materiais do desafio:
 
@@ -130,23 +238,23 @@ Materiais do desafio:
 
 O projeto é desenvolvido em três sprints. O registro de cada uma (objetivo, itens concluídos e pendentes, decisões da Sprint Review) fica em `docs/sprints/`.
 
-| Sprint | Registro | Situação |
-| --- | --- | --- |
-| Sprint 1 | [`docs/sprints/sprint-1.md`](docs/sprints/sprint-1.md) | 🔄 Em andamento |
-| Sprint 2 | [`docs/sprints/sprint-2.md`](docs/sprints/sprint-2.md) | ⏳ Planejada |
-| Sprint 3 | [`docs/sprints/sprint-3.md`](docs/sprints/sprint-3.md) | ⏳ Planejada |
+| Sprint                                     | Período            | Principais Entregas                                                                         | Status        |
+| ------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------- | ------------- |
+| [**Sprint 1**](./docs/sprints/sprint-1.md) | 28/09 — 19/10/2026 | Prototipação · Diagramas UML · Modelagem BD · Conexão API e BD · Teste unitário e validação | ✔️ Finalizada |
+| [**Sprint 2**](./docs/sprints/sprint-2.md) | 20/10 — 09/11/2026 | A ser definido                                                                              | ⏳            |
+| [**Sprint 3**](./docs/sprints/sprint-3.md) | 10/11 — 23/11/2026 | A ser definido                                                                              | ⏳            |
 
 ---
 
 ## 👥 Equipe
 
-| Nome | Papel | GitHub |
-| --- | --- | --- |
-| Vitor Hirch | Scrum Master | [@vitorhirch](https://github.com/vitorhirch) |
-| Gustavo Koiti | Product Owner | [@gustavokoitiyoshimura](https://github.com/gustavokoitiyoshimura) |
-| Igor Souza | Desenvolvedor | [@igorcsouzaa](https://github.com/igorcsouzaa) |
-| Marcello Campbell | Desenvolvedor | [@mparise28-dev](https://github.com/mparise28-dev) |
-| Patrícia Evora | Desenvolvedor | [@PatyMaidana](https://github.com/PatyMaidana) |
+| Nome                | Papel         | GitHub                                                             |
+| ------------------- | ------------- | ------------------------------------------------------------------ |
+| Vitor Hirch         | Scrum Master  | [@vitorhirch](https://github.com/vitorhirch)                       |
+| Gustavo Koiti       | Product Owner | [@gustavokoitiyoshimura](https://github.com/gustavokoitiyoshimura) |
+| Igor Souza          | Desenvolvedor | [@igorcsouzaa](https://github.com/igorcsouzaa)                     |
+| Marcello Campbell   | Desenvolvedor | [@mparise28-dev](https://github.com/mparise28-dev)                 |
+| Patricia R. Maidana | Desenvolvedor | [@PatyMaidana](https://github.com/PatyMaidana)                     |
 
 **Instituição:** FATEC Jacareí, curso de Desenvolvimento de Software Multiplataforma (DSM)
 **Parceiro:** Unilaunch

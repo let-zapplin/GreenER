@@ -1,0 +1,13 @@
+.service-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 700px) {
+  .service-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
