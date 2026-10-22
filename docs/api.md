@@ -27,11 +27,13 @@ flowchart LR
 | `GET` | `/health` | Consultar o estado básico do backend | Infraestrutura |
 | `POST` | `/auth/register` | Cadastrar usuário | Autenticação |
 | `POST` | `/auth/login` | Autenticar usuário e receber token JWT | Autenticação |
+| `GET` | `/auth/me` | Validar token e obter dados do usuário logado (Rota Protegida) | TEC29 |
 | `GET` | `/api/servicos/discover` | Buscar serviços diretamente na API externa | US01 |
 | `POST` | `/api/servicos/sync` | Sincronizar serviços externos com o banco | US02 |
 | `GET` | `/api/servicos` | Listar serviços persistidos no banco | RF01 / RF02 / apoio ao monitoramento |
 
-**Situação de acesso:** cadastro/login e emissão de JWT existem, mas a proteção efetiva das rotas no backend permanece pendente na **TEC29 da Sprint 2**. Até essa implementação ser validada, não considerar os endpoints de serviços como protegidos apenas porque o frontend possui sessão.
+**Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
+ O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas (como a rota `/auth/me` e a futura área de configuração). O backend valida o token e retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
 
 ---
 
