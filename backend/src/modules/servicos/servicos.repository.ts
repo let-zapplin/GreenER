@@ -9,12 +9,11 @@ export class ServicosRepository {
   // LOCATION
   // ========================================================
 
-  // Buscar location por region_code + city
-  async findLocationByRegionAndCity(regionCode: string, city: string) {
+  // Buscar location pelo código da região
+  async findLocationByRegionCode(regionCode: string) {
     const result = await pool.query(
-      `SELECT * FROM location 
-             WHERE region_code = $1 AND city = $2`,
-      [regionCode, city],
+      `SELECT * FROM location WHERE region_code = $1`,
+      [regionCode],
     );
     return result.rows[0] ?? null;
   }
@@ -24,7 +23,7 @@ export class ServicosRepository {
     region_code: string;
     country: string;
     region: string;
-    city: string;
+    city: string | null;
     latitude: number;
     longitude: number;
   }) {

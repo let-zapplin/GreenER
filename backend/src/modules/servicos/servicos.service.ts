@@ -10,7 +10,7 @@ export interface Location {
   region_code: string;
   country: string;
   region: string;
-  city: string;
+  city: string | null;
   latitude: number;
   longitude: number;
 }
@@ -80,7 +80,7 @@ export class ServicosService {
       });
 
       return services;
-    } catch (error) {
+    } catch (error: unknown) {
       // --------------------------------------------------
       // TRATAMENTO DE ERRO
       // Lança ExternalApiError → middleware trata
@@ -115,15 +115,18 @@ export class ServicosService {
       // --------------------------------------------------
       // PASSO 1: Verificar/criar location
       // --------------------------------------------------
-      let location = await this.repository.findLocationByRegionAndCity(
+      let location = await this.repository.findLocationByRegionCode(
         svc.location.region_code,
-        svc.location.city,
       );
 
+      // 2. Se não existe, cria
       if (!location) {
-        // Se não existe, cria
         location = await this.repository.createLocation(svc.location);
-        console.log(`  📍 Location criada: ${svc.location.city}`);
+
+        const nomeCidade = svc.location.city ?? "cidade não informada";
+        console.log(
+          `  📍 Location criada para a região: ${svc.location.region_code} (${nomeCidade})`,
+        );
       }
 
       // --------------------------------------------------
