@@ -115,9 +115,8 @@ export class ServicosService {
       // --------------------------------------------------
       // PASSO 1: Verificar/criar location
       // --------------------------------------------------
-      let location = await this.repository.findLocationByRegionAndCity(
-        svc.location.region_code,
-        svc.location.city,
+      let location = await this.repository.findLocationByRegion(
+        svc.location.region_code
       );
 
       if (!location) {
