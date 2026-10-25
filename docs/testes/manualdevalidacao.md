@@ -93,7 +93,7 @@ Resposta esperada semelhante a:
   "message": "Serviços sincronizados com sucesso",
   "created": 0,
   "updated": 8,
-  "unavailable": 0
+  "removed": 0
 }
 ```
 
@@ -169,7 +169,7 @@ serviço presente
     ↓
 serviço deixa /services
     ↓
-backend marca unavailable
+backend marca o serviço como removido (`removed`)
     ↓
 frontend sinaliza indisponibilidade
     ↓

@@ -212,7 +212,7 @@ curl http://localhost:3000/api/servicos/discover
 
 ### `POST /api/servicos/sync` — US02
 
-Realiza a sincronização entre a lista de serviços externa e o PostgreSQL. Para cada serviço, verifica a localização, cria ou atualiza seu cadastro e sinaliza como indisponíveis os serviços persistidos que não constem mais da resposta externa.
+Realiza a sincronização entre a lista de serviços externa e o PostgreSQL. Para cada serviço, verifica a localização, cria ou atualiza seu cadastro e marca como removidos os serviços persistidos que não constem mais da resposta externa.
 
 **Corpo da requisição:** nenhum.  
 **Sucesso:** `200 OK`.
@@ -222,7 +222,7 @@ Realiza a sincronização entre a lista de serviços externa e o PostgreSQL. Par
   "message": "Serviços sincronizados com sucesso",
   "created": 2,
   "updated": 5,
-  "unavailable": 0
+  "removed": 0
 }
 ```
 
@@ -230,7 +230,7 @@ Realiza a sincronização entre a lista de serviços externa e o PostgreSQL. Par
 |---|---|
 | `created` | Quantidade de serviços criados nesta sincronização |
 | `updated` | Quantidade de serviços já existentes que foram atualizados |
-| `unavailable` | Quantidade de registros alterados para status `unavailable` |
+| `removed` | Quantidade de registros alterados para status `removed` |
 
 **Exemplo:**
 
@@ -249,9 +249,9 @@ flowchart TD
   C --> D{Serviço já existe?}
   D -->|Não| E[Inserir serviço]
   D -->|Sim| F[Atualizar serviço]
-  E --> G[Marcar ausentes como unavailable]
+  E --> G[Marcar ausentes como removed]
   F --> G
-  G --> H[Retornar created, updated, unavailable]
+  G --> H[Retornar created, updated, removed]
 ```
 
 > **Sincronização automática:** além deste endpoint manual, `server.ts` inicia o job `startServiceSync()` quando o backend sobe. Na versão atual, a variável de intervalo está associada à **sincronização do catálogo**, não à futura coleta de métricas. A Sprint 2 deve separar claramente os intervalos de sincronização, coleta e atualização do frontend.

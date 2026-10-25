@@ -144,7 +144,7 @@ A existência desses arquivos não significa que o fluxo de coleta já esteja im
 
 Ao iniciar, o backend dispara um job de sincronização do catálogo de serviços.
 
-O job consulta `/services`, cria ou atualiza registros e marca como `unavailable` serviços persistidos que deixaram de aparecer na resposta externa.
+O job consulta `/services`, cria ou atualiza registros e marca como `removed` serviços persistidos que deixaram de aparecer na resposta externa.
 
 ```mermaid
 flowchart TD
@@ -157,7 +157,7 @@ flowchart TD
     I --> A[Comparar IDs ativos]
     U --> A
 
-    A --> X[Marcar ausentes como unavailable]
+    A --> X[Marcar ausentes como removed]
     X --> W[Esperar próximo intervalo]
     W --> J
 ```
@@ -188,7 +188,7 @@ service.last_seen_at
 Os estados persistidos atualmente têm foco em:
 
 - `active`;
-- `unavailable`.
+- `removed`.
 
 Esses dados permitem consultas rápidas sobre a situação atual do catálogo.
 
@@ -209,7 +209,7 @@ A partir da TEC02, cada tentativa de coleta pode possuir um dos seguintes estado
 | --- | --- |
 | `success` | A consulta retornou métricas válidas |
 | `no_metrics` | O serviço está disponível, mas não forneceu métricas válidas |
-| `unavailable` | Não foi possível consultar o serviço |
+| `removed` | Não foi possível consultar o serviço |
 | `error` | Ocorreu erro durante o processamento da coleta |
 
 Isso permite representar, por exemplo:
@@ -219,7 +219,7 @@ serviço: active
 última coleta: no_metrics
 ```
 
-sem confundir ausência de métricas com indisponibilidade do serviço.
+sem confundir ausência de métricas com indisponibilidade durante uma tentativa de coleta.
 
 A causa técnica de uma falha pode ser registrada separadamente em `collection.failure_reason`, enquanto `http_status` pode armazenar o código HTTP quando houver resposta.
 

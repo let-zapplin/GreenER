@@ -52,12 +52,12 @@ export class ServicosRepository extends LocalidadesRepository{
     );
   }
 
-  async markUnavailableExcept(activeExternalIds: string[]): Promise<number> {
+  async markRemovedExcept(activeExternalIds: string[]): Promise<number> {
     if (activeExternalIds.length === 0) {
       const result = await pool.query(
         `UPDATE service
-       SET status = 'unavailable'
-       WHERE status <> 'unavailable'`,
+       SET status = 'removed'
+       WHERE status <> 'removed'`,
       );
 
       return result.rowCount ?? 0;
@@ -65,10 +65,10 @@ export class ServicosRepository extends LocalidadesRepository{
 
     const result = await pool.query(
       `UPDATE service
-     SET status = 'unavailable'
+     SET status = 'removed'
      WHERE
        id <> ALL($1::text[])
-       AND status <> 'unavailable'`,
+       AND status <> 'removed'`,
       [activeExternalIds],
     );
 

@@ -16,7 +16,7 @@ function getStatusLabel(status: MonitoredService["status"]) {
     case "returned":
       return "Retornou";
 
-    case "unavailable":
+    case "removed":
       return "Indisponível";
   }
 }
