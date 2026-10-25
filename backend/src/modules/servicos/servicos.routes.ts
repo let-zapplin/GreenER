@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { ServicosController } from "./servicos.controller.js";
+import { authMiddleware } from "../../shared/middlewares/auth.middleware.js";
 
 const router = Router();
 const controller = new ServicosController();
@@ -10,7 +11,8 @@ router.get("/discover", (req, res, next) =>
 );
 
 // US02: Sincronizar serviços (salvar no banco)
-router.post("/sync", (req, res, next) => controller.sync(req, res, next));
+router.post("/sync", authMiddleware, (req, res, next) =>
+   controller.sync(req, res, next));
 
 // US03: Listar serviços do banco
 router.get("/", (req, res, next) => controller.list(req, res, next));
