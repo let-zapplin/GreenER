@@ -1,10 +1,33 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicosService, type ExternalService } from "./servicos.service.js";
 import { ExternalApiError } from "../../shared/errors/AppError.js";
 
+const {
+  findLocationByRegionMock,
+  createLocationMock,
+  findByExternalIdMock,
+  createServiceMock,
+  updateServiceMock,
+  markRemovedExceptMock,
+} = vi.hoisted(() => ({
+  findLocationByRegionMock: vi.fn(),
+  createLocationMock: vi.fn(),
+  findByExternalIdMock: vi.fn(),
+  createServiceMock: vi.fn(),
+  updateServiceMock: vi.fn(),
+  markRemovedExceptMock: vi.fn(),
+}));
+
 // A descoberta não precisa acessar o banco de dados.
 vi.mock("./servicos.repository.js", () => ({
-  ServicosRepository: vi.fn(class {}),
+  ServicosRepository: class {
+    findLocationByRegion = findLocationByRegionMock;
+    createLocation = createLocationMock;
+    findByExternalId = findByExternalIdMock;
+    createService = createServiceMock;
+    updateService = updateServiceMock;
+    markRemovedExcept = markRemovedExceptMock;
+  },
 }));
 
 // Evita depender das variáveis de ambiente reais.
@@ -14,6 +37,10 @@ vi.mock("../../config/env.js", () => ({
     externalApiTimeoutMs: 5000,
   },
 }));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -121,5 +148,77 @@ describe("ServicosService.discoverServices", () => {
     expect(requestSignal?.aborted).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("ServicosService.saveServices", () => {
+  it("mantém serviço existente ativo e marca como removidos apenas os ausentes", async () => {
+    const services: ExternalService[] = [
+      {
+        id: "servico-1",
+        name: "API de pedidos",
+        location: {
+          region_code: "BR-SP",
+          country: "Brasil",
+          region: "São Paulo",
+          city: "São Paulo",
+          latitude: -23.55,
+          longitude: -46.63,
+        },
+        metrics_path: "/services/servico-1/metrics",
+      },
+    ];
+
+    const service = new ServicosService();
+
+    vi.spyOn(service, "discoverServices").mockResolvedValue(services);
+
+    findLocationByRegionMock.mockResolvedValue({
+      id_location: 1,
+    });
+
+    findByExternalIdMock.mockResolvedValue({
+      id_service: 10,
+      id: "servico-1",
+    });
+
+    markRemovedExceptMock.mockResolvedValue(2);
+
+    const result = await service.saveServices();
+
+    expect(updateServiceMock).toHaveBeenCalledWith({
+      id: "servico-1",
+      name: "API de pedidos",
+      locationId: 1,
+    });
+
+    expect(markRemovedExceptMock).toHaveBeenCalledWith(["servico-1"]);
+
+    expect(result).toEqual({
+      created: 0,
+      updated: 1,
+      removed: 2,
+    });
+  });
+
+  it("marca os serviços persistidos como removidos quando o catálogo vem vazio", async () => {
+    const service = new ServicosService();
+
+    vi.spyOn(service, "discoverServices").mockResolvedValue([]);
+
+    markRemovedExceptMock.mockResolvedValue(8);
+
+    const result = await service.saveServices();
+
+    expect(markRemovedExceptMock).toHaveBeenCalledWith([]);
+
+    expect(createServiceMock).not.toHaveBeenCalled();
+    expect(updateServiceMock).not.toHaveBeenCalled();
+
+    expect(result).toEqual({
+      created: 0,
+      updated: 0,
+      removed: 8,
+    });
   });
 });

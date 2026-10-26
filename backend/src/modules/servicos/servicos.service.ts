@@ -10,7 +10,7 @@ export interface Location {
   region_code: string;
   country: string;
   region: string;
-  city: string;
+  city: string | null;
   latitude: number;
   longitude: number;
 }
@@ -80,7 +80,7 @@ export class ServicosService {
       });
 
       return services;
-    } catch (error) {
+    } catch (error: unknown) {
       // --------------------------------------------------
       // TRATAMENTO DE ERRO
       // Lança ExternalApiError → middleware trata
@@ -99,7 +99,7 @@ export class ServicosService {
   async saveServices(): Promise<{
     created: number;
     updated: number;
-    unavailable: number;
+    removed: number;
   }> {
     console.log("💾 Salvando serviços no banco...");
 
@@ -115,15 +115,18 @@ export class ServicosService {
       // --------------------------------------------------
       // PASSO 1: Verificar/criar location
       // --------------------------------------------------
-      let location = await this.repository.findLocationByRegionAndCity(
-        svc.location.region_code,
-        svc.location.city,
+      let location = await this.repository.findLocationByRegion(
+        svc.location.region_code
       );
 
+      // 2. Se não existe, cria
       if (!location) {
-        // Se não existe, cria
         location = await this.repository.createLocation(svc.location);
-        console.log(`  📍 Location criada: ${svc.location.city}`);
+
+        const nomeCidade = svc.location.city ?? "cidade não informada";
+        console.log(
+          `  📍 Location criada para a região: ${svc.location.region_code} (${nomeCidade})`,
+        );
       }
 
       // --------------------------------------------------
@@ -150,13 +153,13 @@ export class ServicosService {
       }
     }
 
-    const unavailable =
-      await this.repository.markUnavailableExcept(activeExternalIds);
+    const removed =
+      await this.repository.markRemovedExcept(activeExternalIds);
     console.log(
-      `✅ ${created} criados, ${updated} atualizados, ${unavailable} indisponíveis`,
+      `✅ ${created} criados, ${updated} atualizados, ${removed} removidos`,
     );
 
-    return { created, updated, unavailable };
+    return { created, updated, removed };
   }
   // ========================================================
   // US03: Listar todos os serviços armazenados no banco

@@ -31,14 +31,14 @@ test("serviços que surgem após uma consulta vazia são novos", () => {
   assert.equal(reconcileServices([], [service], true)[0].status, "new");
 });
 
-test("a indisponibilidade do backend é preservada e o retorno atualiza os metadados", () => {
+test("o status removido do backend é preservado e o retorno atualiza os metadados", () => {
   const previous: MonitoredService = { ...service, status: "active" };
   const removed = reconcileServices(
     [previous],
-    [{ ...service, status: "unavailable" }],
+    [{ ...service, status: "removed" }],
     true,
   );
-  assert.deepEqual(removed, [{ ...service, status: "unavailable" }]);
+  assert.deepEqual(removed, [{ ...service, status: "removed" }]);
   const returned = reconcileServices(
     removed,
     [{ ...service, name: "API atualizada" }],
@@ -81,7 +81,7 @@ for (const status of ["new", "returned"] as const) {
     assert.equal(expired[0].statusExpiresAt, undefined);
   });
 
-  test(`indisponibilidade interrompe ${status} imediatamente e o retorno inicia novo prazo`, () => {
+  test(`remoção interrompe ${status} imediatamente e o retorno inicia novo prazo`, () => {
     const highlighted: MonitoredService = {
       ...service,
       status,
@@ -89,11 +89,11 @@ for (const status of ["new", "returned"] as const) {
     };
     const removed = reconcileServices(
       [highlighted],
-      [{ ...service, status: "unavailable" }],
+      [{ ...service, status: "removed" }],
       true,
       11_000,
     );
-    assert.equal(removed[0].status, "unavailable");
+    assert.equal(removed[0].status, "removed");
     assert.equal(removed[0].statusExpiresAt, undefined);
     const returned = reconcileServices(removed, [service], true, 11_500);
     assert.equal(returned[0].status, "returned");
@@ -106,30 +106,61 @@ test("novos serviços recebem prazo contado a partir da descoberta", () => {
   assert.equal(discovered[0].statusExpiresAt, 13_000);
 });
 
-test("a última leitura válida é preservada enquanto o backend informa indisponibilidade", () => {
+test("a última leitura válida é preservada enquanto o backend informa remoção", () => {
   const initial = reconcileServices([], [service], false, 10_000);
-  assert.equal(initial[0].lastConfirmedAt, new Date(10_000).toISOString());
-  const confirmed = reconcileServices(initial, [service], true, 11_000);
-  assert.equal(confirmed[0].lastConfirmedAt, new Date(11_000).toISOString());
-  const storedUnavailable: MonitoredService = {
+  assert.equal(
+    initial[0].lastConfirmedAt,
+    new Date(10_000).toISOString(),
+  );
+
+  const confirmed = reconcileServices(
+    initial,
+    [service],
+    true,
+    11_000,
+  );
+
+  assert.equal(
+    confirmed[0].lastConfirmedAt,
+    new Date(11_000).toISOString(),
+  );
+
+  const storedRemoved: MonitoredService = {
     ...service,
-    status: "unavailable",
+    status: "removed",
     lastConfirmedAt: confirmed[0].lastConfirmedAt,
   };
-  const unavailable = reconcileServices(
+
+  const removed = reconcileServices(
     confirmed,
-    [storedUnavailable],
+    [storedRemoved],
     true,
     12_000,
   );
-  assert.equal(unavailable[0].lastConfirmedAt, confirmed[0].lastConfirmedAt);
+
   assert.equal(
-    reconcileServices(unavailable, [storedUnavailable], true, 15_000)[0]
+    removed[0].lastConfirmedAt,
+    confirmed[0].lastConfirmedAt,
+  );
+
+  assert.equal(
+    reconcileServices(removed, [storedRemoved], true, 15_000)[0]
       .lastConfirmedAt,
     confirmed[0].lastConfirmedAt,
   );
-  const returned = reconcileServices(unavailable, [service], true, 16_000);
-  assert.equal(returned[0].lastConfirmedAt, new Date(16_000).toISOString());
+
+  const returned = reconcileServices(
+    removed,
+    [service],
+    true,
+    16_000,
+  );
+
+  assert.equal(
+    returned[0].lastConfirmedAt,
+    new Date(16_000).toISOString(),
+  );
+
   assert.equal(returned[0].status, "returned");
 });
 
@@ -153,8 +184,8 @@ test("o histórico e o horário permanecem disponíveis ao remontar a tela", () 
   );
   // Reading the snapshot on another mount must not reset successful discoveries.
   assert.strictEqual(getMonitoringSnapshot(), successful);
-  const removed = recordDiscovery([{ ...service, status: "unavailable" }]);
-  assert.equal(getMonitoringSnapshot().services[0].status, "unavailable");
+  const removed = recordDiscovery([{ ...service, status: "removed" }]);
+  assert.equal(getMonitoringSnapshot().services[0].status, "removed");
   assert.strictEqual(getMonitoringSnapshot(), removed);
   assert.equal(recordDiscovery([service]).services[0].status, "returned");
 });

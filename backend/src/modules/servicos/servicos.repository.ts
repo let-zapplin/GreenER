@@ -1,50 +1,12 @@
 import pool from "../../db/connection.js";
+import { LocalidadesRepository } from "../localidades/localidades.repository.js";
 
 // ============================================================
 // CLASSE: ServicosRepository
 // Responsabilidade: Acesso ao banco de dados (SQL puro)
 // ============================================================
-export class ServicosRepository {
-  // ========================================================
-  // LOCATION
-  // ========================================================
-
-  // Buscar location por region_code + city
-  async findLocationByRegionAndCity(regionCode: string, city: string) {
-    const result = await pool.query(
-      `SELECT * FROM location 
-             WHERE region_code = $1 AND city = $2`,
-      [regionCode, city],
-    );
-    return result.rows[0] ?? null;
-  }
-
-  // Criar nova location
-  async createLocation(location: {
-    region_code: string;
-    country: string;
-    region: string;
-    city: string;
-    latitude: number;
-    longitude: number;
-  }) {
-    const result = await pool.query(
-      `INSERT INTO location 
-             (region_code, country, region, city, latitude, longitude)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             RETURNING *`,
-      [
-        location.region_code,
-        location.country,
-        location.region,
-        location.city,
-        location.latitude,
-        location.longitude,
-      ],
-    );
-    return result.rows[0];
-  }
-
+export class ServicosRepository extends LocalidadesRepository{
+  
   // ========================================================
   // SERVICE
   // ========================================================
@@ -90,12 +52,12 @@ export class ServicosRepository {
     );
   }
 
-  async markUnavailableExcept(activeExternalIds: string[]): Promise<number> {
+  async markRemovedExcept(activeExternalIds: string[]): Promise<number> {
     if (activeExternalIds.length === 0) {
       const result = await pool.query(
         `UPDATE service
-       SET status = 'unavailable'
-       WHERE status <> 'unavailable'`,
+       SET status = 'removed'
+       WHERE status <> 'removed'`,
       );
 
       return result.rowCount ?? 0;
@@ -103,10 +65,10 @@ export class ServicosRepository {
 
     const result = await pool.query(
       `UPDATE service
-     SET status = 'unavailable'
+     SET status = 'removed'
      WHERE
        id <> ALL($1::text[])
-       AND status <> 'unavailable'`,
+       AND status <> 'removed'`,
       [activeExternalIds],
     );
 

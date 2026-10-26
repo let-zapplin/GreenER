@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
-import authRoutes from "./modules/auth/auth.routes.js"; // <-- Sem chaves!
+import authRoutes from "./modules/auth/auth.routes.js";
 import servicosRoutes from "./modules/servicos/servicos.routes.js";
+import metricasRoutes from "./modules/coletas/coletas.routes.js";
 import { errorMiddleware } from "./shared/middlewares/error.middleware.js";
 
 const app = express();
@@ -23,6 +24,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/auth", authRoutes);
 app.use("/api/servicos", servicosRoutes);
+app.use("/api/metricas", metricasRoutes);
 app.use(errorMiddleware);
 
 export default app;

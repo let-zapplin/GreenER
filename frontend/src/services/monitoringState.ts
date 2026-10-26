@@ -31,11 +31,11 @@ export function reconcileServices(
   return current.map((service): MonitoredService => {
     const previousService = previousById.get(service.id);
 
-    // O backend é a fonte oficial da indisponibilidade.
-    if (service.status === "unavailable") {
+    // O backend é a fonte oficial do status de remoção.
+    if (service.status === "removed") {
       return {
         ...service,
-        status: "unavailable",
+        status: "removed",
       };
     }
 
@@ -59,8 +59,8 @@ export function reconcileServices(
       };
     }
 
-    // Antes estava indisponível e agora o backend diz que está ativo.
-    if (previousService.status === "unavailable") {
+   // Antes estava removido e agora o backend diz que está ativo.
+    if (previousService.status === "removed") {
       return {
         ...service,
         status: "returned",
