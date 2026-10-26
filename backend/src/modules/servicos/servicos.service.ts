@@ -99,7 +99,7 @@ export class ServicosService {
   async saveServices(): Promise<{
     created: number;
     updated: number;
-    unavailable: number;
+    removed: number;
   }> {
     console.log("💾 Salvando serviços no banco...");
 
@@ -153,13 +153,13 @@ export class ServicosService {
       }
     }
 
-    const unavailable =
-      await this.repository.markUnavailableExcept(activeExternalIds);
+    const removed =
+      await this.repository.markRemovedExcept(activeExternalIds);
     console.log(
-      `✅ ${created} criados, ${updated} atualizados, ${unavailable} indisponíveis`,
+      `✅ ${created} criados, ${updated} atualizados, ${removed} removidos`,
     );
 
-    return { created, updated, unavailable };
+    return { created, updated, removed };
   }
   // ========================================================
   // US03: Listar todos os serviços armazenados no banco

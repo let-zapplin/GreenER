@@ -19,7 +19,7 @@ export type DiscoverServicesResponse = {
   services: Service[];
 };
 
-export type ServiceStatus = "active" | "new" | "unavailable" | "returned";
+export type ServiceStatus = "active" | "new" | "removed" | "returned";
 
 export type MonitoredService = Service & {
   status: ServiceStatus;
@@ -37,7 +37,7 @@ export type StoredService = {
   city: string | null;
   latitude: number | null;
   longitude: number | null;
-  status: "active" | "unavailable";
+  status: "active" | "removed";
   last_seen_at: string | null;
 };
 

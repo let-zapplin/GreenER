@@ -5,7 +5,7 @@
   --status-active: #87e46c;
   --status-new: #e5e65d;
   --status-returned: #7dd3fc;
-  --status-unavailable: #fca5a5;
+  --status-removed: #fca5a5;
   width: 100%;
   max-width: 1328px;
   min-height: 0;
@@ -180,11 +180,11 @@
   font-size: 21px;
   font-variant-numeric: tabular-nums;
 }
-.services-count-active dd {
+.services-count-removed dd {
   color: var(--status-active);
 }
-.services-count-unavailable dd {
-  color: var(--status-unavailable);
+.services-count-removed  dd {
+  color: var(--status-removed);
 }
 .services-overview {
   min-width: 0;
@@ -242,8 +242,8 @@
   background: var(--status-returned);
   box-shadow: 0 0 14px #7dd3fc22;
 }
-.service-indicator.unavailable {
-  background: var(--status-unavailable);
+.service-indicator.removed {
+  background: var(--status-removed);
 }
 .service-indicator:focus-visible {
   outline: 2px solid #fff;
