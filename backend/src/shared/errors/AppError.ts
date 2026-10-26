@@ -38,3 +38,10 @@ export class UnauthorizedError extends AppError {
     super(message, 401, "UNAUTHORIZED");
   }
 }
+
+// Erro 409: Conflito com recurso já existente
+export class ConflictError extends AppError {
+  constructor(message = "Conflito com recurso existente") {
+    super(message, 409, "CONFLICT");
+  }
+}
