@@ -15,6 +15,19 @@ function optional(key: string, defaultValue: string): string {
   return process.env[key] ?? defaultValue;
 }
 
+// Intervalos vazios, zero ou negativos gerariam ciclos apertados
+// de requisição, então falhamos cedo na inicialização.
+function optionalPositiveInt(key: string, defaultValue: number): number {
+  const raw = process.env[key]?.trim();
+  if (!raw) return defaultValue;
+
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`❌ Variável ${key} deve ser um número inteiro positivo`);
+  }
+  return value;
+}
+
 export const env = {
   // Servidor
   nodeEnv: optional("NODE_ENV", "development"),
@@ -26,5 +39,6 @@ export const env = {
   externalApiTimeoutMs: Number(optional("EXTERNAL_API_TIMEOUT_MS", "5000")),
 
   // Monitoramento
-  collectionIntervalMs: Number(optional("COLLECTION_INTERVAL_MS", "60000")),
+  serviceSyncIntervalMs: optionalPositiveInt("SERVICE_SYNC_INTERVAL_MS", 300_000),
+  metricsCollectionIntervalMs: optionalPositiveInt("COLLECTION_INTERVAL_MS", 30_000),
 } as const;
