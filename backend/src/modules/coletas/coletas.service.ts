@@ -1,27 +1,50 @@
-import { fetchServiceMetrics } from "../../integrations/metrics-api.js";
+import {
+  fetchServiceMetrics,
+  type FetchMetricResult,
+} from "../../integrations/metrics-api.js";
 import { ServicosService } from "../servicos/servicos.service.js";
-import { MetricaRepository } from "./coletas.repository.js";
+import type { ListedService } from "../servicos/servicos.repository.js";
+import { ColetasRepository } from "./coletas.repository.js";
+
+interface CollectionFailure {
+  service: string;
+  reason: string;
+}
 
 export interface CollectionSummary {
   skipped: boolean;
-  services: number;
-  success: number;
-  noMetrics: number;
-  errors: number;
+  totalServices: number;
+  successCount: number;
+  noMetricsCount: number;
+  errorCount: number;
+  failures: CollectionFailure[];
 }
 
 // Compartilhado entre instâncias para que o job periódico e a rota manual
 // não consultem a API externa em paralelo.
 let collectionInProgress = false;
 
-export class MetricaService {
-  private servicosService = new ServicosService();
-  private repository = new MetricaRepository();
+export class ColetasService {
+  constructor(
+    private readonly servicosService: Pick<ServicosService, "listAll"> =
+      new ServicosService(),
+    private readonly repository: Pick<ColetasRepository, "saveCollection"> =
+      new ColetasRepository(),
+    private readonly fetchMetrics: typeof fetchServiceMetrics =
+      fetchServiceMetrics,
+  ) {}
 
   async collectAllMetrics(): Promise<CollectionSummary> {
     if (collectionInProgress) {
       console.warn("⚠️ Coleta anterior ainda em execução; ciclo ignorado.");
-      return { skipped: true, services: 0, success: 0, noMetrics: 0, errors: 0 };
+      return {
+        skipped: true,
+        totalServices: 0,
+        successCount: 0,
+        noMetricsCount: 0,
+        errorCount: 0,
+        failures: [],
+      };
     }
 
     collectionInProgress = true;
@@ -29,50 +52,72 @@ export class MetricaService {
     try {
       console.log("📊 Iniciando coleta de métricas em lote...");
 
-      const servicos = await this.servicosService.listAll();
-
+      const services: ListedService[] = await this.servicosService.listAll();
+      const availableServices = services.filter(
+        (service) => service.status === "active",
+      );
       const summary: CollectionSummary = {
         skipped: false,
-        services: servicos.length,
-        success: 0,
-        noMetrics: 0,
-        errors: 0,
+        totalServices: availableServices.length,
+        successCount: 0,
+        noMetricsCount: 0,
+        errorCount: 0,
+        failures: [],
       };
 
-      for (const servico of servicos) {
+      for (const service of availableServices) {
+        let result: FetchMetricResult;
+
         try {
-          const result = await fetchServiceMetrics(servico.external_id);
-
-          // Cada execução cria uma nova coleta (+ métricas quando há dados),
-          // preservando as amostras anteriores.
-          await this.repository.saveCollection(servico.id_service, result);
-
-          if (result.status === "success") {
-            summary.success++;
-            console.log(`✅ Métricas salvas: ${servico.name}`);
-          } else if (result.status === "no_metrics") {
-            summary.noMetrics++;
-            console.log(`⚠️ Sem métricas: ${servico.name}`);
-          } else {
-            summary.errors++;
-            console.log(
-              `❌ Falha na coleta: ${servico.name} (${result.failure_reason})`,
-            );
-          }
-        } catch (error) {
-          // Falha de um serviço não pode interromper a coleta dos demais.
-          summary.errors++;
+          result = await this.fetchMetrics(service.external_id);
+        } catch (error: unknown) {
           console.error(
-            `❌ Erro ao processar a coleta de ${servico.name}:`,
+            `❌ Erro inesperado ao consultar métricas de ${service.name}:`,
             error,
+          );
+          result = {
+            status: "error",
+            failure_reason:
+              "Ocorreu um erro inesperado ao consultar as métricas.",
+          };
+        }
+
+        try {
+          await this.repository.saveCollection(service.id_service, result);
+        } catch (error: unknown) {
+          summary.errorCount++;
+          summary.failures.push({
+            service: service.name,
+            reason: "Não foi possível salvar o resultado da coleta no banco.",
+          });
+          console.error(
+            `❌ Erro ao salvar a coleta de ${service.name}; os próximos serviços serão processados:`,
+            error,
+          );
+          continue;
+        }
+
+        if (result.status === "success") {
+          summary.successCount++;
+          console.log(`✅ Métricas salvas: ${service.name}`);
+        } else if (result.status === "no_metrics") {
+          summary.noMetricsCount++;
+          console.log(`⚠️ Sem métricas: ${service.name}`);
+        } else {
+          summary.errorCount++;
+          summary.failures.push({
+            service: service.name,
+            reason: result.failure_reason,
+          });
+          console.error(
+            `❌ Falha na coleta: ${service.name} (${result.failure_reason})`,
           );
         }
       }
 
       console.log(
-        `🏁 Coleta finalizada: ${summary.success} sucessos, ${summary.noMetrics} sem métricas, ${summary.errors} falhas.`,
+        `🏁 Coleta finalizada: ${summary.successCount} sucessos, ${summary.noMetricsCount} sem métricas, ${summary.errorCount} falhas.`,
       );
-
       return summary;
     } finally {
       collectionInProgress = false;

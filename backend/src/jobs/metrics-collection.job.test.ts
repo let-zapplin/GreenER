@@ -10,17 +10,18 @@ vi.mock("../config/env.js", () => ({
 }));
 
 vi.mock("../modules/coletas/coletas.service.js", () => ({
-  MetricaService: class {
+  ColetasService: class {
     collectAllMetrics = collectAllMetricsMock;
   },
 }));
 
 const emptySummary = {
   skipped: false,
-  services: 0,
-  success: 0,
-  noMetrics: 0,
-  errors: 0,
+  totalServices: 0,
+  successCount: 0,
+  noMetricsCount: 0,
+  errorCount: 0,
+  failures: [],
 };
 
 beforeEach(() => {

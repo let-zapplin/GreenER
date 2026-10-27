@@ -34,14 +34,14 @@ GET /api/servicos
 Frontend React
 ```
 
-A Sprint 2 iniciou a evolução da camada de persistência. O banco já possui estrutura para representar tentativas de coleta e relacioná-las às métricas, embora o fluxo automático de consulta de `/metrics/{id}` ainda dependa das próximas entregas da Sprint.
+A Sprint 2 iniciou a evolução da camada de persistência. O banco já representa tentativas de coleta relacionadas às métricas. A consulta individual de `/metrics/{id}` está implementada no fluxo manual RF03; a execução periódica automática permanece como evolução planejada.
 
 ### Evolução planejada
 
 ```mermaid
 flowchart LR
     M[Metrics Aggregator API] -->|/services| S[Sincronização de serviços]
-    M -->|/metrics/:id| C[Coleta periódica]
+    M -->|/metrics/:id| C[Coleta manual RF03]
 
     S --> DB[(PostgreSQL)]
     C --> DB
@@ -124,19 +124,36 @@ ServicosRepository.listAll()
 PostgreSQL
 ```
 
-A Sprint 2 deve preservar esse padrão para o módulo de coletas e para os futuros endpoints de histórico e indicadores.
+A coleta manual preserva esse padrão em camadas:
 
-A estrutura reservada para o módulo de coletas é:
+```text
+POST /api/metricas/collect
+  ↓
+coletas.routes.ts
+  ↓
+ColetasController.collect()
+  ↓
+ColetasService.collectAllMetrics()
+  ├── ServicosService.listAll()
+  ├── Metrics API /metrics/{external_id}
+  └── ColetasRepository.saveCollection()
+        ↓
+      PostgreSQL
+```
+
+O middleware JWT autentica a requisição e o middleware administrativo consulta `users.admin` no PostgreSQL antes de permitir a coleta manual.
+
+A estrutura atual do módulo de coletas é:
 
 ```text
 modules/coletas/
 ├── coletas.routes.ts
 ├── coletas.controller.ts
 ├── coletas.service.ts
-└── coleta.repository.ts
+└── coletas.repository.ts
 ```
 
-A existência desses arquivos não significa que o fluxo de coleta já esteja implementado. Sua implementação será realizada pelas tarefas específicas da Sprint 2.
+O endpoint manual coleta somente serviços com status `active`. Cada chamada externa tem timeout; uma falha individual é registrada e não interrompe os serviços seguintes. Coletas bem-sucedidas gravam a tentativa e as métricas na mesma transação; resultados sem métricas ou com erro gravam apenas a tentativa.
 
 ---
 
@@ -504,13 +521,13 @@ Foram verificados:
 
 ### Metrics Aggregator API
 
-Atualmente é utilizada para descoberta dos serviços através de:
+É utilizada para descoberta dos serviços através de:
 
 ```text
 GET /services
 ```
 
-A Sprint 2 adicionará o fluxo de coleta individual:
+O fluxo manual de coleta consulta cada serviço ativo individualmente:
 
 ```text
 GET /metrics/{id_servico}
@@ -523,6 +540,8 @@ O módulo de integração deverá tratar:
 - ausência de métricas;
 - resposta válida;
 - falhas individuais sem interromper a coleta dos demais serviços.
+
+A coleta é disparada por `POST /api/metricas/collect`, protegido por JWT e restrito a usuários administradores. Ainda não há job periódico nem endpoint para consultar o histórico.
 
 ### Carbon Intensity API
 

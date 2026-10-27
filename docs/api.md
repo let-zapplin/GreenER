@@ -31,9 +31,9 @@ flowchart LR
 | `GET` | `/api/servicos/discover` | Buscar serviços diretamente na API externa | US01 |
 | `POST` | `/api/servicos/sync` | Sincronizar serviços externos com o banco | US02 |
 | `GET` | `/api/servicos` | Listar serviços persistidos no banco | RF01 / RF02 / apoio ao monitoramento |
-| `POST` | `/api/metricas/collect` | Disparar coleta manual das métricas de todos os serviços (Rota Protegida) | US03 / US04 |
+| `POST` | `/api/metricas/collect` | Executar coleta manual dos serviços ativos (Rota Protegida, administrador) | US03 / US04 |
 
-**Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
+**Situação de acesso:** endpoints protegidos utilizam middleware de autenticação JWT.
  O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas (como a rota `/auth/me` e a futura área de configuração). O backend valida o token e retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
 
 ---
@@ -299,40 +299,49 @@ curl http://localhost:3000/api/servicos
 
 ## 05. Coleta de métricas — US03 / US04
 
-A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço persistido e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`.
+A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`.
 
-### `POST /api/metricas/collect` — disparo manual
+### `POST /api/metricas/collect` — disparo manual (administrador)
 
-**Autenticação:** `Authorization: Bearer <token>`.  
+**Autenticação:** JWT válido e usuário administrador (`users.admin = TRUE`). O status administrativo é consultado no banco em cada chamada; usuários registrados recebem `admin = FALSE` por padrão.  
 **Corpo da requisição:** nenhum.  
 **Sucesso:** `200 OK`.
 
 ```json
 {
-  "message": "Coleta de métricas finalizada",
+  "message": "Coleta de métricas finalizada com falhas parciais",
   "skipped": false,
-  "services": 12,
-  "success": 10,
-  "noMetrics": 1,
-  "errors": 1
+  "totalServices": 12,
+  "successCount": 10,
+  "noMetricsCount": 1,
+  "errorCount": 1,
+  "failures": [
+    {
+      "service": "Serviço Exemplo",
+      "reason": "A consulta à API de métricas excedeu o tempo limite."
+    }
+  ]
 }
 ```
 
 | Campo | Descrição |
 |---|---|
 | `skipped` | `true` quando já havia um ciclo em andamento e nenhuma coleta nova foi iniciada |
-| `services` | Quantidade de serviços consultados neste ciclo |
-| `success` | Coletas com métricas válidas persistidas |
-| `noMetrics` | Serviços disponíveis que não retornaram métricas |
-| `errors` | Falhas de consulta externa ou de persistência |
+| `totalServices` | Serviços ativos consultados neste ciclo |
+| `successCount` | Coletas com métricas válidas persistidas |
+| `noMetricsCount` | Serviços ativos que não retornaram métricas |
+| `errorCount` | Falhas de consulta externa ou de persistência |
+| `failures` | Lista com `service` e `reason` para cada erro |
 
-**Execuções concorrentes:** o job periódico e a rota manual compartilham uma guarda de execução. Se uma coleta já estiver em andamento, a nova chamada retorna `skipped: true`, contadores zerados e a mensagem `"Coleta anterior ainda em execução; nenhuma nova coleta iniciada"`.
+**Execuções concorrentes:** o job periódico e a rota manual compartilham uma guarda de execução. Se uma coleta já estiver em andamento, a nova chamada retorna `skipped: true`, contadores zerados, `failures: []` e a mensagem `"Coleta anterior ainda em execução; nenhuma nova coleta iniciada"`.
+
+**Acesso negado:** `401 Unauthorized` para token inválido/ausente ou usuário não encontrado; `403 Forbidden` para usuário autenticado que não é administrador.
 
 **Exemplo:**
 
 ```bash
 curl -X POST http://localhost:3000/api/metricas/collect \
-  -H "Authorization: Bearer $TOKEN"
+  -H "Authorization: Bearer <token-de-administrador>"
 ```
 
 **Estados persistidos:** `success` (coleta + métricas), `no_metrics` (serviço disponível sem métricas) e `error` (falha na consulta ou no processamento). Cada execução insere novos registros; amostras anteriores não são atualizadas nem removidas, mesmo quando os valores variam entre coletas.
@@ -357,10 +366,11 @@ Os endpoints de serviços utilizam um middleware global para tratamento de erros
 
 | Código | Significado | Exemplos no projeto |
 |---|---|---|
-| `200 OK` | Operação realizada | Health, login, descoberta, sincronização e listagem |
+| `200 OK` | Operação realizada | Health, login, descoberta, sincronização, listagem e coleta (pode indicar falhas parciais no corpo) |
 | `201 Created` | Registro criado | Cadastro de usuário |
 | `400 Bad Request` | Falha tratada no cadastro | E-mail já cadastrado e outros erros capturados pelo controller |
-| `401 Unauthorized` | Erro tratado no login | Credenciais inválidas; outras falhas capturadas no mesmo controller |
+| `401 Unauthorized` | Falha de autenticação | Credenciais inválidas ou token ausente, inválido ou associado a usuário inexistente |
+| `403 Forbidden` | Usuário autenticado sem permissão | Usuário não administrador tenta iniciar coleta manual |
 | `404 Not Found` | Rota/recurso inexistente | Para URLs não registradas, Express responde com seu comportamento padrão; a classe `NotFoundError` existe, mas não está aplicada aos endpoints descritos |
 | `500 Internal Server Error` | Exceção não prevista | Falha inesperada no módulo de serviços |
 | `502 Bad Gateway` | Falha de integração externa | Erro consultando a Metrics API |
@@ -395,11 +405,11 @@ Os endpoints de serviços utilizam um middleware global para tratamento de erros
 
 4. Teste a API em `http://localhost:3000/health`.
 5. Teste a descoberta de serviços, a sincronização e a listagem, nesta ordem, para comparar os dados da origem externa com os registros persistidos.
-6. Com um token válido, dispare uma coleta manual e confira os contadores retornados:
+6. Com um token de administrador, dispare uma coleta manual e confira os contadores retornados:
 
    ```bash
    curl -X POST http://localhost:3000/api/metricas/collect \
-     -H "Authorization: Bearer $TOKEN"
+     -H "Authorization: Bearer <token-de-administrador>"
    ```
 
    A coleta automática também roda ao iniciar o backend e a cada `COLLECTION_INTERVAL_MS`; os logs do container mostram cada ciclo.
@@ -427,14 +437,14 @@ Ao implementar um endpoint novo, registrar nesta documentação: método, URL, p
 
 ## 09. Integrações e funcionalidades futuras
 
-A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização, e a rota `/metrics/{id_servico}`, consumida pela coleta manual e periódica. Ainda não existe endpoint interno para consultar o histórico de coletas por serviço ou período.
+A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização, e a rota `/metrics/{id_servico}`, consumida pela coleta manual (restrita a administradores) e pelo job periódico. Ainda não existe endpoint interno para consultar o histórico de coletas por serviço ou período.
 
 | Recurso | Situação na versão analisada |
 |---|---|
 | Descoberta e sincronização de serviços | Implementadas |
 | Cadastro e login com emissão de JWT | Implementados, com ressalvas descritas acima |
-| Proteção de endpoints por JWT | Aplicada às rotas de escrita e a `/auth/me` |
-| Coleta de métricas | Implementada (manual e periódica); histórico planejado |
+| Proteção de endpoints por JWT | Aplicada seletivamente; coleta manual restrita a administradores |
+| Coleta de métricas | Implementada (manual com administrador e automática); histórico planejado |
 | Cálculo de consumo energético e CO₂e | Planejado |
 | Integração funcional com Carbon Intensity API | Planejada; não conectada às rotas atuais |
 | Endpoints de indicadores consolidados | Planejados; arquivos de módulo ainda vazios |

@@ -1,181 +1,242 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MetricaService } from "./coletas.service.js";
-import type { NormalizedMetric } from "../../integrations/metrics-api.js";
+import { describe, expect, it, vi } from "vitest";
+import type { FetchMetricResult } from "../../integrations/metrics-api.js";
+import type { ListedService } from "../servicos/servicos.repository.js";
+import { ColetasService } from "./coletas.service.js";
 
-const { fetchServiceMetricsMock, saveCollectionMock, listAllMock } = vi.hoisted(
-  () => ({
-    fetchServiceMetricsMock: vi.fn(),
-    saveCollectionMock: vi.fn(),
-    listAllMock: vi.fn(),
-  }),
-);
-
-vi.mock("../../integrations/metrics-api.js", () => ({
-  fetchServiceMetrics: fetchServiceMetricsMock,
-}));
-
-vi.mock("./coletas.repository.js", () => ({
-  MetricaRepository: class {
-    saveCollection = saveCollectionMock;
+vi.mock("../../config/env.js", () => ({
+  env: {
+    metricsApiUrl: "https://metrics.exemplo",
+    externalApiTimeoutMs: 5000,
   },
 }));
 
-vi.mock("../servicos/servicos.service.js", () => ({
-  ServicosService: class {
-    listAll = listAllMock;
-  },
-}));
+function makeService(id: number, status = "active"): ListedService {
+  return {
+    id_service: id,
+    external_id: `external-${id}`,
+    name: `Service ${id}`,
+    status,
+    last_seen_at: null,
+    region_code: "BR-SP",
+    country: "Brasil",
+    region: "São Paulo",
+    city: "São Paulo",
+    latitude: -23.55,
+    longitude: -46.63,
+  };
+}
 
-const servico = { id_service: 1, external_id: "svc-1", name: "API de pedidos" };
-
-function metric(cpuPercent: number, recordedAt: string): NormalizedMetric {
+function makeMetric(cpuPercent: number, recordedAt: string) {
   return {
     cpu_percent: cpuPercent,
     memory_gb: 4,
-    disk_gb: 100,
+    disk_gb: 50,
     network_gb: 2,
     recorded_at: recordedAt,
   };
 }
 
-beforeEach(() => {
-  vi.resetAllMocks();
-});
-
-describe("MetricaService.collectAllMetrics", () => {
-  it("persiste coletas sucessivas com valores diferentes sem sobrescrever as anteriores", async () => {
-    listAllMock.mockResolvedValue([servico]);
-    fetchServiceMetricsMock
+describe("ColetasService.collectAllMetrics", () => {
+  it("consulta e persiste uma tentativa individual para cada serviço ativo", async () => {
+    const services = [makeService(1), makeService(2), makeService(3, "removed")];
+    const listAll = vi.fn().mockResolvedValue(services);
+    const saveCollection = vi.fn().mockResolvedValue(undefined);
+    const fetchMetrics = vi.fn<(
+      serviceId: string,
+    ) => Promise<FetchMetricResult>>()
       .mockResolvedValueOnce({
         status: "success",
-        data: metric(12, "2026-10-26T10:00:00.000Z"),
+        data: makeMetric(10, "2026-10-26T00:00:00.000Z"),
+      })
+      .mockResolvedValueOnce({
+        status: "error",
+        failure_reason: "A consulta à API de métricas excedeu o tempo limite.",
+      });
+    const coletasService = new ColetasService(
+      { listAll },
+      { saveCollection },
+      fetchMetrics,
+    );
+
+    const summary = await coletasService.collectAllMetrics();
+
+    expect(fetchMetrics).toHaveBeenCalledTimes(2);
+    expect(fetchMetrics).toHaveBeenNthCalledWith(1, "external-1");
+    expect(fetchMetrics).toHaveBeenNthCalledWith(2, "external-2");
+    expect(saveCollection).toHaveBeenCalledTimes(2);
+    expect(summary).toMatchObject({
+      skipped: false,
+      totalServices: 2,
+      successCount: 1,
+      noMetricsCount: 0,
+      errorCount: 1,
+      failures: [
+        {
+          service: "Service 2",
+          reason: "A consulta à API de métricas excedeu o tempo limite.",
+        },
+      ],
+    });
+  });
+
+  it("continua para os próximos serviços se uma gravação no banco falhar", async () => {
+    const saveCollection = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("database unavailable"))
+      .mockResolvedValueOnce(undefined);
+    const fetchMetrics = vi.fn<(
+      serviceId: string,
+    ) => Promise<FetchMetricResult>>().mockResolvedValue({
+      status: "no_metrics",
+      http_status: 404,
+    });
+    const coletasService = new ColetasService(
+      { listAll: vi.fn().mockResolvedValue([makeService(1), makeService(2)]) },
+      { saveCollection },
+      fetchMetrics,
+    );
+
+    const summary = await coletasService.collectAllMetrics();
+
+    expect(fetchMetrics).toHaveBeenCalledTimes(2);
+    expect(saveCollection).toHaveBeenCalledTimes(2);
+    expect(summary).toMatchObject({
+      totalServices: 2,
+      successCount: 0,
+      noMetricsCount: 1,
+      errorCount: 1,
+      failures: [
+        {
+          service: "Service 1",
+          reason: "Não foi possível salvar o resultado da coleta no banco.",
+        },
+      ],
+    });
+  });
+
+  it("persiste coletas sucessivas com valores diferentes sem sobrescrever as anteriores", async () => {
+    const saveCollection = vi.fn().mockResolvedValue(undefined);
+    const fetchMetrics = vi.fn<(
+      serviceId: string,
+    ) => Promise<FetchMetricResult>>()
+      .mockResolvedValueOnce({
+        status: "success",
+        data: makeMetric(12, "2026-10-26T10:00:00.000Z"),
       })
       .mockResolvedValueOnce({
         status: "success",
-        data: metric(87, "2026-10-26T10:01:00.000Z"),
+        data: makeMetric(87, "2026-10-26T10:01:00.000Z"),
       });
+    const coletasService = new ColetasService(
+      { listAll: vi.fn().mockResolvedValue([makeService(1)]) },
+      { saveCollection },
+      fetchMetrics,
+    );
 
-    const service = new MetricaService();
+    const first = await coletasService.collectAllMetrics();
+    const second = await coletasService.collectAllMetrics();
 
-    const first = await service.collectAllMetrics();
-    const second = await service.collectAllMetrics();
-
-    expect(fetchServiceMetricsMock).toHaveBeenCalledTimes(2);
-    expect(saveCollectionMock).toHaveBeenCalledTimes(2);
+    expect(fetchMetrics).toHaveBeenCalledTimes(2);
+    expect(saveCollection).toHaveBeenCalledTimes(2);
 
     // Cada execução gera uma nova amostra, sem reaproveitar a anterior.
-    expect(saveCollectionMock.mock.calls[0][1]).toMatchObject({
+    expect(saveCollection.mock.calls[0][1]).toMatchObject({
       data: { cpu_percent: 12, recorded_at: "2026-10-26T10:00:00.000Z" },
     });
-    expect(saveCollectionMock.mock.calls[1][1]).toMatchObject({
+    expect(saveCollection.mock.calls[1][1]).toMatchObject({
       data: { cpu_percent: 87, recorded_at: "2026-10-26T10:01:00.000Z" },
     });
-    expect(first).toEqual({
+    expect(first).toMatchObject({
       skipped: false,
-      services: 1,
-      success: 1,
-      noMetrics: 0,
-      errors: 0,
+      totalServices: 1,
+      successCount: 1,
+      errorCount: 0,
     });
-    expect(second).toEqual({
+    expect(second).toMatchObject({
       skipped: false,
-      services: 1,
-      success: 1,
-      noMetrics: 0,
-      errors: 0,
+      totalServices: 1,
+      successCount: 1,
+      errorCount: 0,
     });
   });
 
   it("contabiliza sucesso, ausência de métricas e falha sem interromper o ciclo", async () => {
-    listAllMock.mockResolvedValue([
-      { id_service: 1, external_id: "svc-1", name: "A" },
-      { id_service: 2, external_id: "svc-2", name: "B" },
-      { id_service: 3, external_id: "svc-3", name: "C" },
-    ]);
-    fetchServiceMetricsMock
+    const fetchMetrics = vi.fn<(
+      serviceId: string,
+    ) => Promise<FetchMetricResult>>()
       .mockResolvedValueOnce({
         status: "success",
-        data: metric(10, "2026-10-26T10:00:00.000Z"),
+        data: makeMetric(10, "2026-10-26T10:00:00.000Z"),
       })
       .mockResolvedValueOnce({ status: "no_metrics", http_status: 404 })
       .mockResolvedValueOnce({
         status: "error",
         failure_reason: "Timeout na requisição",
       });
+    const coletasService = new ColetasService(
+      {
+        listAll: vi
+          .fn()
+          .mockResolvedValue([makeService(1), makeService(2), makeService(3)]),
+      },
+      { saveCollection: vi.fn().mockResolvedValue(undefined) },
+      fetchMetrics,
+    );
 
-    const summary = await new MetricaService().collectAllMetrics();
+    const summary = await coletasService.collectAllMetrics();
 
-    expect(saveCollectionMock).toHaveBeenCalledTimes(3);
     expect(summary).toEqual({
       skipped: false,
-      services: 3,
-      success: 1,
-      noMetrics: 1,
-      errors: 1,
-    });
-  });
-
-  it("continua a coleta quando a persistência de um serviço falha", async () => {
-    listAllMock.mockResolvedValue([
-      { id_service: 1, external_id: "svc-1", name: "A" },
-      { id_service: 2, external_id: "svc-2", name: "B" },
-    ]);
-    fetchServiceMetricsMock
-      .mockResolvedValueOnce({
-        status: "success",
-        data: metric(10, "2026-10-26T10:00:00.000Z"),
-      })
-      .mockResolvedValueOnce({
-        status: "success",
-        data: metric(20, "2026-10-26T10:00:00.000Z"),
-      });
-    saveCollectionMock
-      .mockRejectedValueOnce(new Error("falha no banco"))
-      .mockResolvedValueOnce(undefined);
-
-    const summary = await new MetricaService().collectAllMetrics();
-
-    expect(fetchServiceMetricsMock).toHaveBeenCalledTimes(2);
-    expect(saveCollectionMock).toHaveBeenCalledTimes(2);
-    expect(summary).toEqual({
-      skipped: false,
-      services: 2,
-      success: 1,
-      noMetrics: 0,
-      errors: 1,
+      totalServices: 3,
+      successCount: 1,
+      noMetricsCount: 1,
+      errorCount: 1,
+      failures: [{ service: "Service 3", reason: "Timeout na requisição" }],
     });
   });
 
   it("ignora novo ciclo enquanto uma coleta anterior está em andamento", async () => {
-    let resolveServices: (services: unknown[]) => void = () => {};
-    listAllMock.mockImplementation(
+    let resolveServices: (services: ListedService[]) => void = () => {};
+    const listAll = vi.fn(
       () =>
-        new Promise<unknown[]>((resolve) => {
+        new Promise<ListedService[]>((resolve) => {
           resolveServices = resolve;
         }),
     );
+    const fetchMetrics = vi.fn<(
+      serviceId: string,
+    ) => Promise<FetchMetricResult>>();
+    const coletasService = new ColetasService(
+      { listAll },
+      { saveCollection: vi.fn().mockResolvedValue(undefined) },
+      fetchMetrics,
+    );
 
-    const service = new MetricaService();
-    const firstRun = service.collectAllMetrics();
+    const firstRun = coletasService.collectAllMetrics();
 
-    const concurrent = await new MetricaService().collectAllMetrics();
+    const concurrent = await new ColetasService(
+      { listAll },
+      { saveCollection: vi.fn().mockResolvedValue(undefined) },
+      fetchMetrics,
+    ).collectAllMetrics();
 
     expect(concurrent).toEqual({
       skipped: true,
-      services: 0,
-      success: 0,
-      noMetrics: 0,
-      errors: 0,
+      totalServices: 0,
+      successCount: 0,
+      noMetricsCount: 0,
+      errorCount: 0,
+      failures: [],
     });
-    expect(listAllMock).toHaveBeenCalledTimes(1);
-    expect(fetchServiceMetricsMock).not.toHaveBeenCalled();
+    expect(listAll).toHaveBeenCalledTimes(1);
+    expect(fetchMetrics).not.toHaveBeenCalled();
 
     resolveServices([]);
-    expect(await firstRun).toMatchObject({ skipped: false, services: 0 });
+    expect(await firstRun).toMatchObject({ skipped: false, totalServices: 0 });
 
     // A guarda é liberada quando o ciclo termina.
-    listAllMock.mockResolvedValue([]);
-    const next = await service.collectAllMetrics();
+    listAll.mockResolvedValue([]);
+    const next = await coletasService.collectAllMetrics();
 
     expect(next.skipped).toBe(false);
   });
