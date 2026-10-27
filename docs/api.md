@@ -31,8 +31,9 @@ flowchart LR
 | `GET` | `/api/servicos/discover` | Buscar serviços diretamente na API externa | US01 |
 | `POST` | `/api/servicos/sync` | Sincronizar serviços externos com o banco | US02 |
 | `GET` | `/api/servicos` | Listar serviços persistidos no banco | RF01 / RF02 / apoio ao monitoramento |
+| `POST` | `/api/metricas/collect` | Executar coleta individual dos serviços ativos | RF03 (administrador) |
 
-**Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
+**Situação de acesso:** endpoints protegidos utilizam middleware de autenticação JWT.
  O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas (como a rota `/auth/me` e a futura área de configuração). O backend valida o token e retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
 
 ---
@@ -296,16 +297,56 @@ curl http://localhost:3000/api/servicos
 
 ---
 
+### `POST /api/metricas/collect` — coleta manual de métricas (RF03)
+
+Consulta individualmente a Metrics API para cada serviço com status `active`. Cada resultado é persistido como uma tentativa em `collection`; quando há métricas válidas, os valores também são gravados em `metrics`. Um erro de consulta ou persistência é reportado sem impedir o processamento dos serviços seguintes.
+
+**Autenticação:** JWT válido e usuário administrador (`users.admin = TRUE`). O status administrativo é consultado no banco em cada chamada; usuários registrados recebem `admin = FALSE` por padrão. A concessão de privilégios deve ser feita por um operador autorizado, fora do endpoint público de cadastro.
+
+**Parâmetros:** nenhum.
+
+**Sucesso:** `200 OK`, inclusive quando há falhas parciais. O campo `errorCount` e a lista `failures` identificam resultados de coleta ou persistência com erro.
+
+**Exemplo:**
+
+```bash
+curl -X POST http://localhost:3000/api/metricas/collect \
+  -H "Authorization: Bearer <token-de-administrador>"
+```
+
+**Resposta ilustrativa:**
+
+```json
+{
+  "message": "Coleta de métricas finalizada com falhas parciais",
+  "totalServices": 2,
+  "successCount": 1,
+  "noMetricsCount": 0,
+  "errorCount": 1,
+  "failures": [
+    {
+      "service": "Serviço Exemplo",
+      "reason": "A consulta à API de métricas excedeu o tempo limite."
+    }
+  ]
+}
+```
+
+**Acesso negado:** `401 Unauthorized` para token inválido/ausente ou usuário não encontrado; `403 Forbidden` para usuário autenticado que não é administrador. Falhas inesperadas, como indisponibilidade do banco ao listar os serviços, são encaminhadas ao middleware global.
+
+---
+
 ## 05. Erros e códigos HTTP
 
 Os endpoints de serviços utilizam um middleware global para tratamento de erros. Os endpoints de autenticação, por sua vez, tratam exceções dentro de seus próprios controllers.
 
 | Código | Significado | Exemplos no projeto |
 |---|---|---|
-| `200 OK` | Operação realizada | Health, login, descoberta, sincronização e listagem |
+| `200 OK` | Operação realizada | Health, login, descoberta, sincronização, listagem e coleta (pode indicar falhas parciais no corpo) |
 | `201 Created` | Registro criado | Cadastro de usuário |
 | `400 Bad Request` | Falha tratada no cadastro | E-mail já cadastrado e outros erros capturados pelo controller |
-| `401 Unauthorized` | Erro tratado no login | Credenciais inválidas; outras falhas capturadas no mesmo controller |
+| `401 Unauthorized` | Falha de autenticação | Credenciais inválidas ou token ausente, inválido ou associado a usuário inexistente |
+| `403 Forbidden` | Usuário autenticado sem permissão | Usuário não administrador tenta iniciar coleta manual |
 | `404 Not Found` | Rota/recurso inexistente | Para URLs não registradas, Express responde com seu comportamento padrão; a classe `NotFoundError` existe, mas não está aplicada aos endpoints descritos |
 | `500 Internal Server Error` | Exceção não prevista | Falha inesperada no módulo de serviços |
 | `502 Bad Gateway` | Falha de integração externa | Erro consultando a Metrics API |
@@ -356,24 +397,23 @@ Os endpoints de serviços utilizam um middleware global para tratamento de erros
 
 Os recursos abaixo fazem parte do planejamento, mas **não devem ser considerados endpoints ativos até aparecerem no código, testes e documentação de resposta**:
 
-- coleta de métricas por serviço;
 - histórico de coletas por serviço/período;
 - dados consolidados do dashboard;
 - indicadores ambientais;
-- recursos protegidos por middleware JWT.
 
 Ao implementar um endpoint novo, registrar nesta documentação: método, URL, parâmetros, autenticação, resposta de sucesso, erros esperados e exemplo de verificação.
 
 ## 08. Integrações e funcionalidades futuras
 
-A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização. O campo `metrics_path` retornado por ela indica onde consultar métricas de cada serviço, mas **não existe ainda um endpoint interno registrado no Express para expor essas coletas** na versão analisada.
+A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização, e `/metrics/{id_servico}`, utilizada pela coleta manual de métricas. A coleta é iniciada por `POST /api/metricas/collect`; ainda não há endpoint interno para consultar o histórico persistido nem job automático de coleta.
 
 | Recurso | Situação na versão analisada |
 |---|---|
 | Descoberta e sincronização de serviços | Implementadas |
 | Cadastro e login com emissão de JWT | Implementados, com ressalvas descritas acima |
-| Proteção de endpoints por JWT | Ainda não aplicada |
-| Coleta e histórico de métricas | Planejados; arquivos de módulo ainda vazios |
+| Proteção de endpoints por JWT | Aplicada seletivamente; coleta manual restrita a administradores |
+| Coleta manual de métricas | Implementada em `POST /api/metricas/collect` |
+| Coleta automática e histórico consultável | Planejados |
 | Cálculo de consumo energético e CO₂e | Planejado |
 | Integração funcional com Carbon Intensity API | Planejada; não conectada às rotas atuais |
 | Endpoints de indicadores consolidados | Planejados; arquivos de módulo ainda vazios |

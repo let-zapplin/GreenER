@@ -1,12 +1,16 @@
 import { Router } from "express";
-import { MetricaController } from "./coletas.controller.js";
+import { ColetasController } from "./coletas.controller.js";
 import { authMiddleware } from "../../shared/middlewares/auth.middleware.js";
+import { adminMiddleware } from "../../shared/middlewares/admin.middleware.js";
 
 const router = Router();
-const controller = new MetricaController();
+const controller = new ColetasController();
 
-// Rota para forçar a coleta manual (útil para testes)
-router.post("/collect", authMiddleware, (req, res, next) =>
-     controller.collect(req, res, next));
+router.post(
+  "/collect",
+  authMiddleware,
+  adminMiddleware,
+  (req, res, next) => controller.collect(req, res, next),
+);
 
 export default router;
