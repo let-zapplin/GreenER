@@ -1,49 +1,40 @@
 import { env } from "../../config/env.js";
 import { ExternalApiError } from "../../shared/errors/AppError.js";
-import { ServicosRepository } from "./servicos.repository.js";
+import { IntensidadesRepository } from "./intensidades.repository.js";
 
 // ============================================================
-// TIPO: Location
-// Localização do serviço (retornada pela API)
-// ============================================================
-export interface Location {
-  region_code: string;
-  country: string;
-  region: string;
-  city: string;
-  latitude: number;
-  longitude: number;
-}
-
-// ============================================================
-// TIPO: ExternalService
+// TIPO: ExternalIntensity
 // Representa o que a API externa retorna
 // ============================================================
-export interface ExternalService {
-  id: string;
-  name: string;
-  location: Location;
-  metrics_path: string;
+export interface ExternalIntensity {
+  regionCode: string;
+  country: string;
+  region: string;
+  city: string | null;
+  latitude: number;
+  longitude: number;
+  carbonIntensity: number,
+  renewableShare: number
 }
 
 // ============================================================
-// CLASSE: ServicosService
-// Responsabilidade: Regras de negócio do módulo de serviços
+// CLASSE: IntensidadesService
+// Responsabilidade: Regras de negócio do módulo de intensidades de carbono
 // ============================================================
-export class ServicosService {
-  private readonly repository: ServicosRepository;
+export class IntensidadesService {
+  private readonly repository: IntensidadesRepository;
 
   constructor() {
-    this.repository = new ServicosRepository();
+    this.repository = new IntensidadesRepository();
   }
 
   // ========================================================
-  // US01: Consultar /services e interpretar o retorno
+  //  Consultar /regions e interpretar o retorno
   // ========================================================
-  async discoverServices(): Promise<ExternalService[]> {
-    console.log("🔍 Descobrindo serviços...");
+  async discoverIntensities(): Promise<ExternalIntensity[]> {
+    console.log("🔍 Descobrindo intensidades de carbono...");
 
-    const url = `${env.metricsApiUrl}/services`;
+    const url = `${env.carbonApiUrl}/regions`;
 
     // AbortController: cancela se passar do timeout
     const controller = new AbortController();
@@ -54,7 +45,7 @@ export class ServicosService {
 
     try {
       // --------------------------------------------------
-      // PASSO 1: CONSULTAR /services
+      // PASSO 1: CONSULTAR /regions
       // --------------------------------------------------
       const response = await fetch(url, {
         signal: controller.signal,
@@ -68,25 +59,25 @@ export class ServicosService {
       // --------------------------------------------------
       // PASSO 2: INTERPRETAR O JSON
       // --------------------------------------------------
-      const services: ExternalService[] = await response.json();
+      const intensidades: ExternalIntensity[] = await response.json();
 
       // --------------------------------------------------
-      // PASSO 3: IDENTIFICAR OS SERVIÇOS
+      // PASSO 3: IDENTIFICAR OS INTENSIDADES
       // --------------------------------------------------
-      console.log(`✅ ${services.length} serviços encontrados`);
+      console.log(`✅ ${intensidades.length} intensidades encontrados`);
 
-      services.forEach((svc) => {
-        console.log(`  - ${svc.name} (${svc.location.region_code})`);
+      intensidades.forEach((its) => {
+        console.log(`  - ${its.region} (${its.regionCode})`);
       });
 
-      return services;
+      return intensidades;
     } catch (error) {
       // --------------------------------------------------
       // TRATAMENTO DE ERRO
       // Lança ExternalApiError → middleware trata
       // --------------------------------------------------
-      console.error("❌ Erro na API Metrics:", error);
-      throw new ExternalApiError("Falha ao consultar a API de métricas");
+      console.error("❌ Erro na API Carbon:", error);
+      throw new ExternalApiError("Falha ao consultar a API de intensidades de carbono");
     } finally {
       // Limpa o timeout (evita memory leak)
       clearTimeout(timeoutId);
@@ -94,80 +85,78 @@ export class ServicosService {
   }
 
   // ========================================================
-  // US02: Salvar serviços no banco (evitar duplicação)
+  // Salvar intensidades no banco (evitar duplicação)
   // ========================================================
-  async saveServices(): Promise<{
+  async saveIntensity(): Promise<{
     created: number;
     updated: number;
-    unavailable: number;
   }> {
-    console.log("💾 Salvando serviços no banco...");
+    console.log("💾 Salvando intensidades no banco...");
 
-    // 1. Descobrir serviços (US01)
-    const services = await this.discoverServices();
-    const activeExternalIds = services.map((service) => service.id);
-
+    // 1. Descobrir intensidades
+    const intensities = await this.discoverIntensities();
+    
     let created = 0;
     let updated = 0;
 
     // 2. Para cada serviço
-    for (const svc of services) {
+    for (const its of intensities) {
       // --------------------------------------------------
       // PASSO 1: Verificar/criar location
       // --------------------------------------------------
-      let location = await this.repository.findLocationByRegionAndCity(
-        svc.location.region_code,
-        svc.location.city,
+      let location = await this.repository.findLocationByRegion(
+        its.regionCode
       );
 
       if (!location) {
         // Se não existe, cria
-        location = await this.repository.createLocation(svc.location);
-        console.log(`  📍 Location criada: ${svc.location.city}`);
+        location = await this.repository.createLocation(its);
+        console.log(`  📍 Location criada: ${its.region}`);
       }
 
       // --------------------------------------------------
-      // PASSO 2: Verificar/criar service
+      // PASSO 2: Verificar/criar intensity
       // --------------------------------------------------
-      const existing = await this.repository.findByExternalId(svc.id);
+      const existing = await this.repository.findByCode(its.regionCode);
 
       if (existing) {
         // Já existe → Atualizar
-        await this.repository.updateService({
-          id: svc.id,
-          name: svc.name,
-          locationId: location.id_location,
-        });
-        updated++;
+        // Elaborar
+        // .
+        // .
+        // .
+        // .
+        // .
+        // .
+        // .
+        // .
       } else {
         // Não existe → Criar
-        await this.repository.createService({
-          id: svc.id,
-          name: svc.name,
-          locationId: location.id_location,
+        await this.repository.createCarbonIntensity({
+          idLocation: location.id_location,
+          carbonIntensity: its.carbonIntensity,
+          renewableShare: its.renewableShare,
         });
         created++;
       }
     }
 
-    const unavailable =
-      await this.repository.markUnavailableExcept(activeExternalIds);
     console.log(
-      `✅ ${created} criados, ${updated} atualizados, ${unavailable} indisponíveis`,
+      `✅ ${created} criados, ${updated} atualizados`,
     );
 
-    return { created, updated, unavailable };
+    return { created, updated };
   }
   // ========================================================
-  // US03: Listar todos os serviços armazenados no banco
+  // US03: Listar todas as intensidades armazenadas no banco
   // ========================================================
   async listAll() {
-    console.log("📋 Listando serviços do banco...");
+    console.log("📋 Listando intensidades do banco...");
 
-    const services = await this.repository.listAll();
+    const intensities = await this.repository.listAllIntensities();
 
-    console.log(`✅ ${services.length} serviços listados`);
+    console.log(`✅ ${intensities.length} serviços listados`);
 
-    return services;
+    return intensities;
   }
 }

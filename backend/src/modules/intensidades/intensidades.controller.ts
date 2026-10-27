@@ -1,11 +1,11 @@
 import { type Request, type Response, type NextFunction } from "express";
-import { ServicosService } from "./intensidades.service.js";
+import { IntensidadesService } from "./intensidades.service.js";
 
-export class ServicosController {
-  private readonly service: ServicosService;
+export class IntensidadesController {
+  private readonly service: IntensidadesService;
 
   constructor() {
-    this.service = new ServicosService();
+    this.service = new IntensidadesService();
   }
 
   // ========================================================
@@ -17,10 +17,10 @@ export class ServicosController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const services = await this.service.discoverServices();
+      const intensities = await this.service.discoverIntensities();
       res.status(200).json({
-        message: `${services.length} serviços encontrados`,
-        services,
+        message: `${intensities.length} serviços encontrados`,
+        intensities,
       });
     } catch (error) {
       next(error);
@@ -32,12 +32,11 @@ export class ServicosController {
   // ========================================================
   async sync(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await this.service.saveServices();
+      const result = await this.service.saveIntensity();
       res.status(200).json({
-        message: "Serviços sincronizados com sucesso",
+        message: "Intensidades sincronizadas com sucesso",
         created: result.created,
         updated: result.updated,
-        unavailable: result.unavailable,
       });
     } catch (error) {
       next(error);
@@ -49,10 +48,10 @@ export class ServicosController {
   // ========================================================
   async list(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const services = await this.service.listAll();
+      const intensidades = await this.service.listAll();
       res.status(200).json({
-        message: `${services.length} serviços encontrados`,
-        services,
+        message: `${intensidades.length} serviços encontrados`,
+        intensidades,
       });
     } catch (error) {
       next(error);

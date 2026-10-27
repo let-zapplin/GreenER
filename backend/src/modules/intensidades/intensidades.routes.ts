@@ -1,18 +1,18 @@
 import { Router } from "express";
-import { ServicosController } from "./servicos.controller.js";
+import { IntensidadesController } from "./intensidades.controller.js";
 
 const router = Router();
-const controller = new ServicosController();
+const controller = new IntensidadesController();
 
-// US01: Descobrir serviços (API externa)
+// Descobrir intensidades (API externa)
 router.get("/discover", (req, res, next) =>
   controller.discover(req, res, next),
 );
 
-// US02: Sincronizar serviços (salvar no banco)
+// Sincronizar Intensidades (salvar no banco)
 router.post("/sync", (req, res, next) => controller.sync(req, res, next));
 
-// US03: Listar serviços do banco
+// Listar intensidades do banco
 router.get("/", (req, res, next) => controller.list(req, res, next));
 
 export default router;

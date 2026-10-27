@@ -22,7 +22,6 @@ export class IntensidadesRepository extends LocalidadesRepository {
 
   // Criar novo service
   async createCarbonIntensity(data: {
-    idCarbon: number;
     idLocation: number;
     carbonIntensity: number;
     renewableShare: number;
@@ -30,17 +29,15 @@ export class IntensidadesRepository extends LocalidadesRepository {
     const result = await pool.query(
       `INSERT INTO carbon_intensity
        (
-         id_carbon_intensity,
          location_id_location,
          carbon_intensity_gco2e_per_kwh,
          renewable_share_percent,
          registered_at
        )
-        VALUES ($1, $2, $3, $4, NOW())
+        VALUES ($1, $2, $3, NOW())
         RETURNING *
       `,
       [
-        data.idCarbon,
         data.idLocation,
         data.carbonIntensity,
         data.renewableShare,
@@ -50,63 +47,25 @@ export class IntensidadesRepository extends LocalidadesRepository {
     return result.rows[0];
   }
 
-  // Atualizar service existente
-  async updateService(data: { id: string; name: string; locationId: number }) {
-    await pool.query(
-      `UPDATE service
-     SET
-       name = $1,
-       location_id_location = $2,
-       status = 'active',
-       last_seen_at = NOW()
-     WHERE id = $3`,
-      [data.name, data.locationId, data.id],
-    );
-  }
-
-  async markUnavailableExcept(activeExternalIds: string[]): Promise<number> {
-    if (activeExternalIds.length === 0) {
-      const result = await pool.query(
-        `UPDATE service
-       SET status = 'unavailable'
-       WHERE status <> 'unavailable'`,
-      );
-
-      return result.rowCount ?? 0;
-    }
-
-    const result = await pool.query(
-      `UPDATE service
-     SET status = 'unavailable'
-     WHERE
-       id <> ALL($1::text[])
-       AND status <> 'unavailable'`,
-      [activeExternalIds],
-    );
-
-    return result.rowCount ?? 0;
-  }
-
   // ========================================================
   // US03: Listar todos os serviços
   // ========================================================
-  async listAll() {
+  async listAllIntensities() {
     const result = await pool.query(
       `SELECT 
-          s.id_service,
-          s.id AS external_id,
-          s.name,
-          s.status,
-          s.last_seen_at,
+          c.id_carbon_intensity,
+          c.carbon_intensity_gco2e_per_kwh,
+          c.renewable_share_percent,
+          c.registered_at,
           l.region_code,
           l.country,
           l.region,
           l.city,
           l.latitude,
           l.longitude
-       FROM service s
-       INNER JOIN location l ON l.id_location = s.location_id_location
-       ORDER BY s.name`,
+       FROM carbon_intensity c
+       INNER JOIN location l ON l.id_location = c.location_id_location
+       ORDER BY l.region`,
     );
     return result.rows;
   }
