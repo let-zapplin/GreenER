@@ -83,6 +83,13 @@ CREATE TABLE carbon_intensity (
       ON UPDATE NO ACTION
 );
 
+CREATE INDEX idx_carbon_intensity_location_registered
+  ON carbon_intensity (
+    location_id_location,
+    registered_at DESC,
+    id_carbon_intensity DESC
+);
+
 CREATE TABLE metrics (
   id_metrics BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   collection_id_collection BIGINT NOT NULL UNIQUE,
