@@ -8,9 +8,7 @@ export class IntensidadesController {
     this.service = new IntensidadesService();
   }
 
-  // ========================================================
-  // GET /api/servicos/discover (US01)
-  // ========================================================
+  // GET /api/intensidades/discover
   async discover(
     _req: Request,
     res: Response,
@@ -19,7 +17,7 @@ export class IntensidadesController {
     try {
       const intensities = await this.service.discoverIntensities();
       res.status(200).json({
-        message: `${intensities.length} serviços encontrados`,
+        message: `${intensities.length} intensidades encontradas`,
         intensities,
       });
     } catch (error) {
@@ -27,31 +25,25 @@ export class IntensidadesController {
     }
   }
 
-  // ========================================================
-  // POST /api/servicos/sync (US02)
-  // ========================================================
+  // POST /api/intensidades/sync
   async sync(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await this.service.saveIntensity();
       res.status(200).json({
         message: "Intensidades sincronizadas com sucesso",
-        created: result.created,
-        updated: result.updated,
+        snapshotsInserted: result.inserted,
       });
     } catch (error) {
       next(error);
     }
   }
-  // ========================================================
-  // GET /api/servicos
-  // Listar serviços armazenados no banco
-  // ========================================================
+  // GET /api/intensidades
   async list(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const intensidades = await this.service.listAll();
+      const intensities = await this.service.listAll();
       res.status(200).json({
-        message: `${intensidades.length} serviços encontrados`,
-        intensidades,
+        message: `${intensities.length} intensidades encontradas`,
+        intensities,
       });
     } catch (error) {
       next(error);
