@@ -39,6 +39,13 @@ export class UnauthorizedError extends AppError {
   }
 }
 
+// Erro 403: usuário autenticado sem permissão para a operação
+export class ForbiddenError extends AppError {
+  constructor(message = "Acesso não autorizado") {
+    super(message, 403, "FORBIDDEN");
+  }
+}
+
 // Erro 409: Conflito com recurso já existente
 export class ConflictError extends AppError {
   constructor(message = "Conflito com recurso existente") {

@@ -1,7 +1,7 @@
 import pool from "../../db/connection.js";
 import type { FetchMetricResult } from "../../integrations/metrics-api.js";
 
-export class MetricaRepository {
+export class ColetasRepository {
   async saveCollection(
     serviceId: number,
     result: FetchMetricResult,
@@ -49,9 +49,13 @@ export class MetricaRepository {
 
       await client.query("COMMIT"); // Confirma tudo no banco
     } catch (error) {
-      await client.query("ROLLBACK"); // Desfaz se der erro
       console.error("❌ Erro ao salvar coleta no banco:", error);
-      throw error; // Joga pro middleware global se for erro de banco
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError) {
+        console.error("❌ Erro ao desfazer a transação da coleta:", rollbackError);
+      }
+      throw error;
     } finally {
       client.release(); // Devolve a conexão
     }
