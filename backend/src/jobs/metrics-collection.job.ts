@@ -13,7 +13,8 @@ export async function startMetricsCollection(): Promise<void> {
       if (!summary.skipped) {
         console.log(
           `✅ Coleta periódica concluída: ${summary.successCount} sucessos, ` +
-            `${summary.noMetricsCount} sem métricas, ${summary.errorCount} falhas`,
+            `${summary.noMetricsCount} sem métricas, ` +
+            `${summary.unavailableCount} indisponíveis, ${summary.errorCount} falhas`,
         );
       }
     } catch (error) {

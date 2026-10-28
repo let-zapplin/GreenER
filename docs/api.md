@@ -281,11 +281,19 @@ Lista os serviços armazenados no PostgreSQL, com localização e status. Não c
       "region": "São Paulo",
       "city": "São Paulo",
       "latitude": -23.55,
-      "longitude": -46.63
+      "longitude": -46.63,
+      "last_collection_status": "unavailable",
+      "last_collection_at": "2026-10-18T14:01:00.000Z"
     }
   ]
 }
 ```
+
+| Campo | Descrição |
+|---|---|
+| `status` | Estado do catálogo: `active` ou `removed` |
+| `last_collection_status` | Resultado da coleta mais recente: `success`, `no_metrics`, `unavailable` ou `error`; `null` quando o serviço ainda não foi coletado |
+| `last_collection_at` | Instante da tentativa de coleta mais recente; `null` quando ainda não houve coleta |
 
 **Exemplo:**
 
@@ -297,9 +305,9 @@ curl http://localhost:3000/api/servicos
 
 ---
 
-## 05. Coleta de métricas — US03 / US04
+## 05. Coleta de métricas — US03 / US04 / US05
 
-A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`.
+A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`. Falhas de comunicação (timeout ou conexão recusada) são registradas como `unavailable`, sem interromper a coleta dos demais serviços.
 
 ### `POST /api/metricas/collect` — disparo manual (administrador)
 
@@ -312,13 +320,18 @@ A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviç
   "message": "Coleta de métricas finalizada com falhas parciais",
   "skipped": false,
   "totalServices": 12,
-  "successCount": 10,
+  "successCount": 9,
   "noMetricsCount": 1,
+  "unavailableCount": 1,
   "errorCount": 1,
   "failures": [
     {
-      "service": "Serviço Exemplo",
+      "service": "Serviço Offline",
       "reason": "A consulta à API de métricas excedeu o tempo limite."
+    },
+    {
+      "service": "Serviço Exemplo",
+      "reason": "A API de métricas respondeu com HTTP 500."
     }
   ]
 }
@@ -330,8 +343,9 @@ A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviç
 | `totalServices` | Serviços ativos consultados neste ciclo |
 | `successCount` | Coletas com métricas válidas persistidas |
 | `noMetricsCount` | Serviços ativos que não retornaram métricas |
-| `errorCount` | Falhas de consulta externa ou de persistência |
-| `failures` | Lista com `service` e `reason` para cada erro |
+| `unavailableCount` | Serviços que não responderam (timeout ou falha de conexão) |
+| `errorCount` | Falhas de processamento, de resposta inválida ou de persistência |
+| `failures` | Lista com `service` e `reason` para cada indisponibilidade ou erro |
 
 **Execuções concorrentes:** o job periódico e a rota manual compartilham uma guarda de execução. Se uma coleta já estiver em andamento, a nova chamada retorna `skipped: true`, contadores zerados, `failures: []` e a mensagem `"Coleta anterior ainda em execução; nenhuma nova coleta iniciada"`.
 
@@ -344,7 +358,9 @@ curl -X POST http://localhost:3000/api/metricas/collect \
   -H "Authorization: Bearer <token-de-administrador>"
 ```
 
-**Estados persistidos:** `success` (coleta + métricas), `no_metrics` (serviço disponível sem métricas) e `error` (falha na consulta ou no processamento). Cada execução insere novos registros; amostras anteriores não são atualizadas nem removidas, mesmo quando os valores variam entre coletas.
+**Estados persistidos:** `success` (coleta + métricas), `no_metrics` (serviço disponível sem métricas), `unavailable` (não foi possível consultar o serviço: timeout ou conexão recusada) e `error` (resposta inválida, erro HTTP inesperado ou falha no processamento). Cada execução insere novos registros; amostras anteriores não são atualizadas nem removidas, mesmo quando os valores variam entre coletas.
+
+**Sinalização de indisponibilidade:** o estado `unavailable` fica registrado em `collection.failure_reason` e é exposto ao frontend em `GET /api/servicos` pelo campo `last_collection_status`. A tela de monitoramento exibe o serviço como `Indisponível`, com contador próprio na visão geral, e volta ao normal quando uma coleta seguinte obtém sucesso.
 
 ### Coleta automática
 

@@ -21,6 +21,10 @@
   --service-color: var(--status-returned, #7dd3fc);
   border-color: #7dd3fc70;
 }
+.service-card.unavailable {
+  --service-color: var(--status-unavailable, #fb923c);
+  border-color: #fb923c70;
+}
 .service-card.removed {
   --service-color: var(--status-removed, #fca5a5);
   background: #302e33;

@@ -23,6 +23,8 @@ function makeService(id: number, status = "active"): ListedService {
     city: "São Paulo",
     latitude: -23.55,
     longitude: -46.63,
+    last_collection_status: null,
+    last_collection_at: null,
   };
 }
 
@@ -50,7 +52,7 @@ describe("ColetasService.collectAllMetrics", () => {
       })
       .mockResolvedValueOnce({
         status: "error",
-        failure_reason: "A consulta à API de métricas excedeu o tempo limite.",
+        failure_reason: "A API de métricas respondeu com HTTP 503.",
       });
     const coletasService = new ColetasService(
       { listAll },
@@ -69,11 +71,12 @@ describe("ColetasService.collectAllMetrics", () => {
       totalServices: 2,
       successCount: 1,
       noMetricsCount: 0,
+      unavailableCount: 0,
       errorCount: 1,
       failures: [
         {
           service: "Service 2",
-          reason: "A consulta à API de métricas excedeu o tempo limite.",
+          reason: "A API de métricas respondeu com HTTP 503.",
         },
       ],
     });
@@ -160,7 +163,7 @@ describe("ColetasService.collectAllMetrics", () => {
     });
   });
 
-  it("contabiliza sucesso, ausência de métricas e falha sem interromper o ciclo", async () => {
+  it("contabiliza sucesso, ausência de métricas, indisponibilidade e falha sem interromper o ciclo", async () => {
     const fetchMetrics = vi.fn<(
       serviceId: string,
     ) => Promise<FetchMetricResult>>()
@@ -170,14 +173,21 @@ describe("ColetasService.collectAllMetrics", () => {
       })
       .mockResolvedValueOnce({ status: "no_metrics", http_status: 404 })
       .mockResolvedValueOnce({
+        status: "unavailable",
+        failure_reason: "A consulta à API de métricas excedeu o tempo limite.",
+      })
+      .mockResolvedValueOnce({
         status: "error",
-        failure_reason: "Timeout na requisição",
+        failure_reason: "A API de métricas respondeu com HTTP 500.",
       });
     const coletasService = new ColetasService(
       {
-        listAll: vi
-          .fn()
-          .mockResolvedValue([makeService(1), makeService(2), makeService(3)]),
+        listAll: vi.fn().mockResolvedValue([
+          makeService(1),
+          makeService(2),
+          makeService(3),
+          makeService(4),
+        ]),
       },
       { saveCollection: vi.fn().mockResolvedValue(undefined) },
       fetchMetrics,
@@ -185,13 +195,24 @@ describe("ColetasService.collectAllMetrics", () => {
 
     const summary = await coletasService.collectAllMetrics();
 
+    expect(fetchMetrics).toHaveBeenCalledTimes(4);
     expect(summary).toEqual({
       skipped: false,
-      totalServices: 3,
+      totalServices: 4,
       successCount: 1,
       noMetricsCount: 1,
+      unavailableCount: 1,
       errorCount: 1,
-      failures: [{ service: "Service 3", reason: "Timeout na requisição" }],
+      failures: [
+        {
+          service: "Service 3",
+          reason: "A consulta à API de métricas excedeu o tempo limite.",
+        },
+        {
+          service: "Service 4",
+          reason: "A API de métricas respondeu com HTTP 500.",
+        },
+      ],
     });
   });
 
@@ -225,6 +246,7 @@ describe("ColetasService.collectAllMetrics", () => {
       totalServices: 0,
       successCount: 0,
       noMetricsCount: 0,
+      unavailableCount: 0,
       errorCount: 0,
       failures: [],
     });

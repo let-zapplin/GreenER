@@ -12,7 +12,7 @@ export class ColetasController {
 
       if (summary.skipped) {
         message = "Coleta anterior ainda em execução; nenhuma nova coleta iniciada";
-      } else if (summary.errorCount > 0) {
+      } else if (summary.errorCount > 0 || summary.unavailableCount > 0) {
         message = "Coleta de métricas finalizada com falhas parciais";
       }
 

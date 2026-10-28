@@ -39,6 +39,18 @@ export function reconcileServices(
       };
     }
 
+    // Indisponibilidade vem da última coleta e tem prioridade sobre os
+    // destaques temporários de descoberta.
+    if (service.status === "unavailable") {
+      return {
+        ...service,
+        status: "unavailable",
+        statusExpiresAt: undefined,
+        lastConfirmedAt:
+          previousService?.lastConfirmedAt ?? service.lastConfirmedAt,
+      };
+    }
+
     // Primeira vez que a página carrega:
     // não tratamos todos os serviços existentes como "novos".
     if (!hasLoaded) {

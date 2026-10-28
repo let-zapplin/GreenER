@@ -12,11 +12,14 @@ export function Monitoring() {
   } | null>(null);
   const { services, lastUpdated } = snapshot;
 
-  const activeCount = services.filter(
-    (service) => service.status !== "removed",
+  const removedCount = services.filter(
+    (service) => service.status === "removed",
   ).length;
+  const unavailableCount = services.filter(
+    (service) => service.status === "unavailable",
+  ).length;
+  const activeCount = services.length - removedCount - unavailableCount;
   const stale = lastUpdated !== null && error !== null;
-  const removedCount = services.length - activeCount;
 
   useEffect(() => {
     if (!selection) return;
@@ -135,6 +138,10 @@ export function Monitoring() {
                   <dt>Ativos</dt>
                   <dd>{activeCount}</dd>
                 </div>
+                <div className="services-count-unavailable">
+                  <dt>Indisponíveis</dt>
+                  <dd>{unavailableCount}</dd>
+                </div>
                 <div className="services-count-removed">
                   <dt>Removidos</dt>
                   <dd>{removedCount}</dd>
@@ -178,6 +185,13 @@ export function Monitoring() {
                     aria-hidden="true"
                   />
                   Retornou
+                </li>
+                <li>
+                  <span
+                    className="service-indicator unavailable"
+                    aria-hidden="true"
+                  />
+                  Indisponível
                 </li>
                 <li>
                   <span

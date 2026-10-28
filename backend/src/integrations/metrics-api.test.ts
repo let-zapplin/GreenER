@@ -124,14 +124,14 @@ describe("fetchServiceMetrics", () => {
     });
   });
 
-  it("retorna uma mensagem compreensível quando a conexão falha", async () => {
+  it("sinaliza indisponibilidade quando a conexão falha", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockRejectedValue(new TypeError("network failure")),
     );
 
     await expect(fetchServiceMetrics("service-1")).resolves.toEqual({
-      status: "error",
+      status: "unavailable",
       failure_reason: "Não foi possível conectar à API de métricas.",
     });
   });
@@ -156,7 +156,7 @@ describe("fetchServiceMetrics", () => {
     const result = await resultPromise;
 
     expect(result).toEqual({
-      status: "error",
+      status: "unavailable",
       failure_reason: "A consulta à API de métricas excedeu o tempo limite.",
     });
     expect(requestSignal?.aborted).toBe(true);

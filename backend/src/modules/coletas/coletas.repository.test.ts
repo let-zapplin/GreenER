@@ -62,6 +62,36 @@ describe("ColetasRepository.saveCollection", () => {
     expect(releaseMock).toHaveBeenCalledOnce();
   });
 
+  it("grava o motivo técnico quando o serviço está indisponível", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id_collection: 9 }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    await new ColetasRepository().saveCollection(3, {
+      status: "unavailable",
+      failure_reason: "A consulta à API de métricas excedeu o tempo limite.",
+    });
+
+    expect(queryMock).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("INSERT INTO collection"),
+      [
+        3,
+        "unavailable",
+        "A consulta à API de métricas excedeu o tempo limite.",
+        null,
+      ],
+    );
+    expect(
+      queryMock.mock.calls.some(([sql]) =>
+        String(sql).includes("INSERT INTO metrics"),
+      ),
+    ).toBe(false);
+    expect(queryMock).toHaveBeenLastCalledWith("COMMIT");
+    expect(releaseMock).toHaveBeenCalledOnce();
+  });
+
   it("preserva o erro original se a gravação e o rollback falharem", async () => {
     const saveError = new Error("insert failed");
     queryMock

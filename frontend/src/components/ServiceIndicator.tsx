@@ -5,6 +5,7 @@ const statusLabels = {
   active: "Ativo",
   new: "Novo serviço detectado",
   returned: "Serviço retornou",
+  unavailable: "Serviço indisponível",
   removed: "Serviço removido do catálogo",
 };
 

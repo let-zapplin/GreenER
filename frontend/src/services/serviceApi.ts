@@ -47,7 +47,12 @@ export function storedServiceToService(
 
     metrics_path: "",
 
-    status: storedService.status,
+    status:
+      storedService.status === "removed"
+        ? "removed"
+        : storedService.last_collection_status === "unavailable"
+          ? "unavailable"
+          : "active",
     lastConfirmedAt: storedService.last_seen_at ?? undefined,
   };
 }

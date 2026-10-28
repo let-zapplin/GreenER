@@ -16,6 +16,7 @@ export interface CollectionSummary {
   totalServices: number;
   successCount: number;
   noMetricsCount: number;
+  unavailableCount: number;
   errorCount: number;
   failures: CollectionFailure[];
 }
@@ -42,6 +43,7 @@ export class ColetasService {
         totalServices: 0,
         successCount: 0,
         noMetricsCount: 0,
+        unavailableCount: 0,
         errorCount: 0,
         failures: [],
       };
@@ -61,6 +63,7 @@ export class ColetasService {
         totalServices: availableServices.length,
         successCount: 0,
         noMetricsCount: 0,
+        unavailableCount: 0,
         errorCount: 0,
         failures: [],
       };
@@ -103,6 +106,15 @@ export class ColetasService {
         } else if (result.status === "no_metrics") {
           summary.noMetricsCount++;
           console.log(`⚠️ Sem métricas: ${service.name}`);
+        } else if (result.status === "unavailable") {
+          summary.unavailableCount++;
+          summary.failures.push({
+            service: service.name,
+            reason: result.failure_reason,
+          });
+          console.error(
+            `📡 Serviço indisponível: ${service.name} (${result.failure_reason})`,
+          );
         } else {
           summary.errorCount++;
           summary.failures.push({
@@ -116,7 +128,9 @@ export class ColetasService {
       }
 
       console.log(
-        `🏁 Coleta finalizada: ${summary.successCount} sucessos, ${summary.noMetricsCount} sem métricas, ${summary.errorCount} falhas.`,
+        `🏁 Coleta finalizada: ${summary.successCount} sucessos, ` +
+          `${summary.noMetricsCount} sem métricas, ` +
+          `${summary.unavailableCount} indisponíveis, ${summary.errorCount} falhas.`,
       );
       return summary;
     } finally {

@@ -20,6 +20,7 @@ const emptySummary = {
   totalServices: 0,
   successCount: 0,
   noMetricsCount: 0,
+  unavailableCount: 0,
   errorCount: 0,
   failures: [],
 };

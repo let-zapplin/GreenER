@@ -19,7 +19,18 @@ export type DiscoverServicesResponse = {
   services: Service[];
 };
 
-export type ServiceStatus = "active" | "new" | "removed" | "returned";
+export type ServiceStatus =
+  | "active"
+  | "new"
+  | "removed"
+  | "returned"
+  | "unavailable";
+
+export type CollectionStatus =
+  | "success"
+  | "no_metrics"
+  | "unavailable"
+  | "error";
 
 export type MonitoredService = Service & {
   status: ServiceStatus;
@@ -39,6 +50,8 @@ export type StoredService = {
   longitude: number | null;
   status: "active" | "removed";
   last_seen_at: string | null;
+  last_collection_status: CollectionStatus | null;
+  last_collection_at: string | null;
 };
 
 export type ListServicesResponse = {

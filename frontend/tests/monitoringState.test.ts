@@ -189,3 +189,39 @@ test("o histórico e o horário permanecem disponíveis ao remontar a tela", () 
   assert.strictEqual(getMonitoringSnapshot(), removed);
   assert.equal(recordDiscovery([service]).services[0].status, "returned");
 });
+
+test("a indisponibilidade da última coleta é sinalizada e preserva a última confirmação", () => {
+  const unavailable: MonitoredService = { ...service, status: "unavailable" };
+
+  const firstLoad = reconcileServices([], [unavailable], false, 10_000);
+  assert.equal(firstLoad[0].status, "unavailable");
+  assert.equal(firstLoad[0].statusExpiresAt, undefined);
+
+  const previous: MonitoredService = {
+    ...service,
+    status: "active",
+    lastConfirmedAt: new Date(10_000).toISOString(),
+  };
+  const result = reconcileServices([previous], [unavailable], true, 12_000);
+
+  assert.equal(result[0].status, "unavailable");
+  assert.equal(result[0].lastConfirmedAt, previous.lastConfirmedAt);
+});
+
+test("indisponibilidade cede lugar a ativo na recuperação e a removido no catálogo", () => {
+  const unavailable: MonitoredService = { ...service, status: "unavailable" };
+
+  assert.equal(
+    reconcileServices([unavailable], [service], true, 20_000)[0].status,
+    "active",
+  );
+  assert.equal(
+    reconcileServices(
+      [unavailable],
+      [{ ...service, status: "removed" }],
+      true,
+      20_000,
+    )[0].status,
+    "removed",
+  );
+});
