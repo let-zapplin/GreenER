@@ -1,125 +1,99 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { ServicosService, type ExternalService } from "./intensidades.service.js";
-import { ExternalApiError } from "../../shared/errors/AppError.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// A descoberta não precisa acessar o banco de dados.
-vi.mock("./servicos.repository.js", () => ({
-  ServicosRepository: vi.fn(class {}),
+const mocks = vi.hoisted(() => ({
+  fetchCarbonRegions: vi.fn(),
+  findLocationByRegion: vi.fn(),
+  createLocation: vi.fn(),
+  createCarbonIntensity: vi.fn(),
+  listAllIntensities: vi.fn(),
+  findForCollection: vi.fn(),
 }));
 
-// Evita depender das variáveis de ambiente reais.
 vi.mock("../../config/env.js", () => ({
-  env: {
-    metricsApiUrl: "https://metrics.exemplo",
-    externalApiTimeoutMs: 5000,
-  },
+  env: { carbonIntensityMaxAgeMs: 60_000 },
 }));
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.useRealTimers();
+vi.mock("../../integrations/carbon-api.js", () => ({
+  fetchCarbonRegions: mocks.fetchCarbonRegions,
+}));
+
+vi.mock("./intensidades.repository.js", () => ({
+  IntensidadesRepository: vi.fn(class {
+    findLocationByRegion = mocks.findLocationByRegion;
+    createLocation = mocks.createLocation;
+    createCarbonIntensity = mocks.createCarbonIntensity;
+    listAllIntensities = mocks.listAllIntensities;
+    findForCollection = mocks.findForCollection;
+  }),
+}));
+
+import { IntensidadesService } from "./intensidades.service.js";
+
+const regionCatalog = {
+  regions: [
+    {
+      code: "br-sudeste",
+      country: "Brazil",
+      region: "Sudeste",
+      city: "Sao Paulo",
+      latitude: -23.5505,
+      longitude: -46.6333,
+      carbon_intensity_gco2e_per_kwh: 85,
+      renewable_share_percent: 83,
+    },
+  ],
+  total: 1,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.fetchCarbonRegions.mockResolvedValue(regionCatalog);
+  mocks.findLocationByRegion.mockResolvedValue({ id_location: 42 });
+  mocks.createLocation.mockResolvedValue({ id_location: 42 });
+  mocks.createCarbonIntensity.mockResolvedValue({});
 });
 
-describe("ServicosService.discoverServices", () => {
-  it("retorna os serviços recebidos da API", async () => {
-    // Preparar: definir os dados e a resposta simulada.
-    const services: ExternalService[] = [
+describe("IntensidadesService", () => {
+  it("mapeia o catálogo externo para o modelo interno", async () => {
+    const result = await new IntensidadesService().discoverIntensities();
+
+    expect(result).toEqual([
       {
-        id: "servico-1",
-        name: "API de pedidos",
-        location: {
-          region_code: "BR-SP",
-          country: "Brasil",
-          region: "São Paulo",
-          city: "São Paulo",
-          latitude: -23.55,
-          longitude: -46.63,
-        },
-        metrics_path: "/services/servico-1/metrics",
+        regionCode: "br-sudeste",
+        country: "Brazil",
+        region: "Sudeste",
+        city: "Sao Paulo",
+        latitude: -23.5505,
+        longitude: -46.6333,
+        carbonIntensity: 85,
+        renewableShare: 83,
       },
-    ];
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(services), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    ]);
+  });
 
-    vi.stubGlobal("fetch", fetchMock);
+  it("cria um snapshot regional em cada sincronização", async () => {
+    const service = new IntensidadesService();
 
-    // Executar: chamar o método real.
-    const result = await new ServicosService().discoverServices();
+    await expect(service.saveIntensity()).resolves.toEqual({ inserted: 1 });
+    await expect(service.saveIntensity()).resolves.toEqual({ inserted: 1 });
 
-    // Verificar: conferir o resultado e a URL consultada.
-    expect(result).toEqual(services);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://metrics.exemplo/services",
+    expect(mocks.findLocationByRegion).toHaveBeenCalledTimes(2);
+    expect(mocks.createCarbonIntensity).toHaveBeenCalledTimes(2);
+    expect(mocks.createCarbonIntensity).toHaveBeenCalledWith(
       expect.objectContaining({
-        signal: expect.any(AbortSignal),
+        idLocation: 42,
+        carbonIntensity: 85,
+        renewableShare: 83,
+        registeredAt: expect.any(Date),
       }),
     );
   });
 
-  it("lança ExternalApiError quando a API retorna HTTP 500", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(null, {
-          status: 500,
-          statusText: "Internal Server Error",
-        }),
-      ),
-    );
+  it("usa o limite configurado ao buscar o fator temporal", async () => {
+    const service = new IntensidadesService();
+    mocks.findForCollection.mockResolvedValue(null);
 
-    await expect(
-      new ServicosService().discoverServices(),
-    ).rejects.toBeInstanceOf(ExternalApiError);
-  });
-
-  it("lança ExternalApiError quando a conexão falha", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new TypeError("Falha de conexão")),
-    );
-
-    await expect(
-      new ServicosService().discoverServices(),
-    ).rejects.toBeInstanceOf(ExternalApiError);
-  });
-  it("cancela a requisição ao atingir o timeout e lança ExternalApiError", async () => {
-    vi.useFakeTimers();
-    let requestSignal: AbortSignal | undefined;
-
-    // Simula uma requisição pendente que só falha quando é cancelada.
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockImplementation((_url, options) => {
-        requestSignal = options?.signal ?? undefined;
-        return new Promise<Response>((_resolve, reject) => {
-          requestSignal?.addEventListener(
-            "abort",
-            () =>
-              reject(new DOMException("Requisição cancelada", "AbortError")),
-            { once: true },
-          );
-        });
-      });
-    vi.stubGlobal("fetch", fetchMock);
-
-    // Trata a rejeição antes de avançar o relógio para o timeout.
-    const rejection = expect(
-      new ServicosService().discoverServices(),
-    ).rejects.toBeInstanceOf(ExternalApiError);
-
-    expect(requestSignal).toBeInstanceOf(AbortSignal);
-    await vi.advanceTimersByTimeAsync(4999);
-    expect(requestSignal?.aborted).toBe(false);
-
-    await vi.advanceTimersByTimeAsync(1);
-    await rejection;
-    expect(requestSignal?.aborted).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(vi.getTimerCount()).toBe(0);
+    await expect(service.findIntensityForCollection("12")).resolves.toBeNull();
+    expect(mocks.findForCollection).toHaveBeenCalledWith("12", 60_000);
   });
 });
