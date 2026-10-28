@@ -1,6 +1,20 @@
 import pool from "../../db/connection.js";
 import { LocalidadesRepository } from "../localidades/localidades.repository.js";
 
+export interface ListedService {
+  id_service: number;
+  external_id: string;
+  name: string;
+  status: string;
+  last_seen_at: Date | null;
+  region_code: string;
+  country: string;
+  region: string;
+  city: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 // ============================================================
 // CLASSE: ServicosRepository
 // Responsabilidade: Acesso ao banco de dados (SQL puro)
@@ -80,8 +94,8 @@ export class ServicosRepository extends LocalidadesRepository{
   // ========================================================
   // US03: Listar todos os serviços
   // ========================================================
-  async listAll() {
-    const result = await pool.query(
+  async listAll(): Promise<ListedService[]> {
+    const result = await pool.query<ListedService & Record<string, unknown>>(
       `SELECT 
           s.id_service,
           s.id AS external_id,

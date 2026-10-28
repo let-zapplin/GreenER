@@ -308,3 +308,28 @@ metrics
 A integração real com `/metrics/{id_servico}` e a criação automática desses registros serão implementadas pelas tarefas seguintes da Sprint.
 
 A TEC02 permanece **em andamento** até a conclusão do fluxo de PR, revisão e integração em `develop`.
+
+### US04 — Coleta periódica e variação das métricas
+
+A coleta passou a ser executada automaticamente, sem depender da rota manual criada na US03.
+
+#### Decisões
+
+- **Job dedicado:** `backend/src/jobs/metrics-collection.job.ts` executa um ciclo assim que o backend inicia e reagenda o próximo com `setTimeout` **somente após o término do ciclo atual**. Isso impede que o mesmo job tenha duas execuções simultâneas.
+- **Guarda de execução compartilhada:** `MetricaService.collectAllMetrics()` controla um estado de coleta em andamento no módulo. O job periódico e o `POST /api/metricas/collect` usam a mesma guarda; uma chamada concorrente retorna `skipped: true` sem consultar a API externa novamente.
+- **Intervalos independentes:** `COLLECTION_INTERVAL_MS` (padrão `60000`) define a coleta de métricas e `SERVICE_SYNC_INTERVAL_MS` (padrão `300000`) define a sincronização do catálogo. Antes, a única variável existente controlava apenas o catálogo. Ambos são validados como inteiros positivos na inicialização.
+- **Variação sem sobrescrita:** cada ciclo chama `/metrics/{id_servico}` novamente e insere uma nova linha em `collection` (e em `metrics` quando o estado é `success`). Não há `UPDATE` sobre amostras anteriores, então valores diferentes entre requisições ficam registrados como coletas sucessivas.
+- **Falhas isoladas:** cada serviço é processado em seu próprio `try/catch`. Falha de consulta externa, `no_metrics`, `error` ou erro de persistência contam no resumo e a coleta continua para os demais serviços. O job também captura falhas do ciclo inteiro e mantém o agendamento.
+- **Retorno da coleta:** o endpoint e o job recebem um resumo com `skipped`, `services`, `success`, `noMetrics` e `errors`.
+
+#### Evidências
+
+- coleta manual e automática usando o mesmo caso de uso;
+- configuração do intervalo em `env.ts`, `.env.example` e `compose.yaml`;
+- testes de coletas sucessivas com valores diferentes, sem sobrescrever a amostra anterior;
+- teste de falha de persistência sem interromper os demais serviços;
+- teste de guarda contra execução concorrente;
+- teste do job executando imediatamente, repetindo no intervalo e continuando após falha;
+- suíte do backend com **32 testes aprovados em 32** (6 novos) e `npm run typecheck` sem erros.
+
+A US04 permanece **em andamento** até a conclusão do fluxo de PR, revisão e integração em `develop`.

@@ -257,7 +257,7 @@ flowchart TD
   G --> H[Retornar created, updated, removed]
 ```
 
-> **Sincronização automática:** além deste endpoint manual, `server.ts` inicia o job `startServiceSync()` quando o backend sobe. Na versão atual, a variável de intervalo está associada à **sincronização do catálogo**, não à futura coleta de métricas. A Sprint 2 deve separar claramente os intervalos de sincronização, coleta e atualização do frontend.
+> **Execução automática:** além dos endpoints manuais, `server.ts` inicia dois jobs independentes quando o backend sobe: `startServiceSync()` (sincronização do catálogo, a cada `SERVICE_SYNC_INTERVAL_MS`) e `startMetricsCollection()` (coleta de métricas, a cada `COLLECTION_INTERVAL_MS`). Cada ciclo só é reagendado depois que o anterior termina. Detalhes na seção 05.
 
 ### `GET /api/servicos` — listagem persistida
 
@@ -326,16 +326,80 @@ Lista os snapshots persistidos, incluindo `region_code` e `registered_at`. Os fa
 
 Falhas HTTP, conexão, timeout ou formato inválido da Carbon API resultam em `502 Bad Gateway`. Rotas chamadas sem JWT válido resultam em `401 Unauthorized`.
 
-## 05. Erros e códigos HTTP
+## 05. Coleta de métricas — US03 / US04
+
+A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`.
+
+### `POST /api/metricas/collect` — disparo manual (administrador)
+
+**Autenticação:** JWT válido e usuário administrador (`users.admin = TRUE`). O status administrativo é consultado no banco em cada chamada; usuários registrados recebem `admin = FALSE` por padrão.  
+**Corpo da requisição:** nenhum.  
+**Sucesso:** `200 OK`.
+
+```json
+{
+  "message": "Coleta de métricas finalizada com falhas parciais",
+  "skipped": false,
+  "totalServices": 12,
+  "successCount": 10,
+  "noMetricsCount": 1,
+  "errorCount": 1,
+  "failures": [
+    {
+      "service": "Serviço Exemplo",
+      "reason": "A consulta à API de métricas excedeu o tempo limite."
+    }
+  ]
+}
+```
+
+| Campo | Descrição |
+|---|---|
+| `skipped` | `true` quando já havia um ciclo em andamento e nenhuma coleta nova foi iniciada |
+| `totalServices` | Serviços ativos consultados neste ciclo |
+| `successCount` | Coletas com métricas válidas persistidas |
+| `noMetricsCount` | Serviços ativos que não retornaram métricas |
+| `errorCount` | Falhas de consulta externa ou de persistência |
+| `failures` | Lista com `service` e `reason` para cada erro |
+
+**Execuções concorrentes:** o job periódico e a rota manual compartilham uma guarda de execução. Se uma coleta já estiver em andamento, a nova chamada retorna `skipped: true`, contadores zerados, `failures: []` e a mensagem `"Coleta anterior ainda em execução; nenhuma nova coleta iniciada"`.
+
+**Acesso negado:** `401 Unauthorized` para token inválido/ausente ou usuário não encontrado; `403 Forbidden` para usuário autenticado que não é administrador.
+
+**Exemplo:**
+
+```bash
+curl -X POST http://localhost:3000/api/metricas/collect \
+  -H "Authorization: Bearer <token-de-administrador>"
+```
+
+**Estados persistidos:** `success` (coleta + métricas), `no_metrics` (serviço disponível sem métricas) e `error` (falha na consulta ou no processamento). Cada execução insere novos registros; amostras anteriores não são atualizadas nem removidas, mesmo quando os valores variam entre coletas.
+
+### Coleta automática
+
+`startMetricsCollection()` em `backend/src/jobs/metrics-collection.job.ts` executa um ciclo assim que o backend inicia e reagenda o próximo com `setTimeout` somente após o término do ciclo atual. Falhas são registradas no log e não encerram o ciclo automático.
+
+| Variável | Padrão | Função |
+|---|---:|---|
+| `COLLECTION_INTERVAL_MS` | `60000` | Intervalo entre ciclos de coleta de métricas |
+| `SERVICE_SYNC_INTERVAL_MS` | `300000` | Intervalo da sincronização do catálogo de serviços |
+| `EXTERNAL_API_TIMEOUT_MS` | `10000` | Timeout de cada requisição às APIs externas |
+
+Os intervalos devem ser inteiros positivos; valores inválidos interrompem a inicialização do backend com mensagem explícita.
+
+---
+
+## 06. Erros e códigos HTTP
 
 Os endpoints de serviços e intensidades encaminham exceções ao middleware global. Os endpoints de autenticação tratam exceções dentro de seus próprios controllers.
 
 | Código | Significado | Exemplos no projeto |
 |---|---|---|
-| `200 OK` | Operação realizada | Health, login, descoberta, sincronização e listagem |
+| `200 OK` | Operação realizada | Health, login, descoberta, sincronização, listagem e coleta (pode indicar falhas parciais no corpo) |
 | `201 Created` | Registro criado | Cadastro de usuário |
 | `400 Bad Request` | Falha tratada no cadastro | E-mail já cadastrado e outros erros capturados pelo controller |
-| `401 Unauthorized` | Credenciais inválidas ou token ausente/inválido | Login e rotas protegidas por JWT, incluindo intensidades |
+| `401 Unauthorized` | Falha de autenticação | Credenciais inválidas ou token ausente, inválido ou associado a usuário inexistente |
+| `403 Forbidden` | Usuário autenticado sem permissão | Usuário não administrador tenta iniciar coleta manual |
 | `404 Not Found` | Rota/recurso inexistente | Para URLs não registradas, Express responde com seu comportamento padrão; a classe `NotFoundError` existe, mas não está aplicada aos endpoints descritos |
 | `500 Internal Server Error` | Exceção não prevista | Falha inesperada nos módulos de serviços ou intensidades |
 | `502 Bad Gateway` | Falha de integração externa | Erro consultando a Metrics API ou a Carbon API |
@@ -353,7 +417,7 @@ Os endpoints de serviços e intensidades encaminham exceções ao middleware glo
 
 ---
 
-## 06. Como testar localmente
+## 07. Como testar localmente
 
 1. Configure o `.env` conforme o `.env.example`, sem publicar senhas ou segredos.
 2. Inicie a infraestrutura no diretório raiz:
@@ -370,7 +434,15 @@ Os endpoints de serviços e intensidades encaminham exceções ao middleware glo
 
 4. Teste a API em `http://localhost:3000/health`.
 5. Teste a descoberta de serviços, a sincronização e a listagem, nesta ordem, para comparar os dados da origem externa com os registros persistidos.
-6. Para consultar logs:
+6. Com um token de administrador, dispare uma coleta manual e confira os contadores retornados:
+
+   ```bash
+   curl -X POST http://localhost:3000/api/metricas/collect \
+     -H "Authorization: Bearer <token-de-administrador>"
+   ```
+
+   A coleta automática também roda ao iniciar o backend e a cada `COLLECTION_INTERVAL_MS`; os logs do container mostram cada ciclo.
+7. Para consultar logs:
 
    ```bash
    docker compose logs --tail=50 backend
@@ -382,11 +454,10 @@ Os endpoints de serviços e intensidades encaminham exceções ao middleware glo
 
 ---
 
-## 07. Endpoints planejados para a Sprint 2
+## 08. Endpoints planejados para a Sprint 2
 
 Os recursos abaixo fazem parte do planejamento, mas **não devem ser considerados endpoints ativos até aparecerem no código, testes e documentação de resposta**:
 
-- coleta de métricas por serviço;
 - histórico de coletas por serviço/período;
 - dados consolidados do dashboard;
 - cálculos de energia e CO₂e;
@@ -394,16 +465,16 @@ Os recursos abaixo fazem parte do planejamento, mas **não devem ser considerado
 
 Ao implementar um endpoint novo, registrar nesta documentação: método, URL, parâmetros, autenticação, resposta de sucesso, erros esperados e exemplo de verificação.
 
-## 08. Integrações e funcionalidades futuras
+## 09. Integrações e funcionalidades futuras
 
-A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização. O campo `metrics_path` retornado por ela indica onde consultar métricas de cada serviço, mas **não existe ainda um endpoint interno registrado no Express para expor essas coletas** na versão analisada.
+A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização, e a rota `/metrics/{id_servico}`, consumida pela coleta manual (restrita a administradores) e pelo job periódico. Ainda não existe endpoint interno para consultar o histórico de coletas por serviço ou período.
 
 | Recurso | Situação na versão analisada |
 |---|---|
 | Descoberta e sincronização de serviços | Implementadas |
 | Cadastro e login com emissão de JWT | Implementados, com ressalvas descritas acima |
-| Proteção das rotas de intensidades por JWT | Implementada |
-| Coleta e histórico de métricas | Planejados; arquivos de módulo ainda vazios |
+| Proteção de endpoints por JWT | Aplicada seletivamente; coleta manual restrita a administradores |
+| Coleta de métricas | Implementada (manual com administrador e automática); histórico planejado |
 | Cálculo de consumo energético e CO₂e | Planejado |
 | Descoberta e snapshots da Carbon Intensity API | Implementados nas rotas de intensidades |
 | Endpoints de indicadores consolidados | Planejados; arquivos de módulo ainda vazios |
@@ -413,12 +484,12 @@ A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sinc
 
 ---
 
-## 09. Onde encontrar os endpoints no projeto
+## 10. Onde encontrar os endpoints no projeto
 
 ```text
 backend/src/
 ├── app.ts                         # Registra prefixos e middlewares
-├── server.ts                      # Inicializa o servidor e o job
+├── server.ts                      # Inicializa o servidor e os jobs periódicos
 ├── modules/
 │   ├── auth/
 │   │   ├── auth.routes.ts         # POST /auth/register e /auth/login
@@ -438,7 +509,8 @@ backend/src/
 ├── integrations/
 │   └── carbon-api.ts              # Consulta e validação da Carbon API
 ├── jobs/
-│   └── service-sync.job.ts        # Sincronização periódica
+│   ├── service-sync.job.ts        # Sincronização periódica do catálogo
+│   └── metrics-collection.job.ts  # Coleta periódica de métricas
 └── shared/
     ├── middlewares/error.middleware.ts
     └── errors/AppError.ts
@@ -448,7 +520,7 @@ backend/src/
 
 ---
 
-## 10. Manutenção desta documentação
+## 11. Manutenção desta documentação
 
 Sempre que um endpoint for criado ou alterado, atualizar:
 

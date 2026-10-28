@@ -40,5 +40,6 @@ export const env = {
   carbonIntensityMaxAgeMs,
 
   // Monitoramento
-  collectionIntervalMs: Number(optional("COLLECTION_INTERVAL_MS", "60000")),
+  serviceSyncIntervalMs: optionalPositiveInt("SERVICE_SYNC_INTERVAL_MS", 300_000),
+  metricsCollectionIntervalMs: optionalPositiveInt("COLLECTION_INTERVAL_MS", 30_000),
 } as const;

@@ -1,6 +1,9 @@
 import { env } from "../../config/env.js";
 import { ExternalApiError } from "../../shared/errors/AppError.js";
-import { ServicosRepository } from "./servicos.repository.js";
+import {
+  ServicosRepository,
+  type ListedService,
+} from "./servicos.repository.js";
 
 // ============================================================
 // TIPO: Location
@@ -171,7 +174,7 @@ export class ServicosService {
   // ========================================================
   // US03: Listar todos os serviços armazenados no banco
   // ========================================================
-  async listAll() {
+  async listAll(): Promise<ListedService[]> {
     console.log("📋 Listando serviços do banco...");
 
     const services = await this.repository.listAll();
