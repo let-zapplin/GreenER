@@ -121,7 +121,14 @@ export class ServicosService {
 
       // 2. Se não existe, cria
       if (!location) {
-        location = await this.repository.createLocation(svc.location);
+        location = await this.repository.createLocation({
+          regionCode: svc.location.region_code,
+          country: svc.location.country,
+          region: svc.location.region,
+          city: svc.location.city,
+          latitude: svc.location.latitude,
+          longitude: svc.location.longitude,
+        });
 
         const nomeCidade = svc.location.city ?? "cidade não informada";
         console.log(
