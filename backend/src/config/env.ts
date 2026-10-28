@@ -40,5 +40,5 @@ export const env = {
 
   // Monitoramento
   serviceSyncIntervalMs: optionalPositiveInt("SERVICE_SYNC_INTERVAL_MS", 300_000),
-  metricsCollectionIntervalMs: optionalPositiveInt("COLLECTION_INTERVAL_MS", 30_000),
+  metricsCollectionIntervalMs: optionalPositiveInt("COLLECTION_INTERVAL_MS", 60_000),
 } as const;
