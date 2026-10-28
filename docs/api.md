@@ -31,7 +31,7 @@ flowchart LR
 | `GET` | `/api/servicos/discover` | Buscar serviços diretamente na API externa | US01 |
 | `POST` | `/api/servicos/sync` | Sincronizar serviços externos com o banco | US02 |
 | `GET` | `/api/servicos` | Listar serviços persistidos no banco | RF01 / RF02 / apoio ao monitoramento |
-| `POST` | `/api/metricas/collect` | Executar coleta individual dos serviços ativos | RF03 (administrador) |
+| `POST` | `/api/metricas/collect` | Executar coleta manual dos serviços ativos (Rota Protegida, administrador) | US03 / US04 |
 
 **Situação de acesso:** endpoints protegidos utilizam middleware de autenticação JWT.
  O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas (como a rota `/auth/me` e a futura área de configuração). O backend valida o token e retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
@@ -255,7 +255,7 @@ flowchart TD
   G --> H[Retornar created, updated, removed]
 ```
 
-> **Sincronização automática:** além deste endpoint manual, `server.ts` inicia o job `startServiceSync()` quando o backend sobe. Na versão atual, a variável de intervalo está associada à **sincronização do catálogo**, não à futura coleta de métricas. A Sprint 2 deve separar claramente os intervalos de sincronização, coleta e atualização do frontend.
+> **Execução automática:** além dos endpoints manuais, `server.ts` inicia dois jobs independentes quando o backend sobe: `startServiceSync()` (sincronização do catálogo, a cada `SERVICE_SYNC_INTERVAL_MS`) e `startMetricsCollection()` (coleta de métricas, a cada `COLLECTION_INTERVAL_MS`). Cada ciclo só é reagendado depois que o anterior termina. Detalhes na seção 05.
 
 ### `GET /api/servicos` — listagem persistida
 
@@ -297,31 +297,23 @@ curl http://localhost:3000/api/servicos
 
 ---
 
-### `POST /api/metricas/collect` — coleta manual de métricas (RF03)
+## 05. Coleta de métricas — US03 / US04
 
-Consulta individualmente a Metrics API para cada serviço com status `active`. Cada resultado é persistido como uma tentativa em `collection`; quando há métricas válidas, os valores também são gravados em `metrics`. Um erro de consulta ou persistência é reportado sem impedir o processamento dos serviços seguintes.
+A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`.
 
-**Autenticação:** JWT válido e usuário administrador (`users.admin = TRUE`). O status administrativo é consultado no banco em cada chamada; usuários registrados recebem `admin = FALSE` por padrão. A concessão de privilégios deve ser feita por um operador autorizado, fora do endpoint público de cadastro.
+### `POST /api/metricas/collect` — disparo manual (administrador)
 
-**Parâmetros:** nenhum.
-
-**Sucesso:** `200 OK`, inclusive quando há falhas parciais. O campo `errorCount` e a lista `failures` identificam resultados de coleta ou persistência com erro.
-
-**Exemplo:**
-
-```bash
-curl -X POST http://localhost:3000/api/metricas/collect \
-  -H "Authorization: Bearer <token-de-administrador>"
-```
-
-**Resposta ilustrativa:**
+**Autenticação:** JWT válido e usuário administrador (`users.admin = TRUE`). O status administrativo é consultado no banco em cada chamada; usuários registrados recebem `admin = FALSE` por padrão.  
+**Corpo da requisição:** nenhum.  
+**Sucesso:** `200 OK`.
 
 ```json
 {
   "message": "Coleta de métricas finalizada com falhas parciais",
-  "totalServices": 2,
-  "successCount": 1,
-  "noMetricsCount": 0,
+  "skipped": false,
+  "totalServices": 12,
+  "successCount": 10,
+  "noMetricsCount": 1,
   "errorCount": 1,
   "failures": [
     {
@@ -332,11 +324,43 @@ curl -X POST http://localhost:3000/api/metricas/collect \
 }
 ```
 
-**Acesso negado:** `401 Unauthorized` para token inválido/ausente ou usuário não encontrado; `403 Forbidden` para usuário autenticado que não é administrador. Falhas inesperadas, como indisponibilidade do banco ao listar os serviços, são encaminhadas ao middleware global.
+| Campo | Descrição |
+|---|---|
+| `skipped` | `true` quando já havia um ciclo em andamento e nenhuma coleta nova foi iniciada |
+| `totalServices` | Serviços ativos consultados neste ciclo |
+| `successCount` | Coletas com métricas válidas persistidas |
+| `noMetricsCount` | Serviços ativos que não retornaram métricas |
+| `errorCount` | Falhas de consulta externa ou de persistência |
+| `failures` | Lista com `service` e `reason` para cada erro |
+
+**Execuções concorrentes:** o job periódico e a rota manual compartilham uma guarda de execução. Se uma coleta já estiver em andamento, a nova chamada retorna `skipped: true`, contadores zerados, `failures: []` e a mensagem `"Coleta anterior ainda em execução; nenhuma nova coleta iniciada"`.
+
+**Acesso negado:** `401 Unauthorized` para token inválido/ausente ou usuário não encontrado; `403 Forbidden` para usuário autenticado que não é administrador.
+
+**Exemplo:**
+
+```bash
+curl -X POST http://localhost:3000/api/metricas/collect \
+  -H "Authorization: Bearer <token-de-administrador>"
+```
+
+**Estados persistidos:** `success` (coleta + métricas), `no_metrics` (serviço disponível sem métricas) e `error` (falha na consulta ou no processamento). Cada execução insere novos registros; amostras anteriores não são atualizadas nem removidas, mesmo quando os valores variam entre coletas.
+
+### Coleta automática
+
+`startMetricsCollection()` em `backend/src/jobs/metrics-collection.job.ts` executa um ciclo assim que o backend inicia e reagenda o próximo com `setTimeout` somente após o término do ciclo atual. Falhas são registradas no log e não encerram o ciclo automático.
+
+| Variável | Padrão | Função |
+|---|---:|---|
+| `COLLECTION_INTERVAL_MS` | `60000` | Intervalo entre ciclos de coleta de métricas |
+| `SERVICE_SYNC_INTERVAL_MS` | `300000` | Intervalo da sincronização do catálogo de serviços |
+| `EXTERNAL_API_TIMEOUT_MS` | `10000` | Timeout de cada requisição às APIs externas |
+
+Os intervalos devem ser inteiros positivos; valores inválidos interrompem a inicialização do backend com mensagem explícita.
 
 ---
 
-## 05. Erros e códigos HTTP
+## 06. Erros e códigos HTTP
 
 Os endpoints de serviços utilizam um middleware global para tratamento de erros. Os endpoints de autenticação, por sua vez, tratam exceções dentro de seus próprios controllers.
 
@@ -364,7 +388,7 @@ Os endpoints de serviços utilizam um middleware global para tratamento de erros
 
 ---
 
-## 06. Como testar localmente
+## 07. Como testar localmente
 
 1. Configure o `.env` conforme o `.env.example`, sem publicar senhas ou segredos.
 2. Inicie a infraestrutura no diretório raiz:
@@ -381,7 +405,15 @@ Os endpoints de serviços utilizam um middleware global para tratamento de erros
 
 4. Teste a API em `http://localhost:3000/health`.
 5. Teste a descoberta de serviços, a sincronização e a listagem, nesta ordem, para comparar os dados da origem externa com os registros persistidos.
-6. Para consultar logs:
+6. Com um token de administrador, dispare uma coleta manual e confira os contadores retornados:
+
+   ```bash
+   curl -X POST http://localhost:3000/api/metricas/collect \
+     -H "Authorization: Bearer <token-de-administrador>"
+   ```
+
+   A coleta automática também roda ao iniciar o backend e a cada `COLLECTION_INTERVAL_MS`; os logs do container mostram cada ciclo.
+7. Para consultar logs:
 
    ```bash
    docker compose logs --tail=50 backend
@@ -393,27 +425,26 @@ Os endpoints de serviços utilizam um middleware global para tratamento de erros
 
 ---
 
-## 07. Endpoints planejados para a Sprint 2
+## 08. Endpoints planejados para a Sprint 2
 
 Os recursos abaixo fazem parte do planejamento, mas **não devem ser considerados endpoints ativos até aparecerem no código, testes e documentação de resposta**:
 
 - histórico de coletas por serviço/período;
 - dados consolidados do dashboard;
-- indicadores ambientais;
+- indicadores ambientais.
 
 Ao implementar um endpoint novo, registrar nesta documentação: método, URL, parâmetros, autenticação, resposta de sucesso, erros esperados e exemplo de verificação.
 
-## 08. Integrações e funcionalidades futuras
+## 09. Integrações e funcionalidades futuras
 
-A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização, e `/metrics/{id_servico}`, utilizada pela coleta manual de métricas. A coleta é iniciada por `POST /api/metricas/collect`; ainda não há endpoint interno para consultar o histórico persistido nem job automático de coleta.
+A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização, e a rota `/metrics/{id_servico}`, consumida pela coleta manual (restrita a administradores) e pelo job periódico. Ainda não existe endpoint interno para consultar o histórico de coletas por serviço ou período.
 
 | Recurso | Situação na versão analisada |
 |---|---|
 | Descoberta e sincronização de serviços | Implementadas |
 | Cadastro e login com emissão de JWT | Implementados, com ressalvas descritas acima |
 | Proteção de endpoints por JWT | Aplicada seletivamente; coleta manual restrita a administradores |
-| Coleta manual de métricas | Implementada em `POST /api/metricas/collect` |
-| Coleta automática e histórico consultável | Planejados |
+| Coleta de métricas | Implementada (manual com administrador e automática); histórico planejado |
 | Cálculo de consumo energético e CO₂e | Planejado |
 | Integração funcional com Carbon Intensity API | Planejada; não conectada às rotas atuais |
 | Endpoints de indicadores consolidados | Planejados; arquivos de módulo ainda vazios |
@@ -423,25 +454,31 @@ A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sinc
 
 ---
 
-## 09. Onde encontrar os endpoints no projeto
+## 10. Onde encontrar os endpoints no projeto
 
 ```text
 backend/src/
 ├── app.ts                         # Registra prefixos e middlewares
-├── server.ts                      # Inicializa o servidor e o job
+├── server.ts                      # Inicializa o servidor e os jobs periódicos
 ├── modules/
 │   ├── auth/
 │   │   ├── auth.routes.ts         # POST /auth/register e /auth/login
 │   │   ├── auth.controller.ts     # Entrada e saída HTTP
 │   │   ├── auth.service.ts        # Regras de autenticação
 │   │   └── auth.repository.ts     # Consultas SQL de usuários
+│   ├── coletas/
+│   │   ├── coletas.routes.ts      # POST /collect
+│   │   ├── coletas.controller.ts  # Entrada e saída HTTP
+│   │   ├── coletas.service.ts     # Coleta em lote e guarda de execução
+│   │   └── coletas.repository.ts  # Persistência de collection + metrics
 │   └── servicos/
 │       ├── servicos.routes.ts     # GET /discover, POST /sync, GET /
 │       ├── servicos.controller.ts # Entrada e saída HTTP
 │       ├── servicos.service.ts    # Descoberta e sincronização
 │       └── servicos.repository.ts # Consultas SQL de serviços
 ├── jobs/
-│   └── service-sync.job.ts        # Sincronização periódica
+│   ├── service-sync.job.ts        # Sincronização periódica do catálogo
+│   └── metrics-collection.job.ts  # Coleta periódica de métricas
 └── shared/
     ├── middlewares/error.middleware.ts
     └── errors/AppError.ts
@@ -451,7 +488,7 @@ backend/src/
 
 ---
 
-## 10. Manutenção desta documentação
+## 11. Manutenção desta documentação
 
 Sempre que um endpoint for criado ou alterado, atualizar:
 

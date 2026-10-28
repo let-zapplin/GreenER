@@ -7,11 +7,17 @@ export class ColetasController {
   async collect(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const summary = await this.service.collectAllMetrics();
+
+      let message = "Coleta de métricas finalizada";
+
+      if (summary.skipped) {
+        message = "Coleta anterior ainda em execução; nenhuma nova coleta iniciada";
+      } else if (summary.errorCount > 0) {
+        message = "Coleta de métricas finalizada com falhas parciais";
+      }
+
       res.status(200).json({
-        message:
-          summary.errorCount > 0
-            ? "Coleta de métricas finalizada com falhas parciais"
-            : "Coleta de métricas finalizada",
+        message,
         ...summary,
       });
     } catch (error) {

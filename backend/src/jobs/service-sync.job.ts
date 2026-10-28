@@ -16,7 +16,7 @@ export async function startServiceSync(): Promise<void> {
     } catch (error) {
       console.error("❌ Falha na sincronização automática de serviços:", error);
     } finally {
-      setTimeout(syncServices, env.collectionIntervalMs);
+      setTimeout(syncServices, env.serviceSyncIntervalMs);
     }
   }
 
