@@ -13,4 +13,10 @@ router.post(
   (req, res, next) => controller.collect(req, res, next),
 );
 
+router.get<{ serviceId: string }>(
+  "/historico/:serviceId",
+  authMiddleware,
+  (req, res, next) => controller.history(req, res, next),
+);
+
 export default router;
