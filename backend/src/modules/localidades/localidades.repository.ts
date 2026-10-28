@@ -1,8 +1,8 @@
 import pool from "../../db/connection.js";
 
 // ============================================================
-// CLASSE: IntensidadesRepository
-// Responsabilidade: Acesso ao banco de dados (SQL puro)
+// CLASSE: LocalidadesRepository
+// Responsabilidade: Acesso ao banco de dados de localizações
 // ============================================================
 export class LocalidadesRepository {
   // ========================================================
@@ -55,8 +55,8 @@ export class LocalidadesRepository {
     const result = await pool.query(
       `UPDATE location
      SET
-       city = $1
-       latitude = $2
+       city = $1,
+       latitude = $2,
        longitude = $3
      WHERE region_code = $4
      RETURNING *`,

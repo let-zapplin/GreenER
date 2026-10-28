@@ -6,7 +6,7 @@ CREATE TABLE location (
   city VARCHAR(255) NULL,
   latitude DOUBLE PRECISION,
   longitude DOUBLE PRECISION,
-  UNIQUE (region_code, city)
+  UNIQUE NULLS NOT DISTINCT (region_code, city)
 );
 
 CREATE TABLE users (
