@@ -18,7 +18,7 @@ flowchart LR
     B -->|HTTP GET /services| D[Metrics API externa]
 ```
 
-> A API de intensidade de carbono está prevista para integração nas próximas etapas, mas ainda não participa dos endpoints descritos aqui.
+> A integração da Carbon API fornece descoberta e sincronização de snapshots regionais. Os cálculos ambientais continuam fora deste escopo.
 
 ### Endpoints disponíveis
 
@@ -31,10 +31,12 @@ flowchart LR
 | `GET` | `/api/servicos/discover` | Buscar serviços diretamente na API externa | US01 |
 | `POST` | `/api/servicos/sync` | Sincronizar serviços externos com o banco | US02 |
 | `GET` | `/api/servicos` | Listar serviços persistidos no banco | RF01 / RF02 / apoio ao monitoramento |
-| `POST` | `/api/metricas/collect` | Executar coleta manual dos serviços ativos (Rota Protegida, administrador) | US03 / US04 |
+| `GET` | `/api/intensidades/discover` | Consultar catálogo regional da Carbon API | Intensidades |
+| `POST` | `/api/intensidades/sync` | Registrar snapshots regionais | Intensidades |
+| `GET` | `/api/intensidades` | Listar snapshots regionais registrados | Intensidades |
 
-**Situação de acesso:** endpoints protegidos utilizam middleware de autenticação JWT.
- O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas (como a rota `/auth/me` e a futura área de configuração). O backend valida o token e retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
+**Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
+O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me` e todas as rotas de intensidades. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
 
 ---
 
@@ -297,6 +299,33 @@ curl http://localhost:3000/api/servicos
 
 ---
 
+### Intensidades de carbono
+
+As três rotas exigem `Authorization: Bearer <token>`. A descoberta consulta `GET {CARBON_API_URL}/regions`, valida o envelope `{ regions, total }` e converte os campos externos para o modelo interno. A API externa não fornece histórico nem vigência; `registered_at` registra quando o backend observou os valores.
+
+#### `GET /api/intensidades/discover`
+
+Consulta o catálogo sem persistir. A coleção da resposta usa a chave `intensities` e os campos internos `regionCode`, `carbonIntensity` e `renewableShare`.
+
+#### `POST /api/intensidades/sync`
+
+Insere um snapshot por região em cada sincronização, sem substituir registros anteriores.
+
+```json
+{
+  "message": "Intensidades sincronizadas com sucesso",
+  "snapshotsInserted": 5
+}
+```
+
+#### `GET /api/intensidades`
+
+Lista os snapshots persistidos, incluindo `region_code` e `registered_at`. Os fatores são associados ao código regional e não a uma cidade arbitrária.
+
+`CARBON_INTENSITY_MAX_AGE_MS` configura a idade máxima em milissegundos para a seleção temporal usada pelos cálculos. A variável não tem valor padrão definido: sem configuração, a busca de fator utilizável retorna ausência, em vez de selecionar silenciosamente um snapshot antigo.
+
+Falhas HTTP, conexão, timeout ou formato inválido da Carbon API resultam em `502 Bad Gateway`. Rotas chamadas sem JWT válido resultam em `401 Unauthorized`.
+
 ## 05. Coleta de métricas — US03 / US04
 
 A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`.
@@ -380,7 +409,7 @@ Os intervalos devem ser inteiros positivos; valores inválidos interrompem a ini
 
 ## 06. Erros e códigos HTTP
 
-Os endpoints de serviços utilizam um middleware global para tratamento de erros. Os endpoints de autenticação, por sua vez, tratam exceções dentro de seus próprios controllers.
+Os endpoints de serviços e intensidades encaminham exceções ao middleware global. Os endpoints de autenticação tratam exceções dentro de seus próprios controllers.
 
 | Código | Significado | Exemplos no projeto |
 |---|---|---|
@@ -390,8 +419,8 @@ Os endpoints de serviços utilizam um middleware global para tratamento de erros
 | `401 Unauthorized` | Falha de autenticação | Credenciais inválidas ou token ausente, inválido ou associado a usuário inexistente |
 | `403 Forbidden` | Usuário autenticado sem permissão | Usuário não administrador tenta iniciar coleta manual |
 | `404 Not Found` | Rota/recurso inexistente | Para URLs não registradas, Express responde com seu comportamento padrão; a classe `NotFoundError` existe, mas não está aplicada aos endpoints descritos |
-| `500 Internal Server Error` | Exceção não prevista | Falha inesperada no módulo de serviços |
-| `502 Bad Gateway` | Falha de integração externa | Erro consultando a Metrics API |
+| `500 Internal Server Error` | Exceção não prevista | Falha inesperada nos módulos de serviços ou intensidades |
+| `502 Bad Gateway` | Falha de integração externa | Erro consultando a Metrics API ou a Carbon API |
 
 **Exemplo do formato de erro global:**
 
@@ -449,6 +478,7 @@ Os recursos abaixo fazem parte do planejamento, mas **não devem ser considerado
 
 - histórico de coletas por serviço/período;
 - dados consolidados do dashboard;
+- cálculos de energia e CO₂e;
 - indicadores ambientais.
 
 Ao implementar um endpoint novo, registrar nesta documentação: método, URL, parâmetros, autenticação, resposta de sucesso, erros esperados e exemplo de verificação.
@@ -464,7 +494,7 @@ A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sinc
 | Proteção de endpoints por JWT | Aplicada seletivamente; coleta manual restrita a administradores |
 | Coleta de métricas | Implementada (manual com administrador e automática); histórico planejado |
 | Cálculo de consumo energético e CO₂e | Planejado |
-| Integração funcional com Carbon Intensity API | Planejada; não conectada às rotas atuais |
+| Descoberta e snapshots da Carbon Intensity API | Implementados nas rotas de intensidades |
 | Endpoints de indicadores consolidados | Planejados; arquivos de módulo ainda vazios |
 | Ranking, comparações e filtros por período | Evolução prevista nas próximas sprints |
 
@@ -484,16 +514,18 @@ backend/src/
 │   │   ├── auth.controller.ts     # Entrada e saída HTTP
 │   │   ├── auth.service.ts        # Regras de autenticação
 │   │   └── auth.repository.ts     # Consultas SQL de usuários
-│   ├── coletas/
-│   │   ├── coletas.routes.ts      # POST /collect
-│   │   ├── coletas.controller.ts  # Entrada e saída HTTP
-│   │   ├── coletas.service.ts     # Coleta em lote e guarda de execução
-│   │   └── coletas.repository.ts  # Persistência de collection + metrics
-│   └── servicos/
-│       ├── servicos.routes.ts     # GET /discover, POST /sync, GET /
-│       ├── servicos.controller.ts # Entrada e saída HTTP
-│       ├── servicos.service.ts    # Descoberta e sincronização
-│       └── servicos.repository.ts # Consultas SQL de serviços
+│   ├── servicos/
+│   │   ├── servicos.routes.ts     # GET /discover, POST /sync, GET /
+│   │   ├── servicos.controller.ts # Entrada e saída HTTP
+│   │   ├── servicos.service.ts    # Descoberta e sincronização
+│   │   └── servicos.repository.ts # Consultas SQL de serviços
+│   └── intensidades/
+│       ├── intensidades.routes.ts     # GET /discover, POST /sync, GET /
+│       ├── intensidades.controller.ts # Contrato HTTP das intensidades
+│       ├── intensidades.service.ts    # Mapeamento e snapshots regionais
+│       └── intensidades.repository.ts # Histórico e seleção temporal
+├── integrations/
+│   └── carbon-api.ts              # Consulta e validação da Carbon API
 ├── jobs/
 │   ├── service-sync.job.ts        # Sincronização periódica do catálogo
 │   └── metrics-collection.job.ts  # Coleta periódica de métricas

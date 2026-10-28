@@ -152,6 +152,41 @@ describe("ServicosService.discoverServices", () => {
 });
 
 describe("ServicosService.saveServices", () => {
+  it("converte o código regional externo ao criar uma localização", async () => {
+    const services: ExternalService[] = [
+      {
+        id: "servico-1",
+        name: "API de pedidos",
+        location: {
+          region_code: "BR-SP",
+          country: "Brasil",
+          region: "São Paulo",
+          city: "São Paulo",
+          latitude: -23.55,
+          longitude: -46.63,
+        },
+        metrics_path: "/services/servico-1/metrics",
+      },
+    ];
+    const service = new ServicosService();
+    vi.spyOn(service, "discoverServices").mockResolvedValue(services);
+    findLocationByRegionMock.mockResolvedValue(null);
+    createLocationMock.mockResolvedValue({ id_location: 1 });
+    findByExternalIdMock.mockResolvedValue(null);
+    markRemovedExceptMock.mockResolvedValue(0);
+
+    await service.saveServices();
+
+    expect(createLocationMock).toHaveBeenCalledWith({
+      regionCode: "BR-SP",
+      country: "Brasil",
+      region: "São Paulo",
+      city: "São Paulo",
+      latitude: -23.55,
+      longitude: -46.63,
+    });
+  });
+
   it("mantém serviço existente ativo e marca como removidos apenas os ausentes", async () => {
     const services: ExternalService[] = [
       {
