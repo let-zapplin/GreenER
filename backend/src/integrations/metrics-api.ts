@@ -23,6 +23,7 @@ export interface NormalizedMetric {
 export type FetchMetricResult =
   | { status: "success"; data: NormalizedMetric }
   | { status: "no_metrics"; http_status: number }
+  | { status: "unavailable"; failure_reason: string; http_status?: number }
   | { status: "error"; failure_reason: string; http_status?: number };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -108,9 +109,11 @@ export async function fetchServiceMetrics(
 
     return { status: "success", data: normalizedData };
   } catch (error: unknown) {
+    // Falha de comunicação: o serviço não respondeu dentro do tempo
+    // ou a conexão foi recusada. Não é erro de processamento.
     const isTimeout = error instanceof Error && error.name === "AbortError";
     return {
-      status: "error",
+      status: "unavailable",
       failure_reason: isTimeout
         ? "A consulta à API de métricas excedeu o tempo limite."
         : "Não foi possível conectar à API de métricas.",

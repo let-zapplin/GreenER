@@ -15,7 +15,7 @@ export class ColetasRepository {
       let failureReason: string | null = null;
 
       if (result.status === "no_metrics") httpStatus = result.http_status;
-      if (result.status === "error") {
+      if (result.status === "error" || result.status === "unavailable") {
         httpStatus = result.http_status || null;
         failureReason = result.failure_reason;
       }

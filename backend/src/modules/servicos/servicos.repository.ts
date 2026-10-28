@@ -1,6 +1,12 @@
 import pool from "../../db/connection.js";
 import { LocalidadesRepository } from "../localidades/localidades.repository.js";
 
+export type CollectionStatus =
+  | "success"
+  | "no_metrics"
+  | "unavailable"
+  | "error";
+
 export interface ListedService {
   id_service: number;
   external_id: string;
@@ -13,6 +19,8 @@ export interface ListedService {
   city: string | null;
   latitude: number | null;
   longitude: number | null;
+  last_collection_status: CollectionStatus | null;
+  last_collection_at: Date | null;
 }
 
 // ============================================================
@@ -107,9 +115,18 @@ export class ServicosRepository extends LocalidadesRepository{
           l.region,
           l.city,
           l.latitude,
-          l.longitude
+          l.longitude,
+          c.status AS last_collection_status,
+          c.attempted_at AS last_collection_at
        FROM service s
        INNER JOIN location l ON l.id_location = s.location_id_location
+       LEFT JOIN LATERAL (
+         SELECT status, attempted_at
+         FROM collection
+         WHERE service_id_service = s.id_service
+         ORDER BY attempted_at DESC, id_collection DESC
+         LIMIT 1
+       ) c ON TRUE
        ORDER BY s.name`,
     );
     return result.rows;

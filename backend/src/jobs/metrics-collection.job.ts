@@ -25,7 +25,8 @@ export async function startMetricsCollection(): Promise<void> {
       } else {
         console.log(
           `✅ Coleta #${cycle} concluída: ${summary.successCount} sucessos, ` +
-            `${summary.noMetricsCount} sem métricas, ${summary.errorCount} falhas`,
+            `${summary.noMetricsCount} sem métricas, ` +
+            `${summary.unavailableCount} indisponíveis, ${summary.errorCount} falhas`,
         );
       }
     } catch (error) {
