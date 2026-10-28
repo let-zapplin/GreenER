@@ -5,6 +5,7 @@ import {
 import { ServicosService } from "../servicos/servicos.service.js";
 import type { ListedService } from "../servicos/servicos.repository.js";
 import { ColetasRepository } from "./coletas.repository.js";
+import { AppError } from "../../shared/errors/AppError.js";
 
 interface CollectionFailure {
   service: string;
@@ -27,12 +28,15 @@ let collectionInProgress = false;
 
 export class ColetasService {
   constructor(
-    private readonly servicosService: Pick<ServicosService, "listAll"> =
-      new ServicosService(),
-    private readonly repository: Pick<ColetasRepository, "saveCollection"> =
-      new ColetasRepository(),
-    private readonly fetchMetrics: typeof fetchServiceMetrics =
-      fetchServiceMetrics,
+    private readonly servicosService: Pick<
+      ServicosService,
+      "listAll"
+    > = new ServicosService(),
+    private readonly repository: Pick<
+      ColetasRepository,
+      "saveCollection" | "findHistoryByService"
+    > = new ColetasRepository(),
+    private readonly fetchMetrics: typeof fetchServiceMetrics = fetchServiceMetrics,
   ) {}
 
   async collectAllMetrics(): Promise<CollectionSummary> {
@@ -136,5 +140,27 @@ export class ColetasService {
     } finally {
       collectionInProgress = false;
     }
+  }
+
+  async getHistoryByService(serviceId: string) {
+    if (!/^[1-9]\d*$/.test(serviceId)) {
+      throw new AppError(
+        "O ID do serviço deve ser um inteiro positivo",
+        400,
+        "INVALID_SERVICE_ID",
+      );
+    }
+
+    const id = Number(serviceId);
+
+    if (!Number.isSafeInteger(id) || id > 2147483647) {
+      throw new AppError(
+        "ID do serviço fora do intervalo permitido",
+        400,
+        "INVALID_SERVICE_ID",
+      );
+    }
+
+    return this.repository.findHistoryByService(id);
   }
 }

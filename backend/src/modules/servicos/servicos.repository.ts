@@ -62,16 +62,18 @@ export class ServicosRepository extends LocalidadesRepository{
 
   // Atualizar service existente
   async updateService(data: { id: string; name: string; locationId: number }) {
-    await pool.query(
+    const result = await pool.query(
       `UPDATE service
      SET
        name = $1,
        location_id_location = $2,
        status = 'active',
        last_seen_at = NOW()
-     WHERE id = $3`,
+     WHERE id = $3
+     RETURNING *`,
       [data.name, data.locationId, data.id],
     );
+    return result.rows[0];
   }
 
   async markRemovedExcept(activeExternalIds: string[]): Promise<number> {

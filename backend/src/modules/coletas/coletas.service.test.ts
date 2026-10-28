@@ -40,12 +40,15 @@ function makeMetric(cpuPercent: number, recordedAt: string) {
 
 describe("ColetasService.collectAllMetrics", () => {
   it("consulta e persiste uma tentativa individual para cada serviço ativo", async () => {
-    const services = [makeService(1), makeService(2), makeService(3, "removed")];
+    const services = [
+      makeService(1),
+      makeService(2),
+      makeService(3, "removed"),
+    ];
     const listAll = vi.fn().mockResolvedValue(services);
     const saveCollection = vi.fn().mockResolvedValue(undefined);
-    const fetchMetrics = vi.fn<(
-      serviceId: string,
-    ) => Promise<FetchMetricResult>>()
+    const fetchMetrics = vi
+      .fn<(serviceId: string) => Promise<FetchMetricResult>>()
       .mockResolvedValueOnce({
         status: "success",
         data: makeMetric(10, "2026-10-26T00:00:00.000Z"),
@@ -56,7 +59,10 @@ describe("ColetasService.collectAllMetrics", () => {
       });
     const coletasService = new ColetasService(
       { listAll },
-      { saveCollection },
+      {
+        saveCollection,
+        findHistoryByService: vi.fn().mockResolvedValue([]),
+      },
       fetchMetrics,
     );
 
@@ -87,15 +93,18 @@ describe("ColetasService.collectAllMetrics", () => {
       .fn()
       .mockRejectedValueOnce(new Error("database unavailable"))
       .mockResolvedValueOnce(undefined);
-    const fetchMetrics = vi.fn<(
-      serviceId: string,
-    ) => Promise<FetchMetricResult>>().mockResolvedValue({
-      status: "no_metrics",
-      http_status: 404,
-    });
+    const fetchMetrics = vi
+      .fn<(serviceId: string) => Promise<FetchMetricResult>>()
+      .mockResolvedValue({
+        status: "no_metrics",
+        http_status: 404,
+      });
     const coletasService = new ColetasService(
       { listAll: vi.fn().mockResolvedValue([makeService(1), makeService(2)]) },
-      { saveCollection },
+      {
+        saveCollection,
+        findHistoryByService: vi.fn().mockResolvedValue([]),
+      },
       fetchMetrics,
     );
 
@@ -119,9 +128,8 @@ describe("ColetasService.collectAllMetrics", () => {
 
   it("persiste coletas sucessivas com valores diferentes sem sobrescrever as anteriores", async () => {
     const saveCollection = vi.fn().mockResolvedValue(undefined);
-    const fetchMetrics = vi.fn<(
-      serviceId: string,
-    ) => Promise<FetchMetricResult>>()
+    const fetchMetrics = vi
+      .fn<(serviceId: string) => Promise<FetchMetricResult>>()
       .mockResolvedValueOnce({
         status: "success",
         data: makeMetric(12, "2026-10-26T10:00:00.000Z"),
@@ -132,7 +140,10 @@ describe("ColetasService.collectAllMetrics", () => {
       });
     const coletasService = new ColetasService(
       { listAll: vi.fn().mockResolvedValue([makeService(1)]) },
-      { saveCollection },
+      {
+        saveCollection,
+        findHistoryByService: vi.fn().mockResolvedValue([]),
+      },
       fetchMetrics,
     );
 
@@ -164,9 +175,8 @@ describe("ColetasService.collectAllMetrics", () => {
   });
 
   it("contabiliza sucesso, ausência de métricas, indisponibilidade e falha sem interromper o ciclo", async () => {
-    const fetchMetrics = vi.fn<(
-      serviceId: string,
-    ) => Promise<FetchMetricResult>>()
+    const fetchMetrics = vi
+      .fn<(serviceId: string) => Promise<FetchMetricResult>>()
       .mockResolvedValueOnce({
         status: "success",
         data: makeMetric(10, "2026-10-26T10:00:00.000Z"),
@@ -182,14 +192,19 @@ describe("ColetasService.collectAllMetrics", () => {
       });
     const coletasService = new ColetasService(
       {
-        listAll: vi.fn().mockResolvedValue([
-          makeService(1),
-          makeService(2),
-          makeService(3),
-          makeService(4),
-        ]),
+        listAll: vi
+          .fn()
+          .mockResolvedValue([
+            makeService(1),
+            makeService(2),
+            makeService(3),
+            makeService(4),
+          ]),
       },
-      { saveCollection: vi.fn().mockResolvedValue(undefined) },
+      {
+        saveCollection: vi.fn().mockResolvedValue(undefined),
+        findHistoryByService: vi.fn().mockResolvedValue([]),
+      },
       fetchMetrics,
     );
 
@@ -224,12 +239,14 @@ describe("ColetasService.collectAllMetrics", () => {
           resolveServices = resolve;
         }),
     );
-    const fetchMetrics = vi.fn<(
-      serviceId: string,
-    ) => Promise<FetchMetricResult>>();
+    const fetchMetrics =
+      vi.fn<(serviceId: string) => Promise<FetchMetricResult>>();
     const coletasService = new ColetasService(
       { listAll },
-      { saveCollection: vi.fn().mockResolvedValue(undefined) },
+      {
+        saveCollection: vi.fn().mockResolvedValue(undefined),
+        findHistoryByService: vi.fn().mockResolvedValue([]),
+      },
       fetchMetrics,
     );
 
@@ -237,7 +254,10 @@ describe("ColetasService.collectAllMetrics", () => {
 
     const concurrent = await new ColetasService(
       { listAll },
-      { saveCollection: vi.fn().mockResolvedValue(undefined) },
+      {
+        saveCollection: vi.fn().mockResolvedValue(undefined),
+        findHistoryByService: vi.fn().mockResolvedValue([]),
+      },
       fetchMetrics,
     ).collectAllMetrics();
 
