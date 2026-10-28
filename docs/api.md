@@ -346,9 +346,27 @@ curl -X POST http://localhost:3000/api/metricas/collect \
 
 **Estados persistidos:** `success` (coleta + métricas), `no_metrics` (serviço disponível sem métricas) e `error` (falha na consulta ou no processamento). Cada execução insere novos registros; amostras anteriores não são atualizadas nem removidas, mesmo quando os valores variam entre coletas.
 
-### Coleta automática
+### Descoberta e coleta automáticas
 
-`startMetricsCollection()` em `backend/src/jobs/metrics-collection.job.ts` executa um ciclo assim que o backend inicia e reagenda o próximo com `setTimeout` somente após o término do ciclo atual. Falhas são registradas no log e não encerram o ciclo automático.
+Ao subir, o backend dispara dois ciclos independentes:
+
+- `startServiceSync()` em `backend/src/jobs/service-sync.job.ts` consulta `/services` e sincroniza o catálogo a cada `SERVICE_SYNC_INTERVAL_MS`.
+- `startMetricsCollection()` em `backend/src/jobs/metrics-collection.job.ts` coleta as métricas dos serviços ativos a cada `COLLECTION_INTERVAL_MS`.
+
+Cada job executa um ciclo imediatamente ao iniciar e reagenda o próximo com `setTimeout` somente depois que o ciclo atual termina, então um mesmo job nunca inicia um ciclo enquanto o anterior está em andamento. Falhas de descoberta ou de coleta são registradas no log e não encerram o backend nem interrompem o ciclo automático.
+
+Os logs identificam cada ciclo pelo número sequencial:
+
+```text
+🕒 Descoberta automática ativa: intervalo de 300000 ms
+🔄 Iniciando descoberta automática #1...
+✅ Descoberta #1 concluída: 12 criados, 3 atualizados, 0 removidos
+🕒 Coleta automática ativa: intervalo de 60000 ms
+🔄 Iniciando coleta automática #1...
+✅ Coleta #1 concluída: 10 sucessos, 1 sem métricas, 1 falhas
+```
+
+Quando uma coleta automática coincide com uma coleta manual em andamento, o ciclo é pulado e registrado como `⚠️ Coleta #N ignorada: ciclo anterior ainda em execução.`
 
 | Variável | Padrão | Função |
 |---|---:|---|
@@ -412,7 +430,7 @@ Os endpoints de serviços utilizam um middleware global para tratamento de erros
      -H "Authorization: Bearer <token-de-administrador>"
    ```
 
-   A coleta automática também roda ao iniciar o backend e a cada `COLLECTION_INTERVAL_MS`; os logs do container mostram cada ciclo.
+   A descoberta e a coleta automáticas também rodam ao iniciar o backend, nos intervalos configurados; os logs do container mostram cada ciclo numerado.
 7. Para consultar logs:
 
    ```bash

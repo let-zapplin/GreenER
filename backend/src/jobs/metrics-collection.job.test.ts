@@ -59,4 +59,22 @@ describe("startMetricsCollection", () => {
     await vi.advanceTimersByTimeAsync(60_000);
     expect(collectAllMetricsMock).toHaveBeenCalledTimes(2);
   });
+
+  it("registra o intervalo configurado e o número de cada ciclo no log", async () => {
+    collectAllMetricsMock.mockResolvedValue(emptySummary);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await startMetricsCollection();
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    const logs = logSpy.mock.calls.map(([message]) => String(message));
+
+    expect(logs).toContainEqual(
+      expect.stringContaining("intervalo de 60000 ms"),
+    );
+    expect(logs).toContainEqual(expect.stringContaining("coleta automática #1"));
+    expect(logs).toContainEqual(expect.stringContaining("coleta automática #2"));
+
+    logSpy.mockRestore();
+  });
 });

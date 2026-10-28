@@ -59,6 +59,7 @@ backend/
     │   ├── carbon-api.ts
     │   └── metrics-api.ts
     ├── jobs/
+    │   ├── metrics-collection.job.ts
     │   └── service-sync.job.ts
     ├── modules/
     │   ├── auth/
@@ -125,7 +126,8 @@ As variáveis ficam no arquivo `.env` na raiz do projeto. Use o [`.env.example`]
 | `METRICS_API_URL`<br />`CARBON_API_URL` | URLs das APIs auxiliares de métricas e carbono. |
 | `JWT_SECRET` | Segredo usado na assinatura dos tokens JWT. |
 | `JWT_EXPIRES_IN` | Tempo de validade dos tokens JWT. |
-| `COLLECTION_INTERVAL_MS` | Tempo de espera entre o término de uma sincronização de serviços e o início da próxima, em milissegundos. |
+| `COLLECTION_INTERVAL_MS` | Intervalo entre ciclos automáticos de coleta de métricas, em milissegundos. Padrão: `60000`. |
+| `SERVICE_SYNC_INTERVAL_MS` | Intervalo entre ciclos automáticos de descoberta e sincronização de serviços, em milissegundos. Padrão: `300000`. |
 | `EXTERNAL_API_TIMEOUT_MS` | Tempo limite das requisições às APIs externas, em milissegundos. |
 | `CORS_ORIGIN` | Origem do frontend permitida pelo CORS. |
 | `VITE_API_URL` | URL da API utilizada pelo frontend. |
