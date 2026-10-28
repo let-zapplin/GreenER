@@ -60,4 +60,29 @@ export class ColetasRepository {
       client.release(); // Devolve a conexão
     }
   }
+  //consulta o histórico de coletas 
+  async findHistoryByService(serviceId: number) {
+  const result = await pool.query(
+    `SELECT
+       c.id_collection,
+       c.service_id_service AS service_id,
+       c.status,
+       c.failure_reason,
+       c.http_status,
+       c.attempted_at,
+       m.recorded_at,
+       m.cpu_percent,
+       m.memory_gb,
+       m.disk_gb,
+       m.network_gb
+     FROM collection AS c
+     LEFT JOIN metrics AS m
+       ON m.collection_id_collection = c.id_collection
+     WHERE c.service_id_service = $1
+     ORDER BY c.attempted_at DESC, c.id_collection DESC`,
+    [serviceId],
+  );
+
+  return result.rows;
+}
 }
