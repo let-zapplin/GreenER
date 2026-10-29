@@ -38,6 +38,12 @@ export function ServicePopover({ service }: ServicePopoverProps) {
         </span>
       </div>
 
+      {service.status === "no_metrics" && (
+        <p className="service-popover-note">
+          Segue ativo no catálogo; a última coleta não retornou métricas.
+        </p>
+      )}
+
       <div className="service-popover-location">
         <span>{service.location.city ?? "Cidade não informada"}</span>
 

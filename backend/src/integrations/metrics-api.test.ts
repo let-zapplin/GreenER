@@ -77,7 +77,21 @@ describe("fetchServiceMetrics", () => {
     });
   });
 
-  it("retorna um erro compreensível quando a API responde com erro HTTP", async () => {
+  it("classifica HTTP 500 como serviço indisponível", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 500 })),
+    );
+
+    await expect(fetchServiceMetrics("service-1")).resolves.toEqual({
+      status: "unavailable",
+      failure_reason:
+        "A API de métricas informou serviço ou exportador de métricas indisponível.",
+      http_status: 500,
+    });
+  });
+
+  it("retorna um erro compreensível quando a API responde com erro HTTP inesperado", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(new Response(null, { status: 503 })),
