@@ -1,13 +1,15 @@
 import type { MonitoredService } from "../types/service";
 import { ServicePopover } from "./ServicePopover";
+import type { ServiceStatus } from "../types/service";
 
-const statusLabels = {
+const statusLabels: Record<ServiceStatus, string> = {
   active: "Ativo",
   new: "Novo serviço detectado",
   returned: "Serviço retornou",
+  no_metrics: "Serviço ativo sem métricas",
   unavailable: "Serviço indisponível",
   removed: "Serviço removido do catálogo",
-};
+  };
 
 type ServiceIndicatorProps = {
   service: MonitoredService;

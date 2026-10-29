@@ -29,13 +29,29 @@ export async function listServices(
   );
 }
 
+function getMonitoringStatus(
+  storedService: StoredService,
+): MonitoredService["status"] {
+  if (storedService.status === "removed") {
+    return "removed";
+  }
+
+  if (storedService.last_collection_status === "unavailable") {
+    return "unavailable";
+  }
+  if (storedService.last_collection_status === "no_metrics") {
+    return "no_metrics";
+  }
+
+  return "active";
+}
+
 export function storedServiceToService(
   storedService: StoredService,
 ): MonitoredService {
   return {
     id: storedService.external_id,
     name: storedService.name,
-
     location: {
       region_code: storedService.region_code,
       country: storedService.country,
@@ -44,15 +60,7 @@ export function storedServiceToService(
       latitude: storedService.latitude,
       longitude: storedService.longitude,
     },
-
-    metrics_path: "",
-
-    status:
-      storedService.status === "removed"
-        ? "removed"
-        : storedService.last_collection_status === "unavailable"
-          ? "unavailable"
-          : "active",
+    status: getMonitoringStatus(storedService),
     lastConfirmedAt: storedService.last_seen_at ?? undefined,
   };
 }

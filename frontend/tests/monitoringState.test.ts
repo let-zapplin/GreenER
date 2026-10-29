@@ -31,6 +31,33 @@ test("serviços que surgem após uma consulta vazia são novos", () => {
   assert.equal(reconcileServices([], [service], true)[0].status, "new");
 });
 
+test("serviço sem métricas permanece sinalizado como no_metrics", () => {
+  const result = reconcileServices(
+    [],
+    [{ ...service, status: "no_metrics" }],
+    false,
+    10_000,
+  );
+
+  assert.equal(result[0].status, "no_metrics");
+});
+
+test("serviço no_metrics volta para active sem passar por returned", () => {
+  const previous: MonitoredService = {
+    ...service,
+    status: "no_metrics",
+  };
+
+  const result = reconcileServices(
+    [previous],
+    [service],
+    true,
+    11_000,
+  );
+
+  assert.equal(result[0].status, "active");
+});
+
 test("o status removido do backend é preservado e o retorno atualiza os metadados", () => {
   const previous: MonitoredService = { ...service, status: "active" };
   const removed = reconcileServices(

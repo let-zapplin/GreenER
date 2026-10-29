@@ -18,7 +18,13 @@ export function Monitoring() {
   const unavailableCount = services.filter(
     (service) => service.status === "unavailable",
   ).length;
-  const activeCount = services.length - removedCount - unavailableCount;
+  const noMetricsCount = services.filter(
+    (service) => service.status === "no_metrics",
+  ).length;
+
+  const activeCount =
+    services.length - removedCount - unavailableCount - noMetricsCount;
+
   const stale = lastUpdated !== null && error !== null;
 
   useEffect(() => {
@@ -138,6 +144,12 @@ export function Monitoring() {
                   <dt>Ativos</dt>
                   <dd>{activeCount}</dd>
                 </div>
+
+                <div className="services-count-no-metrics">
+                  <dt>Sem métricas</dt>
+                  <dd>{noMetricsCount}</dd>
+                </div>
+
                 <div className="services-count-unavailable">
                   <dt>Indisponíveis</dt>
                   <dd>{unavailableCount}</dd>
@@ -174,6 +186,13 @@ export function Monitoring() {
                     aria-hidden="true"
                   />
                   Ativo
+                </li>
+                <li>
+                  <span
+                    className="service-indicator no_metrics"
+                    aria-hidden="true"
+                  />
+                  Sem métricas
                 </li>
                 <li>
                   <span className="service-indicator new" aria-hidden="true" />
