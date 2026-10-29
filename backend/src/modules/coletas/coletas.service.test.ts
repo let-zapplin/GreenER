@@ -283,3 +283,108 @@ describe("ColetasService.collectAllMetrics", () => {
     expect(next.skipped).toBe(false);
   });
 });
+//cria uma instancia com dependencias simuladas para testar o método getHistoryByService
+describe("ColetasService.getHistoryByService", () => {
+  function setup() {
+    const listAll = vi.fn().mockResolvedValue([]);
+    const saveCollection = vi.fn().mockResolvedValue(undefined);
+    const findHistoryByService = vi.fn().mockResolvedValue([]);
+    const fetchMetrics =
+      vi.fn<(serviceId: string) => Promise<FetchMetricResult>>();
+
+    const service = new ColetasService(
+      { listAll },
+      { saveCollection, findHistoryByService },
+      fetchMetrics,
+    );
+
+    return {
+      service,
+      listAll,
+      saveCollection,
+      findHistoryByService,
+      fetchMetrics,
+    };
+  }
+
+  it("converte o ID para número e retorna o histórico do repository", async () => {
+    const {
+      service,
+      findHistoryByService,
+      listAll,
+      saveCollection,
+      fetchMetrics,
+    } = setup();
+
+    const history = [
+      {
+        id_collection: "42",
+        service_id: 7,
+        status: "success",
+        attempted_at: "2026-10-29T10:00:00.000Z",
+      },
+    ];
+
+    findHistoryByService.mockResolvedValue(history);
+
+    const result = await service.getHistoryByService("7");
+
+    expect(findHistoryByService).toHaveBeenCalledExactlyOnceWith(7);
+    expect(result).toEqual(history);
+
+    // Consultar histórico não deve iniciar uma coleta.
+    expect(listAll).not.toHaveBeenCalled();
+    expect(saveCollection).not.toHaveBeenCalled();
+    expect(fetchMetrics).not.toHaveBeenCalled();
+  });
+
+  it("retorna lista vazia quando o repository não encontra coletas", async () => {
+    const { service, findHistoryByService } = setup();
+
+    await expect(service.getHistoryByService("7")).resolves.toEqual([]);
+
+    expect(findHistoryByService).toHaveBeenCalledExactlyOnceWith(7);
+  });
+
+  it.each([
+    "",
+    "abc",
+    "0",
+    "-1",
+    "1.5",
+    "1abc",
+    " 7 ",
+    "2147483648",
+    "9007199254740992",
+  ])("rejeita o ID inválido %j sem consultar o repository", async (id) => {
+    const { service, findHistoryByService } = setup();
+
+    await expect(service.getHistoryByService(id)).rejects.toMatchObject({
+      statusCode: 400,
+      code: "INVALID_SERVICE_ID",
+    });
+
+    expect(findHistoryByService).not.toHaveBeenCalled();
+  });
+
+  it("aceita o maior ID permitido pelo tipo INTEGER do banco", async () => {
+    const { service, findHistoryByService } = setup();
+
+    await expect(service.getHistoryByService("2147483647")).resolves.toEqual(
+      [],
+    );
+
+    expect(findHistoryByService).toHaveBeenCalledExactlyOnceWith(2147483647);
+  });
+
+  it("propaga o erro quando o repository falha", async () => {
+    const { service, findHistoryByService } = setup();
+    const error = new Error("Falha ao consultar o banco");
+
+    findHistoryByService.mockRejectedValue(error);
+
+    await expect(service.getHistoryByService("7")).rejects.toBe(error);
+
+    expect(findHistoryByService).toHaveBeenCalledExactlyOnceWith(7);
+  });
+});
