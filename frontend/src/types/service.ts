@@ -24,7 +24,8 @@ export type ServiceStatus =
   | "new"
   | "removed"
   | "returned"
-  | "unavailable";
+  | "unavailable"
+  | "no_metrics";
 
 export type CollectionStatus =
   | "success"

@@ -4,9 +4,11 @@
   --monitoring-border: #315657;
   --status-active: #87e46c;
   --status-new: #e5e65d;
+  --status-no-metrics: #facc15;
   --status-returned: #7dd3fc;
-  --status-unavailable: #fb923c;
-  --status-removed: #fca5a5;
+  --status-unavailable: #ee1e41;
+  --status-removed: #323261;
+
   width: 100%;
   max-width: 1328px;
   min-height: 0;
@@ -187,6 +189,11 @@
 .services-count-unavailable dd {
   color: var(--status-unavailable);
 }
+
+.services-count-no-metrics dd {
+  color: var(--status-no-metrics);
+}
+
 .services-count-removed dd {
   color: var(--status-removed);
 }
@@ -246,6 +253,11 @@
   background: var(--status-returned);
   box-shadow: 0 0 14px #7dd3fc22;
 }
+
+.service-indicator.no_metrics {
+  background: var(--status-no-metrics);
+}
+
 .service-indicator.unavailable {
   background: var(--status-unavailable);
   box-shadow: 0 0 14px #fb923c22;

@@ -51,6 +51,19 @@ export function reconcileServices(
       };
     }
 
+    // O serviço respondeu, mas não forneceu métricas.
+    if (service.status === "no_metrics") {
+      return {
+        ...service,
+        status: "no_metrics",
+        statusExpiresAt: undefined,
+        lastConfirmedAt:
+          service.lastConfirmedAt ??
+          previousService?.lastConfirmedAt ??
+          new Date(now).toISOString(),
+      };
+    }
+
     // Primeira vez que a página carrega:
     // não tratamos todos os serviços existentes como "novos".
     if (!hasLoaded) {
@@ -71,7 +84,7 @@ export function reconcileServices(
       };
     }
 
-   // Antes estava removido e agora o backend diz que está ativo.
+    // Antes estava removido e agora o backend diz que está ativo.
     if (previousService.status === "removed") {
       return {
         ...service,
