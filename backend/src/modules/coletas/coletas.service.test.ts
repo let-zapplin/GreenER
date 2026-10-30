@@ -188,7 +188,7 @@ describe("ColetasService.collectAllMetrics", () => {
       })
       .mockResolvedValueOnce({
         status: "error",
-        failure_reason: "A API de métricas respondeu com HTTP 500.",
+        failure_reason: "A API de métricas respondeu com HTTP 502.",
       });
     const coletasService = new ColetasService(
       {
@@ -225,7 +225,7 @@ describe("ColetasService.collectAllMetrics", () => {
         },
         {
           service: "Service 4",
-          reason: "A API de métricas respondeu com HTTP 500.",
+          reason: "A API de métricas respondeu com HTTP 502.",
         },
       ],
     });

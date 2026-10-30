@@ -37,6 +37,7 @@ export type MonitoredService = Service & {
   status: ServiceStatus;
   statusExpiresAt?: number;
   lastConfirmedAt?: string;
+  lastCollectionAt?: string | null;
 };
 
 export type StoredService = {

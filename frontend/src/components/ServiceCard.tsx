@@ -104,6 +104,18 @@ export function ServiceCard({ service, selectionKey }: ServiceCardProps) {
           {service.location.region}, {service.location.country}
         </p>
       </div>
+
+      {service.status === "no_metrics" && (
+        <p className="service-card-note">
+          Continua ativo no catálogo, mas a última coleta não retornou
+          métricas.
+          {service.lastCollectionAt
+            ? ` Última tentativa em ${new Date(
+                service.lastCollectionAt,
+              ).toLocaleString("pt-BR")}.`
+            : ""}
+        </p>
+      )}
     </article>
   );
 }

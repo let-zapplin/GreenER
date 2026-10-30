@@ -51,7 +51,7 @@ A tarefa entra em **In review** quando possuir Pull Request aberto e passa para 
 | 4 | US04 | User Story | Implementar coleta periódica e tratamento da variação das métricas | RF03, RF04 | DW02, TP02, TP03 | Backend | **P0** | **5** | **Igor** | Marcello | US03 | ⬜ A fazer | Novas coletas executadas em intervalo definido, preservando cada amostra e aceitando valores variáveis entre requisições. |
 | 5 | TEC17 | Técnico | Consolidar a orquestração automática de descoberta e coleta | RF02, RF03 | DW02, DW03, TP03 | Backend | **P0** | **3** | **Igor** | Vitor | US03, US04 | ⬜ A fazer | Processo automático executando descoberta e coleta sem ação manual e sem sobrepor execuções anteriores. |
 | 6 | US05 | User Story | Detectar indisponibilidade durante a coleta individual | RF05, RNF04 | DW02, TP03 | Backend / Frontend | **P0** | **3** | **Igor** | Patricia | US03, US04 | ⬜ A fazer | Falha ou timeout de um serviço identificado e apresentado sem interromper o monitoramento dos demais. |
-| 7 | US06 | User Story | Detectar serviço ativo sem métricas | RF06 | DW02, TP02, TP03 | Backend / Frontend | **P0** | **5** | **Igor** | Patricia + Marcello | US03, US04 | ⬜ A fazer | Diferenciação clara entre coleta `unavailable` e serviço presente em `/services` que não exporta métricas. |
+| 7 | US06 | User Story | Detectar serviço ativo sem métricas | RF06 | DW02, TP02, TP03 | Backend / Frontend | **P0** | **5** | **Igor** | Patricia + Marcello | US03, US04 | 🔵 Em revisão | Diferenciação clara entre coleta `unavailable` e serviço presente em `/services` que não exporta métricas. |
 | 8 | TEC18 | Técnico | Integrar Carbon Intensity API | RF07 | DW02, TP02, TP03 | Backend | **P1** | **5** | **Gustavo** | Igor | TEC02 | ⬜ A fazer | Consulta do fator de intensidade de carbono por região, com tipagem, timeout e tratamento de erro. |
 | 9 | US07 | User Story | Calcular impacto ambiental individual dos serviços | RF07 | DW03, TP01, TP02, TP03 | Backend | **P1** | **8** | **Gustavo** | Marcello | US03, TEC18 | ⬜ A fazer | Energia e CO₂e calculados a partir das métricas e do fator de carbono; fórmula, unidades e premissas documentadas e testadas. |
 | 10 | US11 | User Story | Persistir e consultar histórico de coletas | RF10 | BD02, BD03, DW03 | Backend / DB / Frontend | **P1** | **5** | **Patricia** | Vitor + Marcello | TEC02, US03 | ⬜ A fazer | Histórico associado ao serviço, consultável por período e preservado após reinicialização dos containers. |
@@ -333,3 +333,25 @@ A coleta passou a ser executada automaticamente, sem depender da rota manual cri
 - suíte do backend com **32 testes aprovados em 32** (6 novos) e `npm run typecheck` sem erros.
 
 A US04 permanece **em andamento** até a conclusão do fluxo de PR, revisão e integração em `develop`.
+
+### US06 — Serviço ativo sem métricas
+
+Um serviço que continua presente em `/services` mas deixa de exportar métricas passou a ser representado pelo estado próprio `no_metrics`, sem ser confundido com `unavailable`.
+
+#### Decisões
+
+- **Classificação pelo contrato externo:** o agregador documenta `404` como "serviço removido ou métricas inexistentes" e `500` como "serviço indisponível ou exportador de métricas indisponível". O backend grava `no_metrics` para `404` e para `200` sem `metrics` válido; grava `unavailable` para `500`, timeout e falha de conexão; e mantém `error` para outros HTTP inesperados, JSON inválido ou payload incompleto.
+- **Serviço permanece no catálogo:** `no_metrics` é registrado apenas em `collection`; `service.status` continua `active`, então o serviço segue retornando em `GET /api/servicos` enquanto aparecer em `/services`.
+- **Consulta mantida:** todo serviço ativo tem `/metrics/{id}` consultado em cada ciclo; ausência de métricas não interrompe o ciclo nem remove o serviço.
+- **Registro no fluxo de coleta:** a tentativa é inserida em `collection` com `status = 'no_metrics'`, `http_status` quando houver e sem registro em `metrics`. O resumo do ciclo contabiliza `noMetricsCount`.
+- **Sinalização no frontend:** `last_collection_status` é convertido em estado próprio da interface (`no_metrics`), com contador, cor e legenda distintos de `Indisponível`. O cartão informa que o serviço continua ativo no catálogo e exibe o horário da última tentativa de coleta; o popover do indicador reforça a distinção.
+
+#### Evidências
+
+- teste de `fetchServiceMetrics` para `200` sem métricas, `404`, `500`, timeout e falha de conexão;
+- teste de persistência de `no_metrics` sem inserção em `metrics`;
+- teste do resumo da coleta contabilizando `no_metrics` separado de `unavailable` e `error`;
+- teste do mapeamento de `last_collection_status` para o estado da interface;
+- suíte do backend com **73 testes aprovados em 73** e suíte do frontend com **26 testes aprovados em 26**, ambas com typecheck sem erros (29/10/2026).
+
+A US06 permanece em revisão até a validação do fluxo completo com a API real e a conclusão do fluxo de PR.

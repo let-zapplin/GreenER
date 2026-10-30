@@ -348,10 +348,10 @@ A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviç
 {
   "message": "Coleta de métricas finalizada com falhas parciais",
   "skipped": false,
-  "totalServices": 12,
+  "totalServices": 13,
   "successCount": 9,
   "noMetricsCount": 1,
-  "unavailableCount": 1,
+  "unavailableCount": 2,
   "errorCount": 1,
   "failures": [
     {
@@ -359,8 +359,12 @@ A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviç
       "reason": "A consulta à API de métricas excedeu o tempo limite."
     },
     {
+      "service": "Serviço Sem Exportador",
+      "reason": "A API de métricas informou serviço ou exportador de métricas indisponível."
+    },
+    {
       "service": "Serviço Exemplo",
-      "reason": "A API de métricas respondeu com HTTP 500."
+      "reason": "A API de métricas respondeu com HTTP 502."
     }
   ]
 }
@@ -372,7 +376,7 @@ A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviç
 | `totalServices` | Serviços ativos consultados neste ciclo |
 | `successCount` | Coletas com métricas válidas persistidas |
 | `noMetricsCount` | Serviços ativos que não retornaram métricas |
-| `unavailableCount` | Serviços que não responderam (timeout ou falha de conexão) |
+| `unavailableCount` | Serviços que não responderam (timeout ou falha de conexão) ou cujo exportador está indisponível (HTTP 500) |
 | `errorCount` | Falhas de processamento, de resposta inválida ou de persistência |
 | `failures` | Lista com `service` e `reason` para cada indisponibilidade ou erro |
 
@@ -387,9 +391,13 @@ curl -X POST http://localhost:3000/api/metricas/collect \
   -H "Authorization: Bearer <token-de-administrador>"
 ```
 
-**Estados persistidos:** `success` (coleta + métricas), `no_metrics` (serviço disponível sem métricas), `unavailable` (não foi possível consultar o serviço: timeout ou conexão recusada) e `error` (resposta inválida, erro HTTP inesperado ou falha no processamento). Cada execução insere novos registros; amostras anteriores não são atualizadas nem removidas, mesmo quando os valores variam entre coletas.
+**Estados persistidos:** `success` (coleta + métricas), `no_metrics` (serviço disponível sem métricas), `unavailable` (não foi possível consultar o serviço: timeout, conexão recusada ou HTTP 500 do agregador) e `error` (resposta inválida, outro erro HTTP inesperado ou falha no processamento). Cada execução insere novos registros; amostras anteriores não são atualizadas nem removidas, mesmo quando os valores variam entre coletas.
+
+**Classificação das respostas de `/metrics/{id}`:** o agregador de métricas documenta `404` como serviço removido ou métricas inexistentes e `500` como serviço indisponível ou exportador de métricas indisponível. Por isso o backend grava `no_metrics` para `200` sem métricas válidas e para `404`, `unavailable` para `500`, timeout ou falha de conexão, e `error` para os demais HTTP inesperados, JSON inválido ou payload incompleto.
 
 **Sinalização de indisponibilidade:** o estado `unavailable` fica registrado em `collection.failure_reason` e é exposto ao frontend em `GET /api/servicos` pelo campo `last_collection_status`. A tela de monitoramento exibe o serviço como `Indisponível`, com contador próprio na visão geral, e volta ao normal quando uma coleta seguinte obtém sucesso.
+
+**Sinalização de ausência de métricas:** o estado `no_metrics` também é exposto em `last_collection_status`, mas não remove o serviço nem altera `service.status`. A tela de monitoramento exibe o serviço como `Sem métricas`, com contador próprio e destaque distinto de `Indisponível`, e o cartão informa que o serviço continua ativo no catálogo e o horário da última tentativa de coleta.
 
 ### Descoberta e coleta automáticas
 

@@ -146,6 +146,17 @@
   line-height: 1.5;
   font-weight: 500;
 }
+.service-card-note {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--service-color);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--service-color) 10%, transparent);
+  color: #f4f8f5;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 500;
+}
 @media (hover: hover) and (pointer: fine) {
   .service-card:hover {
     transform: translateY(-2px);

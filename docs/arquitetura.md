@@ -226,7 +226,7 @@ A partir da TEC02, cada tentativa de coleta pode possuir um dos seguintes estado
 | --- | --- |
 | `success` | A consulta retornou métricas válidas |
 | `no_metrics` | O serviço está disponível, mas não forneceu métricas válidas |
-| `removed` | Não foi possível consultar o serviço |
+| `unavailable` | Não foi possível consultar o serviço |
 | `error` | Ocorreu erro durante o processamento da coleta |
 
 Isso permite representar, por exemplo:
@@ -240,7 +240,18 @@ sem confundir ausência de métricas com indisponibilidade durante uma tentativa
 
 A causa técnica de uma falha pode ser registrada separadamente em `collection.failure_reason`, enquanto `http_status` pode armazenar o código HTTP quando houver resposta.
 
-A interpretação desses estados pelo backend será implementada junto ao fluxo efetivo de coleta.
+#### Classificação das respostas de `/metrics/{id}`
+
+| Resposta externa | Estado persistido |
+| --- | --- |
+| `200` com métricas válidas | `success` |
+| `200` com `metrics` ausente, `null` ou vazio | `no_metrics` |
+| `404` (serviço listado, métricas inexistentes) | `no_metrics` |
+| `500` (serviço ou exportador de métricas indisponível) | `unavailable` |
+| Timeout ou falha de conexão | `unavailable` |
+| Outro HTTP inesperado, JSON inválido ou payload incompleto | `error` |
+
+O agregador de métricas documenta `404` como "serviço removido ou métricas inexistentes" e `500` como "serviço indisponível ou exportador de métricas indisponível". Por isso, `no_metrics` representa um serviço que continua no catálogo mas não exporta métricas, enquanto `unavailable` representa a impossibilidade de consultá-lo.
 
 ---
 
@@ -618,6 +629,7 @@ em vez de depender da recriação do volume.
 - `collection` preserva o histórico das tentativas;
 - falhas não geram registros vazios em `metrics`;
 - evolução do schema realizada por migration;
+- classificação das respostas de `/metrics/{id}` em `success`, `no_metrics`, `unavailable` e `error`;
 - energia e CO₂e não são persistidos na entidade `collection` nesta etapa.
 
 ### Decisões ainda pendentes
@@ -626,7 +638,6 @@ em vez de depender da recriação do volume.
 - intervalo de coleta de métricas;
 - intervalo de atualização do frontend;
 - política definitiva de retries e timeouts;
-- regras operacionais para classificar cada resposta externa como `no_metrics`, `unavailable` ou `error`;
 - forma de associação temporal da intensidade de carbono à coleta;
 - fórmulas e unidades de energia e CO₂e;
 - endpoints de histórico e indicadores;

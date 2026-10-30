@@ -58,8 +58,21 @@ export async function fetchServiceMetrics(
   try {
     const response = await fetch(url, { signal: controller.signal });
 
+    // Contrato do agregador: 404 significa que as métricas não existem para
+    // um serviço que continua listado em /services.
     if (response.status === 404) {
       return { status: "no_metrics", http_status: 404 };
+    }
+
+    // Contrato do agregador: 500 significa serviço listado, mas indisponível,
+    // ou exportador de métricas fora do ar. Não é ausência de métricas.
+    if (response.status === 500) {
+      return {
+        status: "unavailable",
+        failure_reason:
+          "A API de métricas informou serviço ou exportador de métricas indisponível.",
+        http_status: 500,
+      };
     }
 
     if (!response.ok) {

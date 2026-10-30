@@ -92,6 +92,31 @@ describe("ColetasRepository.saveCollection", () => {
     expect(releaseMock).toHaveBeenCalledOnce();
   });
 
+  it("grava coleta sem métricas com status próprio, sem inserir dados em metrics", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id_collection: 11 }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    await new ColetasRepository().saveCollection(5, {
+      status: "no_metrics",
+      http_status: 404,
+    });
+
+    expect(queryMock).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("INSERT INTO collection"),
+      [5, "no_metrics", null, 404],
+    );
+    expect(
+      queryMock.mock.calls.some(([sql]) =>
+        String(sql).includes("INSERT INTO metrics"),
+      ),
+    ).toBe(false);
+    expect(queryMock).toHaveBeenLastCalledWith("COMMIT");
+    expect(releaseMock).toHaveBeenCalledOnce();
+  });
+
   it("preserva o erro original se a gravação e o rollback falharem", async () => {
     const saveError = new Error("insert failed");
     queryMock
