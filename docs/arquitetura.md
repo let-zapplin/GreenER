@@ -17,62 +17,58 @@ flowchart TD
     U[Usuário] --> F[Frontend React + Vite :5173]
     F -->|HTTP / JSON| B[Backend Express :3000]
     B -->|SQL explícito| P[(PostgreSQL 17)]
-    B -->|GET /services| M[Metrics Aggregator API]
+    B -->|GET /services e /metrics/:id| M[Metrics Aggregator API]
+    B -->|GET /regions| CI[Carbon Intensity API]
 ```
 
-O fluxo funcional validado na Sprint 1 continua sendo:
+O backend mantém sincronização do catálogo e coleta periódica de métricas. Também oferece rotas protegidas para consulta e sincronização manual, além de cálculo sob demanda dos indicadores a partir dos dados persistidos:
 
 ```text
-Metrics Aggregator /services
-        ↓
-Backend GreenER
-        ↓
-PostgreSQL
-        ↓
-GET /api/servicos
-        ↓
-Frontend React
+Metrics Aggregator API ──→ sincronização/coleta ──→ PostgreSQL
+Carbon Intensity API ────→ sincronização regional ─→ PostgreSQL
+                                                    ↓
+                                       GET /api/indicadores?start=...&end=...
 ```
 
-A Sprint 2 iniciou a evolução da camada de persistência. O banco já representa tentativas de coleta relacionadas às métricas. A consulta individual de `/metrics/{id}` está implementada no fluxo manual RF03; a execução periódica automática permanece como evolução planejada.
+O endpoint de indicadores calcula energia e CO₂e no backend, mas ainda não significa integração do dashboard/frontend nem validação de ponta a ponta. A energia usa provisoriamente `COLLECTION_INTERVAL_MS` como duração da amostra; `collection_interval_seconds` da Metrics API ainda não é validado e persistido por tentativa.
 
-### Evolução planejada
+### Fluxo atual e integrações planejadas
 
 ```mermaid
 flowchart LR
     M[Metrics Aggregator API] -->|/services| S[Sincronização de serviços]
-    M -->|/metrics/:id| C[Coleta manual RF03]
+    M -->|/metrics/:id| C[Coleta periódica e manual]
 
     S --> DB[(PostgreSQL)]
     C --> DB
 
-    CI[Carbon Intensity API] --> CALC[Cálculos ambientais]
-    DB --> CALC
+    CI[Carbon Intensity API] -->|descoberta/sincronização| DB
+    DB --> CALC[Cálculos sob demanda de indicadores]
 
-    CALC --> API[API GreenER]
+    CALC --> API[GET /api/indicadores]
     DB --> API
 
-    API --> DASH[Dashboard / Histórico]
-    API --> ANA[Mapa / Ranking / Comparação]
+    API --> DASH[Frontend / Dashboard - integração pendente]
+    API --> ANA[Mapa / Ranking / Comparação - planejados]
 ```
 
-O objetivo da Sprint 2 é transformar o fluxo já existente de descoberta de serviços em um ciclo completo de:
+O fluxo implementado no backend cobre:
 
 ```text
-descoberta
+sincronização do catálogo
     ↓
-coleta
+coleta periódica de métricas
     ↓
 persistência
     ↓
-histórico
+consulta do histórico
     ↓
-cálculo ambiental
+cálculo ambiental por período
     ↓
 indicadores
-    ↓
-dashboard
 ```
+
+A integração visual dos indicadores com o frontend, o uso do intervalo individual de cada amostra e recursos analíticos adicionais continuam pendentes.
 
 ---
 
@@ -85,7 +81,7 @@ dashboard
 | **Controllers** | Tratar entrada/saída HTTP, códigos de resposta e delegar regras de negócio. |
 | **Services** | Implementar regras de negócio, orquestração de integrações, cálculos e estados. |
 | **Repositories** | Concentrar SQL explícito e parametrizado de acesso ao PostgreSQL. |
-| **Jobs** | Executar processos recorrentes sem ação manual, como sincronização e futuras coletas. |
+| **Jobs** | Executar processos recorrentes sem ação manual, incluindo sincronização do catálogo e coleta de métricas. |
 | **PostgreSQL** | Persistir usuários, serviços, localizações, estrutura de coletas, métricas e demais dados históricos utilizados pela aplicação. |
 | **Metrics Aggregator API** | Fornecer catálogo de serviços e métricas por serviço. |
 | **Carbon Intensity API** | Fornecer intensidade de carbono por região para cálculo de CO₂e. |
@@ -143,6 +139,24 @@ ColetasService.collectAllMetrics()
 
 O middleware JWT autentica a requisição e o middleware administrativo consulta `users.admin` no PostgreSQL antes de permitir a coleta manual.
 
+O cálculo de indicadores também segue as camadas do módulo:
+
+```text
+GET /api/indicadores?start=<ISO>&end=<ISO>
+  ↓
+indicadores.routes.ts (JWT)
+  ↓
+IndicadoresController.list()
+  ↓
+IndicadoresService.getIndicators()
+  ↓
+IndicadoresRepository.findCollectionsForPeriod()
+  ↓
+PostgreSQL: service, location, collection, metrics e carbon_intensity
+```
+
+O repository seleciona tentativas no período e associa, quando elegível, o snapshot de carbono mais recente da mesma região, anterior ou igual a `attempted_at` e dentro de `CARBON_INTENSITY_MAX_AGE_MS`. O service calcula energia, emissões, totais, cobertura e lacunas; resultados calculados não são persistidos.
+
 A estrutura atual do módulo de coletas é:
 
 ```text
@@ -180,6 +194,8 @@ flowchart TD
 ```
 
 > O intervalo usado por esse job deve ser distinguido do intervalo de **coleta de métricas**. Na Sprint 2, a nomenclatura e a configuração desses intervalos devem permanecer separadas para evitar ambiguidade.
+
+Além da sincronização do catálogo, `server.ts` inicia o job de coleta periódica de métricas. Os ciclos usam configurações independentes: `SERVICE_SYNC_INTERVAL_MS` para o catálogo e `COLLECTION_INTERVAL_MS` para métricas.
 
 ---
 
@@ -265,9 +281,9 @@ O agregador de métricas documenta `404` como "serviço removido ou métricas in
 - geração de JWT;
 - sessão e proteção de navegação no frontend.
 
-### Pendente para Sprint 2
+### Fluxo atual
 
-O backend ainda precisa validar o token nas rotas protegidas.
+O backend valida JWT nas rotas protegidas por meio de `authMiddleware`. A coleta manual também exige autorização administrativa. A integração dos fluxos protegidos com todas as telas do frontend e sua validação ponta a ponta devem ser verificadas separadamente.
 
 O fluxo esperado é:
 
@@ -287,7 +303,7 @@ verifyToken()
 controller
 ```
 
-A autenticação só deverá ser documentada como concluída após esse fluxo estar implementado e testado.
+O middleware está aplicado, entre outras, às rotas de histórico, intensidades e indicadores.
 
 ---
 
@@ -445,10 +461,9 @@ histórico de determinado serviço
 ordenado da coleta mais recente para a mais antiga
 ```
 
-A estrutura também prepara consultas futuras por período utilizadas em:
+O endpoint de histórico por serviço já permite consultar tentativas registradas. A estrutura também permite evoluir para consultas agregadas e visões analíticas, como:
 
-- histórico temporal;
-- gráficos;
+- gráficos temporais;
 - ranking;
 - comparação entre serviços.
 
@@ -456,9 +471,11 @@ A estrutura também prepara consultas futuras por período utilizadas em:
 
 Os resultados calculados de energia e CO₂e **não são persistidos em `collection` nesta etapa**.
 
-A TEC02 preserva a estrutura necessária para o histórico de coleta, enquanto a estratégia de cálculo e sua associação temporal com `carbon_intensity` será definida na implementação específica do cálculo ambiental.
+O endpoint `GET /api/indicadores` calcula esses valores sob demanda a partir das tentativas de coleta, métricas e snapshots regionais persistidos. A intensidade é associada pela região do serviço e pelo instante da tentativa: seleciona-se o snapshot mais recente registrado até `attempted_at`, desde que esteja dentro de `CARBON_INTENSITY_MAX_AGE_MS`.
 
-Essa decisão evita antecipar regras pertencentes à US07.
+Quando não há dados de métricas válidos, a tentativa é descrita como lacuna e não produz consumo. Quando falta intensidade utilizável, a energia ainda pode ser calculada, mas a emissão correspondente fica indisponível. A resposta apresenta totais e cobertura para sinalizar resultados parciais.
+
+**Limitação conhecida:** a energia usa provisoriamente `COLLECTION_INTERVAL_MS`, o intervalo configurado entre ciclos do job, como duração da amostra. O `collection_interval_seconds` declarado pela Metrics API ainda não é validado no payload de métricas nem persistido por tentativa.
 
 ---
 
@@ -544,7 +561,7 @@ O fluxo manual de coleta consulta cada serviço ativo individualmente:
 GET /metrics/{id_servico}
 ```
 
-O módulo de integração deverá tratar:
+O módulo de integração trata:
 
 - timeout;
 - erro HTTP;
@@ -552,15 +569,13 @@ O módulo de integração deverá tratar:
 - resposta válida;
 - falhas individuais sem interromper a coleta dos demais serviços.
 
-A coleta é disparada por `POST /api/metricas/collect`, protegido por JWT e restrito a usuários administradores. Ainda não há job periódico nem endpoint para consultar o histórico.
+A coleta é disparada periodicamente pelo job iniciado junto ao backend e também pode ser iniciada manualmente por `POST /api/metricas/collect`, protegido por JWT e restrito a usuários administradores. O histórico por serviço está disponível em `GET /api/metricas/historico/:serviceId`, protegido por JWT.
 
 ### Carbon Intensity API
 
-Será responsável por fornecer os fatores ambientais necessários ao cálculo de CO₂e.
+Fornece os fatores ambientais regionais. As rotas protegidas de intensidades permitem descobrir, sincronizar snapshots e listar os dados persistidos.
 
-A localização persistida para cada serviço permitirá associar o serviço à região utilizada no cálculo.
-
-A forma definitiva de relacionar temporalmente uma coleta ao registro de intensidade de carbono será definida durante a implementação do cálculo ambiental.
+O módulo de indicadores associa cada tentativa ao snapshot da mesma região mais recente até o instante da coleta, limitado por `CARBON_INTENSITY_MAX_AGE_MS`. Sem configuração desse limite, o repository não seleciona um fator utilizável.
 
 ---
 
@@ -571,11 +586,18 @@ A forma definitiva de relacionar temporalmente uma coleta ao registro de intensi
 | `GET` | `/health` | Saúde básica do backend |
 | `POST` | `/auth/register` | Cadastro de usuário |
 | `POST` | `/auth/login` | Login e emissão de JWT |
+| `GET` | `/auth/me` | Validar token e retornar usuário autenticado |
 | `GET` | `/api/servicos/discover` | Descoberta direta na Metrics API |
 | `POST` | `/api/servicos/sync` | Sincronização manual do catálogo |
 | `GET` | `/api/servicos` | Listagem persistida de serviços |
+| `POST` | `/api/metricas/collect` | Disparo manual de coleta (JWT e administrador) |
+| `GET` | `/api/metricas/historico/:serviceId` | Histórico de coletas do serviço (JWT) |
+| `GET` | `/api/intensidades/discover` | Descoberta de snapshots da Carbon API (JWT) |
+| `POST` | `/api/intensidades/sync` | Persistência de snapshots regionais (JWT) |
+| `GET` | `/api/intensidades` | Listagem de snapshots persistidos (JWT) |
+| `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Indicadores ambientais por período (JWT) |
 
-Endpoints de coletas, histórico e indicadores devem ser adicionados somente quando estiverem realmente implementados.
+Os indicadores estão implementados parcialmente no backend. A integração do frontend, a duração real por amostra e a validação de ponta a ponta ainda precisam ser concluídas.
 
 ---
 
@@ -630,17 +652,20 @@ em vez de depender da recriação do volume.
 - falhas não geram registros vazios em `metrics`;
 - evolução do schema realizada por migration;
 - classificação das respostas de `/metrics/{id}` em `success`, `no_metrics`, `unavailable` e `error`;
-- energia e CO₂e não são persistidos na entidade `collection` nesta etapa.
+- energia e CO₂e são calculados sob demanda e não são persistidos na entidade `collection`;
+- jobs de sincronização do catálogo e coleta de métricas iniciados pelo backend;
+- consulta de histórico de coletas por serviço protegida por JWT;
+- cálculo de indicadores por período protegido por JWT;
+- associação temporal da intensidade pelo código regional e instante da tentativa, limitada por `CARBON_INTENSITY_MAX_AGE_MS`;
+- `COLLECTION_INTERVAL_MS` permanece separado de `SERVICE_SYNC_INTERVAL_MS`.
 
 ### Decisões ainda pendentes
 
-- intervalo de sincronização do catálogo;
-- intervalo de coleta de métricas;
 - intervalo de atualização do frontend;
-- política definitiva de retries e timeouts;
-- forma de associação temporal da intensidade de carbono à coleta;
-- fórmulas e unidades de energia e CO₂e;
-- endpoints de histórico e indicadores;
-- proteção JWT das rotas configuráveis.
+- validar, persistir e usar `collection_interval_seconds` por amostra em vez do intervalo configurado do job;
+- confirmar com o fornecedor as unidades e a semântica das métricas de memória, disco e rede;
+- integrar o endpoint de indicadores ao dashboard e validar o fluxo completo com o banco e frontend;
+- definir e implementar novos indicadores, comparações e rankings;
+- definir eventual uso de `renewable_share_percent` sem duplicar o benefício já refletido na intensidade de carbono.
 
-Essas decisões devem ser documentadas conforme forem implementadas e validadas, evitando apresentar comportamento planejado como funcionalidade concluída.
+As pendências devem ser documentadas conforme forem implementadas e validadas, evitando apresentar comportamento planejado como funcionalidade concluída.
