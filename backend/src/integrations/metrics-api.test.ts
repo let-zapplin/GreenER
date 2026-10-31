@@ -44,10 +44,48 @@ describe("fetchServiceMetrics", () => {
         memory_gb: 8,
         disk_gb: 100,
         network_gb: 12,
+        collection_interval_seconds: 30,
       },
     });
     if (result.status === "success") {
       expect(Number.isNaN(Date.parse(result.data.recorded_at))).toBe(false);
+    }
+  });
+
+  it("rejeita intervalo ausente, inválido ou não positivo", async () => {
+    const invalidIntervals: unknown[] = [
+      undefined,
+      null,
+      0,
+      -1,
+      "30",
+      Number.POSITIVE_INFINITY,
+    ];
+
+    for (const interval of invalidIntervals) {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              collection_interval_seconds: interval,
+              metrics: {
+                cpu_percent: 24.5,
+                memory_gb: 8,
+                disk_gb: 100,
+                network_gb: 12,
+              },
+            }),
+            { status: 200 },
+          ),
+        ),
+      );
+
+      await expect(fetchServiceMetrics("service-1")).resolves.toMatchObject({
+        status: "error",
+        failure_reason:
+          "A API de métricas retornou dados incompletos ou em formato inválido.",
+      });
     }
   });
 

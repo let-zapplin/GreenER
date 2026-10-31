@@ -34,6 +34,7 @@ function makeMetric(cpuPercent: number, recordedAt: string) {
     memory_gb: 4,
     disk_gb: 50,
     network_gb: 2,
+    collection_interval_seconds: 45,
     recorded_at: recordedAt,
   };
 }
@@ -155,7 +156,11 @@ describe("ColetasService.collectAllMetrics", () => {
 
     // Cada execução gera uma nova amostra, sem reaproveitar a anterior.
     expect(saveCollection.mock.calls[0][1]).toMatchObject({
-      data: { cpu_percent: 12, recorded_at: "2026-10-26T10:00:00.000Z" },
+      data: {
+        cpu_percent: 12,
+        collection_interval_seconds: 45,
+        recorded_at: "2026-10-26T10:00:00.000Z",
+      },
     });
     expect(saveCollection.mock.calls[1][1]).toMatchObject({
       data: { cpu_percent: 87, recorded_at: "2026-10-26T10:01:00.000Z" },

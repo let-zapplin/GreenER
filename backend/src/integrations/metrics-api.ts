@@ -17,6 +17,7 @@ export interface NormalizedMetric {
   memory_gb: number;
   disk_gb: number;
   network_gb: number;
+  collection_interval_seconds: number;
   recorded_at: string;
 }
 
@@ -32,10 +33,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isMetricPayload(
   value: unknown,
-): value is { metrics: NonNullable<ExternalMetricsResponse["metrics"]> } {
+): value is {
+  collection_interval_seconds: number;
+  metrics: NonNullable<ExternalMetricsResponse["metrics"]>;
+} {
   if (!isRecord(value) || !isRecord(value.metrics)) return false;
 
   return (
+    typeof value.collection_interval_seconds === "number" &&
+    Number.isFinite(value.collection_interval_seconds) &&
+    value.collection_interval_seconds > 0 &&
     typeof value.metrics.cpu_percent === "number" &&
     Number.isFinite(value.metrics.cpu_percent) &&
     typeof value.metrics.memory_gb === "number" &&
@@ -117,6 +124,7 @@ export async function fetchServiceMetrics(
       memory_gb: data.metrics.memory_gb,
       disk_gb: data.metrics.disk_gb,
       network_gb: data.metrics.network_gb,
+      collection_interval_seconds: data.collection_interval_seconds,
       recorded_at: new Date().toISOString(),
     };
 

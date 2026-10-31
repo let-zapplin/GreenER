@@ -16,6 +16,7 @@ export interface IndicatorCollection {
   memory_gb: number | null;
   disk_gb: number | null;
   network_gb: number | null;
+  collection_interval_seconds: number | null;
   carbon_intensity_id: number | null;
   carbon_intensity_gco2e_per_kwh: number | null;
 }
@@ -42,6 +43,7 @@ interface IndicatorRow {
   memory_gb: number | null;
   disk_gb: number | null;
   network_gb: number | null;
+  collection_interval_seconds: number | null;
   carbon_intensity_id: number | null;
   carbon_intensity_gco2e_per_kwh: number | null;
 }
@@ -67,6 +69,7 @@ export class IndicadoresRepository {
          m.memory_gb,
          m.disk_gb,
          m.network_gb,
+         m.collection_interval_seconds,
          intensity.id_carbon_intensity AS carbon_intensity_id,
          intensity.carbon_intensity_gco2e_per_kwh
        FROM service s
@@ -130,6 +133,7 @@ export class IndicadoresRepository {
         memory_gb: row.memory_gb,
         disk_gb: row.disk_gb,
         network_gb: row.network_gb,
+        collection_interval_seconds: row.collection_interval_seconds,
         carbon_intensity_id: row.carbon_intensity_id,
         carbon_intensity_gco2e_per_kwh:
           row.carbon_intensity_gco2e_per_kwh,

@@ -37,6 +37,7 @@ describe("ColetasRepository.saveCollection", () => {
         memory_gb: 4,
         disk_gb: 80,
         network_gb: 6,
+        collection_interval_seconds: 45,
         recorded_at: "2026-10-26T00:00:00.000Z",
       },
     };
@@ -57,7 +58,7 @@ describe("ColetasRepository.saveCollection", () => {
     expect(queryMock).toHaveBeenNthCalledWith(
       3,
       expect.stringContaining("INSERT INTO metrics"),
-      [42, 12.5, 4, 80, 6, "2026-10-26T00:00:00.000Z"],
+      [42, 12.5, 4, 80, 6, 45, "2026-10-26T00:00:00.000Z"],
     );
     expect(releaseMock).toHaveBeenCalledOnce();
   });

@@ -34,14 +34,15 @@ export class ColetasRepository {
       if (result.status === "success") {
         await client.query(
           `INSERT INTO metrics 
-           (collection_id_collection, cpu_percent, memory_gb, disk_gb, network_gb, recorded_at)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
+           (collection_id_collection, cpu_percent, memory_gb, disk_gb, network_gb, collection_interval_seconds, recorded_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [
             collectionId,
             result.data.cpu_percent,
             result.data.memory_gb,
             result.data.disk_gb,
             result.data.network_gb,
+            result.data.collection_interval_seconds,
             result.data.recorded_at || new Date(),
           ],
         );
@@ -74,7 +75,8 @@ export class ColetasRepository {
        m.cpu_percent,
        m.memory_gb,
        m.disk_gb,
-       m.network_gb
+       m.network_gb,
+       m.collection_interval_seconds
      FROM collection AS c
      LEFT JOIN metrics AS m
        ON m.collection_id_collection = c.id_collection

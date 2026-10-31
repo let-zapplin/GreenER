@@ -29,6 +29,7 @@ function createCollection(
     memory_gb: 2,
     disk_gb: 10,
     network_gb: 5,
+    collection_interval_seconds: 45,
     carbon_intensity_id: 301,
     carbon_intensity_gco2e_per_kwh: 200,
     ...overrides,
@@ -51,7 +52,6 @@ describe("IndicadoresService.getIndicators", () => {
   const findCollectionsForPeriod = vi.fn();
   const service = new IndicadoresService(
     { findCollectionsForPeriod },
-    60_000,
     300_000,
   );
   const start = "2026-10-30T00:00:00.000Z";
@@ -69,18 +69,48 @@ describe("IndicadoresService.getIndicators", () => {
     const result = await service.getIndicators(start, end);
     const calculatedSample = result.services[0].latestSampleInPeriod;
 
+    expect(calculatedSample?.collectionIntervalSeconds).toBe(45);
     expect(calculatedSample?.energyKwh).toBeCloseTo(
-      (50.95 * 60_000) / 3_600_000_000,
+      (50.95 * 45) / 3_600_000,
     );
     expect(calculatedSample?.emissionsGco2e).toBeCloseTo(
-      ((50.95 * 60_000) / 3_600_000_000) * 200,
+      ((50.95 * 45) / 3_600_000) * 200,
     );
+    expect(result.period.collectionIntervalMs).toBe(60_000);
     expect(result.summary.isPartial).toBe(false);
     expect(findCollectionsForPeriod).toHaveBeenCalledWith(
       new Date(start),
       new Date(end),
       300_000,
     );
+  });
+
+  it("registra amostras sem intervalo válido como lacunas", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([
+        createCollection({
+          collection_interval_seconds: null,
+          carbon_intensity_id: null,
+          carbon_intensity_gco2e_per_kwh: null,
+        }),
+      ]),
+    ]);
+
+    const result = await service.getIndicators(start, end);
+    const sample = result.services[0].latestSampleInPeriod;
+    const totals = result.services[0].periodTotals;
+
+    expect(sample?.collectionIntervalSeconds).toBeNull();
+    expect(sample?.energyKwh).toBeNull();
+    expect(sample?.emissionsGco2e).toBeNull();
+    expect(sample?.gapReason).toBe("collection_interval_unavailable");
+    expect(totals.validMetricCount).toBe(0);
+    expect(totals.gaps).toEqual([
+      expect.objectContaining({
+        collectionId: "101",
+        reason: "collection_interval_unavailable",
+      }),
+    ]);
   });
 
   it("retorna energia e sinaliza a falta de intensidade sem inventar emissão", async () => {
