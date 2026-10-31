@@ -352,6 +352,51 @@ Sempre que possível, use dados já existentes; não altere registros de produç
 
 Uma resposta parcial não deve ser interpretada como consumo zero para os períodos sem registros. A cobertura representa somente as tentativas registradas no banco e não detecta intervalos sem tentativa.
 
+## Validar dados consolidados do dashboard — TEC19
+
+Este roteiro verifica o endpoint `GET /api/dashboard`, protegido por JWT e disponível para usuários autenticados sem exigir perfil administrador.
+
+### Consultar o período padrão
+
+```bash
+curl.exe -i http://localhost:3000/api/dashboard -H "Authorization: ******"
+```
+
+Verificar na resposta `200 OK`:
+
+- `period.start` e `period.end` delimitam as últimas 24 horas conforme o horário do backend;
+- `summary` retorna `energyKwh`, `emissionsGco2e`, `activeServiceCount`, `unavailableServiceCount` e `isPartial`;
+- `activeServiceCount + unavailableServiceCount` corresponde aos serviços atualmente ativos no catálogo;
+- energia e emissões consideram somente serviços ativos no catálogo e tentativas do período;
+- serviços removidos do catálogo não entram nas contagens nem nos totais;
+- sem serviços ativos, energia/emissões e contagens são zero, com `isPartial: false`;
+- `isPartial` é verdadeiro se um serviço ativo não teve coleta no período ou se uma amostra não pôde contribuir integralmente para os indicadores.
+
+### Classificação dos serviços
+
+As contagens usam a última tentativa registrada, mesmo que seja anterior ao período dos totais:
+
+| Serviço no catálogo | Última tentativa | Contagem esperada |
+|---|---|---|
+| `active` | `success` | Ativo |
+| `active` | `no_metrics` | Ativo |
+| `active` | sem tentativa | Ativo |
+| `active` | `unavailable` ou `error` | Indisponível |
+| `removed` | qualquer estado | Excluído das contagens |
+
+### Consultar período explícito e validar erros
+
+```bash
+curl.exe -i "http://localhost:3000/api/dashboard?start=2026-10-30T12:00:00.000Z&end=2026-10-31T12:00:00.000Z" -H "Authorization: ******"
+```
+
+| Cenário | Resultado esperado |
+|---|---|
+| `start` e `end` válidos | HTTP `200`; resposta agrega somente o período semiaberto informado |
+| Apenas um dos parâmetros, data vazia/repetida/inválida ou `end` não posterior a `start` | HTTP `400` com `code: "INVALID_DASHBOARD_PERIOD"` |
+| JWT ausente ou inválido | HTTP `401 Unauthorized` |
+| Amostra sem `collection_interval_seconds` ou sem intensidade de carbono elegível | `isPartial: true`; nenhum valor ausente é estimado por fallback |
+
 ### Registro da validação manual
 
 Preencher após executar o roteiro, sem marcar como validado apenas por causa dos testes unitários:

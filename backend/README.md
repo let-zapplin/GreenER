@@ -62,6 +62,11 @@ backend/
     │   ├── metrics-collection.job.ts
     │   └── service-sync.job.ts
     ├── modules/
+    │   ├── dashboard/
+    │   │   ├── dashboard.controller.ts
+    │   │   ├── dashboard.repository.ts
+    │   │   ├── dashboard.routes.ts
+    │   │   └── dashboard.service.ts
     │   ├── auth/
     │   │   ├── auth.controller.ts
     │   │   ├── auth.repository.ts
@@ -172,4 +177,3 @@ npm run dev
 - [`database/README.md`](../database/README.md): banco de dados
 - [`frontend/README.md`](../frontend/README.md): frontend
 - [`docs/testes/manual_teste_unitario.md`](../docs/testes/manual_teste_unitario.md): manual de execução de teste unitário
-
