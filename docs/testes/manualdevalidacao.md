@@ -4,23 +4,18 @@
 
 ## Objetivo
 
-Validar o fluxo funcional consolidado ao final da Sprint 1 e fornecer uma base para ampliar as verificações durante a Sprint 2.
+Validar o fluxo funcional do GreenER e fornecer roteiros reproduzíveis para as integrações e funcionalidades do backend.
 
-Fluxo validado atualmente:
+Fluxo de cálculo documentado:
 
 ```text
-Metrics API /services
-      ↓
-Backend
-      ↓
-PostgreSQL
-      ↓
-GET /api/servicos
-      ↓
-React
+Metrics API ──→ coleta ──→ PostgreSQL
+Carbon API ───→ snapshots regionais ──→ PostgreSQL
+                                      ↓
+                    GET /api/indicadores?start=...&end=...
 ```
 
-> Este manual não considera coleta de métricas, energia, CO₂e ou histórico como concluídos. Esses cenários devem ser adicionados conforme as respectivas tarefas da Sprint 2 forem implementadas.
+O endpoint de indicadores calcula energia e CO₂e no backend a partir dos dados persistidos. A validação manual descrita neste documento deve ser realizada contra o ambiente em execução; testes unitários isolados não comprovam a integração com PostgreSQL, as APIs externas ou o frontend.
 
 ---
 
@@ -244,22 +239,131 @@ Não manter alterações artificiais de teste no código após a validação.
 
 ---
 
-## 11. Extensão deste manual durante a Sprint 2
+## 11. Validar indicadores ambientais — backend (US07 parcial)
 
-Adicionar seções somente após implementação para:
+Este roteiro verifica o endpoint `GET /api/indicadores` diretamente. Ele não valida a integração do dashboard/frontend, que continua pendente.
 
-- coleta real de `/metrics/{id_servico}`;
-- múltiplas coletas e variação de métricas;
-- serviço indisponível durante a coleta;
-- serviço ativo sem métricas;
-- persistência do histórico;
-- Carbon Intensity API;
-- cálculo de energia e CO₂e;
-- endpoint consolidado de indicadores;
-- gráfico histórico;
-- JWT validado no backend.
+### Pré-requisitos
 
-Cada seção nova deve registrar comando/cenário, resultado esperado, evidência e versão/commit testado.
+- backend e PostgreSQL em execução, com o schema aplicado;
+- pelo menos um serviço persistido;
+- um snapshot de intensidade de carbono persistido para a região do serviço;
+- pelo menos uma tentativa de coleta dentro do período escolhido;
+- JWT válido obtido por `POST /auth/login`.
+
+O endpoint de indicadores exige JWT, mas não exige usuário administrador. O disparo manual de coleta, por outro lado, exige JWT e usuário administrador. Os jobs periódicos iniciados com o backend também podem gerar as tentativas necessárias.
+
+### Preparar ou localizar dados
+
+Se necessário, sincronize snapshots regionais usando um JWT válido:
+
+```bash
+curl.exe -i -X POST http://localhost:3000/api/intensidades/sync -H "Authorization: Bearer <token>"
+```
+
+Para inspecionar as tentativas recentes e escolher um período que inclua uma coleta, consulte o PostgreSQL:
+
+```sql
+SELECT
+    c.id_collection,
+    c.attempted_at,
+    c.status AS collection_status,
+    s.id_service,
+    s.name AS service_name,
+    l.region_code,
+    m.cpu_percent,
+    m.memory_gb,
+    m.disk_gb,
+    m.network_gb
+FROM collection c
+JOIN service s
+    ON s.id_service = c.service_id_service
+JOIN location l
+    ON l.id_location = s.location_id_location
+LEFT JOIN metrics m
+    ON m.collection_id_collection = c.id_collection
+ORDER BY c.attempted_at DESC
+LIMIT 20;
+```
+
+Confirme também que há um snapshot regional registrado antes da tentativa escolhida:
+
+```sql
+SELECT
+    l.region_code,
+    ci.carbon_intensity_gco2e_per_kwh,
+    ci.registered_at
+FROM carbon_intensity ci
+JOIN location l
+    ON l.id_location = ci.location_id_location
+ORDER BY ci.registered_at DESC
+LIMIT 20;
+```
+
+O cálculo só associa intensidade da mesma região, registrada até `attempted_at` e dentro do limite `CARBON_INTENSITY_MAX_AGE_MS`. Sem esse limite configurado, nenhuma intensidade é considerada utilizável.
+
+### Consultar o período
+
+Defina `start` como instante anterior ou igual a `attempted_at` e `end` como instante posterior à tentativa. O limite é semiaberto: `start` é incluído e `end` é excluído.
+
+```bash
+curl.exe -i "http://localhost:3000/api/indicadores?start=2026-10-30T12:00:00.000Z&end=2026-10-30T13:00:00.000Z" -H "Authorization: Bearer <token>"
+```
+
+Substitua as datas do exemplo por um intervalo que inclua a tentativa escolhida na consulta SQL.
+
+Verificar na resposta `200 OK`:
+
+- `period` contém os limites consultados e `collectionIntervalMs`;
+- `powerModel` informa os fatores usados;
+- `summary` e `services[].periodTotals` trazem energia em kWh, emissões em gCO₂e, contagens e cobertura;
+- `latestSampleInPeriod` corresponde à tentativa mais recente do serviço no período;
+- `gaps` identifica tentativas sem métricas válidas ou sem intensidade utilizável;
+- com métricas e intensidade válidas, `gapReason` é `null` e `isPartial` é `false` para o cenário completo.
+
+Para conferir a aritmética de uma tentativa completa, use as métricas e o fator regional retornados pelas consultas SQL, junto do `collectionIntervalMs` informado na resposta:
+
+```text
+potência_total (W) =
+    (cpu_percent / 100 × 100)
+    + memory_gb × 0,375
+    + disk_gb × 0,01
+    + network_gb × 0,02
+
+energia (kWh) = potência_total × collectionIntervalMs / 3.600.000.000
+emissão (gCO₂e) = energia × carbon_intensity_gco2e_per_kwh
+```
+
+**Limitação que deve ser considerada na conferência:** `collectionIntervalMs` é atualmente derivado de `COLLECTION_INTERVAL_MS`, o intervalo configurado entre ciclos do job; ainda não representa o `collection_interval_seconds` individual da amostra na Metrics API.
+
+### Cenários de lacuna e validação de entrada
+
+Sempre que possível, use dados já existentes; não altere registros de produção apenas para criar um cenário de teste.
+
+| Cenário | Resultado esperado |
+|---|---|
+| Tentativa com status `no_metrics`, `unavailable` ou `error` | Energia e emissão da amostra são `null`; motivo aparece em `gapReason` e em `gaps` |
+| Métricas válidas, mas sem intensidade elegível | Energia pode ser calculada; emissão e intensidade da amostra são `null`; `gapReason` é `carbon_intensity_unavailable` |
+| `start`/`end` ausente, repetido ou inválido, ou `end` não posterior a `start` | HTTP `400` com `code: "INVALID_INDICATOR_PERIOD"` |
+| JWT ausente ou inválido | HTTP `401 Unauthorized` |
+| Período válido sem tentativas | HTTP `200`, sem amostras; `collectionCount` é zero e o resumo fica parcial |
+
+Uma resposta parcial não deve ser interpretada como consumo zero para os períodos sem registros. A cobertura representa somente as tentativas registradas no banco e não detecta intervalos sem tentativa.
+
+### Registro da validação manual
+
+Preencher após executar o roteiro, sem marcar como validado apenas por causa dos testes unitários:
+
+| Campo | Registro |
+|---|---|
+| Data e ambiente | A preencher |
+| Branch/commit testado | A preencher |
+| Período consultado | A preencher |
+| Cenários executados | A preencher |
+| Resultado e evidência (status HTTP/logs/captura) | A preencher |
+| PostgreSQL e frontend validados? | A preencher separadamente |
+
+Os testes unitários atuais de service/controller cobrem cálculos, dados ausentes e validação de query com dependências simuladas. Eles não executam a query do repository em um PostgreSQL real nem demonstram integração visual com o frontend.
 
 ---
 

@@ -1,6 +1,6 @@
 # Documentação da API — GreenER
 
-> **Referência técnica | Base entregue na Sprint 1 / início da Sprint 2**  
+> **Referência técnica | Implementação em evolução na Sprint 2**
 > Esta documentação separa endpoints **já implementados** de endpoints **planejados**. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução.
 
 ## 01. Visão geral
@@ -15,10 +15,11 @@ O backend do **GreenER** utiliza **Node.js, Express e TypeScript** para fornecer
 flowchart LR
     A[Frontend React] <-->|HTTP / JSON| B[API GreenER - Express]
     B <-->|SQL| C[(PostgreSQL)]
-    B -->|HTTP GET /services| D[Metrics API externa]
+    B -->|HTTP GET /services e /metrics/{id}| D[Metrics API externa]
+    B -->|Cálculo sobre dados persistidos| C
 ```
 
-> A integração da Carbon API fornece descoberta e sincronização de snapshots regionais. Os cálculos ambientais continuam fora deste escopo.
+> A integração da Carbon API fornece descoberta e sincronização de snapshots regionais. O endpoint de indicadores calcula energia e emissões usando coletas e intensidades persistidas; ele não consulta as APIs externas durante a requisição.
 
 ### Endpoints disponíveis
 
@@ -34,6 +35,7 @@ flowchart LR
 | `GET` | `/api/intensidades/discover` | Consultar catálogo regional da Carbon API | Intensidades |
 | `POST` | `/api/intensidades/sync` | Registrar snapshots regionais | Intensidades |
 | `GET` | `/api/intensidades` | Listar snapshots regionais registrados | Intensidades |
+| `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Calcular indicadores ambientais no período | US07 (backend parcial) |
 
 **Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
 O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me` e todas as rotas de intensidades. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
@@ -334,6 +336,94 @@ Lista os snapshots persistidos, incluindo `region_code` e `registered_at`. Os fa
 
 Falhas HTTP, conexão, timeout ou formato inválido da Carbon API resultam em `502 Bad Gateway`. Rotas chamadas sem JWT válido resultam em `401 Unauthorized`.
 
+### Indicadores ambientais — US07 (backend parcial)
+
+#### `GET /api/indicadores`
+
+Calcula os indicadores para serviços e coletas persistidos no banco. A associação da intensidade de carbono é feita pelo `region_code` do serviço, usando o snapshot mais recente registrado até o instante da tentativa de coleta e dentro de `CARBON_INTENSITY_MAX_AGE_MS`. Esta rota exige JWT.
+
+**Query parameters:**
+
+| Parâmetro | Obrigatório | Descrição |
+|---|---|---|
+| `start` | Sim | Data/hora inicial válida, em formato ISO |
+| `end` | Sim | Data/hora final válida, em formato ISO e posterior a `start` |
+
+O intervalo consultado é semiaberto: inclui tentativas com `attempted_at >= start` e exclui tentativas com `attempted_at >= end`. A requisição não chama a Metrics API nem a Carbon API; valores indisponíveis ou inválidos não são substituídos por dados simulados.
+
+**Exemplo:**
+
+```bash
+curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2026-10-02T00:00:00.000Z" \
+  -H "Authorization: Bearer <token>"
+```
+
+**Resposta `200 OK` (estrutura resumida):**
+
+```json
+{
+  "message": "Indicadores calculados",
+  "period": {
+    "start": "2026-10-01T00:00:00.000Z",
+    "end": "2026-10-02T00:00:00.000Z",
+    "collectionIntervalMs": 60000
+  },
+  "powerModel": {
+    "version": "1",
+    "cpuMaximumWatts": 100,
+    "memoryWattsPerGb": 0.375,
+    "diskWattsPerGb": 0.01,
+    "networkWattsPerGb": 0.02
+  },
+  "summary": {
+    "serviceCount": 1,
+    "activeServiceCount": 1,
+    "energyKwh": 0.001,
+    "emissionsGco2e": 0.4,
+    "collectionCount": 1,
+    "validMetricCount": 1,
+    "validCarbonIntensityCount": 1,
+    "metricCoveragePercent": 100,
+    "carbonIntensityCoveragePercent": 100,
+    "isPartial": false
+  },
+  "services": [
+    {
+      "serviceId": 1,
+      "name": "servico-exemplo",
+      "status": "active",
+      "regionCode": "regiao-exemplo",
+      "latestSampleInPeriod": {
+        "collectionId": "id-da-coleta",
+        "attemptedAt": "2026-10-01T12:00:00.000Z",
+        "status": "success",
+        "energyKwh": 0.001,
+        "emissionsGco2e": 0.4,
+        "carbonIntensityGco2ePerKwh": 400,
+        "gapReason": null
+      },
+      "periodTotals": {
+        "energyKwh": 0.001,
+        "emissionsGco2e": 0.4,
+        "collectionCount": 1,
+        "validMetricCount": 1,
+        "validCarbonIntensityCount": 1,
+        "metricCoveragePercent": 100,
+        "carbonIntensityCoveragePercent": 100,
+        "isPartial": false,
+        "gaps": []
+      }
+    }
+  ]
+}
+```
+
+Os números do exemplo são ilustrativos. A energia é estimada com o modelo de potência retornado em `powerModel` e o intervalo indicado em `period.collectionIntervalMs`. **Limitação conhecida:** esse intervalo é atualmente o valor configurado para o job de coleta (`COLLECTION_INTERVAL_MS`), não o campo `collection_interval_seconds` retornado pela Metrics API. O intervalo real por amostra ainda precisa ser validado e persistido.
+
+`latestSampleInPeriod` é a tentativa mais recente do serviço dentro do período, ou `null` se não houver tentativas. `periodTotals` agrega as tentativas registradas. `isPartial`, as coberturas e `gaps` indicam tentativas sem métricas válidas ou sem intensidade de carbono utilizável; os motivos podem incluir `no_metrics`, `unavailable`, `error`, `invalid_metrics` e `carbon_intensity_unavailable`. Uma tentativa sem intensidade ainda pode contribuir para energia, mas não para emissões. A cobertura considera as tentativas registradas no banco e não detecta intervalos em que nenhuma tentativa foi registrada.
+
+Períodos inválidos, parâmetros ausentes ou parâmetros repetidos retornam `400 Bad Request` com `code: "INVALID_INDICATOR_PERIOD"`. A ausência de JWT válido retorna `401 Unauthorized`; falhas inesperadas, inclusive de acesso ao banco, são encaminhadas ao middleware global.
+
 ## 05. Coleta de métricas — US03 / US04 / US05
 
 A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`. Falhas de comunicação (timeout ou conexão recusada) são registradas como `unavailable`, sem interromper a coleta dos demais serviços.
@@ -443,7 +533,7 @@ Os endpoints de serviços e intensidades encaminham exceções ao middleware glo
 | `401 Unauthorized` | Falha de autenticação | Credenciais inválidas ou token ausente, inválido ou associado a usuário inexistente |
 | `403 Forbidden` | Usuário autenticado sem permissão | Usuário não administrador tenta iniciar coleta manual |
 | `404 Not Found` | Rota/recurso inexistente | Para URLs não registradas, Express responde com seu comportamento padrão; a classe `NotFoundError` existe, mas não está aplicada aos endpoints descritos |
-| `500 Internal Server Error` | Exceção não prevista | Falha inesperada nos módulos de serviços ou intensidades |
+| `500 Internal Server Error` | Exceção não prevista | Falha inesperada nos módulos de serviços, intensidades ou indicadores |
 | `502 Bad Gateway` | Falha de integração externa | Erro consultando a Metrics API ou a Carbon API |
 
 **Exemplo do formato de erro global:**
@@ -496,16 +586,15 @@ Os endpoints de serviços e intensidades encaminham exceções ao middleware glo
 
 ---
 
-## 08. Endpoints planejados para a Sprint 2
+## 08. Endpoints ainda planejados
 
-Os recursos abaixo fazem parte do planejamento, mas **não devem ser considerados endpoints ativos até aparecerem no código, testes e documentação de resposta**:
+Os recursos abaixo continuam no planejamento e **ainda não possuem endpoints internos implementados**:
 
 - histórico de coletas por serviço/período;
-- dados consolidados do dashboard;
-- cálculos de energia e CO₂e;
-- indicadores ambientais.
+- endpoint consolidado do dashboard;
+- ranking e comparações entre serviços.
 
-Ao implementar um endpoint novo, registrar nesta documentação: método, URL, parâmetros, autenticação, resposta de sucesso, erros esperados e exemplo de verificação.
+O endpoint de indicadores descrito nesta documentação já calcula energia e CO₂e no backend. Isso não significa que o dashboard/frontend esteja integrado ou que todos os indicadores previstos estejam concluídos.
 
 ## 09. Integrações e funcionalidades futuras
 
@@ -517,13 +606,14 @@ A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sinc
 | Cadastro e login com emissão de JWT | Implementados, com ressalvas descritas acima |
 | Proteção de endpoints por JWT | Aplicada seletivamente; coleta manual restrita a administradores |
 | Coleta de métricas | Implementada (manual com administrador e automática); histórico planejado |
-| Cálculo de consumo energético e CO₂e | Planejado |
+| Cálculo de consumo energético e CO₂e | Implementado parcialmente em `/api/indicadores`; intervalo por amostra ainda provisório |
 | Descoberta e snapshots da Carbon Intensity API | Implementados nas rotas de intensidades |
-| Endpoints de indicadores consolidados | Planejados; arquivos de módulo ainda vazios |
-| Ranking, comparações e filtros por período | Evolução prevista nas próximas sprints |
+| Endpoint de indicadores por período | Implementado no backend; integração com frontend e validação de ponta a ponta pendentes |
+| Ranking e comparações | Planejados |
+
+O módulo de indicadores consulta dados persistidos; não busca métricas ou intensidades diretamente nas APIs externas durante a requisição. As lacunas de coleta e de intensidade são representadas na resposta, sem imputação de valores.
 
 **Importante:** nomes e caminhos de endpoints futuros somente devem entrar na tabela oficial quando forem definidos pela equipe e registrados no código. Isso evita que o frontend dependa de rotas ainda inexistentes.
-
 ---
 
 ## 10. Onde encontrar os endpoints no projeto
@@ -543,6 +633,11 @@ backend/src/
 │   │   ├── servicos.controller.ts # Entrada e saída HTTP
 │   │   ├── servicos.service.ts    # Descoberta e sincronização
 │   │   └── servicos.repository.ts # Consultas SQL de serviços
+│   ├── indicadores/
+│   │   ├── indicadores.routes.ts     # GET / (protegido por JWT)
+│   │   ├── indicadores.controller.ts # Validação da query e resposta HTTP
+│   │   ├── indicadores.service.ts    # Cálculos, agregação e cobertura
+│   │   └── indicadores.repository.ts # Consultas de coletas e intensidades
 │   └── intensidades/
 │       ├── intensidades.routes.ts     # GET /discover, POST /sync, GET /
 │       ├── intensidades.controller.ts # Contrato HTTP das intensidades

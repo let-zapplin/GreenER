@@ -58,6 +58,14 @@ Para executar somente os testes de descoberta de serviços:
 docker compose exec backend npm test -- src/modules/servicos/servicos.service.test.ts
 ~~~
 
+Para executar somente os testes do módulo de indicadores:
+
+~~~powershell
+docker compose exec backend npm test -- src/modules/indicadores
+~~~
+
+Esse comando executa os testes de service e controller do módulo, sem rodar o restante da suíte.
+
 ## 4. Interpretar o resultado
 
 Os testes de discoverServices verificam:
@@ -87,6 +95,15 @@ Erro na API Metrics: DOMException [AbortError]: Requisição cancelada
 ~~~
 
 Esses registros vêm do console.error do serviço e, sozinhos, não significam que o teste falhou. Se aparecer failed ou Unhandled Rejection no resultado, confira a descrição do teste e a mensagem de falha. Em uma execução normal da aplicação, fora dos testes, esses erros podem indicar problemas reais.
+
+### Testes do módulo de indicadores
+
+O comando focado executa atualmente sete testes em dois arquivos:
+
+- `indicadores.service.test.ts` (4 testes): cálculo de energia e emissões, ausência de intensidade, coletas sem métricas e validação do período;
+- `indicadores.controller.test.ts` (3 testes): encaminhamento do período ao service, validação de parâmetros ausentes/repetidos e encaminhamento de erros ao middleware.
+
+Os testes usam dependências simuladas. Eles verificam as regras do service e o contrato do controller, mas **não executam a consulta SQL do repository em um PostgreSQL real**, não chamam as APIs externas e não validam a integração com o frontend. Para isso, siga o roteiro manual de indicadores em [`manualdevalidacao.md`](./manualdevalidacao.md).
 
 ## 5. Executar automaticamente ao alterar o código
 
