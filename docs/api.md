@@ -397,6 +397,7 @@ curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2
         "collectionId": "id-da-coleta",
         "attemptedAt": "2026-10-01T12:00:00.000Z",
         "status": "success",
+        "collectionIntervalSeconds": 45,
         "energyKwh": 0.001,
         "emissionsGco2e": 0.4,
         "carbonIntensityGco2ePerKwh": 400,
@@ -418,15 +419,17 @@ curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2
 }
 ```
 
-Os números do exemplo são ilustrativos. A energia é estimada com o modelo de potência retornado em `powerModel` e o intervalo indicado em `period.collectionIntervalMs`. **Limitação conhecida:** esse intervalo é atualmente o valor configurado para o job de coleta (`COLLECTION_INTERVAL_MS`), não o campo `collection_interval_seconds` retornado pela Metrics API. O intervalo real por amostra ainda precisa ser validado e persistido.
+Os números do exemplo são ilustrativos. A energia é estimada com o modelo de potência retornado em `powerModel` e `latestSampleInPeriod.collectionIntervalSeconds`, que contém a duração da amostra em segundos usada no cálculo. `period.collectionIntervalMs` permanece por compatibilidade e informa somente o intervalo configurado entre ciclos do job (`COLLECTION_INTERVAL_MS`); não é usado para calcular a energia.
 
-`latestSampleInPeriod` é a tentativa mais recente do serviço dentro do período, ou `null` se não houver tentativas. `periodTotals` agrega as tentativas registradas. `isPartial`, as coberturas e `gaps` indicam tentativas sem métricas válidas ou sem intensidade de carbono utilizável; os motivos podem incluir `no_metrics`, `unavailable`, `error`, `invalid_metrics` e `carbon_intensity_unavailable`. Uma tentativa sem intensidade ainda pode contribuir para energia, mas não para emissões. A cobertura considera as tentativas registradas no banco e não detecta intervalos em que nenhuma tentativa foi registrada.
+`latestSampleInPeriod` é a tentativa mais recente do serviço dentro do período, ou `null` se não houver tentativas. `periodTotals` agrega as tentativas registradas. `isPartial`, as coberturas e `gaps` indicam tentativas sem métricas válidas, duração de amostra ou intensidade de carbono utilizável; os motivos podem incluir `no_metrics`, `unavailable`, `error`, `invalid_metrics`, `collection_interval_unavailable` e `carbon_intensity_unavailable`. Amostras históricas sem intervalo retornam `collectionIntervalSeconds: null` e geram uma lacuna, sem usar `COLLECTION_INTERVAL_MS` como fallback. Uma tentativa sem intensidade ainda pode contribuir para energia, mas não para emissões. A cobertura considera as tentativas registradas no banco e não detecta intervalos em que nenhuma tentativa foi registrada.
 
 Períodos inválidos, parâmetros ausentes ou parâmetros repetidos retornam `400 Bad Request` com `code: "INVALID_INDICATOR_PERIOD"`. A ausência de JWT válido retorna `401 Unauthorized`; falhas inesperadas, inclusive de acesso ao banco, são encaminhadas ao middleware global.
 
 ## 05. Coleta de métricas — US03 / US04 / US05
 
 A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`. Falhas de comunicação (timeout ou conexão recusada) são registradas como `unavailable`, sem interromper a coleta dos demais serviços.
+
+Para registrar uma amostra como válida, a resposta da Metrics API deve conter `collection_interval_seconds` como número finito maior que zero, além dos valores de métricas válidos. O intervalo é persistido em `metrics` junto com a amostra. Campo ausente ou inválido resulta em erro de payload, sem gravar uma métrica parcial.
 
 ### `POST /api/metricas/collect` — disparo manual (administrador)
 

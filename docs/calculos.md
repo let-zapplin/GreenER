@@ -35,14 +35,14 @@ O endpoint consulta o PostgreSQL, não as APIs externas. Os resultados são calc
 | Memória | `memory_gb` | GB | Multiplicada pelo fator de potência de memória |
 | Disco | `disk_gb` | GB | Multiplicado pelo fator de potência de disco |
 | Rede | `network_gb` | GB | Multiplicada pelo fator de potência de rede |
-| Duração da amostra | `collection_interval_seconds` na resposta da Metrics API | segundos | A API declara esse campo, mas o código atual não o valida como parte do payload de métricas nem o persiste |
-| Intervalo usado atualmente | `COLLECTION_INTERVAL_MS` | milissegundos | Intervalo configurado entre ciclos do job; usado provisoriamente como duração de cada amostra |
+| Duração da amostra | `collection_interval_seconds` na resposta da Metrics API | segundos | Validado como número finito positivo e persistido por amostra; amostras antigas podem ter `NULL` |
+| Intervalo entre coletas | `COLLECTION_INTERVAL_MS` | milissegundos | Configura o intervalo entre ciclos do job; não é usado como duração da amostra no cálculo |
 | Intensidade de carbono | `carbon_intensity_gco2e_per_kwh` | gCO₂e/kWh | Snapshot regional salvo, associado à coleta segundo região e tempo |
 | Participação renovável | `renewable_share_percent` | percentual (%) | Persistida, mas não utilizada nos cálculos atuais |
 
 Os sufixos `_gb` são tratados como GB porque esse é o contrato refletido nos nomes dos campos, mas a semântica exata dos valores de memória, disco e rede ainda deve ser confirmada com a documentação do fornecedor. Em particular, é necessário confirmar se `network_gb` representa volume transferido durante uma amostra ou outra medida; o modelo atual aplica diretamente o fator em W/GB.
 
-**Limitação importante:** `COLLECTION_INTERVAL_MS` controla o intervalo entre ciclos automáticos de coleta; ele não comprova quanto tempo cada amostra representa. Até que `collection_interval_seconds` seja validado e persistido por amostra, energia e emissões devem ser interpretadas como estimativas provisórias. O endpoint retorna o valor utilizado em `period.collectionIntervalMs`.
+`COLLECTION_INTERVAL_MS` controla o intervalo entre ciclos automáticos de coleta, não a duração representada por cada amostra. A energia e as emissões usam `collection_interval_seconds` persistido para cada amostra. Valores ausentes ou inválidos não são substituídos pelo intervalo do job: a amostra é registrada como lacuna `collection_interval_unavailable`.
 
 ---
 
@@ -71,14 +71,14 @@ potência_total (W) =
     potência_CPU + potência_memória + potência_disco + potência_rede
 
 energia (kWh) =
-    potência_total (W) × duração (ms) / 3.600.000.000
+    potência_total (W) × collection_interval_seconds / 3.600.000
 ```
 
-O divisor converte simultaneamente milissegundos em horas e watt-hora em quilowatt-hora. No código atual, a duração usada é `COLLECTION_INTERVAL_MS`, e não a duração individual declarada pela Metrics API.
+O divisor converte segundos em horas e watt-hora em quilowatt-hora. Cada cálculo usa a duração declarada para aquela amostra, não a configuração do job.
 
 ### Exemplo manual reproduzível
 
-Considere uma tentativa com status `success`, `COLLECTION_INTERVAL_MS=60000` e os seguintes valores:
+Considere uma tentativa com status `success`, `collection_interval_seconds=45` e os seguintes valores:
 
 ```text
 CPU = 50%
@@ -94,11 +94,11 @@ potência_disco    = 10 × 0,01 W/GB   = 0,10 W
 potência_rede     = 5 × 0,02 W/GB    = 0,10 W
 potência_total    = 50 + 0,75 + 0,10 + 0,10 = 50,95 W
 
-energia = 50,95 W × 60000 ms / 3.600.000.000
-        ≈ 0,000849166667 kWh
+energia = 50,95 W × 45 s / 3.600.000
+        ≈ 0,000636875 kWh
 ```
 
-Este exemplo verifica a aritmética do modelo, não a precisão física das premissas nem a duração real da amostra.
+Com `COLLECTION_INTERVAL_MS=60000`, o job agenda ciclos a cada 60 segundos, mas essa configuração não altera o cálculo da amostra de 45 segundos. Este exemplo verifica a aritmética do modelo, não a precisão física das premissas nem as unidades/semântica das métricas do fornecedor.
 
 ---
 
@@ -121,8 +121,8 @@ emissão (gCO₂e) = energia (kWh) × intensidade (gCO₂e/kWh)
 Usando a energia do exemplo anterior e uma intensidade ilustrativa de `200 gCO₂e/kWh`:
 
 ```text
-emissão = 0,000849166667 kWh × 200 gCO₂e/kWh
-        ≈ 0,169833333 gCO₂e
+emissão = 0,000636875 kWh × 200 gCO₂e/kWh
+        = 0,127375 gCO₂e
 ```
 
 O campo `renewable_share_percent` é armazenado, mas não entra nessa fórmula nem reduz a intensidade. Utilizá-lo como desconto junto com a intensidade atual poderia contar o benefício renovável duas vezes; qualquer indicador derivado deve ser definido separadamente antes de ser implementado.
@@ -132,6 +132,7 @@ O campo `renewable_share_percent` é armazenado, mas não entra nessa fórmula n
 ## 5. Tentativas incompletas e agregação
 
 - Só tentativas com status `success` e valores numéricos válidos de CPU, memória, disco e rede produzem energia.
+- Uma amostra sem `collection_interval_seconds` finito e positivo não produz energia nem emissões e gera a lacuna `collection_interval_unavailable`. Isso inclui registros históricos cujo intervalo não foi persistido.
 - CPU fora de 0–100%, valores negativos ou valores ausentes/não finitos invalidam as métricas da amostra.
 - Estados `no_metrics`, `unavailable` e `error` são apresentados como lacunas; não são preenchidos com valores estimados ou simulados.
 - Energia é somada para amostras com métricas válidas. Emissões são somadas apenas quando a amostra também possui intensidade válida.
@@ -152,6 +153,7 @@ Unidades retornadas:
 | `energyKwh` | kWh |
 | `emissionsGco2e` | gCO₂e |
 | `carbonIntensityGco2ePerKwh` | gCO₂e/kWh |
+| `collectionIntervalSeconds` | s; duração real usada no cálculo por amostra |
 | `collectionIntervalMs` | ms |
 | coberturas | percentual de 0 a 100 |
 
@@ -163,7 +165,7 @@ O contrato HTTP e o exemplo completo de resposta estão em [`docs/api.md`](./api
 
 O endpoint calcula resultados sob demanda a partir das tentativas, métricas e snapshots já persistidos; não grava um resultado calculado para cada consulta. Cada tentativa é identificada por `collectionId` e `attemptedAt`, e a resposta contém o fator aplicado quando disponível.
 
-Os snapshots regionais e as datas de registro permitem selecionar o fator válido para o instante da tentativa, dentro do limite de idade configurado. A reprodutibilidade completa da energia ainda depende de persistir e usar a duração real de cada amostra e de confirmar as unidades/semântica das métricas.
+Os snapshots regionais e as datas de registro permitem selecionar o fator válido para o instante da tentativa, dentro do limite de idade configurado. A duração real usada é retornada em `collectionIntervalSeconds` por amostra. `period.collectionIntervalMs` continua representando somente a configuração do intervalo entre ciclos do job.
 
 ---
 
@@ -174,7 +176,7 @@ Os snapshots regionais e as datas de registro permitem selecionar o fator válid
 - [x] Exemplo numérico reproduzível incluído.
 - [x] Lacunas de coleta e intensidade descritas.
 - [ ] Confirmar com o fornecedor as unidades e a semântica dos quatro campos de métricas.
-- [ ] Validar, persistir e usar `collection_interval_seconds` por amostra.
+- [x] Validar, persistir e usar `collection_interval_seconds` por amostra; tratar valores ausentes ou inválidos como lacuna.
 - [ ] Validar o cálculo de ponta a ponta com dados de um PostgreSQL em execução.
 - [ ] Definir política de arredondamento de apresentação no frontend.
 
@@ -186,3 +188,4 @@ Os snapshots regionais e as datas de registro permitem selecionar o fator válid
 |---|---|---|---|
 | 20/10/2026 | Estrutura documental criada antes da implementação dos cálculos | Evitar fórmula implícita e garantir rastreabilidade da US07 | Sprint 2 / TEC21 |
 | 31/10/2026 | Documentar fórmulas, fatores e limitações conforme o módulo atual | Distinguir estimativa implementada de duração real e semântica ainda não confirmadas | `backend/src/modules/indicadores/indicadores.service.ts` |
+| 31/10/2026 | Usar a duração declarada e persistida de cada amostra; manter nulos históricos como lacunas | Não inferir duração real a partir do agendamento do job | `backend/src/modules/indicadores/indicadores.service.ts` |

@@ -315,13 +315,14 @@ Substitua as datas do exemplo por um intervalo que inclua a tentativa escolhida 
 Verificar na resposta `200 OK`:
 
 - `period` contém os limites consultados e `collectionIntervalMs`;
+- `latestSampleInPeriod.collectionIntervalSeconds` contém a duração da amostra usada no cálculo;
 - `powerModel` informa os fatores usados;
 - `summary` e `services[].periodTotals` trazem energia em kWh, emissões em gCO₂e, contagens e cobertura;
 - `latestSampleInPeriod` corresponde à tentativa mais recente do serviço no período;
 - `gaps` identifica tentativas sem métricas válidas ou sem intensidade utilizável;
 - com métricas e intensidade válidas, `gapReason` é `null` e `isPartial` é `false` para o cenário completo.
 
-Para conferir a aritmética de uma tentativa completa, use as métricas e o fator regional retornados pelas consultas SQL, junto do `collectionIntervalMs` informado na resposta:
+Para conferir a aritmética de uma tentativa completa, use as métricas e o fator regional retornados pelas consultas SQL, junto do `collectionIntervalSeconds` informado em `latestSampleInPeriod`:
 
 ```text
 potência_total (W) =
@@ -330,11 +331,11 @@ potência_total (W) =
     + disk_gb × 0,01
     + network_gb × 0,02
 
-energia (kWh) = potência_total × collectionIntervalMs / 3.600.000.000
+energia (kWh) = potência_total × collectionIntervalSeconds / 3.600.000
 emissão (gCO₂e) = energia × carbon_intensity_gco2e_per_kwh
 ```
 
-**Limitação que deve ser considerada na conferência:** `collectionIntervalMs` é atualmente derivado de `COLLECTION_INTERVAL_MS`, o intervalo configurado entre ciclos do job; ainda não representa o `collection_interval_seconds` individual da amostra na Metrics API.
+`period.collectionIntervalMs` continua indicando o intervalo configurado entre ciclos do job (`COLLECTION_INTERVAL_MS`), mas não participa do cálculo. Uma amostra histórica sem `collection_interval_seconds` deve apresentar `collectionIntervalSeconds: null`, `energyKwh: null`, `emissionsGco2e: null` e `gapReason: "collection_interval_unavailable"`.
 
 ### Cenários de lacuna e validação de entrada
 
@@ -343,6 +344,7 @@ Sempre que possível, use dados já existentes; não altere registros de produç
 | Cenário | Resultado esperado |
 |---|---|
 | Tentativa com status `no_metrics`, `unavailable` ou `error` | Energia e emissão da amostra são `null`; motivo aparece em `gapReason` e em `gaps` |
+| Amostra sem intervalo real persistido | Energia e emissão da amostra são `null`; `gapReason` é `collection_interval_unavailable` |
 | Métricas válidas, mas sem intensidade elegível | Energia pode ser calculada; emissão e intensidade da amostra são `null`; `gapReason` é `carbon_intensity_unavailable` |
 | `start`/`end` ausente, repetido ou inválido, ou `end` não posterior a `start` | HTTP `400` com `code: "INVALID_INDICATOR_PERIOD"` |
 | JWT ausente ou inválido | HTTP `401 Unauthorized` |

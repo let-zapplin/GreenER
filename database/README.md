@@ -35,6 +35,8 @@ Banco de dados relacional do GreenER, responsável por armazenar serviços monit
 | [`schema.sql`](schema.sql) | Estado completo atual do banco: tabelas, chaves, relacionamentos, restrições e índices |
 | [`migrations/`](migrations/) | Alterações incrementais utilizadas para atualizar bancos já existentes |
 | [`migrations/001_add_collection.sql`](migrations/001_add_collection.sql) | Introduz a entidade `collection` e migra o relacionamento entre serviços e métricas |
+| [`migrations/002_refactor_location.sql`](migrations/002_refactor_location.sql) | Ajusta a unicidade das localizações e adiciona índice para snapshots de intensidade |
+| [`migrations/003_add_collection_interval_seconds.sql`](migrations/003_add_collection_interval_seconds.sql) | Persiste a duração real da amostra em `metrics`; mantém o campo nulo para registros existentes |
 
 O `schema.sql` deve representar sempre a estrutura completa esperada para um banco criado do zero.
 
@@ -52,7 +54,7 @@ As migrations representam a evolução entre versões do modelo sem exigir a rem
 | `users` | Usuários do sistema, contendo nome, e-mail, hashes utilizados pela autenticação e indicação administrativa. |
 | `service` | Serviços monitorados, associados a uma localização e contendo informações como identificador externo, nome, estado atual e instante da última identificação. |
 | `collection` | Cada tentativa de coleta realizada para um serviço, incluindo estado, instante da tentativa e informações de falha quando aplicáveis. |
-| `metrics` | Conjuntos de métricas válidos obtidos em uma coleta, incluindo CPU, memória, disco, rede e timestamp da métrica. |
+| `metrics` | Conjuntos de métricas válidos obtidos em uma coleta, incluindo CPU, memória, disco, rede, duração real da amostra em segundos e timestamp da métrica. A duração é nula em registros anteriores à migration 003. |
 | `carbon_intensity` | Histórico de intensidade de carbono e participação de energia renovável associado a uma localização. |
 | `favorites` | Associação entre usuários e serviços favoritados. |
 
@@ -363,6 +365,18 @@ docker compose cp database/migrations/001_add_collection.sql postgres:/tmp/001_a
 ```bash
 docker compose exec postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/001_add_collection.sql'
 ```
+
+Em bancos que já possuem a estrutura de `collection` e `metrics`, aplique a migration da duração real da amostra:
+
+```bash
+docker compose cp database/migrations/003_add_collection_interval_seconds.sql postgres:/tmp/003_add_collection_interval_seconds.sql
+```
+
+```bash
+docker compose exec postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/003_add_collection_interval_seconds.sql'
+```
+
+Essa migration adiciona uma coluna nullable: os registros anteriores permanecem sem duração conhecida e os indicadores os tratam como lacunas. Aplique cada migration somente uma vez e na ordem necessária para o estado atual do banco.
 
 ### Persistência
 

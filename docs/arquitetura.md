@@ -30,7 +30,7 @@ Carbon Intensity API ────→ sincronização regional ─→ PostgreSQL
                                        GET /api/indicadores?start=...&end=...
 ```
 
-O endpoint de indicadores calcula energia e CO₂e no backend, mas ainda não significa integração do dashboard/frontend nem validação de ponta a ponta. A energia usa provisoriamente `COLLECTION_INTERVAL_MS` como duração da amostra; `collection_interval_seconds` da Metrics API ainda não é validado e persistido por tentativa.
+O endpoint de indicadores calcula energia e CO₂e no backend usando `collection_interval_seconds` validado e persistido por amostra. `COLLECTION_INTERVAL_MS` continua configurando apenas o intervalo entre ciclos do job. Amostras históricas sem esse dado são lacunas, sem fallback para o intervalo do job. A integração do dashboard/frontend e a validação de ponta a ponta continuam pendentes.
 
 ### Fluxo atual e integrações planejadas
 
@@ -68,7 +68,7 @@ cálculo ambiental por período
 indicadores
 ```
 
-A integração visual dos indicadores com o frontend, o uso do intervalo individual de cada amostra e recursos analíticos adicionais continuam pendentes.
+A integração visual dos indicadores com o frontend e recursos analíticos adicionais continuam pendentes.
 
 ---
 
@@ -475,7 +475,7 @@ O endpoint `GET /api/indicadores` calcula esses valores sob demanda a partir das
 
 Quando não há dados de métricas válidos, a tentativa é descrita como lacuna e não produz consumo. Quando falta intensidade utilizável, a energia ainda pode ser calculada, mas a emissão correspondente fica indisponível. A resposta apresenta totais e cobertura para sinalizar resultados parciais.
 
-**Limitação conhecida:** a energia usa provisoriamente `COLLECTION_INTERVAL_MS`, o intervalo configurado entre ciclos do job, como duração da amostra. O `collection_interval_seconds` declarado pela Metrics API ainda não é validado no payload de métricas nem persistido por tentativa.
+O cálculo usa o `collection_interval_seconds` validado da Metrics API e persistido junto com cada amostra. `COLLECTION_INTERVAL_MS` permanece como intervalo de agendamento do job e não é usado como fallback. Dados históricos sem duração geram a lacuna `collection_interval_unavailable`.
 
 ---
 
@@ -508,6 +508,8 @@ service → collection → metrics
 ```
 
 sem exigir a exclusão do volume PostgreSQL.
+
+A migration [`database/migrations/003_add_collection_interval_seconds.sql`](../database/migrations/003_add_collection_interval_seconds.sql) adiciona a duração da amostra a `metrics`. O campo é nullable para preservar registros antigos sem inferir a duração real; indicadores tratam esses registros como lacunas.
 
 Caso existam métricas anteriores à alteração, a migration cria uma coleta de estado `success` para cada registro antigo e utiliza `metrics.recorded_at` como referência temporal disponível durante a conversão.
 
@@ -597,7 +599,7 @@ O módulo de indicadores associa cada tentativa ao snapshot da mesma região mai
 | `GET` | `/api/intensidades` | Listagem de snapshots persistidos (JWT) |
 | `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Indicadores ambientais por período (JWT) |
 
-Os indicadores estão implementados parcialmente no backend. A integração do frontend, a duração real por amostra e a validação de ponta a ponta ainda precisam ser concluídas.
+Os indicadores estão implementados parcialmente no backend. A integração do frontend e a validação de ponta a ponta ainda precisam ser concluídas.
 
 ---
 
@@ -658,11 +660,11 @@ em vez de depender da recriação do volume.
 - cálculo de indicadores por período protegido por JWT;
 - associação temporal da intensidade pelo código regional e instante da tentativa, limitada por `CARBON_INTENSITY_MAX_AGE_MS`;
 - `COLLECTION_INTERVAL_MS` permanece separado de `SERVICE_SYNC_INTERVAL_MS`.
+- `collection_interval_seconds` é validado, persistido por amostra e usado nos cálculos; amostras sem duração são lacunas.
 
 ### Decisões ainda pendentes
 
 - intervalo de atualização do frontend;
-- validar, persistir e usar `collection_interval_seconds` por amostra em vez do intervalo configurado do job;
 - confirmar com o fornecedor as unidades e a semântica das métricas de memória, disco e rede;
 - integrar o endpoint de indicadores ao dashboard e validar o fluxo completo com o banco e frontend;
 - definir e implementar novos indicadores, comparações e rankings;

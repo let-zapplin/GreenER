@@ -97,7 +97,16 @@ CREATE TABLE metrics (
   memory_gb DOUBLE PRECISION NOT NULL,
   disk_gb DOUBLE PRECISION NOT NULL,
   network_gb DOUBLE PRECISION NOT NULL,
+  collection_interval_seconds DOUBLE PRECISION,
   recorded_at TIMESTAMPTZ NOT NULL,
+  CONSTRAINT chk_metrics_collection_interval_seconds
+    CHECK (
+      collection_interval_seconds IS NULL
+      OR (
+        collection_interval_seconds > 0
+        AND collection_interval_seconds < 'Infinity'::DOUBLE PRECISION
+      )
+    ),
   FOREIGN KEY(collection_id_collection)
     REFERENCES collection(id_collection)
       ON DELETE NO ACTION
@@ -118,4 +127,3 @@ CREATE TABLE favorites (
       ON DELETE NO ACTION
       ON UPDATE NO ACTION
 );
-

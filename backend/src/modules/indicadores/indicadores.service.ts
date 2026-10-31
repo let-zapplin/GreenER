@@ -17,6 +17,7 @@ const POWER_MODEL = {
 type CalculationGapReason =
   | IndicatorCollection["status"]
   | "invalid_metrics"
+  | "collection_interval_unavailable"
   | "carbon_intensity_unavailable";
 
 interface CalculationGap {
@@ -29,6 +30,7 @@ interface SampleCalculation {
   collectionId: string;
   attemptedAt: Date;
   status: IndicatorCollection["status"];
+  collectionIntervalSeconds: number | null;
   energyKwh: number | null;
   emissionsGco2e: number | null;
   carbonIntensityGco2ePerKwh: number | null;
@@ -84,16 +86,20 @@ function finiteNumber(value: number | string | null): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function calculateSample(
-  collection: IndicatorCollection,
-  collectionIntervalMs: number,
-): SampleCalculation {
+function calculateSample(collection: IndicatorCollection): SampleCalculation {
+  const collectionIntervalSeconds =
+    typeof collection.collection_interval_seconds === "number" &&
+    Number.isFinite(collection.collection_interval_seconds) &&
+    collection.collection_interval_seconds > 0
+      ? collection.collection_interval_seconds
+      : null;
   const gap = (
     reason: CalculationGapReason,
   ): SampleCalculation => ({
     collectionId: collection.id_collection,
     attemptedAt: collection.attempted_at,
     status: collection.status,
+    collectionIntervalSeconds,
     energyKwh: null,
     emissionsGco2e: null,
     carbonIntensityGco2ePerKwh: null,
@@ -102,6 +108,10 @@ function calculateSample(
 
   if (collection.status !== "success") {
     return gap(collection.status);
+  }
+
+  if (collectionIntervalSeconds === null) {
+    return gap("collection_interval_unavailable");
   }
 
   const cpuPercent = finiteNumber(collection.cpu_percent);
@@ -129,7 +139,7 @@ function calculateSample(
     diskGb * POWER_MODEL.diskWattsPerGb +
     networkGb * POWER_MODEL.networkWattsPerGb;
   const energyKwh =
-    (powerWatts * collectionIntervalMs) / 3_600_000_000;
+    (powerWatts * collectionIntervalSeconds) / 3_600_000;
 
   const carbonIntensity = collection.carbon_intensity_gco2e_per_kwh;
   if (
@@ -141,6 +151,7 @@ function calculateSample(
       collectionId: collection.id_collection,
       attemptedAt: collection.attempted_at,
       status: collection.status,
+      collectionIntervalSeconds,
       energyKwh,
       emissionsGco2e: null,
       carbonIntensityGco2ePerKwh: null,
@@ -152,6 +163,7 @@ function calculateSample(
     collectionId: collection.id_collection,
     attemptedAt: collection.attempted_at,
     status: collection.status,
+    collectionIntervalSeconds,
     energyKwh,
     emissionsGco2e: energyKwh * carbonIntensity,
     carbonIntensityGco2ePerKwh: carbonIntensity,
@@ -169,9 +181,6 @@ export class IndicadoresService {
       IndicadoresRepository,
       "findCollectionsForPeriod"
     > = new IndicadoresRepository(),
-    // Provisório: não substitui collection_interval_seconds da API.
-    // Trocar quando o intervalo real por amostra estiver validado e persistido.
-    private readonly collectionIntervalMs = env.metricsCollectionIntervalMs,
     private readonly carbonIntensityMaxAgeMs = env.carbonIntensityMaxAgeMs,
   ) {}
 
@@ -214,7 +223,7 @@ export class IndicadoresService {
       period: {
         start,
         end,
-        collectionIntervalMs: this.collectionIntervalMs,
+        collectionIntervalMs: env.metricsCollectionIntervalMs,
       },
       powerModel: POWER_MODEL,
       summary: {
@@ -254,7 +263,7 @@ export class IndicadoresService {
     service: ServiceIndicatorData,
   ): ServiceIndicators {
     const samples = service.collections.map((collection) =>
-      calculateSample(collection, this.collectionIntervalMs),
+      calculateSample(collection),
     );
     const collectionCount = samples.length;
     const validMetricSamples = samples.filter(

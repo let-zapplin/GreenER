@@ -30,6 +30,7 @@ async function main() {
       memory_gb: 2,
       disk_gb: 10,
       network_gb: 0.5,
+      collection_interval_seconds: 45,
       recorded_at: new Date().toISOString(),
     },
   });
