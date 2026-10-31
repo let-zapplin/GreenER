@@ -36,6 +36,7 @@ flowchart LR
 | `POST` | `/api/intensidades/sync` | Registrar snapshots regionais | Intensidades |
 | `GET` | `/api/intensidades` | Listar snapshots regionais registrados | Intensidades |
 | `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Calcular indicadores ambientais no período | US07 (backend parcial) |
+| `GET` | `/api/dashboard` | Obter indicadores consolidados para o dashboard | TEC19 |
 
 **Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
 O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me` e todas as rotas de intensidades. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
@@ -335,6 +336,53 @@ Lista os snapshots persistidos, incluindo `region_code` e `registered_at`. Os fa
 `CARBON_INTENSITY_MAX_AGE_MS` configura a idade máxima em milissegundos para a seleção temporal usada pelos cálculos. A variável não tem valor padrão definido: sem configuração, a busca de fator utilizável retorna ausência, em vez de selecionar silenciosamente um snapshot antigo.
 
 Falhas HTTP, conexão, timeout ou formato inválido da Carbon API resultam em `502 Bad Gateway`. Rotas chamadas sem JWT válido resultam em `401 Unauthorized`.
+
+### Dados consolidados do dashboard — TEC19
+
+#### `GET /api/dashboard`
+
+Retorna um resumo tipado de consumo energético, emissões e disponibilidade dos serviços para alimentar os cards do dashboard. Esta rota exige JWT e não exige perfil administrador.
+
+**Query parameters opcionais:**
+
+| Parâmetro | Obrigatório | Descrição |
+|---|---|---|
+| `start` | Não | Data/hora inicial ISO do período consultado |
+| `end` | Não | Data/hora final ISO, posterior a `start` |
+
+Quando ambos são omitidos, o período corresponde às últimas 24 horas, usando o relógio do backend. Se um deles for informado, ambos devem ser enviados como uma única data válida. O período é semiaberto: inclui `start` e exclui `end`.
+
+**Exemplo:**
+
+```bash
+curl "http://localhost:3000/api/dashboard" \
+  -H "Authorization: ******"
+```
+
+**Resposta `200 OK`:**
+
+```json
+{
+  "message": "Dados consolidados do dashboard",
+  "period": {
+    "start": "2026-10-30T12:00:00.000Z",
+    "end": "2026-10-31T12:00:00.000Z"
+  },
+  "summary": {
+    "energyKwh": 0.000636875,
+    "emissionsGco2e": 0.127375,
+    "activeServiceCount": 8,
+    "unavailableServiceCount": 2,
+    "isPartial": false
+  }
+}
+```
+
+Energia e emissões são somadas para serviços atualmente `active` no catálogo, usando somente as coletas no período. `activeServiceCount` e `unavailableServiceCount` classificam esses mesmos serviços, sem sobreposição: a última tentativa `unavailable` ou `error` conta como indisponível; última tentativa `success`, `no_metrics` ou ausência de tentativa conta como ativo. Serviços removidos do catálogo ficam fora das contagens.
+
+`isPartial` é `true` quando algum serviço ativo não tem coleta no período ou tem lacuna no cálculo, como métricas inválidas, intervalo real da amostra ausente ou intensidade de carbono indisponível. Quando não há serviços ativos, os totais são zero e `isPartial` é `false`; o frontend identifica esse estado pelas contagens zeradas. Totais parciais não devem ser interpretados como valores completos; a API não inventa nem preenche dados ausentes. O estado `error` também abrange respostas inválidas e falhas de processamento, portanto a contagem de indisponíveis representa uma última coleta sem sucesso, não necessariamente confirmação de que o serviço está fora do ar.
+
+Parâmetros inválidos, repetidos, enviados sem o par correspondente ou com `end` não posterior a `start` retornam `400 Bad Request` com `code: "INVALID_DASHBOARD_PERIOD"`. A ausência de JWT válido retorna `401 Unauthorized`; falhas inesperadas, inclusive de acesso ao banco, seguem o middleware global de erros.
 
 ### Indicadores ambientais — US07 (backend parcial)
 

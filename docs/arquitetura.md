@@ -157,6 +157,20 @@ PostgreSQL: service, location, collection, metrics e carbon_intensity
 
 O repository seleciona tentativas no período e associa, quando elegível, o snapshot de carbono mais recente da mesma região, anterior ou igual a `attempted_at` e dentro de `CARBON_INTENSITY_MAX_AGE_MS`. O service calcula energia, emissões, totais, cobertura e lacunas; resultados calculados não são persistidos.
 
+O endpoint consolidado do dashboard segue um módulo próprio, reutiliza o cálculo de indicadores e consulta a última tentativa para classificar serviços ativos no catálogo:
+
+```text
+GET /api/dashboard?start=<ISO>&end=<ISO> (JWT; datas opcionais)
+  ↓
+dashboard.routes.ts → DashboardController
+  ↓
+DashboardService
+  ├── IndicadoresService (energia, CO₂e e lacunas no período)
+  └── DashboardRepository (último estado de coleta dos serviços ativos)
+```
+
+Sem datas, o período é de 24 horas até o horário atual do backend. Contagens incluem somente serviços ativos no catálogo: última coleta `unavailable`/`error` conta como indisponível; `success`, `no_metrics` ou ausência de coleta conta como ativo. Categorias não se sobrepõem. Totais ambientais parciais são sinalizados em `isPartial`.
+
 A estrutura atual do módulo de coletas é:
 
 ```text
@@ -598,8 +612,9 @@ O módulo de indicadores associa cada tentativa ao snapshot da mesma região mai
 | `POST` | `/api/intensidades/sync` | Persistência de snapshots regionais (JWT) |
 | `GET` | `/api/intensidades` | Listagem de snapshots persistidos (JWT) |
 | `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Indicadores ambientais por período (JWT) |
+| `GET` | `/api/dashboard` | Resumo consolidado para o dashboard (JWT; período opcional) |
 
-Os indicadores estão implementados parcialmente no backend. A integração do frontend e a validação de ponta a ponta ainda precisam ser concluídas.
+Os indicadores e o resumo consolidado estão implementados parcialmente no backend. A integração visual com o frontend e a validação de ponta a ponta ainda precisam ser concluídas.
 
 ---
 
