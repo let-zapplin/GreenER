@@ -58,6 +58,7 @@ describe("DashboardService.getSummary", () => {
     });
     countServicesByAvailability.mockResolvedValue({
       activeServiceCount: 2,
+      noMetricsServiceCount: 1,
       unavailableServiceCount: 1,
     });
 
@@ -75,6 +76,7 @@ describe("DashboardService.getSummary", () => {
       energyKwh: 0.75,
       emissionsGco2e: 150,
       activeServiceCount: 2,
+      noMetricsServiceCount: 1,
       unavailableServiceCount: 1,
       isPartial: false,
     });
@@ -86,6 +88,7 @@ describe("DashboardService.getSummary", () => {
     });
     countServicesByAvailability.mockResolvedValue({
       activeServiceCount: 1,
+      noMetricsServiceCount: 0,
       unavailableServiceCount: 0,
     });
 
@@ -107,6 +110,7 @@ describe("DashboardService.getSummary", () => {
     });
     countServicesByAvailability.mockResolvedValue({
       activeServiceCount: 0,
+      noMetricsServiceCount: 0,
       unavailableServiceCount: 0,
     });
 
@@ -119,6 +123,7 @@ describe("DashboardService.getSummary", () => {
       energyKwh: 0,
       emissionsGco2e: 0,
       activeServiceCount: 0,
+      noMetricsServiceCount: 0,
       unavailableServiceCount: 0,
       isPartial: false,
     });
@@ -130,6 +135,7 @@ describe("DashboardService.getSummary", () => {
     });
     countServicesByAvailability.mockResolvedValue({
       activeServiceCount: 1,
+      noMetricsServiceCount: 0,
       unavailableServiceCount: 0,
     });
 

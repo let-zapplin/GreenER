@@ -38,6 +38,7 @@ describe("DashboardController.getSummary", () => {
         energyKwh: 0.25,
         emissionsGco2e: 50,
         activeServiceCount: 2,
+        noMetricsServiceCount: 1,
         unavailableServiceCount: 1,
         isPartial: false,
       },

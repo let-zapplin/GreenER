@@ -356,7 +356,7 @@ Quando ambos são omitidos, o período corresponde às últimas 24 horas, usando
 
 ```bash
 curl "http://localhost:3000/api/dashboard" \
-  -H "Authorization: ******"
+  -H "Authorization: Bearer <token>"
 ```
 
 **Resposta `200 OK`:**
@@ -371,16 +371,23 @@ curl "http://localhost:3000/api/dashboard" \
   "summary": {
     "energyKwh": 0.000636875,
     "emissionsGco2e": 0.127375,
-    "activeServiceCount": 8,
+    "activeServiceCount": 7,
+     "noMetricsServiceCount": 1,
     "unavailableServiceCount": 2,
     "isPartial": false
   }
 }
 ```
 
-Energia e emissões são somadas para serviços atualmente `active` no catálogo, usando somente as coletas no período. `activeServiceCount` e `unavailableServiceCount` classificam esses mesmos serviços, sem sobreposição: a última tentativa `unavailable` ou `error` conta como indisponível; última tentativa `success`, `no_metrics` ou ausência de tentativa conta como ativo. Serviços removidos do catálogo ficam fora das contagens.
+Energia e emissões são somadas para serviços atualmente `active` no catálogo, usando somente as coletas no período.
 
-`isPartial` é `true` quando algum serviço ativo não tem coleta no período ou tem lacuna no cálculo, como métricas inválidas, intervalo real da amostra ausente ou intensidade de carbono indisponível. Quando não há serviços ativos, os totais são zero e `isPartial` é `false`; o frontend identifica esse estado pelas contagens zeradas. Totais parciais não devem ser interpretados como valores completos; a API não inventa nem preenche dados ausentes. O estado `error` também abrange respostas inválidas e falhas de processamento, portanto a contagem de indisponíveis representa uma última coleta sem sucesso, não necessariamente confirmação de que o serviço está fora do ar.
+As contagens classificam esses mesmos serviços de acordo com a última tentativa registrada, sem sobreposição: `success`, `error` ou ausência de tentativa contam em `activeServiceCount`; `no_metrics` conta em `noMetricsServiceCount`; e `unavailable` conta em `unavailableServiceCount`. Serviços removidos do catálogo ficam fora das contagens.
+
+Assim, a soma de `activeServiceCount`, `noMetricsServiceCount` e `unavailableServiceCount` corresponde ao total de serviços atualmente ativos no catálogo.
+
+`isPartial` é `true` quando algum serviço ativo não tem coleta no período ou apresenta alguma lacuna no cálculo, como métricas inválidas, intervalo real da amostra ausente ou intensidade de carbono indisponível. Quando não há serviços ativos, os totais são zero e `isPartial` é `false`; o frontend identifica esse estado pelas contagens zeradas.
+
+Totais parciais não devem ser interpretados como valores completos. A API não inventa nem preenche dados ausentes. O estado `error` representa respostas inválidas ou falhas de processamento e permanece separado de `unavailable`, que indica que a última tentativa de coleta não conseguiu obter uma resposta válida do serviço.
 
 Parâmetros inválidos, repetidos, enviados sem o par correspondente ou com `end` não posterior a `start` retornam `400 Bad Request` com `code: "INVALID_DASHBOARD_PERIOD"`. A ausência de JWT válido retorna `401 Unauthorized`; falhas inesperadas, inclusive de acesso ao banco, seguem o middleware global de erros.
 
@@ -642,7 +649,6 @@ Os endpoints de serviços e intensidades encaminham exceções ao middleware glo
 Os recursos abaixo continuam no planejamento e **ainda não possuem endpoints internos implementados**:
 
 - histórico de coletas por serviço/período;
-- endpoint consolidado do dashboard;
 - ranking e comparações entre serviços.
 
 O endpoint de indicadores descrito nesta documentação já calcula energia e CO₂e no backend. Isso não significa que o dashboard/frontend esteja integrado ou que todos os indicadores previstos estejam concluídos.
@@ -660,6 +666,7 @@ A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sinc
 | Cálculo de consumo energético e CO₂e | Implementado parcialmente em `/api/indicadores`; intervalo por amostra ainda provisório |
 | Descoberta e snapshots da Carbon Intensity API | Implementados nas rotas de intensidades |
 | Endpoint de indicadores por período | Implementado no backend; integração com frontend e validação de ponta a ponta pendentes |
+| Endpoint consolidado do dashboard | Implementado em `/api/dashboard`; integração com frontend pendente |
 | Ranking e comparações | Planejados |
 
 O módulo de indicadores consulta dados persistidos; não busca métricas ou intensidades diretamente nas APIs externas durante a requisição. As lacunas de coleta e de intensidade são representadas na resposta, sem imputação de valores.
@@ -689,11 +696,16 @@ backend/src/
 │   │   ├── indicadores.controller.ts # Validação da query e resposta HTTP
 │   │   ├── indicadores.service.ts    # Cálculos, agregação e cobertura
 │   │   └── indicadores.repository.ts # Consultas de coletas e intensidades
-│   └── intensidades/
-│       ├── intensidades.routes.ts     # GET /discover, POST /sync, GET /
-│       ├── intensidades.controller.ts # Contrato HTTP das intensidades
-│       ├── intensidades.service.ts    # Mapeamento e snapshots regionais
-│       └── intensidades.repository.ts # Histórico e seleção temporal
+│   │── intensidades/
+│   │  ├── intensidades.routes.ts     # GET /discover, POST /sync, GET /
+│   │   ├── intensidades.controller.ts # Contrato HTTP das intensidades
+│   │   ├── intensidades.service.ts    # Mapeamento e snapshots regionais
+│   │   └── intensidades.repository.ts # Histórico e seleção temporal
+│   ├── dashboard/
+│   │   ├── dashboard.routes.ts      # GET / (protegido por JWT)
+│   │   ├── dashboard.controller.ts  # Validação do período e resposta HTTP
+│   │   ├── dashboard.service.ts     # Consolidação dos indicadores
+│   │   └── dashboard.repository.ts  # Contagem do estado dos serviços
 ├── integrations/
 │   └── carbon-api.ts              # Consulta e validação da Carbon API
 ├── jobs/

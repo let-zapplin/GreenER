@@ -14,6 +14,7 @@ export interface DashboardSummaryResponse {
   summary: {
     energyKwh: number;
     emissionsGco2e: number;
+    noMetricsServiceCount: number;
     activeServiceCount: number;
     unavailableServiceCount: number;
     isPartial: boolean;
@@ -116,6 +117,7 @@ export class DashboardService {
           0,
         ),
         activeServiceCount: availability.activeServiceCount,
+        noMetricsServiceCount: availability.noMetricsServiceCount,
         unavailableServiceCount: availability.unavailableServiceCount,
         isPartial: activeServices.some(
           (service) =>

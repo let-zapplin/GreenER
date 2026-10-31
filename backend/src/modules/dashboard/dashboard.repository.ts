@@ -2,11 +2,13 @@ import pool from "../../db/connection.js";
 
 export interface DashboardServiceAvailability {
   activeServiceCount: number;
+  noMetricsServiceCount: number;
   unavailableServiceCount: number;
 }
 
 interface DashboardServiceAvailabilityRow {
   active_service_count: number;
+  no_metrics_service_count: number;
   unavailable_service_count: number;
 }
 
@@ -14,13 +16,18 @@ export class DashboardRepository {
   async countServicesByAvailability(): Promise<DashboardServiceAvailability> {
     const result = await pool.query<DashboardServiceAvailabilityRow>(
       `SELECT
-         COUNT(*) FILTER (
-           WHERE latest_collection.status IS NULL
-              OR latest_collection.status IN ('success', 'no_metrics')
-         )::integer AS active_service_count,
-         COUNT(*) FILTER (
-           WHERE latest_collection.status IN ('unavailable', 'error')
-         )::integer AS unavailable_service_count
+COUNT(*) FILTER (
+  WHERE latest_collection.status IS NULL
+     OR latest_collection.status IN ('success', 'error')
+)::integer AS active_service_count,
+
+COUNT(*) FILTER (
+  WHERE latest_collection.status = 'no_metrics'
+)::integer AS no_metrics_service_count,
+
+COUNT(*) FILTER (
+  WHERE latest_collection.status = 'unavailable'
+)::integer AS unavailable_service_count
        FROM service s
        LEFT JOIN LATERAL (
          SELECT c.status
@@ -34,6 +41,7 @@ export class DashboardRepository {
 
     return {
       activeServiceCount: result.rows[0].active_service_count,
+      noMetricsServiceCount: result.rows[0].no_metrics_service_count,
       unavailableServiceCount: result.rows[0].unavailable_service_count,
     };
   }

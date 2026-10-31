@@ -365,8 +365,8 @@ curl.exe -i http://localhost:3000/api/dashboard -H "Authorization: ******"
 Verificar na resposta `200 OK`:
 
 - `period.start` e `period.end` delimitam as últimas 24 horas conforme o horário do backend;
-- `summary` retorna `energyKwh`, `emissionsGco2e`, `activeServiceCount`, `unavailableServiceCount` e `isPartial`;
-- `activeServiceCount + unavailableServiceCount` corresponde aos serviços atualmente ativos no catálogo;
+- `summary` retorna `energyKwh`, `emissionsGco2e`, `activeServiceCount`, `noMetricsServiceCount`, `unavailableServiceCount` e `isPartial`;
+- `activeServiceCount + noMetricsServiceCount + unavailableServiceCount` corresponde aos serviços atualmente ativos no catálogo;
 - energia e emissões consideram somente serviços ativos no catálogo e tentativas do período;
 - serviços removidos do catálogo não entram nas contagens nem nos totais;
 - sem serviços ativos, energia/emissões e contagens são zero, com `isPartial: false`;
@@ -379,9 +379,10 @@ As contagens usam a última tentativa registrada, mesmo que seja anterior ao per
 | Serviço no catálogo | Última tentativa | Contagem esperada |
 |---|---|---|
 | `active` | `success` | Ativo |
-| `active` | `no_metrics` | Ativo |
+| `active` | `error` | Ativo |
+| `active` | `no_metrics` | Sem Métricas |
 | `active` | sem tentativa | Ativo |
-| `active` | `unavailable` ou `error` | Indisponível |
+| `active` | `unavailable` | Indisponível |
 | `removed` | qualquer estado | Excluído das contagens |
 
 ### Consultar período explícito e validar erros
