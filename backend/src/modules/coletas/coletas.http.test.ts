@@ -102,4 +102,10 @@ describe("HTTP do histórico de coletas", () => {
 
     expect(consultarHistorico).toHaveBeenCalledExactlyOnceWith(1);
   });
+
+  it("retorna 401 ao solicitar coleta sem token", async () => {
+    const response = await request(app).post("/api/metricas/collect");
+
+    expect(response.status).toBe(401);
+  });
 });
