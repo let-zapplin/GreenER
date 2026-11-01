@@ -65,4 +65,41 @@ describe("HTTP do histórico de coletas", () => {
     expect(response.status).toBe(400);
     expect(consultarHistorico).not.toHaveBeenCalled();
   });
+  it("retorna as coletas do histórico quando recebe token válido", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const coleta = {
+      id_collection: "10",
+      service_id: 1,
+      status: "success",
+      failure_reason: null,
+      http_status: null,
+      attempted_at: "2026-11-01T12:00:00.000Z",
+      recorded_at: "2026-11-01T12:00:00.000Z",
+      cpu_percent: "25.00",
+      memory_gb: 2,
+      disk_gb: 10,
+      network_gb: 0.5,
+    };
+
+    const consultarHistorico = vi
+      .spyOn(ColetasRepository.prototype, "findHistoryByService")
+      .mockResolvedValue([coleta]);
+
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .get("/api/metricas/historico/1")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+
+    expect(response.body).toEqual({
+      service_id: 1,
+      collections: [coleta],
+    });
+
+    expect(consultarHistorico).toHaveBeenCalledExactlyOnceWith(1);
+  });
 });
