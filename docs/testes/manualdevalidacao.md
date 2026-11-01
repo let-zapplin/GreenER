@@ -400,18 +400,66 @@ curl.exe -i "http://localhost:3000/api/dashboard?start=2026-10-30T12:00:00.000Z&
 
 ### Registro da validação manual
 
-Preencher após executar o roteiro, sem marcar como validado apenas por causa dos testes unitários:
+Registre separadamente as verificações de API, PostgreSQL, preservação após reinicialização e frontend. A aprovação de uma dessas partes não comprova automaticamente o funcionamento das demais.
+
+Preencha os dados da execução:
 
 | Campo | Registro |
 |---|---|
-| Data e ambiente | A preencher |
-| Branch/commit testado | A preencher |
-| Período consultado | A preencher |
-| Cenários executados | A preencher |
-| Resultado e evidência (status HTTP/logs/captura) | A preencher |
-| PostgreSQL e frontend validados? | A preencher separadamente |
+| Data e horário | A preencher |
+| Responsável | A preencher |
+| Branch e commit testado | A preencher |
+| Ambiente utilizado | A preencher |
+| Período consultado nos indicadores | A preencher |
 
-Os testes unitários atuais de service/controller cobrem cálculos, dados ausentes e validação de query com dependências simuladas. Eles não executam a query do repository em um PostgreSQL real nem demonstram integração visual com o frontend.
+#### Evidências por área
+
+Preencha o resultado obtido e vincule as evidências após executar cada verificação.
+
+| Área | Verificação | Resultado esperado | Resultado obtido | Situação | Evidência |
+|---|---|---|---|---|---|
+| API | Consultar histórico com JWT válido | HTTP 200 com o ID do serviço e suas coletas | A preencher | Não executado | Resposta salva ou captura do Insomnia |
+| API | Consultar rota protegida sem JWT | HTTP 401 | A preencher | Não executado | Captura da resposta |
+| API | Solicitar coleta com usuário comum | HTTP 403, sem iniciar coleta | A preencher | Não executado | Resposta e verificação da operação |
+| API | Solicitar coleta com administrador | HTTP 200 com o resumo da operação | A preencher | Não executado | Resposta e registros do ciclo |
+| API | Consultar indicadores e dashboard com período válido | HTTP 200 com resultados coerentes com os dados do período | A preencher | Não executado | Respostas e cálculo de conferência |
+| PostgreSQL | Consultar uma coleta com métricas | Valores, datas e duração correspondem aos dados gravados | A preencher | Não executado | SQL e resultado da consulta |
+| PostgreSQL | Consultar coletas sucessivas | Registros distintos, sem sobrescrever os anteriores | A preencher | Não executado | IDs e valores recuperados |
+| PostgreSQL | Consultar tentativa `no_metrics` | Tentativa registrada sem linha associada em `metrics` | A preencher | Não executado | SQL e resultado da consulta |
+| PostgreSQL | Consultar tentativa `unavailable` | Status e motivo da falha preservados | A preencher | Não executado | SQL e resultado da consulta |
+| Reinicialização | Comparar registros antes e depois de reiniciar os containers sem remover volumes | Mesmos IDs e valores continuam disponíveis | A preencher | Não executado | Consultas e capturas antes e depois |
+| Frontend | Abrir o monitoramento | Serviços, localização e estados correspondem à API | A preencher | Não executado | Tela e resposta na aba Network |
+| Frontend | Aguardar atualização automática | Novas consultas e atualização sem reload manual | A preencher | Não executado | Vídeo ou capturas com horários |
+| Frontend | Conferir indicadores apresentados | Valores e unidades correspondem à resposta do backend | A preencher | Não executado | Tela e resposta da API |
+
+**Situações utilizadas:**
+
+- **Não executado:** verificação ainda não realizada.
+- **Aprovado:** resultado observado corresponde ao esperado.
+- **Reprovado:** resultado observado diverge do esperado.
+- **Bloqueado:** execução impedida; registrar o motivo.
+
+Na comparação após reinicialização, confira os **identificadores e valores dos registros anteriores**, não apenas a quantidade total. Os jobs automáticos podem acrescentar novas coletas durante a validação.
+
+Não utilize `docker compose down -v`: essa opção remove o volume do PostgreSQL.
+
+#### Evidências dos testes automatizados
+
+Os resultados automatizados devem ser registrados separadamente da validação manual.
+
+| Suíte | Comando | Resultado obtido | Evidência |
+|---|---|---|---|
+| Backend: testes unitários e HTTP | `docker compose exec backend npm test` | A preencher, distinguindo aprovados, falhas e ignorados | Log ou captura |
+| Frontend | `docker compose exec frontend npm test` | A preencher | Log ou captura |
+| Integração com PostgreSQL real | `docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test` | A preencher | Log ou captura |
+| TypeScript do backend | `docker compose exec backend npm run typecheck` | A preencher | Log ou captura |
+| TypeScript do frontend | `docker compose exec frontend npm run typecheck` | A preencher | Log ou captura |
+
+Os sete testes de integração aparecem como `skipped` na execução comum do backend. Para validar a persistência automatizada, execute também a suíte com `compose.test.yaml`.
+
+O banco dessa suíte é temporário. Portanto, sua aprovação não substitui a verificação manual de preservação após reinicialização do ambiente da aplicação.
+
+Consulte o [manual de testes automatizados](./manual_teste_unitario.md) e o [manual de integração com PostgreSQL](./manual_integracao_postgres.md) para as instruções completas.
 
 ---
 
