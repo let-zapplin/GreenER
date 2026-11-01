@@ -47,4 +47,22 @@ describe("HTTP do histórico de coletas", () => {
 
     expect(consultarHistorico).toHaveBeenCalledExactlyOnceWith(1);
   });
+
+  it("retorna 400 quando o ID do serviço é inválido", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarHistorico = vi
+      .spyOn(ColetasRepository.prototype, "findHistoryByService")
+      .mockResolvedValue([]);
+
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .get("/api/metricas/historico/abc")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(400);
+    expect(consultarHistorico).not.toHaveBeenCalled();
+  });
 });
