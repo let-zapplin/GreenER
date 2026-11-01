@@ -82,4 +82,27 @@ describe("HTTP dos indicadores", () => {
     expect(response.body.code).toBe("INVALID_INDICATOR_PERIOD");
     expect(consultarIndicadores).not.toHaveBeenCalled();
   });
+
+  it("retorna 400 quando as datas inicial e final são iguais", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarIndicadores = vi
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
+      .mockResolvedValue([]);
+
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .get("/api/indicadores")
+      .set("Authorization", `Bearer ${token}`)
+      .query({
+        start: "2026-11-01T00:00:00.000Z",
+        end: "2026-11-01T00:00:00.000Z",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("INVALID_INDICATOR_PERIOD");
+    expect(consultarIndicadores).not.toHaveBeenCalled();
+  });
 });
