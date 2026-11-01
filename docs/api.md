@@ -337,11 +337,11 @@ Lista os snapshots persistidos, incluindo `region_code` e `registered_at`. Os fa
 
 Falhas HTTP, conexão, timeout ou formato inválido da Carbon API resultam em `502 Bad Gateway`. Rotas chamadas sem JWT válido resultam em `401 Unauthorized`.
 
-### Dados consolidados do dashboard — TEC19
+### Indicadores agregados do ambiente — RF08 / TEC19
 
 #### `GET /api/dashboard`
 
-Retorna um resumo tipado de consumo energético, emissões e disponibilidade dos serviços para alimentar os cards do dashboard. Esta rota exige JWT e não exige perfil administrador.
+Retorna os indicadores agregados do ambiente monitorado: consumo energético estimado, emissão estimada de CO₂e e contagens de serviços por estado. Este endpoint atende ao RF08 e reutiliza a consolidação da TEC19. A rota exige JWT e não exige perfil administrador.
 
 **Query parameters opcionais:**
 
@@ -372,22 +372,28 @@ curl "http://localhost:3000/api/dashboard" \
     "energyKwh": 0.000636875,
     "emissionsGco2e": 0.127375,
     "activeServiceCount": 7,
-     "noMetricsServiceCount": 1,
+    "noMetricsServiceCount": 1,
     "unavailableServiceCount": 2,
     "isPartial": false
   }
 }
 ```
 
-Energia e emissões são somadas para serviços atualmente `active` no catálogo, usando somente as coletas no período.
+Os valores são derivados de dados reais persistidos no PostgreSQL: métricas e tentativas de coleta para o período, e snapshots regionais de intensidade de carbono elegíveis para cada tentativa. Não são consultadas APIs externas durante a requisição e não são usados valores simulados.
 
-As contagens classificam esses mesmos serviços de acordo com a última tentativa registrada, sem sobreposição: `success`, `error` ou ausência de tentativa contam em `activeServiceCount`; `no_metrics` conta em `noMetricsServiceCount`; e `unavailable` conta em `unavailableServiceCount`. Serviços removidos do catálogo ficam fora das contagens.
+Energia e emissões são somadas somente para serviços atualmente `active` no catálogo e com coletas registradas no período. Energia usa `collection_interval_seconds` real de cada amostra. Emissões usam a energia calculada multiplicada pela intensidade de carbono regional válida para a tentativa. Portanto, `energyKwh` está em kWh e `emissionsGco2e` em gCO₂e; são estimativas do modelo documentado em [Cálculos Ambientais](calculos.md), não medições diretas de consumo físico.
 
-Assim, a soma de `activeServiceCount`, `noMetricsServiceCount` e `unavailableServiceCount` corresponde ao total de serviços atualmente ativos no catálogo.
+As contagens classificam os serviços atualmente ativos no catálogo de acordo com a última tentativa registrada, independentemente do período dos totais ambientais:
 
-`isPartial` é `true` quando algum serviço ativo não tem coleta no período ou apresenta alguma lacuna no cálculo, como métricas inválidas, intervalo real da amostra ausente ou intensidade de carbono indisponível. Quando não há serviços ativos, os totais são zero e `isPartial` é `false`; o frontend identifica esse estado pelas contagens zeradas.
+| Campo | Como interpretar |
+|---|---|
+| `activeServiceCount` | Última tentativa `success`, `error` ou nenhuma tentativa. Indica que o serviço não foi classificado como sem métricas ou indisponível; não garante que esteja respondendo com sucesso agora. |
+| `noMetricsServiceCount` | Última tentativa `no_metrics`: o serviço está no catálogo, mas a consulta não retornou métricas. |
+| `unavailableServiceCount` | Última tentativa `unavailable`: a integração não conseguiu obter métricas porque o serviço/API não estava disponível, por exemplo timeout ou falha de conexão. |
 
-Totais parciais não devem ser interpretados como valores completos. A API não inventa nem preenche dados ausentes. O estado `error` representa respostas inválidas ou falhas de processamento e permanece separado de `unavailable`, que indica que a última tentativa de coleta não conseguiu obter uma resposta válida do serviço.
+A soma dessas três contagens corresponde ao total de serviços atualmente ativos no catálogo; serviços `removed` não entram. A categoria `error` permanece em `activeServiceCount` porque representa resposta inválida, status HTTP não classificado ou falha de processamento, e não confirma por si só que o serviço monitorado esteja indisponível.
+
+`isPartial` é `true` quando algum serviço ativo do catálogo não tem coleta no período ou apresenta lacuna no cálculo, como tentativa sem métricas, métricas inválidas, intervalo real da amostra ausente ou intensidade de carbono indisponível. Uma amostra sem intensidade ainda pode contribuir para `energyKwh`, mas não para `emissionsGco2e`; nesse caso, o total de emissões é parcial. Totais parciais não devem ser interpretados como completos: a API não inventa nem preenche dados ausentes. Quando não há serviços ativos no catálogo, os totais e contagens são zero e `isPartial` é `false`.
 
 Parâmetros inválidos, repetidos, enviados sem o par correspondente ou com `end` não posterior a `start` retornam `400 Bad Request` com `code: "INVALID_DASHBOARD_PERIOD"`. A ausência de JWT válido retorna `401 Unauthorized`; falhas inesperadas, inclusive de acesso ao banco, seguem o middleware global de erros.
 
