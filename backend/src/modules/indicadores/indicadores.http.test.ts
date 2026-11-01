@@ -189,4 +189,32 @@ describe("HTTP dos indicadores", () => {
     expect(argumentos[0]).toEqual(new Date(start));
     expect(argumentos[1]).toEqual(new Date(end));
   });
+
+  it("retorna 500 quando a consulta aos indicadores falha", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarIndicadores = vi
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
+      .mockRejectedValue(new Error("Falha simulada na conexão com o banco"));
+
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .get("/api/indicadores")
+      .set("Authorization", `Bearer ${token}`)
+      .query({
+        start: "2026-11-01T00:00:00.000Z",
+        end: "2026-11-02T00:00:00.000Z",
+      });
+
+    expect(response.status).toBe(500);
+
+    expect(response.body).toEqual({
+      error: "Erro interno do servidor",
+      code: "INTERNAL_ERROR",
+    });
+
+    expect(consultarIndicadores).toHaveBeenCalledTimes(1);
+  });
 });
