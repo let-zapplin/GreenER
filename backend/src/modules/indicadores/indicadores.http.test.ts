@@ -217,4 +217,79 @@ describe("HTTP dos indicadores", () => {
 
     expect(consultarIndicadores).toHaveBeenCalledTimes(1);
   });
+
+  it("retorna energia e emissão calculadas para uma coleta válida", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarIndicadores = vi
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
+      .mockResolvedValue([
+        {
+          id_service: 1,
+          name: "Serviço de teste",
+          status: "active",
+          region_code: "BR-SP",
+          collections: [
+            {
+              id_collection: "10",
+              status: "success",
+              attempted_at: new Date("2026-11-01T12:00:00.000Z"),
+              id_metrics: "20",
+              recorded_at: new Date("2026-11-01T12:00:00.000Z"),
+              cpu_percent: 50,
+              memory_gb: 2,
+              disk_gb: 10,
+              network_gb: 5,
+              collection_interval_seconds: 60,
+              carbon_intensity_id: 30,
+              carbon_intensity_gco2e_per_kwh: 200,
+            },
+          ],
+        },
+      ]);
+
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .get("/api/indicadores")
+      .set("Authorization", `Bearer ${token}`)
+      .query({
+        start: "2026-11-01T00:00:00.000Z",
+        end: "2026-11-02T00:00:00.000Z",
+      });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.summary).toMatchObject({
+      serviceCount: 1,
+      collectionCount: 1,
+      validMetricCount: 1,
+      validCarbonIntensityCount: 1,
+      isPartial: false,
+    });
+
+    expect(response.body.summary.energyKwh).toBeCloseTo(0.000849166667, 10);
+
+    expect(response.body.summary.emissionsGco2e).toBeCloseTo(
+      0.169833333333,
+      10,
+    );
+
+    expect(response.body.services).toHaveLength(1);
+
+    const servico = response.body.services[0];
+
+    expect(servico.serviceId).toBe(1);
+    expect(servico.latestSampleInPeriod.energyKwh).toBeCloseTo(
+      0.000849166667,
+      10,
+    );
+    expect(servico.latestSampleInPeriod.emissionsGco2e).toBeCloseTo(
+      0.169833333333,
+      10,
+    );
+
+    expect(consultarIndicadores).toHaveBeenCalledTimes(1);
+  });
 });
