@@ -128,4 +128,21 @@ describe("HTTP dos indicadores", () => {
     expect(response.body.code).toBe("INVALID_INDICATOR_PERIOD");
     expect(consultarIndicadores).not.toHaveBeenCalled();
   });
+
+  it("retorna 401 ao consultar indicadores com token inválido", async () => {
+    const consultarIndicadores = vi
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
+      .mockResolvedValue([]);
+
+    const response = await request(app)
+      .get("/api/indicadores")
+      .set("Authorization", "Bearer token-invalido")
+      .query({
+        start: "2026-11-01T00:00:00.000Z",
+        end: "2026-11-02T00:00:00.000Z",
+      });
+
+    expect(response.status).toBe(401);
+    expect(consultarIndicadores).not.toHaveBeenCalled();
+  });
 });
