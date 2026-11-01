@@ -145,4 +145,48 @@ describe("HTTP dos indicadores", () => {
     expect(response.status).toBe(401);
     expect(consultarIndicadores).not.toHaveBeenCalled();
   });
+
+  it("retorna 200 com indicadores quando token e período são válidos", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarIndicadores = vi
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
+      .mockResolvedValue([]);
+
+    const token = createToken({ sub: "1" });
+
+    const start = "2026-11-01T00:00:00.000Z";
+    const end = "2026-11-02T00:00:00.000Z";
+
+    const response = await request(app)
+      .get("/api/indicadores")
+      .set("Authorization", `Bearer ${token}`)
+      .query({ start, end });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body).toMatchObject({
+      message: "Indicadores calculados",
+      period: {
+        start,
+        end,
+      },
+      summary: {
+        serviceCount: 0,
+        collectionCount: 0,
+        energyKwh: 0,
+        emissionsGco2e: 0,
+        isPartial: true,
+      },
+      services: [],
+    });
+
+    expect(consultarIndicadores).toHaveBeenCalledTimes(1);
+
+    const argumentos = consultarIndicadores.mock.calls[0];
+
+    expect(argumentos[0]).toEqual(new Date(start));
+    expect(argumentos[1]).toEqual(new Date(end));
+  });
 });
