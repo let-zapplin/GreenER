@@ -3,6 +3,12 @@ import { ColetasService } from "../modules/coletas/coletas.service.js";
 
 const coletasService = new ColetasService();
 
+/**
+ * Inicia o ciclo de coleta automática.
+ *
+ * Executa uma vez na chamada e reagenda após cada término. Falha em um ciclo
+ * vira log de erro e não encerra o backend.
+ */
 export async function startMetricsCollection(): Promise<void> {
   let cycle = 0;
 
@@ -23,6 +29,8 @@ export async function startMetricsCollection(): Promise<void> {
           `⚠️ Coleta #${cycle} ignorada: ciclo anterior ainda em execução.`,
         );
       } else {
+        // Contadores do ciclo: sucessos, serviços ativos sem exportação de
+        // métricas, indisponíveis e falhas de processamento/persistência.
         console.log(
           `✅ Coleta #${cycle} concluída: ${summary.successCount} sucessos, ` +
             `${summary.noMetricsCount} sem métricas, ` +
