@@ -1,0 +1,157 @@
+.dashboard-summary {
+  margin-top: 28px;
+}
+
+.dashboard-summary-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+
+  margin-bottom: 16px;
+}
+
+.dashboard-summary-heading h2 {
+  margin: 4px 0 0;
+}
+
+.dashboard-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.dashboard-card {
+  min-width: 0;
+  padding: 20px;
+
+  border: 1px solid var(--monitoring-border);
+  border-radius: 14px;
+
+  background: #103335;
+}
+
+.dashboard-card-label {
+  display: block;
+
+  margin-bottom: 16px;
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  color: var(--monitoring-muted);
+}
+
+.dashboard-card-value {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.dashboard-card-unit {
+  margin-left: 6px;
+
+  font-size: 13px;
+  color: var(--monitoring-muted);
+}
+
+.dashboard-card p {
+  margin: 14px 0 0;
+
+  font-size: 12px;
+  color: var(--monitoring-muted);
+}
+
+.dashboard-service-status {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  margin-top: 14px;
+
+  font-size: 12px;
+  color: var(--monitoring-muted);
+}
+
+.dashboard-partial {
+  padding: 6px 10px;
+
+  border: 1px solid #ffcb00;
+  border-radius: 999px;
+
+  font-size: 12px;
+  color: #ffcb00;
+}
+
+.dashboard-summary-state {
+  padding: 20px;
+
+  border: 1px solid var(--monitoring-border);
+  border-radius: 14px;
+
+  background: #103335;
+}
+
+.dashboard-summary-state p {
+  margin: 6px 0 0;
+  color: var(--monitoring-muted);
+}
+
+.dashboard-card-loading {
+  min-height: 150px;
+
+  opacity: 0.45;
+  animation: dashboard-pulse 1.2s ease-in-out infinite alternate;
+}
+
+.dashboard-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-card::before {
+  content: "";
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 3px;
+
+  opacity: 0.8;
+}
+
+.dashboard-card-energy::before {
+  background: #f2c94c;
+}
+
+.dashboard-card-emissions::before {
+  background: #71d6a6;
+}
+
+.dashboard-card-services::before {
+  background: #6fb7c8;
+}
+
+@keyframes dashboard-pulse {
+  from {
+    opacity: 0.25;
+  }
+
+  to {
+    opacity: 0.55;
+  }
+}
+
+@media (max-width: 800px) {
+  .dashboard-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-summary-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

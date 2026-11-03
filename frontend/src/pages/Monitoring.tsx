@@ -3,9 +3,16 @@ import { ServiceList } from "../components/ServiceList";
 import { ServiceIndicator } from "../components/ServiceIndicator";
 import { useMonitoring } from "../hooks/useMonitoring";
 import "./Monitoring.css";
+import { DashboardSummary } from "../components/DashboardSummary";
+import { useDashboardSummary } from "../hooks/useDashboardSummary";
 
 export function Monitoring() {
   const { snapshot, loading, error } = useMonitoring();
+  const {
+    dashboard,
+    loading: dashboardLoading,
+    error: dashboardError,
+  } = useDashboardSummary();
   const [selection, setSelection] = useState<{
     id: string;
     key: number;
@@ -119,7 +126,6 @@ export function Monitoring() {
         </div>
       )}
       {services.length > 0 && (
-        <>
           <section
             className="services-summary"
             aria-labelledby="services-summary-title"
@@ -225,18 +231,33 @@ export function Monitoring() {
               </p>
             </div>
           </section>
-          <div className="monitoring-list-heading">
-            <div>
-              <p className="monitoring-section-label">SERVIÇOS</p>
-              <h2 id="service-list-title">Detalhes do ambiente</h2>
-            </div>
-            <span>
-              {services.length} {services.length === 1 ? "serviço" : "serviços"}
-            </span>
-          </div>
-          <ServiceList services={services} selection={selection} />
-        </>
-      )}
+)}
+          <DashboardSummary
+            dashboard={dashboard}
+            loading={dashboardLoading}
+            error={dashboardError}
+          />
+
+         {services.length > 0 && (
+  <>
+    <div className="monitoring-list-heading">
+      <div>
+        <p className="monitoring-section-label">SERVIÇOS</p>
+        <h2 id="service-list-title">Detalhes do ambiente</h2>
+      </div>
+
+      <span>
+        {services.length}{" "}
+        {services.length === 1 ? "serviço" : "serviços"}
+      </span>
+    </div>
+
+    <ServiceList
+      services={services}
+      selection={selection}
+    />
+  </>
+)}
     </main>
   );
 }
