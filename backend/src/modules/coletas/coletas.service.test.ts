@@ -154,7 +154,7 @@ describe("ColetasService.collectAllMetrics", () => {
     expect(fetchMetrics).toHaveBeenCalledTimes(2);
     expect(saveCollection).toHaveBeenCalledTimes(2);
 
-    // Cada execução gera uma nova amostra, sem reaproveitar a anterior.
+    // Confirma que cada ciclo envia seus próprios valores ao repository simulado.
     expect(saveCollection.mock.calls[0][1]).toMatchObject({
       data: {
         cpu_percent: 12,
@@ -281,14 +281,14 @@ describe("ColetasService.collectAllMetrics", () => {
     resolveServices([]);
     expect(await firstRun).toMatchObject({ skipped: false, totalServices: 0 });
 
-    // A guarda é liberada quando o ciclo termina.
+    // Confirma que, após encerrar o primeiro ciclo, uma nova coleta pode começar.
     listAll.mockResolvedValue([]);
     const next = await coletasService.collectAllMetrics();
 
     expect(next.skipped).toBe(false);
   });
 });
-//cria uma instancia com dependencias simuladas para testar o método getHistoryByService
+// Testes unitários da consulta de histórico, com dependências simuladas.
 describe("ColetasService.getHistoryByService", () => {
   function setup() {
     const listAll = vi.fn().mockResolvedValue([]);
@@ -311,7 +311,7 @@ describe("ColetasService.getHistoryByService", () => {
       fetchMetrics,
     };
   }
-
+  // Confirma a conversão do ID para número e o retorno do histórico simulado.
   it("converte o ID para número e retorna o histórico do repository", async () => {
     const {
       service,
@@ -342,7 +342,7 @@ describe("ColetasService.getHistoryByService", () => {
     expect(saveCollection).not.toHaveBeenCalled();
     expect(fetchMetrics).not.toHaveBeenCalled();
   });
-
+  // Confirma que o service devolve a lista vazia retornada pelo repository simulado.
   it("retorna lista vazia quando o repository não encontra coletas", async () => {
     const { service, findHistoryByService } = setup();
 
@@ -371,7 +371,7 @@ describe("ColetasService.getHistoryByService", () => {
 
     expect(findHistoryByService).not.toHaveBeenCalled();
   });
-
+  // Confirma que o service aceita 2147483647 e encaminha esse ID ao repository simulado.
   it("aceita o maior ID permitido pelo tipo INTEGER do banco", async () => {
     const { service, findHistoryByService } = setup();
 
@@ -382,6 +382,7 @@ describe("ColetasService.getHistoryByService", () => {
     expect(findHistoryByService).toHaveBeenCalledExactlyOnceWith(2147483647);
   });
 
+  // Confirma que o service repassa o mesmo erro lançado pelo repository simulado.
   it("propaga o erro quando o repository falha", async () => {
     const { service, findHistoryByService } = setup();
     const error = new Error("Falha ao consultar o banco");

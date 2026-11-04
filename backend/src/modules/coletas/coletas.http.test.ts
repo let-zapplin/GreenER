@@ -11,6 +11,8 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+// Testes HTTP de histórico e coleta manual.
+// Usam JWT real e simulam consultas ao banco e a operação de coleta.
 describe("HTTP do histórico de coletas", () => {
   it("retorna 401 quando não recebe token", async () => {
     const response = await request(app).get("/api/metricas/historico/1");
@@ -25,7 +27,7 @@ describe("HTTP do histórico de coletas", () => {
 
     expect(response.status).toBe(401);
   });
-
+  // Confirma resposta 200 com histórico vazio para um JWT válido.
   it("retorna o histórico quando recebe token válido", async () => {
     vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
     vi.stubEnv("JWT_EXPIRES_IN", "15m");
@@ -49,7 +51,7 @@ describe("HTTP do histórico de coletas", () => {
 
     expect(consultarHistorico).toHaveBeenCalledExactlyOnceWith(1);
   });
-
+  // Rejeita ID inválido antes de consultar o repository.
   it("retorna 400 quando o ID do serviço é inválido", async () => {
     vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
     vi.stubEnv("JWT_EXPIRES_IN", "15m");
@@ -67,6 +69,7 @@ describe("HTTP do histórico de coletas", () => {
     expect(response.status).toBe(400);
     expect(consultarHistorico).not.toHaveBeenCalled();
   });
+  // Confirma que a resposta contém a coleta devolvida pelo repository simulado.
   it("retorna as coletas do histórico quando recebe token válido", async () => {
     vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
     vi.stubEnv("JWT_EXPIRES_IN", "15m");
@@ -110,7 +113,8 @@ describe("HTTP do histórico de coletas", () => {
 
     expect(response.status).toBe(401);
   });
-
+  // Usuário autenticado sem perfil administrador recebe 403;
+  // a operação de coleta não deve ser chamada.
   it("retorna 403 ao solicitar coleta sem ser administrador", async () => {
     vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
     vi.stubEnv("JWT_EXPIRES_IN", "15m");
@@ -142,7 +146,8 @@ describe("HTTP do histórico de coletas", () => {
     expect(consultarPermissao).toHaveBeenCalledExactlyOnceWith(1);
     expect(iniciarColeta).not.toHaveBeenCalled();
   });
-
+  // Administrador recebe 200 com o resumo esperado;
+  // o método de coleta é simulado e deve ser chamado uma vez.
   it("permite iniciar coleta quando o usuário é administrador", async () => {
     vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
     vi.stubEnv("JWT_EXPIRES_IN", "15m");

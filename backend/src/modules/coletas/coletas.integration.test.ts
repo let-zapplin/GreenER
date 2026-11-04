@@ -1,10 +1,19 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import pool from "../../db/connection.js";
 import { ColetasRepository } from "./coletas.repository.js";
 
-// A suíte normal não acessa um banco real. O Compose de testes habilita esta suíte.
+// Esta suíte exige RUN_DB_INTEGRATION_TESTS=true, definido no compose.test.yaml.
+// Sem essa configuração, seus testes ficam ignorados na execução comum.
 const enabled = process.env.RUN_DB_INTEGRATION_TESTS === "true";
 
 describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
@@ -28,18 +37,20 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
   }
 
   beforeAll(async () => {
-    // Verifica antes de inserir ou remover qualquer dado.
+    // Confere a configuração do ambiente antes de permitir alterações nos dados.
     if (
       process.env.NODE_ENV !== "test" ||
       process.env.POSTGRES_HOST !== "postgres-test" ||
       process.env.POSTGRES_DB !== "greener_test"
     ) {
-      throw new Error("Execute esta suíte pelo compose.test.yaml, no banco exclusivo de testes.");
+      throw new Error(
+        "Execute esta suíte pelo compose.test.yaml, no banco exclusivo de testes.",
+      );
     }
     const result = await pool.query("SELECT current_database() AS name");
     expect(result.rows[0].name).toBe("greener_test");
   });
-
+  // Cria uma localização e um serviço exclusivos antes de cada teste.
   beforeEach(async () => {
     const location = await pool.query(
       `INSERT INTO location (region_code, country, region)
@@ -57,7 +68,8 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
   });
 
   afterEach(async () => {
-    // Remove somente os registros criados pelo cenário, na ordem das FKs.
+    // Remove os dados do cenário na ordem das chaves estrangeiras:
+    // métricas, coletas, serviços e localização.
     try {
       if (serviceIds.length > 0) {
         await pool.query(
@@ -65,11 +77,19 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
            (SELECT id_collection FROM collection WHERE service_id_service = ANY($1::int[]))`,
           [serviceIds],
         );
-        await pool.query("DELETE FROM collection WHERE service_id_service = ANY($1::int[])", [serviceIds]);
-        await pool.query("DELETE FROM service WHERE id_service = ANY($1::int[])", [serviceIds]);
+        await pool.query(
+          "DELETE FROM collection WHERE service_id_service = ANY($1::int[])",
+          [serviceIds],
+        );
+        await pool.query(
+          "DELETE FROM service WHERE id_service = ANY($1::int[])",
+          [serviceIds],
+        );
       }
       if (locationId !== undefined) {
-        await pool.query("DELETE FROM location WHERE id_location = $1", [locationId]);
+        await pool.query("DELETE FROM location WHERE id_location = $1", [
+          locationId,
+        ]);
       }
     } finally {
       serviceIds.length = 0;
@@ -80,7 +100,7 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
   afterAll(async () => {
     await pool.end();
   });
-
+  // Confirma a gravação e a recuperação de métricas, datas e duração no banco real.
   it("grava e recupera métricas, datas e duração da amostra", async () => {
     await repository.saveCollection(serviceId, success());
     const history = await repository.findHistoryByService(serviceId);
@@ -100,7 +120,8 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
     });
     expect(history[0].attempted_at).toBeInstanceOf(Date);
   });
-
+  // Confirma que a segunda coleta não sobrescreve a primeira
+  // e que o histórico retorna a mais recente primeiro.
   it("preserva duas coletas diferentes e retorna a mais recente primeiro", async () => {
     await repository.saveCollection(serviceId, success(25));
     const before = await repository.findHistoryByService(serviceId);
@@ -112,19 +133,27 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
     expect(after[1].id_collection).toBe(before[0].id_collection);
     expect(after[0].id_collection).not.toBe(after[1].id_collection);
   });
-
+  // Confirma que no_metrics registra a tentativa sem criar métricas associadas.
   it("grava no_metrics sem criar uma linha de métricas", async () => {
-    await repository.saveCollection(serviceId, { status: "no_metrics", http_status: 404 });
+    await repository.saveCollection(serviceId, {
+      status: "no_metrics",
+      http_status: 404,
+    });
     const history = await repository.findHistoryByService(serviceId);
     expect(history).toHaveLength(1);
-    expect(history[0]).toMatchObject({ status: "no_metrics", http_status: 404, cpu_percent: null });
+    expect(history[0]).toMatchObject({
+      status: "no_metrics",
+      http_status: 404,
+      cpu_percent: null,
+    });
     const metrics = await pool.query(
       "SELECT id_metrics FROM metrics WHERE collection_id_collection = $1",
       [history[0].id_collection],
     );
     expect(metrics.rows).toHaveLength(0);
   });
-
+  // Confirma que status, motivo e código HTTP de indisponibilidade
+  // são gravados e recuperados corretamente.
   it("recupera o motivo e o status HTTP de indisponibilidade", async () => {
     await repository.saveCollection(serviceId, {
       status: "unavailable",
@@ -140,7 +169,7 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
       cpu_percent: null,
     });
   });
-
+  // Confirma que cada consulta retorna somente as coletas do serviço solicitado.
   it("separa os históricos de dois serviços", async () => {
     const second = await pool.query(
       `INSERT INTO service (location_id_location, id, name)
@@ -156,22 +185,32 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
     const secondHistory = await repository.findHistoryByService(secondId);
     expect(firstHistory).toHaveLength(1);
     expect(secondHistory).toHaveLength(1);
-    expect(firstHistory[0]).toMatchObject({ service_id: serviceId, cpu_percent: "25.00" });
-    expect(secondHistory[0]).toMatchObject({ service_id: secondId, cpu_percent: "75.00" });
+    expect(firstHistory[0]).toMatchObject({
+      service_id: serviceId,
+      cpu_percent: "25.00",
+    });
+    expect(secondHistory[0]).toMatchObject({
+      service_id: secondId,
+      cpu_percent: "75.00",
+    });
   });
-
+  // Provoca uma violação CHECK com duração negativa e confirma
+  // que o rollback remove a tentativa inserida na mesma transação.
   it("desfaz a tentativa quando a inserção das métricas viola uma restrição", async () => {
     const invalid = success();
     invalid.data.collection_interval_seconds = -1;
 
-    await expect(repository.saveCollection(serviceId, invalid)).rejects.toMatchObject({ code: "23514" });
+    await expect(
+      repository.saveCollection(serviceId, invalid),
+    ).rejects.toMatchObject({ code: "23514" });
     const collections = await pool.query(
       "SELECT id_collection FROM collection WHERE service_id_service = $1",
       [serviceId],
     );
     expect(collections.rows).toHaveLength(0);
   });
-
+  // Confirma que os dados gravados e confirmados por COMMIT
+  // podem ser consultados por outra conexão com o PostgreSQL.
   it("permite recuperar a gravação por uma nova conexão independente", async () => {
     await repository.saveCollection(serviceId, success());
     const otherPool = new pg.Pool({
@@ -188,7 +227,9 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
          WHERE c.service_id_service = $1`,
         [serviceId],
       );
-      expect(result.rows).toEqual([{ cpu_percent: "25.00", collection_interval_seconds: 45 }]);
+      expect(result.rows).toEqual([
+        { cpu_percent: "25.00", collection_interval_seconds: 45 },
+      ]);
     } finally {
       await otherPool.end();
     }

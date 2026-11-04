@@ -8,7 +8,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
-
+// Testes de integração do endpoint GET /api/indicadores
 describe("HTTP dos indicadores", () => {
   it("retorna 401 ao consultar indicadores sem token", async () => {
     const response = await request(app).get("/api/indicadores").query({
@@ -18,7 +18,7 @@ describe("HTTP dos indicadores", () => {
 
     expect(response.status).toBe(401);
   });
-
+  //
   it("retorna 400 quando não informa o período", async () => {
     vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
     vi.stubEnv("JWT_EXPIRES_IN", "15m");
@@ -37,6 +37,7 @@ describe("HTTP dos indicadores", () => {
     expect(response.body.code).toBe("INVALID_INDICATOR_PERIOD");
     expect(consultarIndicadores).not.toHaveBeenCalled();
   });
+  // Testa o endpoint GET /api/indicadores com token válido, mas período inválido (somente data inicial)
   it("retorna 400 quando a data inicial é inválida", async () => {
     vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
     vi.stubEnv("JWT_EXPIRES_IN", "15m");
