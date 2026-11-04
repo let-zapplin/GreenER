@@ -6,6 +6,8 @@ import { adminMiddleware } from "../../shared/middlewares/admin.middleware.js";
 const router = Router();
 const controller = new ColetasController();
 
+// Coleta manual grava no banco e consulta a API externa: exige autenticação
+// e perfil de administrador.
 router.post(
   "/collect",
   authMiddleware,
@@ -13,6 +15,7 @@ router.post(
   (req, res, next) => controller.collect(req, res, next),
 );
 
+// Histórico é leitura, mas expõe dados por serviço: exige autenticação.
 router.get<{ serviceId: string }>(
   "/historico/:serviceId",
   authMiddleware,

@@ -11,6 +11,7 @@ router.get("/discover", (req, res, next) =>
 );
 
 // US02: Sincronizar serviços (salvar no banco)
+// Exige autenticação porque escreve no catálogo local; /discover e / são leitura.
 router.post("/sync", authMiddleware, (req, res, next) =>
    controller.sync(req, res, next));
 

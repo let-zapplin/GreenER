@@ -23,6 +23,7 @@ export class IndicadoresController {
 
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Este endpoint exige start e end como valores únicos de data ISO; a ordem é validada pelo service.
       const start = readQueryDate(req.query.start, "start");
       const end = readQueryDate(req.query.end, "end");
       const result = await this.service.getIndicators(start, end);

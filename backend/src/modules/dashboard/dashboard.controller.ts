@@ -34,6 +34,7 @@ export class DashboardController {
     next: NextFunction,
   ): Promise<void> {
     try {
+      // As datas são opcionais individualmente aqui; o service exige ambas juntas ou nenhuma.
       const start = readOptionalQueryDate(req.query.start, "start");
       const end = readOptionalQueryDate(req.query.end, "end");
       const summary = await this.service.getSummary(start, end);

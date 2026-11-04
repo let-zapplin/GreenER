@@ -7,6 +7,8 @@ import { LocalidadesRepository } from "../localidades/localidades.repository.js"
 // ============================================================
 export class IntensidadesRepository extends LocalidadesRepository {
   async findLocationByRegion(regionCode: string) {
+    // A localização com city NULL representa a região inteira; reutilizá-la
+    // evita criar locais regionais duplicados a cada sincronização.
     const result = await pool.query(
       `SELECT * FROM location
        WHERE region_code = $1
@@ -33,6 +35,8 @@ export class IntensidadesRepository extends LocalidadesRepository {
   }
 
   async findForCollection(collectionId: string, maxAgeMs?: number) {
+    // Sem uma janela válida não existe fator elegível: a ausência é explícita
+    // (null), sem recorrer a snapshots de idade desconhecida.
     if (maxAgeMs === undefined || !Number.isFinite(maxAgeMs) || maxAgeMs < 0) {
       return null;
     }
@@ -60,9 +64,12 @@ export class IntensidadesRepository extends LocalidadesRepository {
      INNER JOIN carbon_intensity c
        ON c.location_id_location = factor_location.id_location
      WHERE co.id_collection = $1
+       -- Somente snapshots da mesma região, não posteriores à coleta e dentro
+       -- da janela maxAgeMs são válidos para essa tentativa.
        AND c.registered_at <= co.attempted_at
        AND c.registered_at >=
          co.attempted_at - ($2::double precision * INTERVAL '1 millisecond')
+     -- Desempata snapshots com o mesmo horário de forma determinística.
      ORDER BY
        c.registered_at DESC,
        c.id_carbon_intensity DESC
@@ -73,7 +80,8 @@ export class IntensidadesRepository extends LocalidadesRepository {
     return result.rows[0] ?? null;
   }
 
-  // Cria um snapshot imutável do fator regional.
+  // Cada execução insere um snapshot imutável em vez de sobrescrever o fator,
+  // preservando o histórico necessário para avaliar coletas passadas.
   async createCarbonIntensity(data: {
     idLocation: number;
     carbonIntensity: number;

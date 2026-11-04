@@ -54,6 +54,9 @@ export class IndicadoresRepository {
     end: Date,
     carbonIntensityMaxAgeMs: number | undefined,
   ): Promise<ServiceIndicatorData[]> {
+    // Mantém serviços sem tentativa no período e seleciona coletas no intervalo [start, end).
+    // Para cada amostra, a LATERAL escolhe o fator regional mais recente que não seja posterior
+    // à tentativa e esteja dentro de CARBON_INTENSITY_MAX_AGE_MS; sem janela ($3 nulo), não há fator.
     const result = await pool.query<IndicatorRow>(
       `SELECT
          s.id_service,
@@ -82,6 +85,8 @@ export class IndicadoresRepository {
        LEFT JOIN metrics m
          ON m.collection_id_collection = c.id_collection
        LEFT JOIN LATERAL (
+         -- Vincula à coleta o snapshot da mesma região registrado até
+         -- attempted_at e dentro da idade máxima configurada em milissegundos.
          SELECT
            ci.id_carbon_intensity,
            ci.carbon_intensity_gco2e_per_kwh
@@ -90,9 +95,13 @@ export class IndicadoresRepository {
            ON intensity_location.id_location = ci.location_id_location
          WHERE intensity_location.region_code = service_location.region_code
            AND ci.registered_at <= c.attempted_at
+           -- Limite nulo desabilita o fator; sem janela configurada não há
+           -- snapshot considerado válido para o cálculo.
            AND $3::double precision IS NOT NULL
            AND ci.registered_at >= c.attempted_at
              - ($3::double precision * INTERVAL '1 millisecond')
+         -- Em empate de horário, o maior id define deterministicamente o mais
+         -- recente entre os snapshots elegíveis.
          ORDER BY ci.registered_at DESC, ci.id_carbon_intensity DESC
          LIMIT 1
        ) intensity ON m.id_metrics IS NOT NULL

@@ -39,9 +39,13 @@ export class IntensidadesService {
     inserted: number;
   }> {
     const intensities = await this.discoverIntensities();
+    // Um único instante mantém o lote coerente: todos os snapshots desta
+    // execução compartilham o mesmo registered_at.
     const registeredAt = new Date();
 
     for (const intensity of intensities) {
+      // Reutiliza a localização regional canônica (city IS NULL); só cria uma
+      // localização nova se ainda não existir para esse region_code.
       let location = await this.repository.findLocationByRegion(
         intensity.regionCode,
       );

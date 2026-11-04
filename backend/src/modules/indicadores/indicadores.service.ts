@@ -6,9 +6,13 @@ import {
   type ServiceIndicatorData,
 } from "./indicadores.repository.js";
 
+// Modelo versão 1, baseado nos parâmetros do exemplo fornecido pelo cliente
+// (detalhes em docs/calculos.md); são estimativas, não medições do hardware.
 const POWER_MODEL = {
   version: "1",
+  // Potência máxima atribuída à CPU, em watts (W).
   cpuMaximumWatts: 100,
+  // Fatores de potência em watts por gigabyte (W/GB).
   memoryWattsPerGb: 0.375,
   diskWattsPerGb: 0.01,
   networkWattsPerGb: 0.02,
@@ -95,6 +99,7 @@ function finiteNumber(value: number | string | null): number | null {
 }
 
 function calculateSample(collection: IndicatorCollection): SampleCalculation {
+  // A duração da amostra só pode participar da conta se for finita e positiva.
   const collectionIntervalSeconds =
     typeof collection.collection_interval_seconds === "number" &&
     Number.isFinite(collection.collection_interval_seconds) &&
@@ -111,12 +116,15 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     status: collection.status,
     metrics,
     collectionIntervalSeconds,
+    // Para status no_metrics/unavailable/error, intervalo inválido ou métricas
+    // inválidas, não há energia nem emissão; os resultados e o fator ficam nulos.
     energyKwh: null,
     emissionsGco2e: null,
     carbonIntensityGco2ePerKwh: null,
     gapReason: reason,
   });
 
+  // Tentativas sem sucesso não têm energia ou emissões calculáveis; o motivo preserva o status da coleta.
   if (collection.status !== "success") {
     return gap(collection.status);
   }
@@ -126,6 +134,8 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
   const diskGb = finiteNumber(collection.disk_gb);
   const networkGb = finiteNumber(collection.network_gb);
 
+  // CPU é percentual entre 0 e 100; memória, disco e rede são quantidades em
+  // GB e não podem ser negativas. Valores ausentes ou não finitos são inválidos.
   if (
     cpuPercent === null ||
     cpuPercent < 0 ||
@@ -137,6 +147,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     networkGb === null ||
     networkGb < 0
   ) {
+    // Requer CPU entre 0 e 100% e memória, disco e rede finitos e não negativos.
     return gap("invalid_metrics");
   }
 
@@ -147,27 +158,34 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     networkGb,
   };
 
+  // Mantém as métricas reais na amostra mesmo quando não há intervalo válido para calcular energia.
   if (collectionIntervalSeconds === null) {
     return gap("collection_interval_unavailable", metrics);
   }
 
+  // Potência estimada = CPU% da potência máxima + consumo estimado de memória, disco e rede.
   const powerWatts =
+    // cpu_percent é uma porcentagem (0–100), convertida em fração antes de
+    // multiplicar pela potência máxima de CPU expressa em watts.
     (cpuPercent / 100) * POWER_MODEL.cpuMaximumWatts +
     memoryGb * POWER_MODEL.memoryWattsPerGb +
     diskGb * POWER_MODEL.diskWattsPerGb +
     networkGb * POWER_MODEL.networkWattsPerGb;
-
+  // W·s convertido em kWh: 3.600 s/h × 1.000 Wh/kWh = 3.600.000.
+  // Potência, energia, emissões e totais são mantidos como doubles crus.
+  // O intervalo usado é o registrado na própria amostra.
   const energyKwh =
     (powerWatts * collectionIntervalSeconds) / 3_600_000;
 
-  const carbonIntensity =
-    collection.carbon_intensity_gco2e_per_kwh;
-
+  const carbonIntensity = collection.carbon_intensity_gco2e_per_kwh;
+  // Uma intensidade ausente/inválida impede somente a emissão; a energia já
+  // calculada continua válida e é mantida na amostra.
   if (
     carbonIntensity === null ||
     !Number.isFinite(carbonIntensity) ||
     carbonIntensity < 0
   ) {
+    // Energia continua disponível; sem fator regional válido, emissões e fator ficam nulos.
     return {
       collectionId: collection.id_collection,
       attemptedAt: collection.attempted_at,
@@ -188,12 +206,16 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     metrics,
     collectionIntervalSeconds,
     energyKwh,
+    // kWh × gCO₂e/kWh resulta em gramas de CO₂ equivalente (gCO₂e).
     emissionsGco2e: energyKwh * carbonIntensity,
     carbonIntensityGco2ePerKwh: carbonIntensity,
     gapReason: null,
   };
 }
 function coveragePercent(valid: number, total: number): number {
+  // Percentual de amostras válidas sobre o denominador correspondente:
+  // todas as coletas para métricas, ou métricas válidas para intensidade.
+  // O resultado permanece double, sem arredondamento.
   return total === 0 ? 0 : (valid / total) * 100;
 }
 
@@ -241,6 +263,9 @@ export class IndicadoresService {
       0,
     );
 
+    // Cobertura de métricas compara amostras com energia válida ao total de tentativas.
+    // Cobertura de carbono compara amostras com emissões válidas às que têm métricas válidas.
+    // O resumo é parcial se não houver tentativas ou se alguma dessas etapas tiver lacunas.
     return {
       period: {
         start,
@@ -272,6 +297,8 @@ export class IndicadoresService {
           validCarbonIntensityCount,
           validMetricCount,
         ),
+        // Resultado parcial se não houve coletas, faltam métricas válidas ou
+        // alguma amostra com energia válida não tem intensidade elegível.
         isPartial:
           collectionCount === 0 ||
           validMetricCount < collectionCount ||
@@ -324,6 +351,7 @@ export class IndicadoresService {
         collectionCount,
         validMetricCount: validMetricSamples.length,
         validCarbonIntensityCount: validCarbonSamples.length,
+        // As coberturas usam os mesmos denominadores do resumo: tentativas e métricas válidas, respectivamente.
         metricCoveragePercent: coveragePercent(
           validMetricSamples.length,
           collectionCount,
@@ -332,7 +360,9 @@ export class IndicadoresService {
           validCarbonSamples.length,
           validMetricSamples.length,
         ),
+        // Os totais e percentuais permanecem doubles crus, sem arredondamento.
         isPartial:
+          // Não houve coleta no período, faltam métricas válidas ou faltam fatores de carbono para métricas válidas.
           collectionCount === 0 ||
           validMetricSamples.length < collectionCount ||
           validCarbonSamples.length < validMetricSamples.length,
