@@ -54,6 +54,9 @@ export class IndicadoresRepository {
     end: Date,
     carbonIntensityMaxAgeMs: number | undefined,
   ): Promise<ServiceIndicatorData[]> {
+    // Mantém serviços sem tentativa no período e seleciona coletas no intervalo [start, end).
+    // Para cada amostra, a LATERAL escolhe o fator regional mais recente que não seja posterior
+    // à tentativa e esteja dentro de CARBON_INTENSITY_MAX_AGE_MS; sem janela ($3 nulo), não há fator.
     const result = await pool.query<IndicatorRow>(
       `SELECT
          s.id_service,
