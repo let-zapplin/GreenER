@@ -14,6 +14,9 @@ interface DashboardServiceAvailabilityRow {
 
 export class DashboardRepository {
   async countServicesByAvailability(): Promise<DashboardServiceAvailability> {
+    // activeServiceCount é uma categoria de disponibilidade, não uma confirmação de atividade atual:
+    // serviços cadastrados como ativos sem tentativa, com sucesso ou erro entram nela.
+    // no_metrics e unavailable são categorias próprias; timestamps iguais são desempatados pelo maior id_collection.
     const result = await pool.query<DashboardServiceAvailabilityRow>(
       `SELECT
 COUNT(*) FILTER (

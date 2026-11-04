@@ -3,6 +3,12 @@ import { ServicosService } from "../modules/servicos/servicos.service.js";
 
 const servicosService = new ServicosService();
 
+/**
+ * Inicia o ciclo de descoberta automática.
+ *
+ * Executa uma vez na chamada e reagenda após cada término. Falha em um ciclo
+ * vira log de erro e não encerra o backend.
+ */
 export async function startServiceSync(): Promise<void> {
   let cycle = 0;
 

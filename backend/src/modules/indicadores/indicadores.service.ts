@@ -113,10 +113,12 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     gapReason: reason,
   });
 
+  // Tentativas sem sucesso não têm energia ou emissões calculáveis; o motivo preserva o status da coleta.
   if (collection.status !== "success") {
     return gap(collection.status);
   }
 
+  // Sem intervalo positivo, não é possível converter a potência estimada em energia.
   if (collectionIntervalSeconds === null) {
     return gap("collection_interval_unavailable");
   }
@@ -139,9 +141,11 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     networkGb === null ||
     networkGb < 0
   ) {
+    // Requer CPU entre 0 e 100% e memória, disco e rede finitos e não negativos.
     return gap("invalid_metrics");
   }
 
+  // Potência estimada = CPU% da potência máxima + consumo estimado de memória, disco e rede.
   const powerWatts =
     // cpu_percent é uma porcentagem (0–100), convertida em fração antes de
     // multiplicar pela potência máxima de CPU expressa em watts.
@@ -162,6 +166,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     !Number.isFinite(carbonIntensity) ||
     carbonIntensity < 0
   ) {
+    // Energia continua disponível; sem fator regional válido, emissões e fator ficam nulos.
     return {
       collectionId: collection.id_collection,
       attemptedAt: collection.attempted_at,
@@ -238,6 +243,9 @@ export class IndicadoresService {
       0,
     );
 
+    // Cobertura de métricas compara amostras com energia válida ao total de tentativas.
+    // Cobertura de carbono compara amostras com emissões válidas às que têm métricas válidas.
+    // O resumo é parcial se não houver tentativas ou se alguma dessas etapas tiver lacunas.
     return {
       period: {
         start,
@@ -323,6 +331,7 @@ export class IndicadoresService {
         collectionCount,
         validMetricCount: validMetricSamples.length,
         validCarbonIntensityCount: validCarbonSamples.length,
+        // As coberturas usam os mesmos denominadores do resumo: tentativas e métricas válidas, respectivamente.
         metricCoveragePercent: coveragePercent(
           validMetricSamples.length,
           collectionCount,
@@ -333,6 +342,7 @@ export class IndicadoresService {
         ),
         // Os totais e percentuais permanecem doubles crus, sem arredondamento.
         isPartial:
+          // Não houve coleta no período, faltam métricas válidas ou faltam fatores de carbono para métricas válidas.
           collectionCount === 0 ||
           validMetricSamples.length < collectionCount ||
           validCarbonSamples.length < validMetricSamples.length,
