@@ -30,7 +30,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
-
+// Testes HTTP de GET /api/dashboard, com JWT real e consultas simuladas.
 describe("HTTP do dashboard", () => {
   it("retorna 401 quando não recebe token", async () => {
     const response = await request(app).get("/api/dashboard").query({
@@ -48,7 +48,8 @@ describe("HTTP do dashboard", () => {
       DashboardRepository.prototype.countServicesByAvailability,
     ).not.toHaveBeenCalled();
   });
-
+  // Confirma resposta 200 com resumo zerado para token e período válidos,
+  // quando as consultas simuladas não retornam serviços.
   it("retorna 200 com o resumo quando token e período são válidos", async () => {
     const token = createToken({ sub: "1" });
 
@@ -86,7 +87,8 @@ describe("HTTP do dashboard", () => {
       DashboardRepository.prototype.countServicesByAvailability,
     ).toHaveBeenCalledExactlyOnceWith();
   });
-
+  // Confirma que enviar apenas start retorna 400,
+  // sem executar as consultas aos repositories.
   it("retorna 400 quando informa somente a data inicial", async () => {
     const token = createToken({ sub: "1" });
 
@@ -108,7 +110,8 @@ describe("HTTP do dashboard", () => {
       DashboardRepository.prototype.countServicesByAvailability,
     ).not.toHaveBeenCalled();
   });
-
+  // Simula uma falha na consulta de disponibilidade e confirma
+  // a resposta 500 com mensagem genérica, sem expor detalhes internos.
   it("retorna 500 quando uma consulta do dashboard falha", async () => {
     const token = createToken({ sub: "1" });
 
