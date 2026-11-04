@@ -5,10 +5,7 @@ import {
   type ListedService,
 } from "./servicos.repository.js";
 
-// ============================================================
-// TIPO: Location
-// Localização do serviço (retornada pela API)
-// ============================================================
+/** Localização retornada por `GET /services`. */
 export interface Location {
   region_code: string;
   country: string;
@@ -18,10 +15,7 @@ export interface Location {
   longitude: number;
 }
 
-// ============================================================
-// TIPO: ExternalService
-// Representa o que a API externa retorna
-// ============================================================
+/** Serviço como retornado por `GET /services`. */
 export interface ExternalService {
   id: string;
   name: string;
@@ -29,10 +23,10 @@ export interface ExternalService {
   metrics_path: string;
 }
 
-// ============================================================
-// CLASSE: ServicosService
-// Responsabilidade: Regras de negócio do módulo de serviços
-// ============================================================
+/**
+ * Regras de negócio do catálogo de serviços: descoberta na API externa,
+ * sincronização com o banco e listagem do que está persistido.
+ */
 export class ServicosService {
   private readonly repository: ServicosRepository;
 
@@ -40,15 +34,18 @@ export class ServicosService {
     this.repository = new ServicosRepository();
   }
 
-  // ========================================================
-  // US01: Consultar /services e interpretar o retorno
-  // ========================================================
+  /**
+   * Consulta `GET /services` e devolve o catálogo bruto da API externa.
+   *
+   * O AbortController existe porque a API não tem contrato de tempo de
+   * resposta: ao estourar `EXTERNAL_API_TIMEOUT_MS` a requisição é cancelada.
+   * Qualquer falha vira `ExternalApiError`, tratada pelo errorMiddleware.
+   */
   async discoverServices(): Promise<ExternalService[]> {
     console.log("🔍 Descobrindo serviços...");
 
     const url = `${env.metricsApiUrl}/services`;
 
-    // AbortController: cancela se passar do timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(
       () => controller.abort(),
@@ -56,26 +53,16 @@ export class ServicosService {
     );
 
     try {
-      // --------------------------------------------------
-      // PASSO 1: CONSULTAR /services
-      // --------------------------------------------------
       const response = await fetch(url, {
         signal: controller.signal,
       });
 
-      // Verifica se a resposta foi OK (200-299)
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // --------------------------------------------------
-      // PASSO 2: INTERPRETAR O JSON
-      // --------------------------------------------------
       const services: ExternalService[] = await response.json();
 
-      // --------------------------------------------------
-      // PASSO 3: IDENTIFICAR OS SERVIÇOS
-      // --------------------------------------------------
       console.log(`✅ ${services.length} serviços encontrados`);
 
       services.forEach((svc) => {
@@ -84,21 +71,24 @@ export class ServicosService {
 
       return services;
     } catch (error: unknown) {
-      // --------------------------------------------------
-      // TRATAMENTO DE ERRO
-      // Lança ExternalApiError → middleware trata
-      // --------------------------------------------------
       console.error("❌ Erro na API Metrics:", error);
       throw new ExternalApiError("Falha ao consultar a API de métricas");
     } finally {
-      // Limpa o timeout (evita memory leak)
       clearTimeout(timeoutId);
     }
   }
 
-  // ========================================================
-  // US02: Salvar serviços no banco (evitar duplicação)
-  // ========================================================
+  /**
+   * Sincroniza o catálogo local com o catálogo atual da API externa.
+   *
+   * `created` e `updated` contam serviços presentes em `/services`;
+   * `removed` conta os que estavam ativos e desapareceram do catálogo.
+   * Eles são marcados como `removed` em vez de excluídos para preservar o
+   * histórico de coletas que referencia `service`.
+   *
+   * A localização é resolvida antes do serviço porque `service` depende de
+   * `location_id_location`.
+   */
   async saveServices(): Promise<{
     created: number;
     updated: number;
@@ -106,23 +96,17 @@ export class ServicosService {
   }> {
     console.log("💾 Salvando serviços no banco...");
 
-    // 1. Descobrir serviços (US01)
     const services = await this.discoverServices();
     const activeExternalIds = services.map((service) => service.id);
 
     let created = 0;
     let updated = 0;
 
-    // 2. Para cada serviço
     for (const svc of services) {
-      // --------------------------------------------------
-      // PASSO 1: Verificar/criar location
-      // --------------------------------------------------
       let location = await this.repository.findLocationByRegion(
         svc.location.region_code
       );
 
-      // 2. Se não existe, cria
       if (!location) {
         location = await this.repository.createLocation({
           regionCode: svc.location.region_code,
@@ -139,13 +123,9 @@ export class ServicosService {
         );
       }
 
-      // --------------------------------------------------
-      // PASSO 2: Verificar/criar service
-      // --------------------------------------------------
       const existing = await this.repository.findByExternalId(svc.id);
 
       if (existing) {
-        // Já existe → Atualizar
         await this.repository.updateService({
           id: svc.id,
           name: svc.name,
@@ -153,7 +133,6 @@ export class ServicosService {
         });
         updated++;
       } else {
-        // Não existe → Criar
         await this.repository.createService({
           id: svc.id,
           name: svc.name,
@@ -163,6 +142,7 @@ export class ServicosService {
       }
     }
 
+    // Feito depois do upsert para que o catálogo atual já esteja persistido.
     const removed =
       await this.repository.markRemovedExcept(activeExternalIds);
     console.log(
@@ -171,9 +151,8 @@ export class ServicosService {
 
     return { created, updated, removed };
   }
-  // ========================================================
-  // US03: Listar todos os serviços armazenados no banco
-  // ========================================================
+
+  /** Lista o catálogo persistido com localização e última coleta de cada serviço. */
   async listAll(): Promise<ListedService[]> {
     console.log("📋 Listando serviços do banco...");
 

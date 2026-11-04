@@ -4,6 +4,12 @@ import { ColetasService } from "./coletas.service.js";
 export class ColetasController {
   private readonly service = new ColetasService();
 
+  /**
+   * Dispara uma coleta manual (restrita a administrador na rota).
+   *
+   * Falha parcial não altera o status HTTP: a resposta continua 200 e o
+   * resumo informa quantos serviços ficaram sem métricas ou indisponíveis.
+   */
   async collect(
     _req: Request,
     res: Response,
@@ -30,6 +36,8 @@ export class ColetasController {
       next(error);
     }
   }
+
+  /** Histórico de coletas do serviço; o ID é validado no service. */
   async history(
     req: Request<{ serviceId: string }>,
     res: Response,

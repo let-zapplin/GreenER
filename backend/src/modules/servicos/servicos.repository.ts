@@ -23,17 +23,10 @@ export interface ListedService {
   last_collection_at: Date | null;
 }
 
-// ============================================================
-// CLASSE: ServicosRepository
-// Responsabilidade: Acesso ao banco de dados (SQL puro)
-// ============================================================
+/** Acesso ao banco para o catálogo de serviços (SQL puro). */
 export class ServicosRepository extends LocalidadesRepository{
-  
-  // ========================================================
-  // SERVICE
-  // ========================================================
 
-  // Buscar service por ID externo
+  /** Busca pelo `id` da API externa, que é a chave usada na sincronização. */
   async findByExternalId(externalId: string) {
     const result = await pool.query(`SELECT * FROM service WHERE id = $1`, [
       externalId,
@@ -41,7 +34,7 @@ export class ServicosRepository extends LocalidadesRepository{
     return result.rows[0] ?? null;
   }
 
-  // Criar novo service
+  /** Cria o serviço já como `active` e registra `last_seen_at`. */
   async createService(data: { id: string; name: string; locationId: number }) {
     const result = await pool.query(
       `INSERT INTO service
@@ -60,7 +53,10 @@ export class ServicosRepository extends LocalidadesRepository{
     return result.rows[0];
   }
 
-  // Atualizar service existente
+  /**
+   * Atualiza o serviço e o reativa: um serviço que voltou ao catálogo
+   * deixa de ser `removed`.
+   */
   async updateService(data: { id: string; name: string; locationId: number }) {
     const result = await pool.query(
       `UPDATE service
@@ -76,6 +72,13 @@ export class ServicosRepository extends LocalidadesRepository{
     return result.rows[0];
   }
 
+  /**
+   * Marca como `removed` tudo que está ativo e não veio no catálogo atual.
+   *
+   * A exclusão é lógica porque as coletas referenciam `service`; apagar a
+   * linha perderia o histórico. O caso de lista vazia é tratado à parte
+   * porque `id <> ALL('{}')` não seleciona nenhuma linha.
+   */
   async markRemovedExcept(activeExternalIds: string[]): Promise<number> {
     if (activeExternalIds.length === 0) {
       const result = await pool.query(
@@ -99,9 +102,12 @@ export class ServicosRepository extends LocalidadesRepository{
     return result.rowCount ?? 0;
   }
 
-  // ========================================================
-  // US03: Listar todos os serviços
-  // ========================================================
+  /**
+   * Lista os serviços com localização e a última coleta.
+   *
+   * A subconsulta LATERAL traz apenas a coleta mais recente de cada serviço;
+   * um JOIN comum multiplicaria as linhas do serviço por todo o histórico.
+   */
   async listAll(): Promise<ListedService[]> {
     const result = await pool.query<ListedService & Record<string, unknown>>(
       `SELECT 

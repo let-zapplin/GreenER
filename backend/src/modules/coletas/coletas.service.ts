@@ -12,6 +12,17 @@ interface CollectionFailure {
   reason: string;
 }
 
+/**
+ * Resultado de um ciclo de coleta.
+ *
+ * Contadores por estado:
+ * - `success`: métricas recebidas e persistidas;
+ * - `no_metrics`: serviço ativo que não exporta métricas (não é falha);
+ * - `unavailable`: API ou exportador indisponível (o serviço segue no catálogo);
+ * - `error`: resposta inválida ou falha ao persistir a coleta.
+ *
+ * `skipped` indica que o ciclo foi ignorado porque o anterior ainda rodava.
+ */
 export interface CollectionSummary {
   skipped: boolean;
   totalServices: number;
@@ -39,6 +50,13 @@ export class ColetasService {
     private readonly fetchMetrics: typeof fetchServiceMetrics = fetchServiceMetrics,
   ) {}
 
+  /**
+   * Coleta as métricas de todos os serviços ativos, um por vez.
+   *
+   * A guarda `collectionInProgress` é compartilhada entre o job periódico e a
+   * rota manual; quando um ciclo já está em andamento, o novo retorna
+   * `skipped: true` em vez de consultar a API externa em paralelo.
+   */
   async collectAllMetrics(): Promise<CollectionSummary> {
     if (collectionInProgress) {
       console.warn("⚠️ Coleta anterior ainda em execução; ciclo ignorado.");
@@ -59,6 +77,8 @@ export class ColetasService {
       console.log("📊 Iniciando coleta de métricas em lote...");
 
       const services: ListedService[] = await this.servicosService.listAll();
+      // Serviços `removed` continuam no banco apenas para histórico;
+      // consultar a API deles geraria coletas de serviços que saíram do catálogo.
       const availableServices = services.filter(
         (service) => service.status === "active",
       );
@@ -89,6 +109,8 @@ export class ColetasService {
           };
         }
 
+        // A persistência é isolada por serviço: falha aqui vira `errorCount`
+        // e o loop segue com os demais, em vez de abortar o ciclo inteiro.
         try {
           await this.repository.saveCollection(service.id_service, result);
         } catch (error: unknown) {
@@ -142,6 +164,13 @@ export class ColetasService {
     }
   }
 
+  /**
+   * Histórico de tentativas de coleta de um serviço, da mais recente para a
+   * mais antiga.
+   *
+   * O ID chega como string da rota e é validado antes da consulta: o valor
+   * precisa caber em `INT4`, que é o tipo de `service_id_service`.
+   */
   async getHistoryByService(serviceId: string) {
     if (!/^[1-9]\d*$/.test(serviceId)) {
       throw new AppError(
@@ -153,6 +182,8 @@ export class ColetasService {
 
     const id = Number(serviceId);
 
+    // Limite do INT4 usado em service_id_service: acima disso a consulta
+    // falharia no driver em vez de responder 400.
     if (!Number.isSafeInteger(id) || id > 2147483647) {
       throw new AppError(
         "ID do serviço fora do intervalo permitido",

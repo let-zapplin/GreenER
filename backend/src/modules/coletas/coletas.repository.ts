@@ -2,6 +2,17 @@ import pool from "../../db/connection.js";
 import type { FetchMetricResult } from "../../integrations/metrics-api.js";
 
 export class ColetasRepository {
+  /**
+   * Persiste uma tentativa de coleta.
+   *
+   * A linha em `collection` é gravada para todo estado — inclusive `no_metrics`
+   * e `unavailable` — porque o histórico precisa registrar a tentativa mesmo
+   * sem métricas. Já `metrics` só recebe dados em `success`, pois é lá que
+   * ficam as amostras brutas.
+   *
+   * Tentativa e métricas ficam na mesma transação: se a segunda inserção
+   * falhar, o `ROLLBACK` evita uma coleta `success` sem dados associados.
+   */
   async saveCollection(
     serviceId: number,
     result: FetchMetricResult,
@@ -9,18 +20,20 @@ export class ColetasRepository {
     const client = await pool.connect();
 
     try {
-      await client.query("BEGIN"); // Inicia a transação
+      await client.query("BEGIN");
 
       let httpStatus: number | null = null;
       let failureReason: string | null = null;
 
+      // `no_metrics` guarda o 404 do agregador, mas não é falha e por isso
+      // não recebe motivo; só `error` e `unavailable` preenchem a justificativa.
       if (result.status === "no_metrics") httpStatus = result.http_status;
       if (result.status === "error" || result.status === "unavailable") {
         httpStatus = result.http_status || null;
         failureReason = result.failure_reason;
       }
 
-      // 1. Insere a TENTATIVA na tabela collection
+      // A tentativa é registrada para todos os estados, com ou sem métricas.
       const collectionResult = await client.query(
         `INSERT INTO collection (service_id_service, status, failure_reason, http_status)
          VALUES ($1, $2, $3, $4)
@@ -30,7 +43,7 @@ export class ColetasRepository {
 
       const collectionId = collectionResult.rows[0].id_collection;
 
-      // 2. Se deu certo, insere os DADOS BRUTOS na tabela metrics
+      // Dados brutos só existem quando a API respondeu com métricas válidas.
       if (result.status === "success") {
         await client.query(
           `INSERT INTO metrics 
@@ -48,7 +61,7 @@ export class ColetasRepository {
         );
       }
 
-      await client.query("COMMIT"); // Confirma tudo no banco
+      await client.query("COMMIT");
     } catch (error) {
       console.error("❌ Erro ao salvar coleta no banco:", error);
       try {
@@ -58,10 +71,16 @@ export class ColetasRepository {
       }
       throw error;
     } finally {
-      client.release(); // Devolve a conexão
+      client.release();
     }
   }
-  //consulta o histórico de coletas 
+  /**
+   * Histórico completo do serviço, mais recente primeiro.
+   *
+   * O LEFT JOIN é necessário porque tentativas `no_metrics`, `unavailable` e
+   * `error` não têm linha em `metrics`; um INNER JOIN esconderia justamente
+   * os casos de falha.
+   */
   async findHistoryByService(serviceId: number) {
   const result = await pool.query(
     `SELECT
