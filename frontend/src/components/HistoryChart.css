@@ -1,0 +1,38 @@
+.history-chart {
+  margin-top: 24px;
+}
+
+.history-chart-canvas {
+  width: 100%;
+  height: 360px;
+  min-height: 280px;
+  padding: 8px 4px 0;
+  border-top: 1px solid #ffffff12;
+}
+
+.history-chart-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+  padding: 0 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  .history-chart-canvas {
+    height: 300px;
+    min-height: 260px;
+  }
+
+  .history-chart-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}

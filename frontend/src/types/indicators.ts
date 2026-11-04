@@ -97,3 +97,25 @@ export type IndicatorsResponse = {
 
   services: ServiceIndicators[];
 };
+
+export type ServiceIndicatorHistory = {
+  period: {
+    start: string;
+    end: string;
+    collectionIntervalMs: number;
+  };
+
+  service: {
+    serviceId: number;
+    name: string;
+    status: string;
+    regionCode: string;
+  };
+
+  samples: IndicatorSample[];
+};
+
+export type ServiceIndicatorHistoryResponse =
+  ServiceIndicatorHistory & {
+    message: string;
+  };

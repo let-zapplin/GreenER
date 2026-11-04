@@ -1,5 +1,6 @@
-import type { IndicatorsResponse } from "../types/indicators";
+import type { IndicatorsResponse,  ServiceIndicatorHistoryResponse } from "../types/indicators";
 import { apiRequest } from "./api";
+
 
 type IndicatorsPeriod ={
     start: string;
@@ -24,4 +25,25 @@ export async function getServiceIndicators (
         },
         token,
     );
+}
+
+export async function getServiceIndicatorHistory(
+  serviceId: number,
+  period: IndicatorsPeriod,
+  signal?: AbortSignal,
+  token?: string,
+): Promise<ServiceIndicatorHistoryResponse> {
+  const params = new URLSearchParams({
+    start: period.start,
+    end: period.end,
+  });
+
+  return apiRequest<ServiceIndicatorHistoryResponse>(
+    `/api/indicadores/${serviceId}/historico?${params.toString()}`,
+    {
+      signal,
+      cache: "no-store",
+    },
+    token,
+  );
 }
