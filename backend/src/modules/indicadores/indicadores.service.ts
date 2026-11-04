@@ -30,10 +30,18 @@ interface CalculationGap {
   reason: CalculationGapReason;
 }
 
+interface SampleMetrics {
+  cpuPercent: number;
+  memoryGb: number;
+  diskGb: number;
+  networkGb: number;
+}
+
 interface SampleCalculation {
   collectionId: string;
   attemptedAt: Date;
   status: IndicatorCollection["status"];
+  metrics: SampleMetrics | null;
   collectionIntervalSeconds: number | null;
   energyKwh: number | null;
   emissionsGco2e: number | null;
@@ -98,12 +106,15 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     collection.collection_interval_seconds > 0
       ? collection.collection_interval_seconds
       : null;
+
   const gap = (
     reason: CalculationGapReason,
+    metrics: SampleMetrics | null = null,
   ): SampleCalculation => ({
     collectionId: collection.id_collection,
     attemptedAt: collection.attempted_at,
     status: collection.status,
+    metrics,
     collectionIntervalSeconds,
     // Para status no_metrics/unavailable/error, intervalo inválido ou métricas
     // inválidas, não há energia nem emissão; os resultados e o fator ficam nulos.
@@ -116,11 +127,6 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
   // Tentativas sem sucesso não têm energia ou emissões calculáveis; o motivo preserva o status da coleta.
   if (collection.status !== "success") {
     return gap(collection.status);
-  }
-
-  // Sem intervalo positivo, não é possível converter a potência estimada em energia.
-  if (collectionIntervalSeconds === null) {
-    return gap("collection_interval_unavailable");
   }
 
   const cpuPercent = finiteNumber(collection.cpu_percent);
@@ -145,6 +151,18 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     return gap("invalid_metrics");
   }
 
+  const metrics: SampleMetrics = {
+    cpuPercent,
+    memoryGb,
+    diskGb,
+    networkGb,
+  };
+
+  // Mantém as métricas reais na amostra mesmo quando não há intervalo válido para calcular energia.
+  if (collectionIntervalSeconds === null) {
+    return gap("collection_interval_unavailable", metrics);
+  }
+
   // Potência estimada = CPU% da potência máxima + consumo estimado de memória, disco e rede.
   const powerWatts =
     // cpu_percent é uma porcentagem (0–100), convertida em fração antes de
@@ -155,6 +173,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     networkGb * POWER_MODEL.networkWattsPerGb;
   // W·s convertido em kWh: 3.600 s/h × 1.000 Wh/kWh = 3.600.000.
   // Potência, energia, emissões e totais são mantidos como doubles crus.
+  // O intervalo usado é o registrado na própria amostra.
   const energyKwh =
     (powerWatts * collectionIntervalSeconds) / 3_600_000;
 
@@ -171,6 +190,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
       collectionId: collection.id_collection,
       attemptedAt: collection.attempted_at,
       status: collection.status,
+      metrics,
       collectionIntervalSeconds,
       energyKwh,
       emissionsGco2e: null,
@@ -183,6 +203,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     collectionId: collection.id_collection,
     attemptedAt: collection.attempted_at,
     status: collection.status,
+    metrics,
     collectionIntervalSeconds,
     energyKwh,
     // kWh × gCO₂e/kWh resulta em gramas de CO₂ equivalente (gCO₂e).
@@ -191,7 +212,6 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     gapReason: null,
   };
 }
-
 function coveragePercent(valid: number, total: number): number {
   // Percentual de amostras válidas sobre o denominador correspondente:
   // todas as coletas para métricas, ou métricas válidas para intensidade.

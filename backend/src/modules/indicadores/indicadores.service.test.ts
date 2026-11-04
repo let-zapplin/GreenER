@@ -50,10 +50,7 @@ function createServiceData(
 
 describe("IndicadoresService.getIndicators", () => {
   const findCollectionsForPeriod = vi.fn();
-  const service = new IndicadoresService(
-    { findCollectionsForPeriod },
-    300_000,
-  );
+  const service = new IndicadoresService({ findCollectionsForPeriod }, 300_000);
   const start = "2026-10-30T00:00:00.000Z";
   const end = "2026-10-31T00:00:00.000Z";
 
@@ -69,10 +66,15 @@ describe("IndicadoresService.getIndicators", () => {
     const result = await service.getIndicators(start, end);
     const calculatedSample = result.services[0].latestSampleInPeriod;
 
+    expect(calculatedSample?.metrics).toEqual({
+      cpuPercent: 50,
+      memoryGb: 2,
+      diskGb: 10,
+      networkGb: 5,
+    });
+
     expect(calculatedSample?.collectionIntervalSeconds).toBe(45);
-    expect(calculatedSample?.energyKwh).toBeCloseTo(
-      (50.95 * 45) / 3_600_000,
-    );
+    expect(calculatedSample?.energyKwh).toBeCloseTo((50.95 * 45) / 3_600_000);
     expect(calculatedSample?.emissionsGco2e).toBeCloseTo(
       ((50.95 * 45) / 3_600_000) * 200,
     );
@@ -99,6 +101,14 @@ describe("IndicadoresService.getIndicators", () => {
     const result = await service.getIndicators(start, end);
     const sample = result.services[0].latestSampleInPeriod;
     const totals = result.services[0].periodTotals;
+
+    expect(sample?.metrics).toEqual({
+      cpuPercent: 50,
+      memoryGb: 2,
+      diskGb: 10,
+      networkGb: 5,
+    });
+
 
     expect(sample?.collectionIntervalSeconds).toBeNull();
     expect(sample?.energyKwh).toBeNull();
@@ -150,7 +160,9 @@ describe("IndicadoresService.getIndicators", () => {
     ]);
 
     const result = await service.getIndicators(start, end);
+    const sample = result.services[0].latestSampleInPeriod;
     const totals = result.services[0].periodTotals;
+    expect(sample?.metrics).toBeNull();
 
     expect(totals.energyKwh).toBe(0);
     expect(totals.emissionsGco2e).toBe(0);

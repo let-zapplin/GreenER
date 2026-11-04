@@ -23,6 +23,7 @@ export function storedServiceToService(
 ): MonitoredService {
   return {
     id: storedService.external_id,
+    serviceId: storedService.id_service,
     name: storedService.name,
     location: {
       region_code: storedService.region_code,
