@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { ServiceList } from "../components/ServiceList";
 import { ServiceIndicator } from "../components/ServiceIndicator";
-import { useMonitoring } from "../hooks/useMonitoring";
 import "./Monitoring.css";
 import { DashboardSummary } from "../components/DashboardSummary";
+import { useMonitoring } from "../hooks/useMonitoring";
 import { useDashboardSummary } from "../hooks/useDashboardSummary";
+import { useServiceIndicators } from "../hooks/useServiceIndicators";
 
 export function Monitoring() {
   const { snapshot, loading, error } = useMonitoring();
@@ -13,6 +14,11 @@ export function Monitoring() {
     loading: dashboardLoading,
     error: dashboardError,
   } = useDashboardSummary();
+  const {
+    indicators: serviceIndicators,
+    loading: indicatorsLoading,
+    error: indicatorsError,
+  } = useServiceIndicators();
   const [selection, setSelection] = useState<{
     id: string;
     key: number;
@@ -126,138 +132,137 @@ export function Monitoring() {
         </div>
       )}
       {services.length > 0 && (
-          <section
-            className="services-summary"
-            aria-labelledby="services-summary-title"
-          >
-            <div className="services-summary-info">
-              <p className="monitoring-section-label">VISÃO GERAL</p>
-              <h2 id="services-summary-title">Seu ambiente agora</h2>
-              <div className="services-total">
-                <strong>{activeCount}</strong>
-                <span>
-                  de {services.length} serviços
-                  <br />
-                  {stale ? "ativos na última consulta" : "ativos na descoberta"}
-                </span>
-              </div>
-              <dl className="services-counts">
-                <div>
-                  <dt>Detectados</dt>
-                  <dd>{services.length}</dd>
-                </div>
-                <div className="services-count-active">
-                  <dt>Ativos</dt>
-                  <dd>{activeCount}</dd>
-                </div>
-
-                <div className="services-count-no-metrics">
-                  <dt>Sem métricas</dt>
-                  <dd>{noMetricsCount}</dd>
-                </div>
-
-                <div className="services-count-unavailable">
-                  <dt>Indisponíveis</dt>
-                  <dd>{unavailableCount}</dd>
-                </div>
-                <div className="services-count-removed">
-                  <dt>Removidos</dt>
-                  <dd>{removedCount}</dd>
-                </div>
-              </dl>
+        <section
+          className="services-summary"
+          aria-labelledby="services-summary-title"
+        >
+          <div className="services-summary-info">
+            <p className="monitoring-section-label">VISÃO GERAL</p>
+            <h2 id="services-summary-title">Seu ambiente agora</h2>
+            <div className="services-total">
+              <strong>{activeCount}</strong>
+              <span>
+                de {services.length} serviços
+                <br />
+                {stale ? "ativos na última consulta" : "ativos na descoberta"}
+              </span>
             </div>
-            <div className="services-overview">
-              <div className="services-overview-heading">
-                <h3>Status dos serviços</h3>
-                <span>{services.length} identificados</span>
+            <dl className="services-counts">
+              <div>
+                <dt>Detectados</dt>
+                <dd>{services.length}</dd>
               </div>
-              <div className="services-summary-grid">
-                {services.map((service) => (
-                  <ServiceIndicator
-                    key={service.id}
-                    service={service}
-                    onSelect={(id) =>
-                      setSelection((previous) => ({
-                        id,
-                        key: (previous?.key ?? 0) + 1,
-                      }))
-                    }
-                  />
-                ))}
+              <div className="services-count-active">
+                <dt>Ativos</dt>
+                <dd>{activeCount}</dd>
               </div>
-              <ul className="services-legend" aria-label="Legenda dos status">
-                <li>
-                  <span
-                    className="service-indicator active"
-                    aria-hidden="true"
-                  />
-                  Ativo
-                </li>
-                <li>
-                  <span
-                    className="service-indicator no_metrics"
-                    aria-hidden="true"
-                  />
-                  Sem métricas
-                </li>
-                <li>
-                  <span className="service-indicator new" aria-hidden="true" />
-                  Novo
-                </li>
-                <li>
-                  <span
-                    className="service-indicator returned"
-                    aria-hidden="true"
-                  />
-                  Retornou
-                </li>
-                <li>
-                  <span
-                    className="service-indicator unavailable"
-                    aria-hidden="true"
-                  />
-                  Indisponível
-                </li>
-                <li>
-                  <span
-                    className="service-indicator removed"
-                    aria-hidden="true"
-                  />
-                  Removido
-                </li>
-              </ul>
-              <p className="services-overview-note">
-                Selecione um indicador para ver os detalhes.
-              </p>
+
+              <div className="services-count-no-metrics">
+                <dt>Sem métricas</dt>
+                <dd>{noMetricsCount}</dd>
+              </div>
+
+              <div className="services-count-unavailable">
+                <dt>Indisponíveis</dt>
+                <dd>{unavailableCount}</dd>
+              </div>
+              <div className="services-count-removed">
+                <dt>Removidos</dt>
+                <dd>{removedCount}</dd>
+              </div>
+            </dl>
+          </div>
+          <div className="services-overview">
+            <div className="services-overview-heading">
+              <h3>Status dos serviços</h3>
+              <span>{services.length} identificados</span>
             </div>
-          </section>
-)}
-          <DashboardSummary
-            dashboard={dashboard}
-            loading={dashboardLoading}
-            error={dashboardError}
-          />
+            <div className="services-summary-grid">
+              {services.map((service) => (
+                <ServiceIndicator
+                  key={service.id}
+                  service={service}
+                  onSelect={(id) =>
+                    setSelection((previous) => ({
+                      id,
+                      key: (previous?.key ?? 0) + 1,
+                    }))
+                  }
+                />
+              ))}
+            </div>
+            <ul className="services-legend" aria-label="Legenda dos status">
+              <li>
+                <span className="service-indicator active" aria-hidden="true" />
+                Ativo
+              </li>
+              <li>
+                <span
+                  className="service-indicator no_metrics"
+                  aria-hidden="true"
+                />
+                Sem métricas
+              </li>
+              <li>
+                <span className="service-indicator new" aria-hidden="true" />
+                Novo
+              </li>
+              <li>
+                <span
+                  className="service-indicator returned"
+                  aria-hidden="true"
+                />
+                Retornou
+              </li>
+              <li>
+                <span
+                  className="service-indicator unavailable"
+                  aria-hidden="true"
+                />
+                Indisponível
+              </li>
+              <li>
+                <span
+                  className="service-indicator removed"
+                  aria-hidden="true"
+                />
+                Removido
+              </li>
+            </ul>
+            <p className="services-overview-note">
+              Selecione um indicador para ver os detalhes.
+            </p>
+          </div>
+        </section>
+      )}
+      <DashboardSummary
+        dashboard={dashboard}
+        loading={dashboardLoading}
+        error={dashboardError}
+      />
 
-         {services.length > 0 && (
-  <>
-    <div className="monitoring-list-heading">
-      <div>
-        <p className="monitoring-section-label">SERVIÇOS</p>
-        <h2 id="service-list-title">Detalhes do ambiente</h2>
-      </div>
+      {services.length > 0 && (
+        <>
+          <div className="monitoring-list-heading">
+            <div>
+              <p className="monitoring-section-label">SERVIÇOS</p>
+              <h2 id="service-list-title">Detalhes do ambiente</h2>
+            </div>
 
-      <span>
-        {services.length}{" "}
-        {services.length === 1 ? "serviço" : "serviços"}
-      </span>
-    </div>
+            <span>
+              {services.length} {services.length === 1 ? "serviço" : "serviços"}
+            </span>
+          </div>
 
-    <ServiceList
-      services={services}
-      selection={selection}
-    />
-  </>
-)}
+          <ServiceList
+  services={services}
+  selection={selection}
+  indicators={serviceIndicators?.services ?? []}
+  indicatorsLoading={indicatorsLoading}
+  indicatorsError={indicatorsError}
+/>
+        </>
+      )}
     </main>
   );
 }

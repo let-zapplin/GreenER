@@ -34,6 +34,8 @@ export type CollectionStatus =
   | "error";
 
 export type MonitoredService = Service & {
+  serviceId: number;
+
   status: ServiceStatus;
   statusExpiresAt?: number;
   lastConfirmedAt?: string;

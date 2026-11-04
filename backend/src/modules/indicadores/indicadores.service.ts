@@ -26,10 +26,18 @@ interface CalculationGap {
   reason: CalculationGapReason;
 }
 
+interface SampleMetrics {
+  cpuPercent: number;
+  memoryGb: number;
+  diskGb: number;
+  networkGb: number;
+}
+
 interface SampleCalculation {
   collectionId: string;
   attemptedAt: Date;
   status: IndicatorCollection["status"];
+  metrics: SampleMetrics | null;
   collectionIntervalSeconds: number | null;
   energyKwh: number | null;
   emissionsGco2e: number | null;
@@ -93,12 +101,15 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     collection.collection_interval_seconds > 0
       ? collection.collection_interval_seconds
       : null;
+
   const gap = (
     reason: CalculationGapReason,
+    metrics: SampleMetrics | null = null,
   ): SampleCalculation => ({
     collectionId: collection.id_collection,
     attemptedAt: collection.attempted_at,
     status: collection.status,
+    metrics,
     collectionIntervalSeconds,
     energyKwh: null,
     emissionsGco2e: null,
@@ -108,10 +119,6 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
 
   if (collection.status !== "success") {
     return gap(collection.status);
-  }
-
-  if (collectionIntervalSeconds === null) {
-    return gap("collection_interval_unavailable");
   }
 
   const cpuPercent = finiteNumber(collection.cpu_percent);
@@ -133,15 +140,29 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     return gap("invalid_metrics");
   }
 
+  const metrics: SampleMetrics = {
+    cpuPercent,
+    memoryGb,
+    diskGb,
+    networkGb,
+  };
+
+  if (collectionIntervalSeconds === null) {
+    return gap("collection_interval_unavailable", metrics);
+  }
+
   const powerWatts =
     (cpuPercent / 100) * POWER_MODEL.cpuMaximumWatts +
     memoryGb * POWER_MODEL.memoryWattsPerGb +
     diskGb * POWER_MODEL.diskWattsPerGb +
     networkGb * POWER_MODEL.networkWattsPerGb;
+
   const energyKwh =
     (powerWatts * collectionIntervalSeconds) / 3_600_000;
 
-  const carbonIntensity = collection.carbon_intensity_gco2e_per_kwh;
+  const carbonIntensity =
+    collection.carbon_intensity_gco2e_per_kwh;
+
   if (
     carbonIntensity === null ||
     !Number.isFinite(carbonIntensity) ||
@@ -151,6 +172,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
       collectionId: collection.id_collection,
       attemptedAt: collection.attempted_at,
       status: collection.status,
+      metrics,
       collectionIntervalSeconds,
       energyKwh,
       emissionsGco2e: null,
@@ -163,6 +185,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     collectionId: collection.id_collection,
     attemptedAt: collection.attempted_at,
     status: collection.status,
+    metrics,
     collectionIntervalSeconds,
     energyKwh,
     emissionsGco2e: energyKwh * carbonIntensity,
@@ -170,7 +193,6 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     gapReason: null,
   };
 }
-
 function coveragePercent(valid: number, total: number): number {
   return total === 0 ? 0 : (valid / total) * 100;
 }
