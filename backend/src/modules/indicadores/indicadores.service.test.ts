@@ -189,3 +189,126 @@ describe("IndicadoresService.getIndicators", () => {
     expect(findCollectionsForPeriod).not.toHaveBeenCalled();
   });
 });
+
+describe("IndicadoresService.getServiceHistory", () => {
+  const findCollectionsForPeriod = vi.fn();
+
+  const service = new IndicadoresService(
+    { findCollectionsForPeriod },
+    300_000,
+  );
+
+  const serviceId = 7;
+  const start = "2026-10-30T00:00:00.000Z";
+  const end = "2026-10-31T00:00:00.000Z";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("retorna o histórico ambiental real do serviço no período", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([
+        createCollection({
+          id_collection: "101",
+          attempted_at: new Date("2026-10-30T12:00:00.000Z"),
+        }),
+        createCollection({
+          id_collection: "102",
+          attempted_at: new Date("2026-10-30T12:01:00.000Z"),
+          cpu_percent: 60,
+        }),
+      ]),
+    ]);
+
+    const result = await service.getServiceHistory(
+      serviceId,
+      start,
+      end,
+    );
+
+    expect(result.service).toEqual({
+      serviceId: 7,
+      name: "Serviço de pedidos",
+      status: "active",
+      regionCode: "BR-SP",
+    });
+
+    expect(result.samples).toHaveLength(2);
+
+    expect(result.samples[0].collectionId).toBe("101");
+    expect(result.samples[0].attemptedAt).toEqual(
+      new Date("2026-10-30T12:00:00.000Z"),
+    );
+    expect(result.samples[0].energyKwh).toBeGreaterThan(0);
+
+    expect(result.samples[1].collectionId).toBe("102");
+    expect(result.samples[1].attemptedAt).toEqual(
+      new Date("2026-10-30T12:01:00.000Z"),
+    );
+    expect(result.samples[1].energyKwh).toBeGreaterThan(0);
+
+    expect(findCollectionsForPeriod).toHaveBeenCalledWith(
+      new Date(start),
+      new Date(end),
+      300_000,
+      serviceId,
+    );
+  });
+
+  it("retorna lista vazia quando o serviço existe, mas não possui coletas no período", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([]),
+    ]);
+
+    const result = await service.getServiceHistory(
+      serviceId,
+      start,
+      end,
+    );
+
+    expect(result.service.serviceId).toBe(serviceId);
+    expect(result.samples).toEqual([]);
+  });
+
+  it("preserva lacunas do histórico sem transformar ausência de dado em zero", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([
+        createCollection({
+          status: "unavailable",
+          id_metrics: null,
+          cpu_percent: null,
+          memory_gb: null,
+          disk_gb: null,
+          network_gb: null,
+          collection_interval_seconds: null,
+          carbon_intensity_id: null,
+          carbon_intensity_gco2e_per_kwh: null,
+        }),
+      ]),
+    ]);
+
+    const result = await service.getServiceHistory(
+      serviceId,
+      start,
+      end,
+    );
+
+    expect(result.samples).toHaveLength(1);
+
+    expect(result.samples[0].energyKwh).toBeNull();
+    expect(result.samples[0].emissionsGco2e).toBeNull();
+    expect(result.samples[0].gapReason).toBe("unavailable");
+  });
+
+  it("retorna erro 404 quando o serviço não existe", async () => {
+    findCollectionsForPeriod.mockResolvedValue([]);
+
+    await expect(
+      service.getServiceHistory(serviceId, start, end),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: "SERVICE_NOT_FOUND",
+    });
+  });
+});

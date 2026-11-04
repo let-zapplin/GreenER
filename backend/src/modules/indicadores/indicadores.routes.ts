@@ -10,4 +10,7 @@ router.get("/", authMiddleware, (req, res, next) =>
   controller.list(req, res, next),
 );
 
+router.get("/:serviceId/historico", authMiddleware, (req, res, next) =>
+  controller.history(req, res, next),
+);
 export default router;

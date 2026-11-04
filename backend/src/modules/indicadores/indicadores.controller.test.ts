@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const serviceMocks = vi.hoisted(() => ({
   getIndicators: vi.fn(),
+  getServiceHistory: vi.fn(),
 }));
 
 vi.mock("./indicadores.service.js", () => ({
   IndicadoresService: vi.fn(
     class {
       getIndicators = serviceMocks.getIndicators;
+      getServiceHistory = serviceMocks.getServiceHistory;
     },
   ),
 }));
@@ -87,6 +89,137 @@ describe("IndicadoresController.list", () => {
 
     await controller.list(
       { query: { start: "2026-10-30", end: "2026-10-31" } } as never,
+      createResponse() as never,
+      next,
+    );
+
+    expect(next).toHaveBeenCalledWith(error);
+  });
+});
+
+describe("IndicadoresController.history", () => {
+  it("consulta o histórico do serviço com id e período informados", async () => {
+    const history = {
+      period: {
+        start: new Date("2026-11-03T00:00:00.000Z"),
+        end: new Date("2026-11-04T00:00:00.000Z"),
+        collectionIntervalMs: 60_000,
+      },
+      service: {
+        serviceId: 7,
+        name: "Serviço de pedidos",
+        status: "active",
+        regionCode: "BR-SP",
+      },
+      samples: [],
+    };
+
+    serviceMocks.getServiceHistory.mockResolvedValue(history);
+
+    const response = createResponse();
+    const controller = new IndicadoresController();
+
+    await controller.history(
+      {
+        params: {
+          serviceId: "7",
+        },
+        query: {
+          start: "2026-11-03T00:00:00.000Z",
+          end: "2026-11-04T00:00:00.000Z",
+        },
+      } as never,
+      response as never,
+      vi.fn(),
+    );
+
+    expect(serviceMocks.getServiceHistory).toHaveBeenCalledWith(
+      7,
+      "2026-11-03T00:00:00.000Z",
+      "2026-11-04T00:00:00.000Z",
+    );
+
+    expect(response.status).toHaveBeenCalledWith(200);
+
+    expect(response.json).toHaveBeenCalledWith({
+      message: "Histórico de indicadores calculado",
+      ...history,
+    });
+  });
+
+  it("encaminha período ausente como erro de validação", async () => {
+    const next = vi.fn();
+    const controller = new IndicadoresController();
+
+    await controller.history(
+      {
+        params: {
+          serviceId: "7",
+        },
+        query: {},
+      } as never,
+      createResponse() as never,
+      next,
+    );
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 400,
+        code: "INVALID_INDICATOR_PERIOD",
+      }),
+    );
+
+    expect(serviceMocks.getServiceHistory).not.toHaveBeenCalled();
+  });
+
+  it("converte o identificador da rota para número antes de chamar o service", async () => {
+    serviceMocks.getServiceHistory.mockResolvedValue({
+      period: {},
+      service: {},
+      samples: [],
+    });
+
+    const controller = new IndicadoresController();
+
+    await controller.history(
+      {
+        params: {
+          serviceId: "15",
+        },
+        query: {
+          start: "2026-11-03T00:00:00.000Z",
+          end: "2026-11-04T00:00:00.000Z",
+        },
+      } as never,
+      createResponse() as never,
+      vi.fn(),
+    );
+
+    expect(serviceMocks.getServiceHistory).toHaveBeenCalledWith(
+      15,
+      "2026-11-03T00:00:00.000Z",
+      "2026-11-04T00:00:00.000Z",
+    );
+  });
+
+  it("encaminha erros do service ao middleware global", async () => {
+    const error = new Error("Falha na consulta do histórico");
+
+    serviceMocks.getServiceHistory.mockRejectedValue(error);
+
+    const next = vi.fn();
+    const controller = new IndicadoresController();
+
+    await controller.history(
+      {
+        params: {
+          serviceId: "7",
+        },
+        query: {
+          start: "2026-11-03T00:00:00.000Z",
+          end: "2026-11-04T00:00:00.000Z",
+        },
+      } as never,
       createResponse() as never,
       next,
     );

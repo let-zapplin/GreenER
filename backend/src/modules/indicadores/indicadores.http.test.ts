@@ -294,3 +294,245 @@ describe("HTTP dos indicadores", () => {
     expect(consultarIndicadores).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("HTTP do histórico ambiental", () => {
+  it("retorna 401 ao consultar histórico sem token", async () => {
+    const consultarHistorico = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([]);
+
+    const response = await request(app)
+      .get("/api/indicadores/7/historico")
+      .query({
+        start: "2026-11-03T00:00:00.000Z",
+        end: "2026-11-04T00:00:00.000Z",
+      });
+
+    expect(response.status).toBe(401);
+    expect(consultarHistorico).not.toHaveBeenCalled();
+  });
+
+  it("retorna 400 quando não informa o período", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarHistorico = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([]);
+
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .get("/api/indicadores/7/historico")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe(
+      "INVALID_INDICATOR_PERIOD",
+    );
+
+    expect(consultarHistorico).not.toHaveBeenCalled();
+  });
+
+  it("retorna 400 quando o identificador do serviço é inválido", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarHistorico = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([]);
+
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .get("/api/indicadores/abc/historico")
+      .set("Authorization", `Bearer ${token}`)
+      .query({
+        start: "2026-11-03T00:00:00.000Z",
+        end: "2026-11-04T00:00:00.000Z",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("INVALID_SERVICE_ID");
+
+    expect(consultarHistorico).not.toHaveBeenCalled();
+  });
+
+  it("retorna 404 quando o serviço não existe", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarHistorico = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([]);
+
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .get("/api/indicadores/999/historico")
+      .set("Authorization", `Bearer ${token}`)
+      .query({
+        start: "2026-11-03T00:00:00.000Z",
+        end: "2026-11-04T00:00:00.000Z",
+      });
+
+    expect(response.status).toBe(404);
+
+    expect(response.body).toEqual({
+      error: "Serviço não encontrado",
+      code: "SERVICE_NOT_FOUND",
+    });
+
+    expect(consultarHistorico).toHaveBeenCalledTimes(1);
+  });
+
+  it("retorna 200 com lista vazia quando o serviço existe, mas não possui coletas no período", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarHistorico = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([
+        {
+          id_service: 7,
+          name: "Serviço de pedidos",
+          status: "active",
+          region_code: "BR-SP",
+          collections: [],
+        },
+      ]);
+
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .get("/api/indicadores/7/historico")
+      .set("Authorization", `Bearer ${token}`)
+      .query({
+        start: "2026-11-03T00:00:00.000Z",
+        end: "2026-11-04T00:00:00.000Z",
+      });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body).toMatchObject({
+      message: "Histórico de indicadores calculado",
+      service: {
+        serviceId: 7,
+        name: "Serviço de pedidos",
+        status: "active",
+        regionCode: "BR-SP",
+      },
+      samples: [],
+    });
+  });
+
+  it("retorna o histórico ambiental calculado de um serviço", async () => {
+    vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
+    vi.stubEnv("JWT_EXPIRES_IN", "15m");
+
+    const consultarHistorico = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([
+        {
+          id_service: 7,
+          name: "Serviço de pedidos",
+          status: "active",
+          region_code: "BR-SP",
+          collections: [
+            {
+              id_collection: "101",
+              status: "success",
+              attempted_at: new Date(
+                "2026-11-03T12:00:00.000Z",
+              ),
+              id_metrics: "201",
+              recorded_at: new Date(
+                "2026-11-03T12:00:00.000Z",
+              ),
+              cpu_percent: 50,
+              memory_gb: 2,
+              disk_gb: 10,
+              network_gb: 5,
+              collection_interval_seconds: 60,
+              carbon_intensity_id: 301,
+              carbon_intensity_gco2e_per_kwh: 200,
+            },
+          ],
+        },
+      ]);
+
+    const token = createToken({ sub: "1" });
+
+    const start = "2026-11-03T00:00:00.000Z";
+    const end = "2026-11-04T00:00:00.000Z";
+
+    const response = await request(app)
+      .get("/api/indicadores/7/historico")
+      .set("Authorization", `Bearer ${token}`)
+      .query({ start, end });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body).toMatchObject({
+      message: "Histórico de indicadores calculado",
+
+      period: {
+        start,
+        end,
+      },
+
+      service: {
+        serviceId: 7,
+        name: "Serviço de pedidos",
+        status: "active",
+        regionCode: "BR-SP",
+      },
+    });
+
+    expect(response.body.samples).toHaveLength(1);
+
+    expect(response.body.samples[0]).toMatchObject({
+      collectionId: "101",
+      attemptedAt: "2026-11-03T12:00:00.000Z",
+      status: "success",
+      gapReason: null,
+    });
+
+    expect(
+      response.body.samples[0].energyKwh,
+    ).toBeCloseTo(0.000849166667, 10);
+
+    expect(
+      response.body.samples[0].emissionsGco2e,
+    ).toBeCloseTo(0.169833333333, 10);
+
+    expect(consultarHistorico).toHaveBeenCalledTimes(1);
+
+    const argumentos = consultarHistorico.mock.calls[0];
+
+    expect(argumentos[0]).toEqual(new Date(start));
+    expect(argumentos[1]).toEqual(new Date(end));
+
+    // O quarto argumento é o filtro por serviço que
+    // implementamos especificamente para o histórico.
+    expect(argumentos[3]).toBe(7);
+  });
+});
