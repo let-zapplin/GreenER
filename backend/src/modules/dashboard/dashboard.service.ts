@@ -47,6 +47,7 @@ function resolvePeriod(
   endValue?: string,
   now = new Date(),
 ): DashboardPeriod {
+  // Sem datas explícitas, o dashboard considera as 24 horas anteriores ao relógio do servidor.
   if (startValue === undefined && endValue === undefined) {
     return {
       start: new Date(now.getTime() - DEFAULT_PERIOD_MS),
@@ -54,6 +55,7 @@ function resolvePeriod(
     };
   }
 
+  // O período só pode ser omitido por completo ou informado com início e fim.
   if (startValue === undefined || endValue === undefined) {
     throw new AppError(
       "Informe os parâmetros start e end juntos ou omita ambos",
@@ -62,6 +64,7 @@ function resolvePeriod(
     );
   }
 
+  // Datas inválidas ou um fim não posterior ao início são rejeitados como período inválido.
   const start = parseDate(startValue, "start");
   const end = parseDate(endValue, "end");
 
@@ -105,6 +108,8 @@ export class DashboardService {
       (service) => service.status === "active",
     );
 
+    // Os totais ambientais incluem apenas serviços atualmente ativos; as contagens de disponibilidade
+    // vêm de uma consulta própria e classificam todos os serviços ativos pelo resultado mais recente.
     return {
       period,
       summary: {
@@ -119,6 +124,7 @@ export class DashboardService {
         activeServiceCount: availability.activeServiceCount,
         noMetricsServiceCount: availability.noMetricsServiceCount,
         unavailableServiceCount: availability.unavailableServiceCount,
+        // O resumo é parcial se algum serviço ativo não teve coleta no período ou tem lacunas de cálculo.
         isPartial: activeServices.some(
           (service) =>
             service.periodTotals.collectionCount === 0 ||
