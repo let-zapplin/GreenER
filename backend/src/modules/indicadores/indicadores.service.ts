@@ -6,6 +6,7 @@ import {
   type ServiceIndicatorData,
 } from "./indicadores.repository.js";
 
+// Modelo de potência estimada v1; as constantes e premissas estão documentadas em docs/calculos.md.
 const POWER_MODEL = {
   version: "1",
   cpuMaximumWatts: 100,
@@ -106,10 +107,12 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     gapReason: reason,
   });
 
+  // Tentativas sem sucesso não têm energia ou emissões calculáveis; o motivo preserva o status da coleta.
   if (collection.status !== "success") {
     return gap(collection.status);
   }
 
+  // Sem intervalo positivo, não é possível converter a potência estimada em energia.
   if (collectionIntervalSeconds === null) {
     return gap("collection_interval_unavailable");
   }
@@ -130,14 +133,17 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     networkGb === null ||
     networkGb < 0
   ) {
+    // Requer CPU entre 0 e 100% e memória, disco e rede finitos e não negativos.
     return gap("invalid_metrics");
   }
 
+  // Potência estimada = CPU% da potência máxima + consumo estimado de memória, disco e rede.
   const powerWatts =
     (cpuPercent / 100) * POWER_MODEL.cpuMaximumWatts +
     memoryGb * POWER_MODEL.memoryWattsPerGb +
     diskGb * POWER_MODEL.diskWattsPerGb +
     networkGb * POWER_MODEL.networkWattsPerGb;
+  // Converte watt-segundos em kWh: potência (W) × duração (s) / 3.600.000.
   const energyKwh =
     (powerWatts * collectionIntervalSeconds) / 3_600_000;
 
@@ -147,6 +153,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     !Number.isFinite(carbonIntensity) ||
     carbonIntensity < 0
   ) {
+    // Energia continua disponível; sem fator regional válido, emissões e fator ficam nulos.
     return {
       collectionId: collection.id_collection,
       attemptedAt: collection.attempted_at,
@@ -165,6 +172,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     status: collection.status,
     collectionIntervalSeconds,
     energyKwh,
+    // Emissões em gCO₂e são a energia em kWh multiplicada pela intensidade em gCO₂e/kWh.
     emissionsGco2e: energyKwh * carbonIntensity,
     carbonIntensityGco2ePerKwh: carbonIntensity,
     gapReason: null,
@@ -172,6 +180,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
 }
 
 function coveragePercent(valid: number, total: number): number {
+  // Uma base vazia tem cobertura zero; caso contrário, cobertura é a fração válida em porcentagem.
   return total === 0 ? 0 : (valid / total) * 100;
 }
 
@@ -219,6 +228,9 @@ export class IndicadoresService {
       0,
     );
 
+    // Cobertura de métricas compara amostras com energia válida ao total de tentativas.
+    // Cobertura de carbono compara amostras com emissões válidas às que têm métricas válidas.
+    // O resumo é parcial se não houver tentativas ou se alguma dessas etapas tiver lacunas.
     return {
       period: {
         start,
@@ -302,6 +314,7 @@ export class IndicadoresService {
         collectionCount,
         validMetricCount: validMetricSamples.length,
         validCarbonIntensityCount: validCarbonSamples.length,
+        // As coberturas usam os mesmos denominadores do resumo: tentativas e métricas válidas, respectivamente.
         metricCoveragePercent: coveragePercent(
           validMetricSamples.length,
           collectionCount,
@@ -311,6 +324,7 @@ export class IndicadoresService {
           validMetricSamples.length,
         ),
         isPartial:
+          // Não houve coleta no período, faltam métricas válidas ou faltam fatores de carbono para métricas válidas.
           collectionCount === 0 ||
           validMetricSamples.length < collectionCount ||
           validCarbonSamples.length < validMetricSamples.length,
