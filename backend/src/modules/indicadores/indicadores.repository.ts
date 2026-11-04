@@ -82,6 +82,8 @@ export class IndicadoresRepository {
        LEFT JOIN metrics m
          ON m.collection_id_collection = c.id_collection
        LEFT JOIN LATERAL (
+         -- Vincula à coleta o snapshot da mesma região registrado até
+         -- attempted_at e dentro da idade máxima configurada em milissegundos.
          SELECT
            ci.id_carbon_intensity,
            ci.carbon_intensity_gco2e_per_kwh
@@ -90,9 +92,13 @@ export class IndicadoresRepository {
            ON intensity_location.id_location = ci.location_id_location
          WHERE intensity_location.region_code = service_location.region_code
            AND ci.registered_at <= c.attempted_at
+           -- Limite nulo desabilita o fator; sem janela configurada não há
+           -- snapshot considerado válido para o cálculo.
            AND $3::double precision IS NOT NULL
            AND ci.registered_at >= c.attempted_at
              - ($3::double precision * INTERVAL '1 millisecond')
+         -- Em empate de horário, o maior id define deterministicamente o mais
+         -- recente entre os snapshots elegíveis.
          ORDER BY ci.registered_at DESC, ci.id_carbon_intensity DESC
          LIMIT 1
        ) intensity ON m.id_metrics IS NOT NULL

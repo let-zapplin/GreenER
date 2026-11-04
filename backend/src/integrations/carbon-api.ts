@@ -6,9 +6,12 @@ export interface CarbonRegion {
 	country: string;
 	region: string;
 	city?: string | null;
+	// Coordenadas devem ser finitas e estar dentro dos limites geográficos.
 	latitude: number;
 	longitude: number;
+	// Intensidade em gramas de CO₂ equivalente por quilowatt-hora.
 	carbon_intensity_gco2e_per_kwh: number;
+	// Participação renovável em percentual (0 a 100).
 	renewable_share_percent: number;
 }
 
@@ -37,12 +40,16 @@ function isCarbonRegion(value: unknown): value is CarbonRegion {
 		isNonEmptyString(value.country) &&
 		isNonEmptyString(value.region) &&
 		(value.city === undefined || value.city === null || typeof value.city === "string") &&
+		// Coordenadas negativas são válidas; os limites garantem latitude/longitude
+		// geográficas, enquanto Number.isFinite rejeita NaN e infinitos.
 		isFiniteNumber(value.latitude) &&
 		value.latitude >= -90 &&
 		value.latitude <= 90 &&
 		isFiniteNumber(value.longitude) &&
 		value.longitude >= -180 &&
 		value.longitude <= 180 &&
+		// Fatores não negativos evitam intensidades fisicamente inválidas; a
+		// participação renovável também não pode ultrapassar 100%.
 		isFiniteNumber(value.carbon_intensity_gco2e_per_kwh) &&
 		value.carbon_intensity_gco2e_per_kwh >= 0 &&
 		isFiniteNumber(value.renewable_share_percent) &&
@@ -90,6 +97,8 @@ export async function fetchCarbonRegions(): Promise<CarbonRegionsResponse> {
 		const payload: unknown = await response.json();
 		return parseCarbonRegions(payload);
 	} catch {
+		// Falhas de rede/timeout, status HTTP não bem-sucedido, JSON inválido ou
+		// catálogo fora do contrato são expostos uniformemente como HTTP 502.
 		throw new ExternalApiError(
 			"Falha ao consultar ou validar o catálogo da API de intensidades de carbono",
 		);

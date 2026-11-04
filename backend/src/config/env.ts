@@ -33,6 +33,8 @@ function optionalPositiveInt(key: string, defaultValue: number): number {
   return value;
 }
 
+// Vazio/ausente desabilita o uso do fator; valor não numérico ou negativo
+// interrompe a inicialização para não aplicar uma janela inválida.
 const carbonIntensityMaxAgeValue = process.env.CARBON_INTENSITY_MAX_AGE_MS;
 
 const carbonIntensityMaxAgeMs =
@@ -58,6 +60,7 @@ export const env = {
   // APIs externas
   metricsApiUrl: required("METRICS_API_URL"),
   carbonApiUrl: required("CARBON_API_URL"),
+  // Limite, em ms, aplicado ao AbortController das chamadas às APIs externas.
   externalApiTimeoutMs: Number(optional("EXTERNAL_API_TIMEOUT_MS", "5000")),
   carbonIntensityMaxAgeMs,
 

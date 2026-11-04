@@ -4,7 +4,9 @@ import { env } from "../config/env.js";
 export interface ExternalMetricsResponse {
   collection_interval_seconds: number;
   metrics?: {
+    // Percentual de uso da CPU, no intervalo de 0 a 100.
     cpu_percent: number;
+    // Quantidades em gigabytes, conforme o contrato da Metrics API.
     memory_gb: number;
     disk_gb: number;
     network_gb: number;
@@ -18,6 +20,8 @@ export interface NormalizedMetric {
   disk_gb: number;
   network_gb: number;
   collection_interval_seconds: number;
+  // Instante em que o backend recebeu e normalizou a amostra; a API não fornece
+  // um horário de registro confiável no payload.
   recorded_at: string;
 }
 
@@ -83,6 +87,8 @@ export async function fetchServiceMetrics(
     }
 
     if (!response.ok) {
+      // Respostas HTTP diferentes dos contratos especiais 404 e 500 são erros
+      // da consulta, não ausência de métricas nem falha de conexão.
       return {
         status: "error",
         failure_reason: `A API de métricas respondeu com HTTP ${response.status}.`,
@@ -94,6 +100,8 @@ export async function fetchServiceMetrics(
     try {
       data = await response.json();
     } catch {
+      // A conexão e o status HTTP foram bem-sucedidos; JSON inválido indica
+      // resposta incompatível, por isso é erro e não indisponibilidade.
       return {
         status: "error",
         failure_reason: "A API de métricas retornou um JSON inválido.",
@@ -110,6 +118,8 @@ export async function fetchServiceMetrics(
       return { status: "no_metrics", http_status: response.status };
     }
 
+    // Payload válido como JSON, mas incompleto ou com valores inválidos, também
+    // é erro de contrato; "unavailable" fica reservado às falhas de transporte.
     if (!isMetricPayload(data)) {
       return {
         status: "error",
@@ -125,6 +135,7 @@ export async function fetchServiceMetrics(
       disk_gb: data.metrics.disk_gb,
       network_gb: data.metrics.network_gb,
       collection_interval_seconds: data.collection_interval_seconds,
+      // O instante é criado localmente no recebimento, não copiado da API.
       recorded_at: new Date().toISOString(),
     };
 

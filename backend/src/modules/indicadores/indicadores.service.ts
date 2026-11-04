@@ -6,9 +6,13 @@ import {
   type ServiceIndicatorData,
 } from "./indicadores.repository.js";
 
+// Modelo versão 1, baseado nos parâmetros do exemplo fornecido pelo cliente
+// (detalhes em docs/calculos.md); são estimativas, não medições do hardware.
 const POWER_MODEL = {
   version: "1",
+  // Potência máxima atribuída à CPU, em watts (W).
   cpuMaximumWatts: 100,
+  // Fatores de potência em watts por gigabyte (W/GB).
   memoryWattsPerGb: 0.375,
   diskWattsPerGb: 0.01,
   networkWattsPerGb: 0.02,
@@ -87,6 +91,7 @@ function finiteNumber(value: number | string | null): number | null {
 }
 
 function calculateSample(collection: IndicatorCollection): SampleCalculation {
+  // A duração da amostra só pode participar da conta se for finita e positiva.
   const collectionIntervalSeconds =
     typeof collection.collection_interval_seconds === "number" &&
     Number.isFinite(collection.collection_interval_seconds) &&
@@ -100,6 +105,8 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     attemptedAt: collection.attempted_at,
     status: collection.status,
     collectionIntervalSeconds,
+    // Para status no_metrics/unavailable/error, intervalo inválido ou métricas
+    // inválidas, não há energia nem emissão; os resultados e o fator ficam nulos.
     energyKwh: null,
     emissionsGco2e: null,
     carbonIntensityGco2ePerKwh: null,
@@ -119,6 +126,8 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
   const diskGb = finiteNumber(collection.disk_gb);
   const networkGb = finiteNumber(collection.network_gb);
 
+  // CPU é percentual entre 0 e 100; memória, disco e rede são quantidades em
+  // GB e não podem ser negativas. Valores ausentes ou não finitos são inválidos.
   if (
     cpuPercent === null ||
     cpuPercent < 0 ||
@@ -134,14 +143,20 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
   }
 
   const powerWatts =
+    // cpu_percent é uma porcentagem (0–100), convertida em fração antes de
+    // multiplicar pela potência máxima de CPU expressa em watts.
     (cpuPercent / 100) * POWER_MODEL.cpuMaximumWatts +
     memoryGb * POWER_MODEL.memoryWattsPerGb +
     diskGb * POWER_MODEL.diskWattsPerGb +
     networkGb * POWER_MODEL.networkWattsPerGb;
+  // W·s convertido em kWh: 3.600 s/h × 1.000 Wh/kWh = 3.600.000.
+  // Potência, energia, emissões e totais são mantidos como doubles crus.
   const energyKwh =
     (powerWatts * collectionIntervalSeconds) / 3_600_000;
 
   const carbonIntensity = collection.carbon_intensity_gco2e_per_kwh;
+  // Uma intensidade ausente/inválida impede somente a emissão; a energia já
+  // calculada continua válida e é mantida na amostra.
   if (
     carbonIntensity === null ||
     !Number.isFinite(carbonIntensity) ||
@@ -165,6 +180,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     status: collection.status,
     collectionIntervalSeconds,
     energyKwh,
+    // kWh × gCO₂e/kWh resulta em gramas de CO₂ equivalente (gCO₂e).
     emissionsGco2e: energyKwh * carbonIntensity,
     carbonIntensityGco2ePerKwh: carbonIntensity,
     gapReason: null,
@@ -172,6 +188,9 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
 }
 
 function coveragePercent(valid: number, total: number): number {
+  // Percentual de amostras válidas sobre o denominador correspondente:
+  // todas as coletas para métricas, ou métricas válidas para intensidade.
+  // O resultado permanece double, sem arredondamento.
   return total === 0 ? 0 : (valid / total) * 100;
 }
 
@@ -250,6 +269,8 @@ export class IndicadoresService {
           validCarbonIntensityCount,
           validMetricCount,
         ),
+        // Resultado parcial se não houve coletas, faltam métricas válidas ou
+        // alguma amostra com energia válida não tem intensidade elegível.
         isPartial:
           collectionCount === 0 ||
           validMetricCount < collectionCount ||
@@ -310,6 +331,7 @@ export class IndicadoresService {
           validCarbonSamples.length,
           validMetricSamples.length,
         ),
+        // Os totais e percentuais permanecem doubles crus, sem arredondamento.
         isPartial:
           collectionCount === 0 ||
           validMetricSamples.length < collectionCount ||
