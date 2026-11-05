@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Testa contratos e validações do controller com métodos do service simulados.
+// vi.hoisted permite usar os mocks na fábrica antecipada de vi.mock.
 const serviceMocks = vi.hoisted(() => ({
   getIndicators: vi.fn(),
   getServiceHistory: vi.fn(),
@@ -16,6 +18,7 @@ vi.mock("./indicadores.service.js", () => ({
 
 import { IndicadoresController } from "./indicadores.controller.js";
 
+// Simula status encadeável e json para conferir a resposta sem iniciar um servidor.
 function createResponse() {
   const response = {
     status: vi.fn(),
@@ -26,10 +29,12 @@ function createResponse() {
 }
 
 beforeEach(() => {
+  // Zera as chamadas dos mocks; cada cenário define a resposta ou falha que precisa.
   vi.clearAllMocks();
 });
 
 describe("IndicadoresController.list", () => {
+  // Confere as datas encaminhadas e o corpo passado a json; não executa os cálculos do service.
   it("consulta o service com o período e retorna os indicadores", async () => {
     const indicators = {
       period: { start: new Date("2026-10-30T00:00:00.000Z") },
@@ -62,6 +67,7 @@ describe("IndicadoresController.list", () => {
     });
   });
 
+  // O caso implementado envia start repetido; espera erro de validação em next, sem chamar o service.
   it("encaminha query ausente ou repetida como erro de validação", async () => {
     const next = vi.fn();
     const controller = new IndicadoresController();
@@ -81,6 +87,7 @@ describe("IndicadoresController.list", () => {
     expect(serviceMocks.getIndicators).not.toHaveBeenCalled();
   });
 
+  // Verifica que o controller repassa o mesmo erro a next; o middleware global não é executado aqui.
   it("encaminha erros do service ao middleware global", async () => {
     const error = new Error("Falha na consulta");
     serviceMocks.getIndicators.mockRejectedValue(error);
@@ -97,7 +104,9 @@ describe("IndicadoresController.list", () => {
   });
 });
 
+// O histórico recebe o ID na rota e o período na query, usando getServiceHistory simulado.
 describe("IndicadoresController.history", () => {
+  // Confere o ID numérico, as datas encaminhadas e o corpo com identificação do serviço e amostras.
   it("consulta o histórico do serviço com id e período informados", async () => {
     const history = {
       period: {
@@ -147,6 +156,7 @@ describe("IndicadoresController.history", () => {
     });
   });
 
+  // A ausência das datas deve interromper o fluxo antes da chamada ao service.
   it("encaminha período ausente como erro de validação", async () => {
     const next = vi.fn();
     const controller = new IndicadoresController();
@@ -172,6 +182,7 @@ describe("IndicadoresController.history", () => {
     expect(serviceMocks.getServiceHistory).not.toHaveBeenCalled();
   });
 
+  // O parâmetro textual "15" deve chegar como número 15 ao service.
   it("converte o identificador da rota para número antes de chamar o service", async () => {
     serviceMocks.getServiceHistory.mockResolvedValue({
       period: {},
@@ -202,6 +213,7 @@ describe("IndicadoresController.history", () => {
     );
   });
 
+  // Verifica que o controller repassa o mesmo erro a next; o middleware global não é executado aqui.
   it("encaminha erros do service ao middleware global", async () => {
     const error = new Error("Falha na consulta do histórico");
 

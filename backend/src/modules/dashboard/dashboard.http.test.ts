@@ -5,6 +5,7 @@ import { createToken } from "../../shared/utils/jwt.util.js";
 import { IndicadoresRepository } from "../indicadores/indicadores.repository.js";
 import { DashboardRepository } from "./dashboard.repository.js";
 
+// Prepara JWT de teste e as duas consultas simuladas antes de cada cenário HTTP.
 beforeEach(() => {
   vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
   vi.stubEnv("JWT_EXPIRES_IN", "15m");
@@ -26,12 +27,14 @@ beforeEach(() => {
   });
 });
 
+// Remove as substituições de métodos e restaura as variáveis ao terminar cada teste.
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
 // Testes HTTP de GET /api/dashboard, com JWT real e consultas simuladas.
 describe("HTTP do dashboard", () => {
+  // A autenticação deve bloquear a requisição antes de acionar qualquer consulta.
   it("retorna 401 quando não recebe token", async () => {
     const response = await request(app).get("/api/dashboard").query({
       start: "2026-11-01T00:00:00.000Z",
@@ -115,6 +118,7 @@ describe("HTTP do dashboard", () => {
   it("retorna 500 quando uma consulta do dashboard falha", async () => {
     const token = createToken({ sub: "1" });
 
+    // O método já foi simulado no beforeEach; vi.mocked permite configurar sua rejeição com tipagem.
     vi.mocked(
       DashboardRepository.prototype.countServicesByAvailability,
     ).mockRejectedValue(

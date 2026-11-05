@@ -6,6 +6,7 @@ import { ColetasRepository } from "./coletas.repository.js";
 import { UserRepository } from "../auth/auth.repository.js";
 import { ColetasService } from "./coletas.service.js";
 
+// Restaura os métodos e variáveis temporários depois de cada requisição de teste.
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
@@ -14,12 +15,14 @@ afterEach(() => {
 // Testes HTTP de histórico e coleta manual.
 // Usam JWT real e simulam consultas ao banco e a operação de coleta.
 describe("HTTP do histórico de coletas", () => {
+  // Sem Authorization, a autenticação deve bloquear o acesso antes da consulta ao histórico.
   it("retorna 401 quando não recebe token", async () => {
     const response = await request(app).get("/api/metricas/historico/1");
 
     expect(response.status).toBe(401);
   });
 
+  // Enviar Bearer não basta: o conteúdo precisa ser um JWT válido.
   it("retorna 401 quando recebe token inválido", async () => {
     const response = await request(app)
       .get("/api/metricas/historico/1")
@@ -74,6 +77,7 @@ describe("HTTP do histórico de coletas", () => {
     vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
     vi.stubEnv("JWT_EXPIRES_IN", "15m");
 
+    // Registro fictício devolvido pelo repository; este cenário não comprova gravação real.
     const coleta = {
       id_collection: "10",
       service_id: 1,
@@ -108,6 +112,7 @@ describe("HTTP do histórico de coletas", () => {
     expect(consultarHistorico).toHaveBeenCalledExactlyOnceWith(1);
   });
 
+  // Sem autenticação, a rota manual deve rejeitar o pedido antes de iniciar a coleta.
   it("retorna 401 ao solicitar coleta sem token", async () => {
     const response = await request(app).post("/api/metricas/collect");
 

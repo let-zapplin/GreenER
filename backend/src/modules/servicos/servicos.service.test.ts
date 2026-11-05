@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServicosService, type ExternalService } from "./servicos.service.js";
 import { ExternalApiError } from "../../shared/errors/AppError.js";
 
+// Simula o acesso ao banco para testar descoberta e sincronização sem persistência real.
 const {
   findLocationByRegionMock,
   createLocationMock,
@@ -42,6 +43,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// Restaura fetch e o relógio após os cenários de requisição e timeout.
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
@@ -151,7 +153,10 @@ describe("ServicosService.discoverServices", () => {
   });
 });
 
+// A descoberta é substituída nos cenários de sincronização; as verificações acompanham
+// criação, atualização e remoção solicitadas ao repository simulado.
 describe("ServicosService.saveServices", () => {
+  // Confere o código regional usado na criação quando a localização ainda não foi encontrada.
   it("converte o código regional externo ao criar uma localização", async () => {
     const services: ExternalService[] = [
       {
@@ -187,6 +192,7 @@ describe("ServicosService.saveServices", () => {
     });
   });
 
+  // Um registro existente deve ser atualizado, enquanto a lista de IDs presentes orienta as remoções.
   it("mantém serviço existente ativo e marca como removidos apenas os ausentes", async () => {
     const services: ExternalService[] = [
       {
@@ -236,6 +242,7 @@ describe("ServicosService.saveServices", () => {
     });
   });
 
+  // Catálogo vazio deve encaminhar uma lista vazia de IDs preservados ao repository.
   it("marca os serviços persistidos como removidos quando o catálogo vem vazio", async () => {
     const service = new ServicosService();
 

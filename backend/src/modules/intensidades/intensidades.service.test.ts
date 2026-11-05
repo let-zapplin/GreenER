@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Simula Carbon API e repository para testar somente as regras do service.
+// vi.hoisted cria as funções antes das fábricas de vi.mock.
 const mocks = vi.hoisted(() => ({
   fetchCarbonRegions: vi.fn(),
   findLocationByRegion: vi.fn(),
@@ -9,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   findForCollection: vi.fn(),
 }));
 
+// Define idade máxima fixa para conferir seu encaminhamento à consulta temporal.
 vi.mock("../../config/env.js", () => ({
   env: { carbonIntensityMaxAgeMs: 60_000 },
 }));
@@ -29,6 +32,7 @@ vi.mock("./intensidades.repository.js", () => ({
 
 import { IntensidadesService } from "./intensidades.service.js";
 
+// Catálogo fictício no formato externo, usado como entrada para o mapeamento.
 const regionCatalog = {
   regions: [
     {
@@ -45,6 +49,7 @@ const regionCatalog = {
   total: 1,
 };
 
+// Limpa as chamadas e prepara respostas conhecidas antes de cada cenário.
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.fetchCarbonRegions.mockResolvedValue(regionCatalog);
@@ -54,6 +59,7 @@ beforeEach(() => {
 });
 
 describe("IntensidadesService", () => {
+  // Confere a conversão dos nomes externos para os campos internos sem alterar seus valores.
   it("mapeia o catálogo externo para o modelo interno", async () => {
     const result = await new IntensidadesService().discoverIntensities();
 
@@ -71,6 +77,8 @@ describe("IntensidadesService", () => {
     ]);
   });
 
+  // Duas sincronizações devem solicitar duas inserções, com data e fatores esperados.
+  // A persistência é simulada; o teste verifica chamadas ao repository.
   it("cria um snapshot regional em cada sincronização", async () => {
     const service = new IntensidadesService();
 
@@ -89,6 +97,7 @@ describe("IntensidadesService", () => {
     );
   });
 
+  // Confere ID da coleta e idade máxima passados ao repository; null é preservado no retorno.
   it("usa o limite configurado ao buscar o fator temporal", async () => {
     const service = new IntensidadesService();
     mocks.findForCollection.mockResolvedValue(null);

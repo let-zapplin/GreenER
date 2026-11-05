@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Substitui pool.query: verifica o mapeamento do resultado e trechos do SQL,
+// sem executar a consulta em PostgreSQL real.
 const { queryMock } = vi.hoisted(() => ({
   queryMock: vi.fn(),
 }));
@@ -17,6 +19,7 @@ describe("DashboardRepository.countServicesByAvailability", () => {
     vi.clearAllMocks();
   });
 
+  // Fornece contagens conhecidas no formato do banco para conferir o retorno em camelCase.
   it("conta categorias disjuntas somente entre serviços ativos do catálogo", async () => {
     queryMock.mockResolvedValue({
       rows: [
@@ -36,6 +39,8 @@ describe("DashboardRepository.countServicesByAvailability", () => {
       unavailableServiceCount: 2,
     });
 
+    // Confere filtros de catálogo, classificação da última coleta e ordenação usada
+    // para escolher a tentativa mais recente. Não comprova a contagem com dados reais.
     const [sql] = queryMock.mock.calls[0];
     expect(sql).toContain("WHERE s.status = 'active'");
     expect(sql).toContain("latest_collection.status IN ('success', 'error')");

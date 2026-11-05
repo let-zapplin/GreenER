@@ -3,6 +3,8 @@ import type { FetchMetricResult } from "../../integrations/metrics-api.js";
 import type { ListedService } from "../servicos/servicos.repository.js";
 import { ColetasService } from "./coletas.service.js";
 
+// Testes unitários: listagem, gravação e busca de métricas são injetadas como simulações.
+// Não acessam PostgreSQL ou API externa; a configuração também fica controlada.
 vi.mock("../../config/env.js", () => ({
   env: {
     metricsApiUrl: "https://metrics.exemplo",
@@ -10,6 +12,7 @@ vi.mock("../../config/env.js", () => ({
   },
 }));
 
+// Cria dados de catálogo fictícios; o status permite testar serviços ativos e removidos.
 function makeService(id: number, status = "active"): ListedService {
   return {
     id_service: id,
@@ -28,6 +31,7 @@ function makeService(id: number, status = "active"): ListedService {
   };
 }
 
+// Monta métricas conhecidas com duração de 45 segundos e data informada pelo cenário.
 function makeMetric(cpuPercent: number, recordedAt: string) {
   return {
     cpu_percent: cpuPercent,
@@ -40,6 +44,8 @@ function makeMetric(cpuPercent: number, recordedAt: string) {
 }
 
 describe("ColetasService.collectAllMetrics", () => {
+  // Dois serviços estão ativos e um removido: somente os ativos devem gerar chamadas
+  // à integração e ao método de gravação simulado.
   it("consulta e persiste uma tentativa individual para cada serviço ativo", async () => {
     const services = [
       makeService(1),
@@ -89,6 +95,7 @@ describe("ColetasService.collectAllMetrics", () => {
     });
   });
 
+  // A primeira gravação simulada falha; o próximo serviço ainda deve ser processado.
   it("continua para os próximos serviços se uma gravação no banco falhar", async () => {
     const saveCollection = vi
       .fn()
@@ -179,6 +186,7 @@ describe("ColetasService.collectAllMetrics", () => {
     });
   });
 
+  // Devolve um resultado de cada categoria e confere contadores e motivos no resumo.
   it("contabiliza sucesso, ausência de métricas, indisponibilidade e falha sem interromper o ciclo", async () => {
     const fetchMetrics = vi
       .fn<(serviceId: string) => Promise<FetchMetricResult>>()
@@ -236,6 +244,8 @@ describe("ColetasService.collectAllMetrics", () => {
     });
   });
 
+  // Mantém a primeira listagem pendente para verificar o bloqueio entre duas instâncias
+  // e depois libera a Promise para permitir um novo ciclo.
   it("ignora novo ciclo enquanto uma coleta anterior está em andamento", async () => {
     let resolveServices: (services: ListedService[]) => void = () => {};
     const listAll = vi.fn(
@@ -290,6 +300,7 @@ describe("ColetasService.collectAllMetrics", () => {
 });
 // Testes unitários da consulta de histórico, com dependências simuladas.
 describe("ColetasService.getHistoryByService", () => {
+  // Cada chamada cria um service com novas funções simuladas para isolar os cenários de histórico.
   function setup() {
     const listAll = vi.fn().mockResolvedValue([]);
     const saveCollection = vi.fn().mockResolvedValue(undefined);
@@ -351,6 +362,7 @@ describe("ColetasService.getHistoryByService", () => {
     expect(findHistoryByService).toHaveBeenCalledExactlyOnceWith(7);
   });
 
+  // Cada ID da lista gera um cenário que deve falhar antes de consultar o repository.
   it.each([
     "",
     "abc",

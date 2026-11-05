@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardService } from "./dashboard.service.js";
 
+// Testa as regras do dashboard com indicadores e contagens simulados, sem acessar PostgreSQL.
+// Os intervalos ficam fixos para não depender do ambiente de desenvolvimento.
 vi.mock("../../config/env.js", () => ({
   env: {
     metricsCollectionIntervalMs: 60_000,
@@ -8,6 +10,7 @@ vi.mock("../../config/env.js", () => ({
   },
 }));
 
+// Evita carregar a conexão real do módulo de indicadores; as dependências são injetadas no service.
 vi.mock("../indicadores/indicadores.repository.js", () => ({
   IndicadoresRepository: class {},
 }));
@@ -16,6 +19,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+// Monta somente os campos de um serviço calculado que o dashboard usa para agregar totais.
 function createIndicatorService(
   status: string,
   energyKwh: number,
@@ -43,9 +47,12 @@ describe("DashboardService.getSummary", () => {
   );
 
   beforeEach(() => {
+    // Limpa as chamadas para conferir o encaminhamento dos parâmetros em cada cenário.
     vi.clearAllMocks();
   });
 
+  // Fixa o horário atual: sem datas informadas, espera as 24 horas anteriores.
+  // Os valores do serviço removed não devem contribuir para energia ou emissão.
   it("usa as últimas 24 horas e soma somente os serviços ativos do catálogo", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-31T12:00:00.000Z"));
@@ -82,6 +89,7 @@ describe("DashboardService.getSummary", () => {
     });
   });
 
+  // Um serviço ativo sem tentativas torna o resumo parcial, mesmo com totais zerados.
   it("marca o resumo parcial se serviço ativo não teve coleta no período", async () => {
     getIndicators.mockResolvedValue({
       services: [createIndicatorService("active", 0, 0, 0, true)],
@@ -104,6 +112,7 @@ describe("DashboardService.getSummary", () => {
     );
   });
 
+  // Um serviço removido não torna o resumo parcial: ele fica fora da agregação.
   it("retorna totais vazios completos quando não há serviços ativos", async () => {
     getIndicators.mockResolvedValue({
       services: [createIndicatorService("removed", 0, 0, 0, true)],
@@ -129,6 +138,7 @@ describe("DashboardService.getSummary", () => {
     });
   });
 
+  // Preserva a energia disponível, mas mantém a sinalização de dados incompletos.
   it("marca o resumo parcial quando cálculos do período têm lacunas", async () => {
     getIndicators.mockResolvedValue({
       services: [createIndicatorService("active", 0.25, 0, 1, true)],
@@ -151,6 +161,7 @@ describe("DashboardService.getSummary", () => {
     });
   });
 
+  // Confere falta de end, data inválida e período invertido, sem chamar as dependências.
   it("rejeita período incompleto ou inválido antes de consultar dependências", async () => {
     await expect(
       service.getSummary("2026-10-30T00:00:00.000Z"),

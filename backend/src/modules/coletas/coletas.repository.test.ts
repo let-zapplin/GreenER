@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FetchMetricResult } from "../../integrations/metrics-api.js";
 
+// Simula pool, cliente, consultas e liberação da conexão; nenhum SQL é executado no banco.
+// Os testes conferem os comandos e parâmetros solicitados pelo repository real.
 const { connectMock, queryMock, releaseMock } = vi.hoisted(() => ({
   connectMock: vi.fn(),
   queryMock: vi.fn(),
@@ -18,12 +20,15 @@ import { ColetasRepository } from "./coletas.repository.js";
 describe("ColetasRepository.saveCollection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // O cliente simulado oferece os mesmos métodos usados pelo repository: query e release.
     connectMock.mockResolvedValue({
       query: queryMock,
       release: releaseMock,
     });
   });
 
+  // As quatro respostas representam BEGIN, INSERT da tentativa com ID 42,
+  // INSERT das métricas e COMMIT, nessa ordem.
   it("grava coleta e métricas na mesma transação", async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [] })
@@ -44,6 +49,7 @@ describe("ColetasRepository.saveCollection", () => {
 
     await new ColetasRepository().saveCollection(7, result);
 
+    // Confere a sequência da transação; as verificações seguintes conferem os valores parametrizados.
     expect(queryMock.mock.calls.map(([sql]) => sql)).toEqual([
       "BEGIN",
       expect.stringContaining("INSERT INTO collection"),
@@ -63,6 +69,7 @@ describe("ColetasRepository.saveCollection", () => {
     expect(releaseMock).toHaveBeenCalledOnce();
   });
 
+  // Indisponibilidade deve inserir a tentativa e seu motivo, sem pedir INSERT em metrics.
   it("grava o motivo técnico quando o serviço está indisponível", async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [] })
@@ -93,6 +100,7 @@ describe("ColetasRepository.saveCollection", () => {
     expect(releaseMock).toHaveBeenCalledOnce();
   });
 
+  // no_metrics preserva o HTTP 404 na tentativa e não deve solicitar gravação de métricas.
   it("grava coleta sem métricas com status próprio, sem inserir dados em metrics", async () => {
     queryMock
       .mockResolvedValueOnce({ rows: [] })
@@ -118,6 +126,8 @@ describe("ColetasRepository.saveCollection", () => {
     expect(releaseMock).toHaveBeenCalledOnce();
   });
 
+  // Simula sucesso de BEGIN, falha do INSERT e outra falha no ROLLBACK.
+  // Confirma a propagação do erro original e a liberação do cliente mesmo assim.
   it("preserva o erro original se a gravação e o rollback falharem", async () => {
     const saveError = new Error("insert failed");
     queryMock
