@@ -120,6 +120,51 @@
   margin: 20px 0 0;
 }
 
+.analyses-history-navigation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.analyses-service-nav-button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+
+  border: 1px solid #315657;
+  border-radius: 50%;
+
+  background: #0c2d30;
+  color: #c8d8d1;
+
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.analyses-service-nav-button:hover {
+  border-color: #87e46c;
+  background: #12383b;
+  color: #87e46c;
+  transform: translateY(-1px);
+}
+
+.analyses-service-nav-button:focus-visible {
+  outline: 2px solid #87e46c;
+  outline-offset: 2px;
+}
+
 .analyses-section-label {
   margin: 0 0 6px;
   color: #87e46c;
@@ -175,7 +220,8 @@
 }
 
 .analyses-history {
-  padding: 24px;
+  position: relative;
+  padding: 20px 22px;
   border: 1px solid #315657;
   border-radius: 18px;
   background: #12383b;
@@ -185,7 +231,123 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
+  padding: 0 52px;
+}
+
+.analyses-history-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.analyses-history-corner-nav {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  pointer-events: none;
+}
+
+.analyses-service-corner-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+
+  border: 1px solid #315657;
+  border-radius: 999px;
+
+  background: #0c2d30cc;
+  backdrop-filter: blur(4px);
+
+  cursor: pointer;
+  pointer-events: auto;
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.analyses-service-corner-button:hover {
+  border-color: #87e46c;
+  background: #12383b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px #00000022;
+}
+
+.analyses-service-corner-button:focus-visible {
+  outline: 2px solid #87e46c;
+  outline-offset: 2px;
+}
+
+.analyses-service-corner-button span {
+  display: block;
+  width: 0;
+  height: 0;
+}
+
+.analyses-service-corner-button.is-previous span {
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 11px solid #87e46c;
+  margin-left: -2px;
+}
+
+.analyses-service-corner-button.is-next span {
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 11px solid #87e46c;
+  margin-right: -2px;
+}
+
+.analyses-service-badge {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 56px;
+  flex: 0 0 auto;
+
+  background: linear-gradient(
+    180deg,
+    #11383b 0%,
+    #0c2d30 100%
+  );
+  border: 1px solid #87e46c66;
+
+  color: #87e46c;
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+
+  clip-path: polygon(
+    25% 6%,
+    75% 6%,
+    94% 50%,
+    75% 94%,
+    25% 94%,
+    6% 50%
+  );
+
+  box-shadow:
+    inset 0 0 0 1px #ffffff08,
+    0 0 0 1px #87e46c22;
+  }
+
+.analyses-history-service strong {
+  color: #e8f1eb;
+  font-weight: 600;
 }
 
 .analyses-history-header h2 {
@@ -197,7 +359,8 @@
 .analyses-history-service {
   margin: 6px 0 0;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .analyses-history-unit {
@@ -224,11 +387,11 @@
     repeat(2, minmax(120px, 180px))
     minmax(220px, 1fr);
   gap: 12px;
-  margin: 22px 0 0;
+  margin: 16px 0 0;
 }
 
 .analyses-history-summary > div {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-top: 1px solid #ffffff12;
 }
 
@@ -336,6 +499,55 @@
   }
 }
 
+.analyses-period-selector {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.analyses-period-selector > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analyses-period-options {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #315657;
+  border-radius: 10px;
+  background: #0c2d30;
+}
+
+.analyses-period-button {
+  min-width: 48px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.analyses-period-button:hover {
+  color: #f4f8f5;
+}
+
+.analyses-period-button.is-active {
+  background: #87e46c;
+  color: #062f32;
+}
+
 @media (max-width: 700px) {
   .analyses-page {
     padding: 36px 20px 148px;
@@ -366,27 +578,88 @@
   }
 
   .analyses-controls {
-  align-items: stretch;
-  flex-direction: column;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .analyses-service-select {
+    width: 100%;
+  }
+
+  .analyses-history {
+    padding: 16px;
+  }
+
+  .analyses-history-header {
+    gap: 16px;
+  }
+
+  .analyses-history-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .analyses-history-summary > div:last-child {
+    grid-column: 1 / -1;
+  }
+  .analyses-period-selector {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .analyses-period-options {
+    width: 100%;
+  }
+
+  .analyses-period-button {
+    flex: 1;
+  }
+
+  .analyses-service-badge {
+  width: 42px;
+  height: 46px;
+  font-size: 11px;
 }
 
-.analyses-service-select {
+.analyses-history-identity {
+  gap: 10px;
+}
+.analyses-history-navigation {
   width: 100%;
+  gap: 8px;
 }
 
-.analyses-history {
-  padding: 18px;
+.analyses-history-identity {
+  flex: 1;
+}
+
+.analyses-service-nav-button {
+  width: 32px;
+  height: 32px;
+}
+.analyses-history-corner-nav {
+  top: 14px;
+  left: 14px;
+  right: 14px;
+}
+
+.analyses-service-corner-button {
+  width: 34px;
+  height: 34px;
+}
+
+.analyses-service-corner-button.is-previous span {
+  border-top-width: 6px;
+  border-bottom-width: 6px;
+  border-right-width: 9px;
+}
+
+.analyses-service-corner-button.is-next span {
+  border-top-width: 6px;
+  border-bottom-width: 6px;
+  border-left-width: 9px;
 }
 
 .analyses-history-header {
-  gap: 16px;
-}
-
-.analyses-history-summary {
-  grid-template-columns: 1fr 1fr;
-}
-
-.analyses-history-summary > div:last-child {
-  grid-column: 1 / -1;
+  padding: 0 40px;
 }
 }

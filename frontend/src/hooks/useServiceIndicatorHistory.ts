@@ -5,11 +5,11 @@ import { ApiError } from "../services/api";
 import { getServiceIndicatorHistory } from "../services/indicatorsApi";
 import type { ServiceIndicatorHistoryResponse } from "../types/indicators";
 
-const PERIOD_MS = 24 * 60 * 60 * 1000;
 const REFRESH_INTERVAL_MS = 60_000;
 
 export function useServiceIndicatorHistory(
   serviceId: number | null,
+  periodMs: number,
 ) {
   const { token, logout } = useAuth();
 
@@ -38,10 +38,7 @@ export function useServiceIndicatorHistory(
     setLoading(true);
     setError(null);
 
-    async function loadHistory(
-      authToken: string,
-      selectedServiceId: number,
-    ) {
+    async function loadHistory(authToken: string, selectedServiceId: number) {
       if (disposed || requestInFlight) return;
 
       requestInFlight = true;
@@ -55,7 +52,7 @@ export function useServiceIndicatorHistory(
       );
 
       const end = new Date();
-      const start = new Date(end.getTime() - PERIOD_MS);
+      const start = new Date(end.getTime() - periodMs);
 
       try {
         const data = await getServiceIndicatorHistory(
@@ -109,7 +106,7 @@ export function useServiceIndicatorHistory(
       clearInterval(refreshTimer);
       controller?.abort();
     };
-  }, [serviceId, token, logout]);
+  }, [serviceId, periodMs, token, logout]);
 
   return {
     history,

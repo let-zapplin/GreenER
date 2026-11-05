@@ -4,6 +4,38 @@ import { useMonitoring } from "../hooks/useMonitoring";
 import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
 
 import "./Analyses.css";
+type HistoryPeriod = {
+  label: string;
+  value: number;
+};
+
+const HISTORY_PERIODS: HistoryPeriod[] = [
+  {
+    label: "1h",
+    value: 1 * 60 * 60 * 1000,
+  },
+  {
+    label: "6h",
+    value: 6 * 60 * 60 * 1000,
+  },
+  {
+    label: "24h",
+    value: 24 * 60 * 60 * 1000,
+  },
+  {
+    label: "7d",
+    value: 7 * 24 * 60 * 60 * 1000,
+  },
+];
+
+const DEFAULT_HISTORY_PERIOD_MS = 24 * 60 * 60 * 1000;
+
+function getServiceInitials(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 3)
+    .toUpperCase();
+}
 
 export function Analyses() {
   const {
@@ -16,6 +48,10 @@ export function Analyses() {
 
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(
     null,
+  );
+
+  const [historyPeriodMs, setHistoryPeriodMs] = useState(
+    DEFAULT_HISTORY_PERIOD_MS,
   );
 
   useEffect(() => {
@@ -40,11 +76,41 @@ export function Analyses() {
   const selectedService =
     services.find((service) => service.serviceId === selectedServiceId) ?? null;
 
+  const selectedServiceIndex = services.findIndex(
+    (service) => service.serviceId === selectedServiceId,
+  );
+
+  function selectPreviousService() {
+    if (services.length === 0 || selectedServiceIndex < 0) {
+      return;
+    }
+
+    const previousIndex =
+      selectedServiceIndex === 0
+        ? services.length - 1
+        : selectedServiceIndex - 1;
+
+    setSelectedServiceId(services[previousIndex].serviceId);
+  }
+
+  function selectNextService() {
+    if (services.length === 0 || selectedServiceIndex < 0) {
+      return;
+    }
+
+    const nextIndex =
+      selectedServiceIndex === services.length - 1
+        ? 0
+        : selectedServiceIndex + 1;
+
+    setSelectedServiceId(services[nextIndex].serviceId);
+  }
+
   const {
     history,
     loading: historyLoading,
     error: historyError,
-  } = useServiceIndicatorHistory(selectedServiceId);
+  } = useServiceIndicatorHistory(selectedServiceId, historyPeriodMs);
 
   const validEnergySamples =
     history?.samples.filter((sample) => sample.energyKwh !== null).length ?? 0;
@@ -125,22 +191,78 @@ export function Analyses() {
 
         {selectedService && (
           <section className="analyses-history" aria-labelledby="history-title">
+            <div className="analyses-history-corner-nav">
+              <button
+                type="button"
+                className="analyses-service-corner-button is-previous"
+                onClick={selectPreviousService}
+                aria-label="Serviço anterior"
+                title="Serviço anterior"
+              >
+                <span aria-hidden="true" />
+              </button>
+
+              <button
+                type="button"
+                className="analyses-service-corner-button is-next"
+                onClick={selectNextService}
+                aria-label="Próximo serviço"
+                title="Próximo serviço"
+              >
+                <span aria-hidden="true" />
+              </button>
+            </div>
             <div className="analyses-history-header">
-              <div>
-                <p className="analyses-section-label">ÚLTIMAS 24 HORAS</p>
+              <div className="analyses-history-identity">
+                <div className="analyses-service-badge" aria-hidden="true">
+                  {getServiceInitials(selectedService.name)}
+                </div>
 
-                <h2 id="history-title">Energia estimada</h2>
+                <div>
+                  <p className="analyses-section-label">HISTÓRICO AMBIENTAL</p>
 
-                <p className="analyses-history-service">
-                  {selectedService.name}
-                  <span aria-hidden="true"> · </span>
-                  {selectedService.location.region_code}
-                </p>
+                  <h2 id="history-title">Energia estimada</h2>
+
+                  <p className="analyses-history-service">
+                    <strong>{selectedService.name}</strong>
+                    <span aria-hidden="true">{" · "}</span>
+                    {selectedService.location.region_code}
+                  </p>
+                </div>
               </div>
 
               <div className="analyses-history-unit">
                 <span>Unidade</span>
                 <strong>kWh</strong>
+              </div>
+            </div>
+
+            <div
+              className="analyses-period-selector"
+              aria-label="Período analisado"
+            >
+              <span>Período</span>
+
+              <div className="analyses-period-options">
+                {HISTORY_PERIODS.map((period) => {
+                  const isActive = historyPeriodMs === period.value;
+
+                  return (
+                    <button
+                      key={period.label}
+                      type="button"
+                      className={
+                        isActive
+                          ? "analyses-period-button is-active"
+                          : "analyses-period-button"
+                      }
+                      aria-pressed={isActive}
+                      onClick={() => setHistoryPeriodMs(period.value)}
+                    >
+                      {period.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -229,7 +351,13 @@ export function Analyses() {
                 )}
 
                 {history.samples.length > 0 && validEnergySamples > 0 && (
-                  <HistoryChart samples={history.samples} />
+                  <HistoryChart
+                    key={`${selectedServiceId}-${historyPeriodMs}`}
+                    samples={history.samples}
+                    periodStart={history.period.start}
+                    periodEnd={history.period.end}
+                    collectionIntervalMs={history.period.collectionIntervalMs}
+                  />
                 )}
               </>
             )}

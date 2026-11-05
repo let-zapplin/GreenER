@@ -1,13 +1,84 @@
 .history-chart {
-  margin-top: 24px;
+  margin-top: 16px;
+}
+
+.history-chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 30px;
+  margin: 8px 8px 4px;
+}
+
+.history-chart-toolbar > span {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.history-chart-toolbar button {
+  padding: 6px 10px;
+  border: 1px solid #426c60;
+  border-radius: 8px;
+  background: #0c2d30;
+  color: #dce8e2;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.history-chart-toolbar button:hover {
+  border-color: #87e46c;
+  color: #87e46c;
 }
 
 .history-chart-canvas {
   width: 100%;
-  height: 360px;
-  min-height: 280px;
-  padding: 8px 4px 0;
+  height: 250px;
+  min-height: 220px;
+  padding: 6px 4px 0;
   border-top: 1px solid #ffffff12;
+  user-select: none;
+  cursor: crosshair;
+}
+
+.history-chart-zoom-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-chart-toolbar button {
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid #426c60;
+  border-radius: 8px;
+  background: #0c2d30;
+  color: #dce8e2;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.history-chart-toolbar button:hover {
+  border-color: #87e46c;
+  background: #12383b;
+  color: #87e46c;
+}
+
+.history-chart-reset-button {
+  color: var(--text-muted);
 }
 
 .history-chart-footer {
@@ -15,24 +86,130 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 8px;
-  padding: 0 8px;
-  color: var(--text-muted);
-  font-size: 10px;
+  margin-top: 10px;
+  padding: 10px 12px 0;
+  border-top: 1px solid #ffffff0d;
+  color: #a9beb6;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.history-chart-tooltip {
+  min-width: 210px;
+  padding: 14px 16px;
+  border: 1px solid #426c60;
+  border-radius: 12px;
+  background: #0c2d30f2;
+  box-shadow: 0 10px 28px #0006;
+  color: #f4f8f5;
+  backdrop-filter: blur(6px);
+}
+
+.history-chart-tooltip time {
+  display: block;
+  margin-bottom: 12px;
+  color: #abc0b8;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.history-chart-tooltip span {
+  display: block;
+  color: #b5c8c0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.history-chart-tooltip strong {
+  display: block;
+  margin-top: 6px;
+  color: #f4f8f5;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  line-height: 1.25;
+}
+
+.history-chart-tooltip-gap {
+  color: #f1dc84;
+}
+
+.history-chart-tooltip p {
+  max-width: 260px;
+  margin: 10px 0 0;
+  color: #c7d6d0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.history-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+
+  margin: 10px 8px 0;
+  padding: 10px 12px;
+
+  border-radius: 8px;
+  background: #0c2d3044;
+
+  color: #c2d3cc;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.history-chart-legend > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.history-chart-legend-line {
+  width: 30px;
+  height: 3px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #87e46c;
+}
+
+.history-chart-legend-gap {
+  width: 30px;
+  flex: 0 0 auto;
+  border-top: 2px dashed #b3c6be;
 }
 
 @media (max-width: 700px) {
   .history-chart-canvas {
-    height: 300px;
-    min-height: 260px;
-  }
-
-  .history-chart-footer {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-  }
+  height: 240px;
+  min-height: 220px;
 }
+
+
+  .history-chart-legend {
+  align-items: flex-start;
+  padding: 10px;
+}
+
+.history-chart-footer {
+  padding: 8px 10px 0;
+}
+
+  .history-chart-toolbar {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.history-chart-zoom-actions {
+  width: 100%;
+}
+
+.history-chart-zoom-actions button {
+  flex: 1;
+}
+} 
