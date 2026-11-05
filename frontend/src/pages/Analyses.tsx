@@ -54,6 +54,8 @@ export function Analyses() {
     DEFAULT_HISTORY_PERIOD_MS,
   );
 
+  const [isChartTransitioning, setIsChartTransitioning] = useState(false);
+
   useEffect(() => {
     if (services.length === 0) {
       setSelectedServiceId(null);
@@ -72,6 +74,22 @@ export function Analyses() {
       return services[0].serviceId;
     });
   }, [services]);
+
+  useEffect(() => {
+    if (selectedServiceId === null) {
+      return;
+    }
+
+    setIsChartTransitioning(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setIsChartTransitioning(false);
+    }, 750);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [selectedServiceId, historyPeriodMs]);
 
   const selectedService =
     services.find((service) => service.serviceId === selectedServiceId) ?? null;
@@ -112,8 +130,19 @@ export function Analyses() {
     error: historyError,
   } = useServiceIndicatorHistory(selectedServiceId, historyPeriodMs);
 
+  const [previousHistory, setPreviousHistory] = useState<typeof history>(null);
+
+  useEffect(() => {
+    if (history) {
+      setPreviousHistory(history);
+    }
+  }, [history]);
+
+  const visibleHistory = history ?? (historyLoading ? previousHistory : null);
+
   const validEnergySamples =
-    history?.samples.filter((sample) => sample.energyKwh !== null).length ?? 0;
+    visibleHistory?.samples.filter((sample) => sample.energyKwh !== null)
+      .length ?? 0;
 
   return (
     <div className="analyses-screen">
@@ -213,7 +242,10 @@ export function Analyses() {
               </button>
             </div>
             <div className="analyses-history-header">
-              <div className="analyses-history-identity">
+              <div
+                key={selectedServiceId}
+                className="analyses-history-identity"
+              >
                 <div className="analyses-service-badge" aria-hidden="true">
                   {getServiceInitials(selectedService.name)}
                 </div>
@@ -273,94 +305,125 @@ export function Analyses() {
               </div>
             )}
 
-            {historyLoading && !history && (
-              <div className="analyses-history-state" role="status">
-                <span className="analyses-loader" aria-hidden="true" />
-                <p>Carregando histórico ambiental...</p>
-              </div>
-            )}
-
-            {historyError && !history && (
+            <div className="analyses-history-content">
               <div
-                className="analyses-history-state analyses-state-error"
-                role="alert"
+                key={`${selectedServiceId}-${historyPeriodMs}`}
+                className={
+                  isChartTransitioning
+                    ? "analyses-chameleon-transition is-active"
+                    : "analyses-chameleon-transition"
+                }
+                aria-hidden="true"
               >
-                <h3>Não foi possível carregar o histórico</h3>
-                <p>{historyError}</p>
+                <div className="analyses-transition-glow" />
+
+                <div className="analyses-transition-fragments">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
               </div>
-            )}
 
-            {historyError && history && (
-              <div className="analyses-warning" role="status">
-                Não foi possível atualizar o histórico. Os últimos dados
-                carregados permanecem visíveis.
-              </div>
-            )}
+              {historyError && !history && (
+                <div
+                  className="analyses-history-state analyses-state-error"
+                  role="alert"
+                >
+                  <h3>Não foi possível carregar o histórico</h3>
+                  <p>{historyError}</p>
+                </div>
+              )}
 
-            {history && (
-              <>
-                <dl className="analyses-history-summary">
-                  <div>
-                    <dt>Coletas no período</dt>
-                    <dd>{history.samples.length}</dd>
-                  </div>
+              {historyError && history && (
+                <div className="analyses-warning" role="status">
+                  Não foi possível atualizar o histórico. Os últimos dados
+                  carregados permanecem visíveis.
+                </div>
+              )}
 
-                  <div>
-                    <dt>Com energia calculada</dt>
-                    <dd>{validEnergySamples}</dd>
-                  </div>
+              {visibleHistory && (
+                <>
+                  <dl className="analyses-history-summary">
+                    <div>
+                      <dt>Coletas no período</dt>
+                      <dd>{visibleHistory.samples.length}</dd>
+                    </div>
 
-                  <div>
-                    <dt>Período</dt>
-                    <dd>
-                      {new Date(history.period.start).toLocaleString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {" — "}
-                      {new Date(history.period.end).toLocaleString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </dd>
-                  </div>
-                </dl>
+                    <div>
+                      <dt>Com energia calculada</dt>
+                      <dd>{validEnergySamples}</dd>
+                    </div>
 
-                {history.samples.length === 0 && (
-                  <div className="analyses-history-state" role="status">
-                    <h3>Sem histórico neste período</h3>
-                    <p>
-                      Ainda não existem coletas registradas para este serviço
-                      nas últimas 24 horas.
-                    </p>
-                  </div>
-                )}
+                    <div>
+                      <dt>Período</dt>
+                      <dd>
+                        {new Date(visibleHistory.period.start).toLocaleString(
+                          "pt-BR",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
+                        {" — "}
+                        {new Date(visibleHistory.period.end).toLocaleString(
+                          "pt-BR",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
 
-                {history.samples.length > 0 && validEnergySamples === 0 && (
-                  <div className="analyses-history-state" role="status">
-                    <h3>Energia ainda indisponível</h3>
-                    <p>
-                      Existem coletas no período, mas nenhuma possui dados
-                      suficientes para calcular o consumo energético.
-                    </p>
-                  </div>
-                )}
+                  {visibleHistory.samples.length === 0 && (
+                    <div className="analyses-history-state" role="status">
+                      <h3>Sem histórico neste período</h3>
+                      <p>
+                        Ainda não existem coletas registradas para este serviço
+                        nas últimas 24 horas.
+                      </p>
+                    </div>
+                  )}
 
-                {history.samples.length > 0 && validEnergySamples > 0 && (
-                  <HistoryChart
-                    key={`${selectedServiceId}-${historyPeriodMs}`}
-                    samples={history.samples}
-                    periodStart={history.period.start}
-                    periodEnd={history.period.end}
-                    collectionIntervalMs={history.period.collectionIntervalMs}
-                  />
-                )}
-              </>
-            )}
+                  {visibleHistory.samples.length > 0 &&
+                    validEnergySamples === 0 && (
+                      <div className="analyses-history-state" role="status">
+                        <h3>Energia ainda indisponível</h3>
+                        <p>
+                          Existem coletas no período, mas nenhuma possui dados
+                          suficientes para calcular o consumo energético.
+                        </p>
+                      </div>
+                    )}
+
+                  {visibleHistory.samples.length > 0 &&
+                    validEnergySamples > 0 && (
+                      <HistoryChart
+                        key={`${visibleHistory.service.serviceId}-${visibleHistory.period.start}-${visibleHistory.period.end}`}
+                        samples={visibleHistory.samples}
+                        periodStart={visibleHistory.period.start}
+                        periodEnd={visibleHistory.period.end}
+                        collectionIntervalMs={
+                          visibleHistory.period.collectionIntervalMs
+                        }
+                        displayIntervalMs={
+                          visibleHistory.period.displayIntervalMs
+                        }
+                      />
+                    )}
+                </>
+              )}
+            </div>
           </section>
         )}
       </main>

@@ -19,6 +19,7 @@ type HistoryChartProps = {
   periodStart: string;
   periodEnd: string;
   collectionIntervalMs: number;
+  displayIntervalMs: number;
 };
 
 type ChartPoint = {
@@ -129,6 +130,7 @@ export function HistoryChart({
   periodStart,
   periodEnd,
   collectionIntervalMs,
+  displayIntervalMs,
 }: HistoryChartProps) {
   const startTimestamp = new Date(periodStart).getTime();
   const endTimestamp = new Date(periodEnd).getTime();
@@ -142,7 +144,7 @@ export function HistoryChart({
 
   const data: ChartPoint[] = [];
 
-  const temporalGapThreshold = collectionIntervalMs * 2.5;
+  const temporalGapThreshold = displayIntervalMs * 2.5;
 
   rawData.forEach((point, index) => {
     const previousPoint = rawData[index - 1];
@@ -153,9 +155,10 @@ export function HistoryChart({
       if (elapsed > temporalGapThreshold) {
         data.push({
           attemptedAt: new Date(
-            previousPoint.timestamp + collectionIntervalMs,
+            previousPoint.timestamp + displayIntervalMs,
           ).toISOString(),
-          timestamp: previousPoint.timestamp + collectionIntervalMs,
+
+          timestamp: previousPoint.timestamp + displayIntervalMs,
           energyKwh: null,
           gapReason: null,
           temporalGap: true,
@@ -407,10 +410,7 @@ export function HistoryChart({
 
         <div>
           <span className="history-chart-legend-gap" />
-          <span>
-            {" "}
-            Ausência de coleta ou energia não calculável
-          </span>
+          <span> Ausência de coleta ou energia não calculável</span>
         </div>
       </div>
     </div>

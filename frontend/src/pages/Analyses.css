@@ -225,6 +225,9 @@
   border: 1px solid #315657;
   border-radius: 18px;
   background: #12383b;
+  transition:
+  border-color 180ms ease,
+  background-color 180ms ease;
 }
 
 .analyses-history-header {
@@ -434,6 +437,283 @@
 .analyses-history-state p {
   margin: 0;
   color: var(--text-muted);
+}
+
+.analyses-history-content {
+  position: relative;
+  min-height: 390px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.analyses-chameleon-transition {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+
+  overflow: hidden;
+  border-radius: inherit;
+
+  opacity: 0;
+
+  pointer-events: none;
+
+  transition: opacity 200ms ease;
+}
+
+.analyses-chameleon-transition.is-active {
+  opacity: 1;
+}
+
+.analyses-chameleon-transition.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.analyses-transition-glow {
+  position: absolute;
+
+  top: 5%;
+  bottom: 5%;
+  left: -30%;
+
+  width: 46%;
+
+  border-radius: 50%;
+
+  background:
+     radial-gradient(
+    ellipse at center,
+    #65d7ff66 0%,
+    #3aa7c94d 24%,
+    #2f7f9f2e 48%,
+    transparent 72%
+    );
+
+  filter: blur(16px);
+
+  opacity: 0;
+
+  mix-blend-mode: screen;
+}
+
+.analyses-chameleon-transition.is-active
+  .analyses-transition-glow {
+  animation:
+    analyses-chameleon-glow
+    620ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
+}
+
+@keyframes analyses-chameleon-glow {
+  0% {
+    left: -30%;
+    opacity: 0;
+    transform: scaleX(0.65);
+  }
+
+  20% {
+    opacity: 0.9;
+  }
+
+  65% {
+    opacity: 0.7;
+  }
+
+  100% {
+    left: 92%;
+    opacity: 0;
+    transform: scaleX(1.2);
+  }
+}
+
+.analyses-transition-fragments {
+  position: absolute;
+  inset: 0;
+}
+
+.analyses-transition-fragments span {
+  position: absolute;
+
+  width: 10px;
+  height: 10px;
+
+  background: #87e46c;
+
+  clip-path: polygon(
+    25% 6%,
+    75% 6%,
+    94% 50%,
+    75% 94%,
+    25% 94%,
+    6% 50%
+  );
+
+  box-shadow:
+    0 0 10px #87e46caa,
+    0 0 22px #87e46c55;
+
+  opacity: 0;
+
+  mix-blend-mode: screen;
+}
+
+.analyses-transition-fragments span:nth-child(1) {
+  top: 24%;
+  left: 18%;
+  animation-delay: 20ms;
+}
+
+.analyses-transition-fragments span:nth-child(2) {
+  top: 56%;
+  left: 27%;
+  animation-delay: 70ms;
+}
+
+.analyses-transition-fragments span:nth-child(3) {
+  top: 36%;
+  left: 39%;
+  animation-delay: 110ms;
+}
+
+.analyses-transition-fragments span:nth-child(4) {
+  top: 70%;
+  left: 48%;
+  animation-delay: 150ms;
+}
+
+.analyses-transition-fragments span:nth-child(5) {
+  top: 29%;
+  left: 58%;
+  animation-delay: 190ms;
+}
+
+.analyses-transition-fragments span:nth-child(6) {
+  top: 61%;
+  left: 67%;
+  animation-delay: 230ms;
+}
+
+.analyses-transition-fragments span:nth-child(7) {
+  top: 42%;
+  left: 77%;
+  animation-delay: 270ms;
+}
+
+.analyses-transition-fragments span:nth-child(8) {
+  top: 68%;
+  left: 84%;
+  animation-delay: 310ms;
+}
+
+.analyses-transition-fragments
+  span:nth-child(even) {
+  background: #58cbb7;
+
+  box-shadow:
+    0 0 10px #58cbb7aa,
+    0 0 22px #58cbb755;
+}
+
+.analyses-chameleon-transition.is-active
+  .analyses-transition-fragments span {
+  animation-name: analyses-fragment-shift;
+  animation-duration: 520ms;
+  animation-timing-function:
+    cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+@keyframes analyses-fragment-shift {
+  0% {
+    opacity: 0;
+    transform:
+      translateX(-8px)
+      scale(0.45)
+      rotate(-12deg);
+  }
+
+  35% {
+    opacity: 0.75;
+  }
+
+  65% {
+    opacity: 0.55;
+    transform:
+      translateX(8px)
+      scale(1)
+      rotate(6deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translateX(18px)
+      scale(0.55)
+      rotate(12deg);
+  }
+}
+
+.analyses-history-content .history-chart {
+  animation:
+    analyses-chart-adapt
+    420ms
+    cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes analyses-chart-adapt {
+  from {
+    opacity: 0.45;
+
+    filter:
+      saturate(0.45)
+      brightness(1.14);
+  }
+
+  45% {
+    opacity: 0.82;
+
+    filter:
+      saturate(1.25)
+      brightness(1.08);
+  }
+
+  to {
+    opacity: 1;
+
+    filter:
+      saturate(1)
+      brightness(1);
+  }
+}
+
+@keyframes analyses-history-enter {
+  from {
+    opacity: 0;
+    filter: saturate(0.65);
+  }
+
+  to {
+    opacity: 1;
+    filter: saturate(1);
+  }
+}
+
+.analyses-history-identity {
+  animation: analyses-service-enter 160ms ease-out;
+}
+
+@keyframes analyses-service-enter {
+  from {
+    opacity: 0.45;
+    filter: saturate(0.45);
+  }
+
+  to {
+    opacity: 1;
+    filter: saturate(1);
+  }
 }
 
 .analyses-state-error {
@@ -662,4 +942,9 @@
 .analyses-history-header {
   padding: 0 40px;
 }
+
+.analyses-history-content {
+  min-height: 360px;
+}
+
 }

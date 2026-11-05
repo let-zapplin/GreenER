@@ -523,7 +523,8 @@ curl "http://localhost:3000/api/indicadores/7/historico?start=2026-11-04T00:00:0
   "period": {
     "start": "2026-11-04T00:00:00.000Z",
     "end": "2026-11-05T00:00:00.000Z",
-    "collectionIntervalMs": 60000
+    "collectionIntervalMs": 60000,
+    "displayIntervalMs": 60000
   },
   "service": {
     "serviceId": 7,
@@ -545,6 +546,16 @@ curl "http://localhost:3000/api/indicadores/7/historico?start=2026-11-04T00:00:0
   ]
 }
 ```
+No objeto `period`:
+
+- `collectionIntervalMs`: intervalo configurado entre os ciclos de coleta.
+- `displayIntervalMs`: resolução temporal aproximada dos pontos retornados para visualização.
+
+Para evitar o envio de milhares de pontos em períodos extensos, o backend reduz a quantidade de amostras retornadas para visualização, mantendo aproximadamente até 500 pontos por consulta.
+
+O histórico persistido no banco não é alterado. A redução ocorre apenas na resposta utilizada pelo gráfico.
+
+Durante essa redução, amostras sem energia calculável são priorizadas dentro de cada grupo para preservar visualmente interrupções e indisponibilidades.
 
 As amostras são retornadas em ordem temporal e preservam lacunas de cálculo. Uma tentativa que não permita calcular energia retorna `energyKwh: null` em vez de assumir consumo zero.
 
@@ -737,14 +748,13 @@ Os endpoints de serviços e intensidades encaminham exceções ao middleware glo
 
 Os recursos abaixo continuam no planejamento e **ainda não possuem endpoints internos implementados**:
 
-- histórico de coletas por serviço/período;
 - ranking e comparações entre serviços.
 
 O endpoint de indicadores descrito nesta documentação já calcula energia e CO₂e no backend. Isso não significa que o dashboard/frontend esteja integrado ou que todos os indicadores previstos estejam concluídos.
 
 ## 09. Integrações e funcionalidades futuras
 
-A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização, e a rota `/metrics/{id_servico}`, consumida pela coleta manual (restrita a administradores) e pelo job periódico. Ainda não existe endpoint interno para consultar o histórico de coletas por serviço ou período.
+A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização, e a rota `/metrics/{id_servico}`, consumida pela coleta manual (restrita a administradores) e pelo job periódico. 
 
 | Recurso | Situação na versão analisada |
 |---|---|

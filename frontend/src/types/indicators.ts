@@ -103,6 +103,7 @@ export type ServiceIndicatorHistory = {
     start: string;
     end: string;
     collectionIntervalMs: number;
+    displayIntervalMs: number;
   };
 
   service: {
