@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// pool.query é simulado: verifica parâmetros e trechos do SQL, sem executar consultas reais.
 const query = vi.hoisted(() => vi.fn());
 
 vi.mock("../../db/connection.js", () => ({
@@ -9,10 +10,12 @@ vi.mock("../../db/connection.js", () => ({
 import { IntensidadesRepository } from "./intensidades.repository.js";
 
 beforeEach(() => {
+  // Limpa as chamadas para distinguir as consultas realizadas por cada cenário.
   vi.clearAllMocks();
 });
 
 describe("IntensidadesRepository", () => {
+  // Sem idade máxima, o repository deve devolver null antes de chamar query.
   it("não consulta snapshots sem idade máxima definida", async () => {
     const repository = new IntensidadesRepository();
 
@@ -20,6 +23,8 @@ describe("IntensidadesRepository", () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  // Fornece um snapshot simulado e verifica se o SQL solicitado contém os critérios
+  // de região, anterioridade e idade máxima; não testa a seleção no PostgreSQL real.
   it("seleciona um snapshot regional anterior à coleta e dentro do limite", async () => {
     const snapshot = {
       id_carbon_intensity: 9,
@@ -40,6 +45,7 @@ describe("IntensidadesRepository", () => {
     expect(params).toEqual(["12", 60_000]);
   });
 
+  // Confere o filtro city IS NULL e o código regional parametrizado na consulta.
   it("procura localização regional sem selecionar uma cidade arbitrária", async () => {
     const location = { id_location: 42, region_code: "br-sudeste", city: null };
     query.mockResolvedValue({ rows: [location] });

@@ -1,0 +1,174 @@
+.service-history-preview {
+  display: grid;
+  gap: 14px;
+
+  width: 100%;
+  min-width: 0;
+  padding: 18px;
+
+  border: 1px solid #315657;
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #12383b 0%,
+      #0d3033 100%
+    );
+
+  color: inherit;
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.service-history-preview:hover {
+  border-color: #58cbb766;
+
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 12px 28px #0000001f,
+    0 0 22px #58cbb70d;
+}
+
+.service-history-preview.is-selected {
+  border-color: #87e46c80;
+
+  background:
+    linear-gradient(
+      145deg,
+      #153e3d 0%,
+      #0d3033 100%
+    );
+
+  box-shadow:
+    inset 0 0 0 1px #87e46c12,
+    0 0 24px #65d7ff0c;
+}
+
+.service-history-preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.service-history-preview-header > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.service-history-preview-header strong {
+  overflow: hidden;
+
+  color: #eef6f1;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-history-preview-header span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.service-history-preview-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+
+  flex: 0 0 auto;
+}
+
+.service-history-preview-value strong {
+  color: #87e46c;
+  font-size: 12px;
+}
+
+.service-history-preview-chart {
+  position: relative;
+
+  width: 100%;
+  height: 110px;
+
+  color: #58cbb7;
+}
+
+.service-history-preview.is-selected
+  .service-history-preview-chart {
+  color: #65d7ff;
+}
+
+.service-history-preview-empty {
+  display: grid;
+  place-items: center;
+
+  height: 100%;
+
+  color: var(--text-muted);
+  font-size: 11px;
+
+  border-top: 1px solid #ffffff0b;
+}
+
+.service-history-preview-loading {
+  position: absolute;
+  inset: 16px 0;
+
+  border-radius: 8px;
+
+  background:
+    linear-gradient(
+      100deg,
+      #ffffff05 20%,
+      #65d7ff12 48%,
+      #ffffff05 76%
+    );
+
+  background-size: 220% 100%;
+
+  animation:
+    service-history-preview-loading
+    1.2s
+    linear
+    infinite;
+}
+
+@keyframes service-history-preview-loading {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.service-history-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding-top: 10px;
+
+  border-top: 1px solid #ffffff0d;
+
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.service-history-preview-action {
+  color: #58cbb7 !important;
+}

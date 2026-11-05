@@ -52,10 +52,12 @@ describe("authMiddleware com JWT real", () => {
   it("aceita token válido, disponibiliza req.user e continua a requisição", () => {
     const token = createToken({ sub: "42" });
     const { req, res, next } = setup(`Bearer ${token}`);
+    // JWT usa segundos: iat é o instante de emissão e exp deve ficar 900 segundos depois.
     const issuedAt = NOW.getTime() / 1000;
 
     authMiddleware(req, res, next);
 
+    // Confere o payload disponibilizado ao próximo handler; esse teste não consulta usuários no banco.
     expect(req.user).toMatchObject({
       sub: "42",
       iat: issuedAt,

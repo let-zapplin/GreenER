@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Testa o controller diretamente: service, resposta Express e next são simulados.
+// Não envia requisições HTTP nem consulta o banco.
 const serviceMocks = vi.hoisted(() => ({
   getSummary: vi.fn(),
 }));
@@ -14,6 +16,7 @@ vi.mock("./dashboard.service.js", () => ({
 
 import { DashboardController } from "./dashboard.controller.js";
 
+// status devolve o próprio objeto para permitir res.status(...).json(...), como no Express.
 function createResponse() {
   const response = {
     status: vi.fn(),
@@ -24,10 +27,12 @@ function createResponse() {
 }
 
 beforeEach(() => {
+  // Limpa as chamadas antes de cada cenário; os resultados do service são configurados nos testes.
   vi.clearAllMocks();
 });
 
 describe("DashboardController.getSummary", () => {
+  // Sem query, encaminha undefined nas duas datas; o cálculo do período padrão pertence ao service.
   it("retorna o resumo e permite omitir o período", async () => {
     const summary = {
       period: {
@@ -61,6 +66,8 @@ describe("DashboardController.getSummary", () => {
     });
   });
 
+  // Este cenário envia start como lista de duas datas e confere o erro passado a next,
+  // sem chamar o service. Não há execução do middleware global neste teste unitário.
   it("encaminha datas repetidas ou vazias como erro de validação", async () => {
     const next = vi.fn();
     const controller = new DashboardController();
@@ -80,6 +87,7 @@ describe("DashboardController.getSummary", () => {
     expect(serviceMocks.getSummary).not.toHaveBeenCalled();
   });
 
+  // A rejeição do service deve ser repassada ao next com o mesmo objeto de erro.
   it("encaminha erros do service ao middleware global", async () => {
     const error = new Error("Falha na consulta");
     serviceMocks.getSummary.mockRejectedValue(error);

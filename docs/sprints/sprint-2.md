@@ -60,7 +60,7 @@ A tarefa entra em **In review** quando possuir Pull Request aberto e passa para 
 | 13 | TEC22 | Frontend / UI | Implementar visualizações iniciais do dashboard | RF08, RF09 | DW04, DW05 | Frontend | **P1** | **5** | **Patricia** | Vitor | TEC19 | ⬜ A fazer | Cards e componentes reutilizáveis para indicadores, estado e impacto dos serviços. |
 | 14 | US09 | User Story | Consolidar dashboard operacional | RF09 | DW04, DW05 | Frontend | **P1** | **3** | **Vitor** | Patricia | US07, US08, TEC22 | ⬜ A fazer | Dashboard apresenta status, localização, métricas, energia e CO₂e com leitura clara. |
 | 15 | US10 | User Story | Atualizar dashboard automaticamente | RF11, RNF02 | DW05 | Frontend / Backend | **P1** | **3** | **Vitor** | Igor | TEC17, US09 | ⬜ A fazer | Atualização sem reload, intervalo definido/documentado e data/hora da última atualização visível. |
-| 16 | TEC23 | Frontend / UI | Implementar gráfico inicial de histórico | RF10 | DW04, DW05 | Frontend | **P1** | **3** | **Vitor** | Patricia | US11, US07 | ⬜ A fazer | Um gráfico temporal real e legível de energia ou CO₂e de um serviço. |
+| 16 | TEC23 | Frontend / UI | Implementar gráfico inicial de histórico | RF10 | DW04, DW05 | Frontend | **P1** | **3** | **Vitor** | Patricia | US11, US07 | 🔵 Em revisão | Um gráfico temporal real e legível de energia ou CO₂e de um serviço. |
 | 17 | TEC20 | Técnico | Ampliar testes automatizados | Qualidade | TP03, ES07 | Backend / Frontend | **P1** | **5** | **Patricia** | Todos | Durante toda a Sprint | ⬜ A fazer | Cobertura de coleta, cálculos, estados, persistência, JWT e endpoints críticos. Cada responsável testa sua própria entrega. |
 | 18 | TEC21 | Técnico | Atualizar documentação técnica da Sprint 2 | RNF05 | ES06, ES08 | Geral | **P1** | **3** | **Gustavo** | Vitor + todos | Durante toda a Sprint | ⬜ A fazer | README, arquitetura, API, banco, cálculos, plano de entregas e registro da Sprint coerentes com a versão entregue. |
 
@@ -355,3 +355,42 @@ Um serviço que continua presente em `/services` mas deixa de exportar métricas
 - suíte do backend com **73 testes aprovados em 73** e suíte do frontend com **26 testes aprovados em 26**, ambas com typecheck sem erros (29/10/2026).
 
 A US06 permanece em revisão até a validação do fluxo completo com a API real e a conclusão do fluxo de PR.
+
+### TEC23 — Gráfico inicial de histórico ambiental
+
+Foi implementada a primeira visualização temporal de indicadores ambientais do GreenER utilizando dados históricos reais persistidos no PostgreSQL.
+
+#### Decisões técnicas
+
+- Foi criado o endpoint protegido `GET /api/indicadores/:serviceId/historico`, com seleção de serviço e período por `start` e `end`.
+- A consulta ao histórico reutiliza o módulo de indicadores e o mesmo cálculo ambiental utilizado pelo dashboard, evitando duplicação da fórmula de energia e CO₂e.
+- O repository passou a aceitar filtro opcional por serviço, mantendo SQL parametrizado e reutilizando a consulta temporal existente.
+- Amostras sem energia calculável permanecem como `null`; ausência de dado não é convertida em consumo zero.
+- Períodos sem coletas são preservados como lacunas temporais na visualização, evitando conectar artificialmente amostras separadas por longos intervalos.
+- O frontend utiliza Recharts para representar a evolução da energia estimada em `kWh`.
+- A página de Análises permite selecionar o serviço e consultar períodos de `1h`, `6h`, `24h` e `7d`.
+- O gráfico possui tooltip contextual, indicação de lacunas, atualização automática e zoom por seleção de intervalo.
+- A navegação temporal permite desfazer o último zoom ou restaurar o período completo.
+- A troca de serviço pode ser realizada pelo seletor ou pela navegação sequencial entre os serviços monitorados.
+
+#### Estados tratados
+
+A interface diferencia:
+
+- carregamento do histórico;
+- erro de consulta;
+- serviço existente sem coletas no período;
+- coletas existentes sem energia calculável;
+- lacunas causadas por indisponibilidade ou ausência de coleta;
+- atualização temporariamente indisponível mantendo os últimos dados válidos.
+
+#### Validações realizadas
+
+- testes do service para histórico válido, ausência de coletas, lacunas e serviço inexistente;
+- testes do controller para parâmetros e propagação de erros;
+- testes HTTP para autenticação, período inválido, identificador inválido, serviço inexistente e resposta histórica calculada;
+- suíte de testes do backend executada sem regressões;
+- build do frontend executado com sucesso após a integração;
+- validação manual da troca de serviços, períodos, tooltip, lacunas e navegação por zoom.
+
+A TEC23 encontra-se **em revisão**, aguardando aprovação e integração da Pull Request na `develop`.

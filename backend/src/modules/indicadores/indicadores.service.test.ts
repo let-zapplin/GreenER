@@ -5,6 +5,8 @@ import type {
   ServiceIndicatorData,
 } from "./indicadores.repository.js";
 
+// Testa os cálculos reais com dados do repository simulados e configuração fixa.
+// Esta suíte não comprova a seleção de região ou período pelo SQL real.
 vi.mock("../../config/env.js", () => ({
   env: {
     metricsCollectionIntervalMs: 60_000,
@@ -16,6 +18,7 @@ vi.mock("./indicadores.repository.js", () => ({
   IndicadoresRepository: class {},
 }));
 
+// Cria uma amostra completa; overrides permite alterar somente os campos de cada cenário.
 function createCollection(
   overrides: Partial<IndicatorCollection> = {},
 ): IndicatorCollection {
@@ -36,6 +39,7 @@ function createCollection(
   };
 }
 
+// Agrupa as amostras simuladas sob a identificação de um serviço.
 function createServiceData(
   collections: IndicatorCollection[],
 ): ServiceIndicatorData {
@@ -55,9 +59,12 @@ describe("IndicadoresService.getIndicators", () => {
   const end = "2026-10-31T00:00:00.000Z";
 
   beforeEach(() => {
+    // Limpa as chamadas para conferir se o repository foi consultado com os argumentos esperados.
     vi.clearAllMocks();
   });
 
+  // Os recursos somam 50,95 W. A energia usa 45 segundos por amostra;
+  // 60000 ms continua sendo o intervalo do job, não a duração usada no cálculo.
   it("calcula energia e emissão com as métricas e intensidade regionais", async () => {
     findCollectionsForPeriod.mockResolvedValue([
       createServiceData([createCollection()]),
@@ -87,6 +94,7 @@ describe("IndicadoresService.getIndicators", () => {
     );
   });
 
+  // Métricas existem, mas duração nula impede calcular energia e emissão; não há fallback para o job.
   it("registra amostras sem intervalo válido como lacunas", async () => {
     findCollectionsForPeriod.mockResolvedValue([
       createServiceData([
@@ -123,6 +131,7 @@ describe("IndicadoresService.getIndicators", () => {
     ]);
   });
 
+  // Sem fator de carbono utilizável, preserva energia e marca emissão como indisponível.
   it("retorna energia e sinaliza a falta de intensidade sem inventar emissão", async () => {
     findCollectionsForPeriod.mockResolvedValue([
       createServiceData([
@@ -143,6 +152,7 @@ describe("IndicadoresService.getIndicators", () => {
     expect(result.summary.carbonIntensityCoveragePercent).toBe(0);
   });
 
+  // A tentativa unavailable mantém a lacuna; os totais zerados não representam uma amostra de consumo zero.
   it("registra coletas sem métricas como lacunas, sem calcular energia", async () => {
     findCollectionsForPeriod.mockResolvedValue([
       createServiceData([
@@ -175,6 +185,7 @@ describe("IndicadoresService.getIndicators", () => {
     ]);
   });
 
+  // Período invertido e data inválida devem falhar antes de consultar dados.
   it("rejeita períodos inválidos antes de consultar o repository", async () => {
     await expect(service.getIndicators(end, start)).rejects.toMatchObject({
       statusCode: 400,
@@ -187,5 +198,134 @@ describe("IndicadoresService.getIndicators", () => {
       code: "INVALID_INDICATOR_PERIOD",
     });
     expect(findCollectionsForPeriod).not.toHaveBeenCalled();
+  });
+});
+
+// Testa o cálculo das amostras históricas com dados controlados, sem acessar PostgreSQL.
+describe("IndicadoresService.getServiceHistory", () => {
+  const findCollectionsForPeriod = vi.fn();
+
+  const service = new IndicadoresService(
+    { findCollectionsForPeriod },
+    300_000,
+  );
+
+  const serviceId = 7;
+  const start = "2026-10-30T00:00:00.000Z";
+  const end = "2026-10-31T00:00:00.000Z";
+
+  beforeEach(() => {
+    // Limpa as chamadas para conferir se o repository foi consultado com os argumentos esperados.
+    vi.clearAllMocks();
+  });
+
+  // O cálculo é real, mas as duas coletas são simuladas; confere também o filtro serviceId encaminhado.
+  it("retorna o histórico ambiental real do serviço no período", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([
+        createCollection({
+          id_collection: "101",
+          attempted_at: new Date("2026-10-30T12:00:00.000Z"),
+        }),
+        createCollection({
+          id_collection: "102",
+          attempted_at: new Date("2026-10-30T12:01:00.000Z"),
+          cpu_percent: 60,
+        }),
+      ]),
+    ]);
+
+    const result = await service.getServiceHistory(
+      serviceId,
+      start,
+      end,
+    );
+
+    expect(result.service).toEqual({
+      serviceId: 7,
+      name: "Serviço de pedidos",
+      status: "active",
+      regionCode: "BR-SP",
+    });
+
+    expect(result.samples).toHaveLength(2);
+
+    expect(result.samples[0].collectionId).toBe("101");
+    expect(result.samples[0].attemptedAt).toEqual(
+      new Date("2026-10-30T12:00:00.000Z"),
+    );
+    expect(result.samples[0].energyKwh).toBeGreaterThan(0);
+
+    expect(result.samples[1].collectionId).toBe("102");
+    expect(result.samples[1].attemptedAt).toEqual(
+      new Date("2026-10-30T12:01:00.000Z"),
+    );
+    expect(result.samples[1].energyKwh).toBeGreaterThan(0);
+
+    expect(findCollectionsForPeriod).toHaveBeenCalledWith(
+      new Date(start),
+      new Date(end),
+      300_000,
+      serviceId,
+    );
+  });
+
+  // O serviço existe na resposta do repository, porém sua lista de coletas está vazia.
+  it("retorna lista vazia quando o serviço existe, mas não possui coletas no período", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([]),
+    ]);
+
+    const result = await service.getServiceHistory(
+      serviceId,
+      start,
+      end,
+    );
+
+    expect(result.service.serviceId).toBe(serviceId);
+    expect(result.samples).toEqual([]);
+  });
+
+  // Valores ausentes continuam null, acompanhados do motivo unavailable.
+  it("preserva lacunas do histórico sem transformar ausência de dado em zero", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([
+        createCollection({
+          status: "unavailable",
+          id_metrics: null,
+          cpu_percent: null,
+          memory_gb: null,
+          disk_gb: null,
+          network_gb: null,
+          collection_interval_seconds: null,
+          carbon_intensity_id: null,
+          carbon_intensity_gco2e_per_kwh: null,
+        }),
+      ]),
+    ]);
+
+    const result = await service.getServiceHistory(
+      serviceId,
+      start,
+      end,
+    );
+
+    expect(result.samples).toHaveLength(1);
+
+    expect(result.samples[0].energyKwh).toBeNull();
+    expect(result.samples[0].emissionsGco2e).toBeNull();
+    expect(result.samples[0].gapReason).toBe("unavailable");
+  });
+
+  // Uma lista de serviços vazia representa ausência do serviço, diferente de um serviço sem coletas.
+  it("retorna erro 404 quando o serviço não existe", async () => {
+    findCollectionsForPeriod.mockResolvedValue([]);
+
+    await expect(
+      service.getServiceHistory(serviceId, start, end),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: "SERVICE_NOT_FOUND",
+    });
   });
 });

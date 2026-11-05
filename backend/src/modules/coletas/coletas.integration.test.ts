@@ -22,6 +22,7 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
   let serviceId: number;
   const serviceIds: number[] = [];
 
+  // Monta entradas conhecidas para o repository real, permitindo variar CPU entre coletas.
   function success(cpu = 25) {
     return {
       status: "success" as const,
@@ -97,6 +98,7 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
     }
   });
 
+  // Fecha as conexões da suíte ao terminar; a limpeza dos registros ocorre em afterEach.
   afterAll(async () => {
     await pool.end();
   });
@@ -213,6 +215,8 @@ describe.skipIf(!enabled)("ColetasRepository com PostgreSQL real", () => {
   // podem ser consultados por outra conexão com o PostgreSQL.
   it("permite recuperar a gravação por uma nova conexão independente", async () => {
     await repository.saveCollection(serviceId, success());
+    // Abre outra conexão ao mesmo banco exclusivo para conferir a visibilidade do COMMIT.
+    // Não equivale a reiniciar o PostgreSQL nem a validar persistência após restart.
     const otherPool = new pg.Pool({
       host: process.env.POSTGRES_HOST,
       port: Number(process.env.POSTGRES_PORT),

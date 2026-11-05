@@ -53,6 +53,7 @@ export class IndicadoresRepository {
     start: Date,
     end: Date,
     carbonIntensityMaxAgeMs: number | undefined,
+     serviceId?: number,
   ): Promise<ServiceIndicatorData[]> {
     // Mantém serviços sem tentativa no período e seleciona coletas no intervalo [start, end).
     // Para cada amostra, a LATERAL escolhe o fator regional mais recente que não seja posterior
@@ -105,8 +106,9 @@ export class IndicadoresRepository {
          ORDER BY ci.registered_at DESC, ci.id_carbon_intensity DESC
          LIMIT 1
        ) intensity ON m.id_metrics IS NOT NULL
+        WHERE ($4::integer IS NULL OR s.id_service = $4)
        ORDER BY s.id_service, c.attempted_at, c.id_collection`,
-      [start, end, carbonIntensityMaxAgeMs ?? null],
+      [start, end, carbonIntensityMaxAgeMs ?? null,  serviceId ?? null,],
     );
 
     const services = new Map<number, ServiceIndicatorData>();
