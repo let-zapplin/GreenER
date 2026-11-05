@@ -68,7 +68,7 @@ cálculo ambiental por período
 indicadores
 ```
 
-A integração visual dos indicadores com o frontend e recursos analíticos adicionais continuam pendentes.
+A integração dos indicadores operacionais com o frontend e a primeira visualização histórica ambiental já estão disponíveis. Ranking, comparação entre serviços e demais recursos analíticos permanecem planejados para as próximas entregas.
 
 ---
 
@@ -154,6 +154,27 @@ IndicadoresRepository.findCollectionsForPeriod()
   ↓
 PostgreSQL: service, location, collection, metrics e carbon_intensity
 ```
+
+O histórico ambiental por serviço reutiliza o mesmo módulo e o mesmo cálculo por amostra:
+
+```text
+GET /api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>
+  ↓
+indicadores.routes.ts (JWT)
+  ↓
+IndicadoresController.history()
+  ↓
+IndicadoresService.getServiceHistory()
+  ↓
+IndicadoresRepository.findCollectionsForPeriod(..., serviceId)
+  ↓
+PostgreSQL: service, location, collection, metrics e carbon_intensity
+  ↓
+Frontend / Análises
+  ↓
+useServiceIndicatorHistory()
+  ↓
+HistoryChart
 
 O repository seleciona tentativas no período e associa, quando elegível, o snapshot de carbono mais recente da mesma região, anterior ou igual a `attempted_at` e dentro de `CARBON_INTENSITY_MAX_AGE_MS`. O service calcula energia, emissões, totais, cobertura e lacunas; resultados calculados não são persistidos.
 

@@ -36,6 +36,7 @@ flowchart LR
 | `POST` | `/api/intensidades/sync` | Registrar snapshots regionais | Intensidades |
 | `GET` | `/api/intensidades` | Listar snapshots regionais registrados | Intensidades |
 | `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Calcular indicadores ambientais no período | US07 (backend parcial) |
+| `GET` | `/api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>` | Consultar histórico ambiental calculado de um serviço | TEC23 / RF10 |
 | `GET` | `/api/dashboard` | Obter indicadores consolidados para o dashboard | TEC19 |
 
 **Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
@@ -485,6 +486,88 @@ Os números do exemplo são ilustrativos. A energia é estimada com o modelo de 
 `latestSampleInPeriod` é a tentativa mais recente do serviço dentro do período, ou `null` se não houver tentativas. `periodTotals` agrega as tentativas registradas. `isPartial`, as coberturas e `gaps` indicam tentativas sem métricas válidas, duração de amostra ou intensidade de carbono utilizável; os motivos podem incluir `no_metrics`, `unavailable`, `error`, `invalid_metrics`, `collection_interval_unavailable` e `carbon_intensity_unavailable`. Amostras históricas sem intervalo retornam `collectionIntervalSeconds: null` e geram uma lacuna, sem usar `COLLECTION_INTERVAL_MS` como fallback. Uma tentativa sem intensidade ainda pode contribuir para energia, mas não para emissões. A cobertura considera as tentativas registradas no banco e não detecta intervalos em que nenhuma tentativa foi registrada.
 
 Períodos inválidos, parâmetros ausentes ou parâmetros repetidos retornam `400 Bad Request` com `code: "INVALID_INDICATOR_PERIOD"`. A ausência de JWT válido retorna `401 Unauthorized`; falhas inesperadas, inclusive de acesso ao banco, são encaminhadas ao middleware global.
+
+#### `GET /api/indicadores/:serviceId/historico` — TEC23 / RF10
+
+Retorna o histórico ambiental calculado de um serviço em um período informado. A rota utiliza as coletas persistidas no PostgreSQL e reaproveita o mesmo modelo de cálculo de energia e CO₂e usado pelos demais indicadores do GreenER.
+
+A operação exige autenticação JWT e não consulta as APIs externas durante a requisição.
+
+**Parâmetro de rota:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `serviceId` | `number` | Identificador interno do serviço no PostgreSQL |
+
+**Query parameters:**
+
+| Parâmetro | Obrigatório | Descrição |
+|---|---|---|
+| `start` | Sim | Data/hora inicial válida em formato ISO |
+| `end` | Sim | Data/hora final válida em formato ISO e posterior a `start` |
+
+O período consultado é definido pelo frontend conforme o intervalo selecionado pelo usuário. A visualização inicial oferece períodos de **1 hora, 6 horas, 24 horas e 7 dias**, mas o endpoint aceita qualquer intervalo válido informado por `start` e `end`.
+
+**Exemplo:**
+
+```bash
+curl "http://localhost:3000/api/indicadores/7/historico?start=2026-11-04T00:00:00.000Z&end=2026-11-05T00:00:00.000Z" \
+  -H "Authorization: Bearer <token>"
+```
+
+**Resposta `200 OK` — estrutura resumida:**
+
+```json
+{
+  "message": "Histórico de indicadores calculado",
+  "period": {
+    "start": "2026-11-04T00:00:00.000Z",
+    "end": "2026-11-05T00:00:00.000Z",
+    "collectionIntervalMs": 60000
+  },
+  "service": {
+    "serviceId": 7,
+    "name": "Serviço de pedidos",
+    "status": "active",
+    "regionCode": "BR-SP"
+  },
+  "samples": [
+    {
+      "collectionId": "101",
+      "attemptedAt": "2026-11-04T12:00:00.000Z",
+      "status": "success",
+      "collectionIntervalSeconds": 60,
+      "energyKwh": 0.000849,
+      "emissionsGco2e": 0.1698,
+      "carbonIntensityGco2ePerKwh": 200,
+      "gapReason": null
+    }
+  ]
+}
+```
+
+As amostras são retornadas em ordem temporal e preservam lacunas de cálculo. Uma tentativa que não permita calcular energia retorna `energyKwh: null` em vez de assumir consumo zero.
+
+Um serviço existente sem coletas no período retorna `200 OK` com:
+
+```json
+{
+  "samples": []
+}
+```
+
+A interface diferencia ausência de histórico, coletas sem energia calculável e falhas de carregamento. Intervalos sem qualquer coleta também são representados visualmente como interrupções, sem criar registros artificiais no banco.
+
+**Erros tratados:**
+
+| Status | Código | Situação |
+|---|---|---|
+| `400 Bad Request` | `INVALID_SERVICE_ID` | `serviceId` não representa um inteiro positivo |
+| `400 Bad Request` | `INVALID_INDICATOR_PERIOD` | período ausente, inválido ou com `end` não posterior a `start` |
+| `401 Unauthorized` | — | JWT ausente, inválido ou expirado |
+| `404 Not Found` | `SERVICE_NOT_FOUND` | serviço informado não existe |
+
+O frontend consome esta rota na página **Análises**, permitindo seleção do serviço, seleção de período, atualização automática e exploração do histórico por zoom. O cálculo ambiental permanece centralizado no backend; o gráfico apenas representa os valores retornados pela API.
 
 ## 05. Coleta de métricas — US03 / US04 / US05
 
