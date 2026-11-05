@@ -36,4 +36,30 @@ export class IndicadoresController {
       next(error);
     }
   }
+
+  async history(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const serviceId = Number(req.params.serviceId);
+
+    const start = readQueryDate(req.query.start, "start");
+    const end = readQueryDate(req.query.end, "end");
+
+    const result = await this.service.getServiceHistory(
+      serviceId,
+      start,
+      end,
+    );
+
+    res.status(200).json({
+      message: "Histórico de indicadores calculado",
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 }

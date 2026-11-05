@@ -174,8 +174,7 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
   // W·s convertido em kWh: 3.600 s/h × 1.000 Wh/kWh = 3.600.000.
   // Potência, energia, emissões e totais são mantidos como doubles crus.
   // O intervalo usado é o registrado na própria amostra.
-  const energyKwh =
-    (powerWatts * collectionIntervalSeconds) / 3_600_000;
+  const energyKwh = (powerWatts * collectionIntervalSeconds) / 3_600_000;
 
   const carbonIntensity = collection.carbon_intensity_gco2e_per_kwh;
   // Uma intensidade ausente/inválida impede somente a emissão; a energia já
@@ -212,6 +211,46 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     gapReason: null,
   };
 }
+
+const MAX_HISTORY_POINTS = 500;
+
+function downsampleHistory<T extends { energyKwh: number | null }>(
+  samples: T[],
+) {
+  if (samples.length <= MAX_HISTORY_POINTS) {
+    return {
+      samples,
+      stride: 1,
+    };
+  }
+
+  const stride = Math.ceil(samples.length / MAX_HISTORY_POINTS);
+
+  const reducedSamples: T[] = [];
+
+  for (let index = 0; index < samples.length; index += stride) {
+    const bucket = samples.slice(index, index + stride);
+
+    /*
+     * Se houver uma coleta sem energia no bloco,
+     * preservamos essa amostra para que o gráfico
+     * continue representando a interrupção.
+     *
+     * Caso contrário, usamos a última coleta do bloco.
+     */
+    const representativeSample =
+      bucket.find((sample) => sample.energyKwh === null) ??
+      bucket[bucket.length - 1];
+
+    reducedSamples.push(representativeSample);
+  }
+
+  return {
+    samples: reducedSamples,
+    stride,
+  };
+}
+
 function coveragePercent(valid: number, total: number): number {
   // Percentual de amostras válidas sobre o denominador correspondente:
   // todas as coletas para métricas, ou métricas válidas para intensidade.
@@ -305,6 +344,67 @@ export class IndicadoresService {
           validCarbonIntensityCount < validMetricCount,
       },
       services: indicators,
+    };
+  }
+  //o método abaixo recebe serviço e período
+  async getServiceHistory(
+    serviceId: number,
+    startValue: string,
+    endValue: string,
+  ) {
+    if (!Number.isInteger(serviceId) || serviceId <= 0) {
+      throw new AppError(
+        "O identificador do serviço deve ser um número inteiro positivo",
+        400,
+        "INVALID_SERVICE_ID",
+      );
+    }
+
+    const start = parseDate(startValue, "start");
+    const end = parseDate(endValue, "end");
+
+    if (end <= start) {
+      throw new AppError(
+        "A data final deve ser posterior à data inicial",
+        400,
+        "INVALID_INDICATOR_PERIOD",
+      );
+    }
+
+    const services = await this.repository.findCollectionsForPeriod(
+      start,
+      end,
+      this.carbonIntensityMaxAgeMs,
+      serviceId,
+    );
+
+    const service = services[0];
+    if (!service) {
+      throw new AppError("Serviço não encontrado", 404, "SERVICE_NOT_FOUND");
+    }
+    const calculatedSamples = service.collections.map((collection) =>
+      calculateSample(collection),
+    );
+
+    const { samples, stride } = downsampleHistory(calculatedSamples);
+
+    return {
+      period: {
+        start,
+        end,
+        collectionIntervalMs: env.metricsCollectionIntervalMs,
+
+        displayIntervalMs: env.metricsCollectionIntervalMs * stride,
+      },
+
+      service: {
+        serviceId: service.id_service,
+        name: service.name,
+        status: service.status,
+        regionCode: service.region_code,
+      },
+
+      samples,
     };
   }
 
