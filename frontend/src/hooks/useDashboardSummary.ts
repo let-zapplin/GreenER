@@ -5,68 +5,134 @@ import { ApiError } from "../services/api";
 import { getDashboardSummary } from "../services/dashboardApi";
 import type { DashboardResponse } from "../types/dashboard";
 
+const DASHBOARD_REFRESH_INTERVAL_MS = 60_000;
+const DASHBOARD_REQUEST_TIMEOUT_MS = 15_000;
+
 export function useDashboardSummary() {
-    const {token, logout} = useAuth();
+  const { token, logout } = useAuth();
 
-    const[dashboard, setDashboard] = useState<DashboardResponse | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const [dashboard, setDashboard] =
+    useState<DashboardResponse | null>(null);
 
-    useEffect(()=> {
-        const authToken = token;
-        
-        if (!authToken) {
-            setDashboard(null);
-            setLoading(false);
-            return;
-        }
+  const [loading, setLoading] = useState(true);
 
-    const controller = new AbortController();
-    async function loadDashboard(authToken: string) {
-        try {
-            setLoading (true);
-            setError (null);
+  const [error, setError] =
+    useState<string | null>(null);
 
+  const [lastUpdated, setLastUpdated] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+      if (!token) {
+      setDashboard(null);
+      setLoading(false);
+      setError(null);
+      setLastUpdated(null);
+      return;
+    }
+      const authToken = token;
+
+    let disposed = false;
+    let refreshTimer: number | undefined;
+    let controller: AbortController | null = null;
+    let firstRequest = true;
+    let keepPolling = true;
+
+    async function loadDashboard() {
+      if (disposed) {
+        return;
+      }
+
+      const requestController =
+        new AbortController();
+
+      controller = requestController;
+
+      const requestTimeout =
+        window.setTimeout(() => {
+          requestController.abort();
+        }, DASHBOARD_REQUEST_TIMEOUT_MS);
+
+      if (firstRequest) {
+        setLoading(true);
+      }
+
+      try {
         const data = await getDashboardSummary(
-            controller.signal,
-            authToken,
+          requestController.signal,
+          authToken,
         );
 
-        if (controller.signal.aborted) return;
+        if (
+          disposed ||
+          requestController.signal.aborted
+        ) {
+          return;
+        }
 
         setDashboard(data);
-        } catch (error) {
-          if (controller.signal.aborted) return;
+        setError(null);
 
-          if (error instanceof ApiError && error.status === 401) {
-            logout();
-            return;
-          }
-
-          setDashboard(null);
-
-          setError(
-            error instanceof ApiError
-            ? error.message
-            : "Não foi possível carregar os indicadores do ambiente.",
-          );
-        } finally {
-            if (!controller.signal.aborted) {
-                setLoading(false);
-            }
+        setLastUpdated(
+          new Date().toISOString(),
+        );
+      } catch (error) {
+        if (disposed) {
+          return;
         }
+
+        if (
+          error instanceof ApiError &&
+          error.status === 401
+        ) {
+          keepPolling = false;
+          logout();
+          return;
+        }
+
+        setError(
+          requestController.signal.aborted
+            ? "A atualização dos indicadores excedeu o tempo de espera."
+            : error instanceof ApiError
+              ? error.message
+              : "Não foi possível atualizar os indicadores do ambiente.",
+        );
+      } finally {
+        window.clearTimeout(requestTimeout);
+
+        controller = null;
+
+        if (!disposed) {
+          setLoading(false);
+          firstRequest = false;
+
+          if (keepPolling) {
+            refreshTimer =
+              window.setTimeout(() => {
+                void loadDashboard();
+              }, DASHBOARD_REFRESH_INTERVAL_MS);
+          }
+        }
+      }
     }
-    
-    void loadDashboard(authToken);
+
+    void loadDashboard();
 
     return () => {
-        controller.abort();
-    };
-    }, [token, logout]);
+      disposed = true;
 
-    return {
-        dashboard,
-        loading,
-        error,
+      if (refreshTimer !== undefined) {
+        window.clearTimeout(refreshTimer);
+      }
+
+      controller?.abort();
     };
+  }, [token, logout]);
+
+  return {
+    dashboard,
+    loading,
+    error,
+    lastUpdated,
+  };
 }

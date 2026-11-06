@@ -20,7 +20,7 @@ export function DashboardSummary({
   loading,
   error,
 }: DashboardSummaryProps) {
-  if (loading) {
+  if (loading && !dashboard) {
     return (
       <section className="dashboard-summary" aria-busy="true">
         <div className="dashboard-summary-heading">
@@ -37,7 +37,7 @@ export function DashboardSummary({
     );
   }
 
-  if (error) {
+  if (error && !dashboard) {
     return (
       <section className="dashboard-summary">
         <div className="dashboard-summary-state" role="alert">
@@ -48,20 +48,20 @@ export function DashboardSummary({
     );
   }
 
-if (!dashboard) {
-  return (
-    <section className="dashboard-summary">
-      <div className="dashboard-summary-state">
-        <strong>Indicadores ainda não disponíveis.</strong>
+  if (!dashboard) {
+    return (
+      <section className="dashboard-summary">
+        <div className="dashboard-summary-state">
+          <strong>Indicadores ainda não disponíveis.</strong>
 
-        <p>
-          Os dados aparecerão assim que o ambiente concluir as primeiras
-          coletas.
-        </p>
-      </div>
-    </section>
-  );
-}
+          <p>
+            Os dados aparecerão assim que o ambiente concluir as primeiras
+            coletas.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   const {
     energyKwh,
@@ -111,6 +111,17 @@ if (!dashboard) {
         )}
       </div>
 
+      {error && (
+        <div className="dashboard-summary-warning" role="status">
+          <strong> Atualização temporariamente indisponível.</strong>
+          <span>
+            {" "}
+            Os últimos indicadores válidos continuam sendo exibidos. Uma nova
+            tentativa será feita automaticamente.
+          </span>
+        </div>
+        
+      )}
       <div className="dashboard-summary-grid">
         <DashboardMetricCard
           label="Consumo energético"
