@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
-import type { Map as MapLibreMap, Marker } from "maplibre-gl";
+import type { Map as MapLibreMap, Marker, Popup } from "maplibre-gl";
 import "maplibre-gl-original/dist/maplibre-gl.css";
 import type { MonitoredService, ServiceStatus } from "../types/service";
 import "./ServicesMap.css";
@@ -10,7 +10,8 @@ const WORLD_BOUNDS: [[number, number], [number, number]] = [
   [180, 85],
 ];
 
-const FOCUS_ZOOM = 14;
+const FOCUS_ZOOM = 16;
+const FOCUS_ZOOM_BY_CITY: Record<string, number> = { Toronto: 14 };
 const FOCUS_PITCH = 62;
 const FLY_DURATION = 3200;
 const OVERVIEW_DURATION = 1800;
@@ -93,6 +94,25 @@ function hideRoadNames(map: MapLibreMap) {
   }
 }
 
+function formatPlace(location: MonitoredService["location"]) {
+  const { city, region, country } = location;
+  return `${city ? `${city} · ` : ""}${region}, ${country}`;
+}
+
+function buildPopupContent(title: string, subtitle: string) {
+  const content = document.createElement("div");
+  content.className = "services-map-popup-content";
+
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+
+  const meta = document.createElement("span");
+  meta.textContent = subtitle;
+
+  content.append(heading, meta);
+  return content;
+}
+
 const statusPriority: ServiceStatus[] = [
   "unavailable",
   "no_metrics",
@@ -161,6 +181,9 @@ export type MapFocusRequest = {
   longitude: number;
   latitude: number;
   label: string;
+  city?: string | null;
+  place?: string;
+  scrollToMap?: boolean;
 };
 
 type ServicesMapProps = {
@@ -173,6 +196,7 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
   const mapRef = useRef<MapLibreMap | null>(null);
   const loadedRef = useRef(false);
   const orbitFrameRef = useRef<number | null>(null);
+  const popupRef = useRef<Popup | null>(null);
   const pendingArrivalRef = useRef<{
     map: MapLibreMap;
     handler: () => void;
@@ -242,7 +266,12 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
     orbitFrameRef.current = requestAnimationFrame(step);
   };
 
-  const flyToPoint = (map: MapLibreMap, longitude: number, latitude: number) => {
+  const flyToPoint = (
+    map: MapLibreMap,
+    longitude: number,
+    latitude: number,
+    city?: string | null,
+  ) => {
     cancelOrbit();
 
     const onArrive = () => {
@@ -258,7 +287,7 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
 
     map.flyTo({
       center: [longitude, latitude],
-      zoom: FOCUS_ZOOM,
+      zoom: (city && FOCUS_ZOOM_BY_CITY[city]) || FOCUS_ZOOM,
       pitch: FOCUS_PITCH,
       bearing: 0,
       duration: reducedMotion ? 0 : FLY_DURATION,
@@ -267,11 +296,49 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
     });
   };
 
+  const openPopup = (
+    map: MapLibreMap,
+    longitude: number,
+    latitude: number,
+    title: string,
+    subtitle: string,
+  ) => {
+    const popup =
+      popupRef.current ??
+      new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: true,
+        focusAfterOpen: false,
+        offset: 18,
+        maxWidth: "280px",
+        className: "services-map-popup",
+      });
+
+    popupRef.current = popup;
+    popup
+      .setLngLat([longitude, latitude])
+      .setDOMContent(buildPopupContent(title, subtitle))
+      .addTo(map);
+  };
+
+  const focusPoint = (
+    map: MapLibreMap,
+    longitude: number,
+    latitude: number,
+    city: string | null | undefined,
+    title: string,
+    subtitle: string,
+  ) => {
+    flyToPoint(map, longitude, latitude, city);
+    openPopup(map, longitude, latitude, title, subtitle);
+  };
+
   const showOverview = () => {
     const map = mapRef.current;
     if (!map || !loadedRef.current) return;
 
     cancelOrbit();
+    popupRef.current?.remove();
     map.stop();
 
     const reducedMotion = window.matchMedia(
@@ -333,7 +400,14 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
       const pending = pendingFocusRef.current;
       if (pending) {
         pendingFocusRef.current = null;
-        flyToPoint(map, pending.longitude, pending.latitude);
+        focusPoint(
+          map,
+          pending.longitude,
+          pending.latitude,
+          pending.city,
+          pending.label,
+          pending.place ?? "",
+        );
       }
     };
     map.on("style.load", onStyleLoad);
@@ -345,6 +419,8 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
     return () => {
       resize.disconnect();
       cancelOrbit();
+      popupRef.current?.remove();
+      popupRef.current = null;
       map.off("style.load", onStyleLoad);
       map.off("load", onLoad);
       map.remove();
@@ -357,6 +433,15 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
   useEffect(() => {
     if (!focus) return;
 
+    if (focus.scrollToMap) {
+      containerRef.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "center",
+      });
+    }
+
     const map = mapRef.current;
     if (!map) return;
 
@@ -365,7 +450,14 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
       return;
     }
 
-    flyToPoint(map, focus.longitude, focus.latitude);
+    focusPoint(
+      map,
+      focus.longitude,
+      focus.latitude,
+      focus.city,
+      focus.label,
+      focus.place ?? "",
+    );
   }, [focusKey]);
 
   useEffect(() => {
@@ -415,8 +507,16 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
         element.append(count);
       }
 
-      element.addEventListener("click", () => {
-        flyToPoint(map, group.longitude, group.latitude);
+      element.addEventListener("click", (event) => {
+        event.stopPropagation();
+        focusPoint(
+          map,
+          group.longitude,
+          group.latitude,
+          group.services[0].location.city,
+          names,
+          formatPlace(group.services[0].location),
+        );
       });
 
       return new maplibregl.Marker({ element, anchor: "center" })

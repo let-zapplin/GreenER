@@ -39,6 +39,7 @@ export function Monitoring() {
   const [selection, setSelection] = useState<{
     id: string;
     key: number;
+    scroll: boolean;
   } | null>(null);
 
   const [mapFocus, setMapFocus] =
@@ -68,39 +69,26 @@ export function Monitoring() {
     dashboardLoading ||
     indicatorsLoading;
 
-  function focusServiceOnMap(id: string) {
-    const service = services.find(
-      (item) => item.id === id,
-    );
-
+   function focusServiceOnMap(id: string, options?: { scroll?: boolean }) {
+    const service = services.find((item) => item.id === id);
     if (!service) return;
 
     focusKeyRef.current += 1;
 
     const key = focusKeyRef.current;
+    setSelection({ id, key, scroll: options?.scroll ?? true });
 
-    setSelection({
-      id,
-      key,
-    });
-
-    const {
-      latitude,
-      longitude,
-    } = service.location;
-
-    if (
-      latitude === null ||
-      longitude === null
-    ) {
-      return;
-    }
+    const { latitude, longitude, city, region, country } = service.location;
+    if (latitude === null || longitude === null) return;
 
     setMapFocus({
       key,
       latitude,
       longitude,
       label: service.name,
+      city,
+      place: `${city ? `${city} · ` : ""}${region}, ${country}`,
+      scrollToMap: options?.scroll === false,
     });
   }
 
