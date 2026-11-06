@@ -9,7 +9,8 @@ type ServiceCardProps = {
   indicatorsLoading: boolean;
   indicatorsError: string | null;
   selectionKey?: number;
-  onSelect: (id: string) => void;
+  scrollOnSelect?: boolean;
+  onSelect: (id: string, options?: { scroll?: boolean }) => void;
 };
 
 function getStatusLabel(status: MonitoredService["status"]) {
@@ -40,6 +41,7 @@ export function ServiceCard({
   indicatorsLoading,
   indicatorsError,
   selectionKey,
+  scrollOnSelect = true,
   onSelect,
 }: ServiceCardProps) {
   const cardRef = useRef<HTMLElement>(null);
@@ -48,7 +50,7 @@ export function ServiceCard({
     service.location.latitude !== null && service.location.longitude !== null;
 
   useLayoutEffect(() => {
-    if (selectionKey === undefined) return;
+    if (selectionKey === undefined || !scrollOnSelect) return;
 
     const frame = requestAnimationFrame(() => {
       cardRef.current?.scrollIntoView({
@@ -75,7 +77,7 @@ export function ServiceCard({
       ref={cardRef}
       tabIndex={-1}
       aria-labelledby={titleId}
-      onClick={hasLocation ? () => onSelect(service.id) : undefined}
+      onClick={hasLocation ? () => onSelect(service.id, { scroll: true }) : undefined}
       className={`service-card ${service.status}${selectionKey !== undefined ? " is-selected" : ""}${hasLocation ? " is-focusable" : ""}`}
     >
       <div className="service-card-header">
@@ -113,7 +115,7 @@ export function ServiceCard({
             className="service-card-map-button"
             onClick={(event) => {
               event.stopPropagation();
-              onSelect(service.id);
+              onSelect(service.id, { scroll: false });
             }}
             disabled={!hasLocation}
             aria-label={`Ver ${service.name} no mapa`}

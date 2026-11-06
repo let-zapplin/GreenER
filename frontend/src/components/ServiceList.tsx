@@ -5,8 +5,8 @@ import "./ServiceList.css";
 
 type ServiceListProps = {
   services: MonitoredService[];
-  selection: { id: string; key: number } | null;
-  onSelect: (id: string) => void;
+  selection: { id: string; key: number; scroll: boolean } | null;
+  onSelect: (id: string, options?: { scroll?: boolean }) => void;
 
   indicators: ServiceIndicators[];
   indicatorsLoading: boolean;
@@ -36,6 +36,9 @@ export function ServiceList({
             indicatorsError={indicatorsError}
             selectionKey={
               selection?.id === service.id ? selection.key : undefined
+            }
+            scrollOnSelect={
+              selection?.id === service.id ? selection.scroll : true
             }
             onSelect={onSelect}
           />

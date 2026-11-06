@@ -28,6 +28,7 @@ export function Monitoring() {
   const [selection, setSelection] = useState<{
     id: string;
     key: number;
+    scroll: boolean;
   } | null>(null);
   const [mapFocus, setMapFocus] = useState<MapFocusRequest | null>(null);
   const focusKeyRef = useRef(0);
@@ -41,18 +42,26 @@ export function Monitoring() {
 
   const stale = lastUpdated !== null && error !== null;
 
-  function focusServiceOnMap(id: string) {
+  function focusServiceOnMap(id: string, options?: { scroll?: boolean }) {
     const service = services.find((item) => item.id === id);
     if (!service) return;
 
     focusKeyRef.current += 1;
     const key = focusKeyRef.current;
-    setSelection({ id, key });
+    setSelection({ id, key, scroll: options?.scroll ?? true });
 
-    const { latitude, longitude } = service.location;
+    const { latitude, longitude, city, region, country } = service.location;
     if (latitude === null || longitude === null) return;
 
-    setMapFocus({ key, latitude, longitude, label: service.name });
+    setMapFocus({
+      key,
+      latitude,
+      longitude,
+      label: service.name,
+      city,
+      place: `${city ? `${city} · ` : ""}${region}, ${country}`,
+      scrollToMap: options?.scroll === false,
+    });
   }
 
   useEffect(() => {
