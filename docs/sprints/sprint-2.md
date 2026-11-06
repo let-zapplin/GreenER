@@ -394,3 +394,33 @@ A interface diferencia:
 - validação manual da troca de serviços, períodos, tooltip, lacunas e navegação por zoom.
 
 A TEC23 encontra-se **em revisão**, aguardando aprovação e integração da Pull Request na `develop`.
+
+### US10 — Atualização automática do dashboard
+
+O dashboard de Monitoramento foi configurado para atualizar
+automaticamente sem necessidade de recarregamento manual.
+
+Intervalos adotados:
+
+- sincronização do catálogo de serviços: 60 segundos;
+- coleta de métricas: 60 segundos;
+- atualização do dashboard no frontend: 60 segundos;
+- sincronização da intensidade de carbono: 5 minutos.
+
+As consultas do frontend são reagendadas após a conclusão da
+requisição anterior, evitando sobreposição e acúmulo de chamadas.
+
+Em falhas temporárias, os últimos dados válidos permanecem
+visíveis e uma nova tentativa ocorre automaticamente.
+
+A interface informa separadamente o horário da última atualização
+bem-sucedida dos indicadores e dos serviços.
+
+#### Validação
+
+- atualização automática sem reload;
+- intervalo de 60 segundos confirmado no Network;
+- última atualização exibida na interface;
+- ausência de acúmulo de requisições;
+- backend interrompido propositalmente sem derrubar a interface;
+- recuperação automática após retorno do backend.

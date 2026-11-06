@@ -41,7 +41,7 @@
 | US07 | usuário da plataforma | visualizar energia e CO₂e de cada serviço | compreender seu impacto ambiental individual | RF07 | 🔴 Alta | S2 | ⏳ Planejado |
 | US08 | usuário da plataforma | visualizar indicadores consolidados | compreender rapidamente o estado geral do ambiente | RF08 | 🔴 Alta | S2 | ⏳ Planejado |
 | US09 | usuário da plataforma | visualizar um dashboard operacional | acompanhar serviços, métricas e impacto em um único lugar | RF09 | 🔴 Alta | S2 | 🔄 Parcial - monitoramento existe; indicadores ambientais pendentes |
-| US10 | usuário da plataforma | que o dashboard seja atualizado automaticamente | acompanhar o ambiente sem recarregar a página | RF11, RNF02 | 🔴 Alta | S2 | 🔄 Parcial - atualização existe; intervalo/última coleta devem ser consolidados |
+| US10 | usuário da plataforma | que o dashboard seja atualizado automaticamente | acompanhar o ambiente sem recarregar a página | RF11, RNF02 | 🔴 Alta | S2 |✅ Concluíd |
 | US11 | usuário da plataforma | consultar o histórico das coletas | analisar evolução de métricas e impacto ao longo do tempo | RF10 | 🔴 Alta | S2 | ⏳ Planejado |
 | US12 | usuário da plataforma | visualizar onde cada serviço está hospedado | relacionar localização e indicadores | RF12 | 🟡 Média | S3 | 🔄 Parcial - localização já persistida/exibida em partes da interface |
 | US13 | usuário da plataforma | visualizar geograficamente serviços com coordenadas | entender sua distribuição espacial | RF13 | 🟡 Média | S3 | ⏳ Planejado - globo conceitual não atende ao requisito funcional |
@@ -149,10 +149,10 @@ Para cada serviço, apresentar:
 
 #### US10 - Atualização automática
 - [x] atualizar a interface sem reload manual;
-- [ ] definir e documentar intervalo de sincronização do catálogo;
-- [ ] definir e documentar intervalo de coleta de métricas;
-- [ ] definir intervalo de atualização do frontend coerente com o backend;
-- [ ] informar data/hora da última atualização/coleta relevante ao usuário.
+- [x] definir e documentar intervalo de sincronização do catálogo;
+- [x] definir e documentar intervalo de coleta de métricas;
+- [x] definir intervalo de atualização do frontend coerente com o backend;
+- [x] informar data/hora da última atualização/coleta relevante ao usuário.
 
 **RF:** RF11 | **RNF:** RNF02
 

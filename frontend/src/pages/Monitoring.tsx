@@ -13,7 +13,9 @@ export function Monitoring() {
     dashboard,
     loading: dashboardLoading,
     error: dashboardError,
+    lastUpdated: dashboardLastUpdated,
   } = useDashboardSummary();
+
   const {
     indicators: serviceIndicators,
     loading: indicatorsLoading,
@@ -39,6 +41,11 @@ export function Monitoring() {
     services.length - removedCount - unavailableCount - noMetricsCount;
 
   const stale = lastUpdated !== null && error !== null;
+
+  const hasSyncError =
+    error !== null || dashboardError !== null || indicatorsError !== null;
+
+  const isSyncing = loading || dashboardLoading || indicatorsLoading;
 
   useEffect(() => {
     if (!selection) return;
@@ -73,36 +80,65 @@ export function Monitoring() {
             seu ambiente.
           </p>
         </div>
-        <details className={`monitoring-sync ${error ? "has-error" : ""}`}>
-          <summary className="monitoring-sync-label">
-            <span aria-hidden="true" className="monitoring-sync-dot" />
-            {error
-              ? "Atualização interrompida"
-              : loading
-                ? "Atualizando serviços"
-                : "Ultima Atualização"}
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="m4 6 4 4 4-4" />
-            </svg>
-          </summary>
-          {lastUpdated ? (
-            <span className="refresh-note">
-              Última consulta bem-sucedida
-              <br />
-              <time dateTime={lastUpdated}>
-                {new Date(lastUpdated).toLocaleString("pt-BR")}
-              </time>
-            </span>
-          ) : (
-            <span className="refresh-note">Aguardando a primeira consulta</span>
-          )}
-        </details>
+<details
+  className={`monitoring-sync ${hasSyncError ? "has-error" : ""}`}
+>
+  <summary className="monitoring-sync-label">
+    <span
+      aria-hidden="true"
+      className="monitoring-sync-dot"
+    />
+
+    {hasSyncError
+      ? "Atualização com falha"
+      : isSyncing
+        ? "Atualizando dados"
+        : "Última atualização"}
+
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <path d="m4 6 4 4 4-4" />
+    </svg>
+  </summary>
+
+  <span className="refresh-note">
+    {dashboardLastUpdated ? (
+      <>
+        Indicadores
+        <br />
+        <time dateTime={dashboardLastUpdated}>
+          {new Date(
+            dashboardLastUpdated,
+          ).toLocaleString("pt-BR")}
+        </time>
+      </>
+    ) : (
+      <>Indicadores: aguardando primeira consulta</>
+    )}
+
+    <br />
+    <br />
+
+    {lastUpdated ? (
+      <>
+        Serviços
+        <br />
+        <time dateTime={lastUpdated}>
+          {new Date(
+            lastUpdated,
+          ).toLocaleString("pt-BR")}
+        </time>
+      </>
+    ) : (
+      <>Serviços: aguardando primeira consulta</>
+    )}
+  </span>
+</details>
       </section>
       {error && (
         <div className="monitoring-stale" role="alert">
@@ -255,12 +291,12 @@ export function Monitoring() {
           </div>
 
           <ServiceList
-  services={services}
-  selection={selection}
-  indicators={serviceIndicators?.services ?? []}
-  indicatorsLoading={indicatorsLoading}
-  indicatorsError={indicatorsError}
-/>
+            services={services}
+            selection={selection}
+            indicators={serviceIndicators?.services ?? []}
+            indicatorsLoading={indicatorsLoading}
+            indicatorsError={indicatorsError}
+          />
         </>
       )}
     </main>
