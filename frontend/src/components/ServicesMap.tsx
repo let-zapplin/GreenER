@@ -1,0 +1,501 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import maplibregl from "maplibre-gl";
+import type { Map as MapLibreMap, Marker } from "maplibre-gl";
+import "maplibre-gl-original/dist/maplibre-gl.css";
+import type { MonitoredService, ServiceStatus } from "../types/service";
+import "./ServicesMap.css";
+
+const WORLD_BOUNDS: [[number, number], [number, number]] = [
+  [-180, -85],
+  [180, 85],
+];
+
+const FOCUS_ZOOM = 14;
+const FOCUS_PITCH = 62;
+const FLY_DURATION = 3200;
+const OVERVIEW_DURATION = 1800;
+const ORBIT_DEGREES_PER_MS = 0.006;
+
+const MAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
+const BUILDINGS_LAYER_ID = "services-3d-buildings";
+
+function addBuildingsLayer(map: MapLibreMap) {
+  if (map.getLayer(BUILDINGS_LAYER_ID) || !map.getSource("openmaptiles")) {
+    return;
+  }
+
+  const labelLayer = map
+    .getStyle()
+    .layers?.find((layer) => layer.type === "symbol");
+
+  map.addLayer(
+    {
+      id: BUILDINGS_LAYER_ID,
+      type: "fill-extrusion",
+      source: "openmaptiles",
+      "source-layer": "building",
+      minzoom: 14,
+      filter: [
+        "all",
+        ["match", ["geometry-type"], ["MultiPolygon", "Polygon"], true, false],
+        ["!=", ["get", "hide_3d"], true],
+      ],
+      paint: {
+        "fill-extrusion-color": [
+          "interpolate",
+          ["linear"],
+          ["coalesce", ["get", "render_height"], 0],
+          0,
+          "#16292b",
+          60,
+          "#1f3c3f",
+          140,
+          "#2a5154",
+          240,
+          "#37686b",
+        ],
+        "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8],
+        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+        "fill-extrusion-opacity": 0.92,
+      },
+    },
+    labelLayer?.id,
+  );
+}
+
+function hideBoundaries(map: MapLibreMap) {
+  for (const layer of map.getStyle().layers ?? []) {
+    if (layer.type !== "line") continue;
+
+    const sourceLayer =
+      "source-layer" in layer ? layer["source-layer"] : undefined;
+    const isBoundary =
+      sourceLayer === "boundary" ||
+      layer.id.startsWith("boundary_") ||
+      layer.id.includes("admin") ||
+      layer.id.includes("border");
+
+    if (isBoundary) {
+      map.setLayoutProperty(layer.id, "visibility", "none");
+    }
+  }
+}
+
+function hideRoadNames(map: MapLibreMap) {
+  for (const layer of map.getStyle().layers ?? []) {
+    if (layer.type !== "symbol") continue;
+
+    const sourceLayer =
+      "source-layer" in layer ? layer["source-layer"] : undefined;
+    if (sourceLayer === "transportation_name") {
+      map.setLayoutProperty(layer.id, "visibility", "none");
+    }
+  }
+}
+
+const statusPriority: ServiceStatus[] = [
+  "unavailable",
+  "no_metrics",
+  "new",
+  "returned",
+  "active",
+  "removed",
+];
+
+const statusLabels: Record<ServiceStatus, string> = {
+  active: "Ativo",
+  new: "Novo",
+  returned: "Retornou",
+  no_metrics: "Sem métricas",
+  unavailable: "Indisponível",
+  removed: "Removido",
+};
+
+type ServiceGroup = {
+  key: string;
+  longitude: number;
+  latitude: number;
+  status: ServiceStatus;
+  services: MonitoredService[];
+};
+
+function groupServices(services: MonitoredService[]) {
+  const grouped = new Map<string, ServiceGroup>();
+  let withoutLocation = 0;
+
+  for (const service of services) {
+    const { latitude, longitude } = service.location;
+    if (latitude === null || longitude === null) {
+      withoutLocation += 1;
+      continue;
+    }
+
+    const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.services.push(service);
+    } else {
+      grouped.set(key, {
+        key,
+        latitude,
+        longitude,
+        status: service.status,
+        services: [service],
+      });
+    }
+  }
+
+  const groups = [...grouped.values()].map((group) => ({
+    ...group,
+    status:
+      statusPriority.find((status) =>
+        group.services.some((service) => service.status === status),
+      ) ?? group.services[0].status,
+  }));
+
+  return { groups, withoutLocation };
+}
+
+export type MapFocusRequest = {
+  key: number;
+  longitude: number;
+  latitude: number;
+  label: string;
+};
+
+type ServicesMapProps = {
+  services: MonitoredService[];
+  focus?: MapFocusRequest | null;
+};
+
+export function ServicesMap({ services, focus }: ServicesMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const loadedRef = useRef(false);
+  const orbitFrameRef = useRef<number | null>(null);
+  const pendingArrivalRef = useRef<{
+    map: MapLibreMap;
+    handler: () => void;
+  } | null>(null);
+  const pendingFocusRef = useRef<MapFocusRequest | null>(null);
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const { groups, withoutLocation } = useMemo(
+    () => groupServices(services),
+    [services],
+  );
+
+  const markerKey = useMemo(
+    () =>
+      groups
+        .map(
+          (group) =>
+            `${group.key}:${group.status}:${group.services
+              .map((service) => service.id)
+              .sort()
+              .join(",")}`,
+        )
+        .join("|"),
+    [groups],
+  );
+
+  const legendStatuses = statusPriority.filter((status) =>
+    groups.some((group) => group.status === status),
+  );
+
+  const focusKey = focus?.key;
+
+  const cancelOrbit = () => {
+    if (orbitFrameRef.current !== null) {
+      cancelAnimationFrame(orbitFrameRef.current);
+      orbitFrameRef.current = null;
+    }
+
+    const pending = pendingArrivalRef.current;
+    if (pending) {
+      pending.map.off("moveend", pending.handler);
+      pendingArrivalRef.current = null;
+    }
+  };
+
+  const startOrbit = (
+    map: MapLibreMap,
+    longitude: number,
+    latitude: number,
+  ) => {
+    cancelOrbit();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const center: [number, number] = [longitude, latitude];
+    let lastFrame = performance.now();
+    const step = (now: number) => {
+      const elapsed = Math.min(now - lastFrame, 64);
+      lastFrame = now;
+      map.jumpTo({
+        center,
+        bearing: (map.getBearing() + elapsed * ORBIT_DEGREES_PER_MS) % 360,
+      });
+      orbitFrameRef.current = requestAnimationFrame(step);
+    };
+
+    orbitFrameRef.current = requestAnimationFrame(step);
+  };
+
+  const flyToPoint = (map: MapLibreMap, longitude: number, latitude: number) => {
+    cancelOrbit();
+
+    const onArrive = () => {
+      pendingArrivalRef.current = null;
+      startOrbit(map, longitude, latitude);
+    };
+    pendingArrivalRef.current = { map, handler: onArrive };
+    map.once("moveend", onArrive);
+
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    map.flyTo({
+      center: [longitude, latitude],
+      zoom: FOCUS_ZOOM,
+      pitch: FOCUS_PITCH,
+      bearing: 0,
+      duration: reducedMotion ? 0 : FLY_DURATION,
+      curve: 1.42,
+      essential: true,
+    });
+  };
+
+  const showOverview = () => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+
+    cancelOrbit();
+    map.stop();
+
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    map.fitBounds(WORLD_BOUNDS, {
+      animate: !reducedMotion,
+      duration: reducedMotion ? 0 : OVERVIEW_DURATION,
+      bearing: 0,
+      pitch: 0,
+      padding: 0,
+    });
+  };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let map: MapLibreMap;
+    try {
+      map = new maplibregl.Map({
+        container,
+        style: MAP_STYLE,
+        center: [0, 15],
+        zoom: 1.2,
+        bearing: 0,
+        pitch: 0,
+        minZoom: -1,
+        maxZoom: 19,
+        maxPitch: 70,
+        dragRotate: false,
+        pitchWithRotate: false,
+        touchPitch: false,
+        renderWorldCopies: false,
+      });
+    } catch (error) {
+      console.error("Não foi possível inicializar o mapa:", error);
+      setFailed(true);
+      return;
+    }
+
+    mapRef.current = map;
+    map.fitBounds(WORLD_BOUNDS, { animate: false, padding: 0 });
+    setReady(true);
+
+    const applyMapLayers = () => {
+      addBuildingsLayer(map);
+      hideBoundaries(map);
+      hideRoadNames(map);
+    };
+
+    const onStyleLoad = () => applyMapLayers();
+
+    const onLoad = () => {
+      loadedRef.current = true;
+      applyMapLayers();
+
+      const pending = pendingFocusRef.current;
+      if (pending) {
+        pendingFocusRef.current = null;
+        flyToPoint(map, pending.longitude, pending.latitude);
+      }
+    };
+    map.on("style.load", onStyleLoad);
+    map.on("load", onLoad);
+
+    const resize = new ResizeObserver(() => map.resize());
+    resize.observe(container);
+
+    return () => {
+      resize.disconnect();
+      cancelOrbit();
+      map.off("style.load", onStyleLoad);
+      map.off("load", onLoad);
+      map.remove();
+      mapRef.current = null;
+      loadedRef.current = false;
+      setReady(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!focus) return;
+
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!loadedRef.current) {
+      pendingFocusRef.current = focus;
+      return;
+    }
+
+    flyToPoint(map, focus.longitude, focus.latitude);
+  }, [focusKey]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const stopOrbit = () => cancelOrbit();
+
+    container.addEventListener("pointerdown", stopOrbit, true);
+    container.addEventListener("wheel", stopOrbit, {
+      capture: true,
+      passive: true,
+    });
+
+    return () => {
+      container.removeEventListener("pointerdown", stopOrbit, true);
+      container.removeEventListener("wheel", stopOrbit, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+
+    const markers: Marker[] = groups.map((group) => {
+      const names = group.services.map((service) => service.name).join(", ");
+      const { city, country } = group.services[0].location;
+      const place = [city, country].filter(Boolean).join(", ");
+
+      const element = document.createElement("button");
+      element.type = "button";
+      element.className = `services-map-marker ${group.status}`;
+      element.setAttribute(
+        "aria-label",
+        `${names} — ${place}. Aproximar no mapa.`,
+      );
+      element.title = names;
+
+      const dot = document.createElement("span");
+      dot.className = "services-map-marker-dot";
+      element.append(dot);
+
+      if (group.services.length > 1) {
+        const count = document.createElement("span");
+        count.className = "services-map-marker-count";
+        count.textContent = String(group.services.length);
+        element.append(count);
+      }
+
+      element.addEventListener("click", () => {
+        flyToPoint(map, group.longitude, group.latitude);
+      });
+
+      return new maplibregl.Marker({ element, anchor: "center" })
+        .setLngLat([group.longitude, group.latitude])
+        .addTo(map);
+    });
+
+    return () => {
+      markers.forEach((marker) => marker.remove());
+    };
+  }, [markerKey, ready]);
+
+  if (failed) {
+    return (
+      <div className="services-map-notice" role="status">
+        <strong>Não foi possível carregar o mapa</strong>
+        <p>Verifique se o navegador tem suporte a WebGL e tente novamente.</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="services-map-shell">
+        <div
+          ref={containerRef}
+          className="services-map-canvas"
+          role="region"
+          aria-label={
+            focus
+              ? `Mapa dos serviços. Último foco: ${focus.label}`
+              : "Mapa dos serviços"
+          }
+        />
+        <button
+          type="button"
+          className="services-map-overview-button"
+          onClick={showOverview}
+          title="Voltar para a visão geral do mundo"
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3Z" />
+          </svg>
+          Visão geral
+        </button>
+        {ready && groups.length === 0 && (
+          <p className="services-map-empty">
+            Nenhum serviço com coordenadas cadastradas.
+          </p>
+        )}
+      </div>
+      <div className="services-map-footer">
+        <ul className="services-map-legend" aria-label="Legenda dos status">
+          {legendStatuses.map((status) => (
+            <li key={status}>
+              <span
+                className={`services-map-legend-dot ${status}`}
+                aria-hidden="true"
+              />
+              {statusLabels[status]}
+            </li>
+          ))}
+        </ul>
+        {withoutLocation > 0 && (
+          <p className="services-map-note">
+            {withoutLocation}{" "}
+            {withoutLocation === 1
+              ? "serviço sem localização cadastrada"
+              : "serviços sem localização cadastrada"}
+          </p>
+        )}
+      </div>
+    </>
+  );
+}

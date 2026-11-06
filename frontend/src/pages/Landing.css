@@ -679,6 +679,11 @@
   place-items: center;
   color: var(--text-muted);
 }
+.landing-globe-sphere .landing-globe-loading {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+}
 .landing-globe .maplibregl-ctrl-attrib {
   font-size: var(--font-size-small);
   line-height: 1.5;

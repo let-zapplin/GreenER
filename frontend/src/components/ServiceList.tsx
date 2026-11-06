@@ -6,6 +6,7 @@ import "./ServiceList.css";
 type ServiceListProps = {
   services: MonitoredService[];
   selection: { id: string; key: number } | null;
+  onSelect: (id: string) => void;
 
   indicators: ServiceIndicators[];
   indicatorsLoading: boolean;
@@ -15,6 +16,7 @@ type ServiceListProps = {
 export function ServiceList({
   services,
   selection,
+  onSelect,
   indicators,
   indicatorsLoading,
   indicatorsError,
@@ -22,18 +24,20 @@ export function ServiceList({
   return (
     <section className="service-list" aria-labelledby="service-list-title">
       {services.map((service) => {
-       const indicator = indicators.find(
-        (item)=> item.serviceId === service.serviceId,
-       );
-       return(
-        <ServiceCard
-        key={service.id}
-        service={service}
-        indicator={indicator}
-        indicatorsLoading={indicatorsLoading}
-        indicatorsError={indicatorsError}
-        selectionKey={selection?.id === service.id ? selection.key : undefined
-           }
+        const indicator = indicators.find(
+          (item) => item.serviceId === service.serviceId,
+        );
+        return (
+          <ServiceCard
+            key={service.id}
+            service={service}
+            indicator={indicator}
+            indicatorsLoading={indicatorsLoading}
+            indicatorsError={indicatorsError}
+            selectionKey={
+              selection?.id === service.id ? selection.key : undefined
+            }
+            onSelect={onSelect}
           />
         );
       })}

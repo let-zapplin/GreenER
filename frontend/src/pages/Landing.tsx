@@ -15,6 +15,7 @@ import {
   PulseIcon,
   ShieldCheckIcon,
   SparkleIcon,
+  SpinnerGapIcon,
   XIcon,
 } from "@phosphor-icons/react";
 import logo from "../../assets/logo.png";
@@ -251,8 +252,16 @@ export function Landing() {
           <div className="landing-planet-visual">
             <Suspense
               fallback={
-                <div className="landing-globe-loading" role="status">
-                  Preparando o planeta…
+                <div
+                  className="landing-globe-loading"
+                  role="status"
+                  aria-label="Preparando o planeta…"
+                >
+                  <SpinnerGapIcon
+                    className="landing-spinner"
+                    size={32}
+                    aria-hidden="true"
+                  />
                 </div>
               }
             >

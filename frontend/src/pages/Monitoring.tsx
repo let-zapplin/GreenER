@@ -1,14 +1,28 @@
-import { useEffect, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import type { MapFocusRequest } from "../components/ServicesMap";
 import { ServiceList } from "../components/ServiceList";
-import { ServiceIndicator } from "../components/ServiceIndicator";
 import "./Monitoring.css";
 import { DashboardSummary } from "../components/DashboardSummary";
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useDashboardSummary } from "../hooks/useDashboardSummary";
 import { useServiceIndicators } from "../hooks/useServiceIndicators";
 
+const ServicesMap = lazy(() =>
+  import("../components/ServicesMap").then((module) => ({
+    default: module.ServicesMap,
+  })),
+);
+
 export function Monitoring() {
   const { snapshot, loading, error } = useMonitoring();
+
   const {
     dashboard,
     loading: dashboardLoading,
@@ -21,49 +35,126 @@ export function Monitoring() {
     loading: indicatorsLoading,
     error: indicatorsError,
   } = useServiceIndicators();
+
   const [selection, setSelection] = useState<{
     id: string;
     key: number;
   } | null>(null);
+
+  const [mapFocus, setMapFocus] =
+    useState<MapFocusRequest | null>(null);
+
+  const focusKeyRef = useRef(0);
+
   const { services, lastUpdated } = snapshot;
 
-  const removedCount = services.filter(
-    (service) => service.status === "removed",
-  ).length;
-  const unavailableCount = services.filter(
-    (service) => service.status === "unavailable",
-  ).length;
-  const noMetricsCount = services.filter(
-    (service) => service.status === "no_metrics",
+  const servicesWithLocation = services.filter(
+    (service) =>
+      service.location.latitude !== null &&
+      service.location.longitude !== null,
   ).length;
 
-  const activeCount =
-    services.length - removedCount - unavailableCount - noMetricsCount;
-
-  const stale = lastUpdated !== null && error !== null;
+  const stale =
+    lastUpdated !== null &&
+    error !== null;
 
   const hasSyncError =
-    error !== null || dashboardError !== null || indicatorsError !== null;
+    error !== null ||
+    dashboardError !== null ||
+    indicatorsError !== null;
 
-  const isSyncing = loading || dashboardLoading || indicatorsLoading;
+  const isSyncing =
+    loading ||
+    dashboardLoading ||
+    indicatorsLoading;
+
+  function focusServiceOnMap(id: string) {
+    const service = services.find(
+      (item) => item.id === id,
+    );
+
+    if (!service) return;
+
+    focusKeyRef.current += 1;
+
+    const key = focusKeyRef.current;
+
+    setSelection({
+      id,
+      key,
+    });
+
+    const {
+      latitude,
+      longitude,
+    } = service.location;
+
+    if (
+      latitude === null ||
+      longitude === null
+    ) {
+      return;
+    }
+
+    setMapFocus({
+      key,
+      latitude,
+      longitude,
+      label: service.name,
+    });
+  }
 
   useEffect(() => {
     if (!selection) return;
-    function deselectOutside(event: PointerEvent) {
+
+    function deselectOutside(
+      event: PointerEvent,
+    ) {
       const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (target.closest(".service-card.is-selected, button.service-indicator"))
+
+      if (!(target instanceof Element)) {
         return;
+      }
+
+      if (
+        target.closest(
+          ".service-card.is-selected",
+        )
+      ) {
+        return;
+      }
+
       setSelection(null);
     }
-    function deselectOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setSelection(null);
+
+    function deselectOnEscape(
+      event: KeyboardEvent,
+    ) {
+      if (event.key === "Escape") {
+        setSelection(null);
+      }
     }
-    document.addEventListener("pointerdown", deselectOutside);
-    document.addEventListener("keydown", deselectOnEscape);
+
+    document.addEventListener(
+      "pointerdown",
+      deselectOutside,
+    );
+
+    document.addEventListener(
+      "keydown",
+      deselectOnEscape,
+    );
+
     return () => {
-      document.removeEventListener("pointerdown", deselectOutside);
-      document.removeEventListener("keydown", deselectOnEscape);
+      document.removeEventListener(
+        "pointerdown",
+        deselectOutside,
+      );
+
+      document.removeEventListener(
+        "keydown",
+        deselectOnEscape,
+      );
     };
   }, [selection]);
 
@@ -71,206 +162,212 @@ export function Monitoring() {
     <main className="monitoring-page">
       <section className="monitoring-header">
         <div className="monitoring-intro">
-          <p className="monitoring-eyebrow">SEU AMBIENTE, EM UM SÓ LUGAR</p>
+          <p className="monitoring-eyebrow">
+            SEU AMBIENTE, EM UM SÓ LUGAR
+          </p>
+
           <h1>
-            Monitoramento de <span>serviços.</span>
+            Monitoramento de{" "}
+            <span>serviços.</span>
           </h1>
+
           <p className="monitoring-description">
-            Acompanhe os serviços descobertos, sua localização e as mudanças no
+            Acompanhe os serviços descobertos,
+            sua localização e as mudanças no
             seu ambiente.
           </p>
         </div>
-<details
-  className={`monitoring-sync ${hasSyncError ? "has-error" : ""}`}
->
-  <summary className="monitoring-sync-label">
-    <span
-      aria-hidden="true"
-      className="monitoring-sync-dot"
-    />
 
-    {hasSyncError
-      ? "Atualização com falha"
-      : isSyncing
-        ? "Atualizando dados"
-        : "Última atualização"}
+        <details
+          className={`monitoring-sync ${
+            hasSyncError
+              ? "has-error"
+              : ""
+          }`}
+        >
+          <summary className="monitoring-sync-label">
+            <span
+              aria-hidden="true"
+              className="monitoring-sync-dot"
+            />
 
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <path d="m4 6 4 4 4-4" />
-    </svg>
-  </summary>
+            {hasSyncError
+              ? "Atualização com falha"
+              : isSyncing
+                ? "Atualizando dados"
+                : "Última atualização"}
 
-  <span className="refresh-note">
-    {dashboardLastUpdated ? (
-      <>
-        Indicadores
-        <br />
-        <time dateTime={dashboardLastUpdated}>
-          {new Date(
-            dashboardLastUpdated,
-          ).toLocaleString("pt-BR")}
-        </time>
-      </>
-    ) : (
-      <>Indicadores: aguardando primeira consulta</>
-    )}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="m4 6 4 4 4-4" />
+            </svg>
+          </summary>
 
-    <br />
-    <br />
+          <span className="refresh-note">
+            {dashboardLastUpdated ? (
+              <>
+                Indicadores
+                <br />
 
-    {lastUpdated ? (
-      <>
-        Serviços
-        <br />
-        <time dateTime={lastUpdated}>
-          {new Date(
-            lastUpdated,
-          ).toLocaleString("pt-BR")}
-        </time>
-      </>
-    ) : (
-      <>Serviços: aguardando primeira consulta</>
-    )}
-  </span>
-</details>
+                <time
+                  dateTime={
+                    dashboardLastUpdated
+                  }
+                >
+                  {new Date(
+                    dashboardLastUpdated,
+                  ).toLocaleString(
+                    "pt-BR",
+                  )}
+                </time>
+              </>
+            ) : (
+              <>
+                Indicadores: aguardando
+                primeira consulta
+              </>
+            )}
+
+            <br />
+            <br />
+
+            {lastUpdated ? (
+              <>
+                Serviços
+                <br />
+
+                <time
+                  dateTime={
+                    lastUpdated
+                  }
+                >
+                  {new Date(
+                    lastUpdated,
+                  ).toLocaleString(
+                    "pt-BR",
+                  )}
+                </time>
+              </>
+            ) : (
+              <>
+                Serviços: aguardando primeira
+                consulta
+              </>
+            )}
+          </span>
+        </details>
       </section>
+
       {error && (
-        <div className="monitoring-stale" role="alert">
+        <div
+          className="monitoring-stale"
+          role="alert"
+        >
           <strong>{error}</strong>
+
           <p>
             {stale
               ? "Os dados abaixo são da última consulta bem-sucedida. "
               : ""}
-            Uma nova tentativa será feita automaticamente.
+
+            Uma nova tentativa será feita
+            automaticamente.
           </p>
         </div>
       )}
-      {loading && services.length === 0 && (
-        <div className="monitoring-empty" role="status">
-          <span className="monitoring-loader" aria-hidden="true" />
-          <h2>Buscando serviços</h2>
-          <p>Estamos consultando os serviços disponíveis no seu ambiente.</p>
-        </div>
-      )}
-      {!loading && !error && services.length === 0 && (
-        <div className="monitoring-empty" role="status">
-          <h2>Nenhum serviço encontrado</h2>
-          <p>
-            Os serviços aparecerão aqui assim que forem identificados. A
-            consulta continua automaticamente.
-          </p>
-        </div>
-      )}
-      {services.length > 0 && (
-        <section
-          className="services-summary"
-          aria-labelledby="services-summary-title"
-        >
-          <div className="services-summary-info">
-            <p className="monitoring-section-label">VISÃO GERAL</p>
-            <h2 id="services-summary-title">Seu ambiente agora</h2>
-            <div className="services-total">
-              <strong>{activeCount}</strong>
-              <span>
-                de {services.length} serviços
-                <br />
-                {stale ? "ativos na última consulta" : "ativos na descoberta"}
-              </span>
-            </div>
-            <dl className="services-counts">
-              <div>
-                <dt>Detectados</dt>
-                <dd>{services.length}</dd>
-              </div>
-              <div className="services-count-active">
-                <dt>Ativos</dt>
-                <dd>{activeCount}</dd>
-              </div>
 
-              <div className="services-count-no-metrics">
-                <dt>Sem métricas</dt>
-                <dd>{noMetricsCount}</dd>
-              </div>
+      {loading &&
+        services.length === 0 && (
+          <div
+            className="monitoring-empty"
+            role="status"
+          >
+            <span
+              className="monitoring-loader"
+              aria-hidden="true"
+            />
 
-              <div className="services-count-unavailable">
-                <dt>Indisponíveis</dt>
-                <dd>{unavailableCount}</dd>
-              </div>
-              <div className="services-count-removed">
-                <dt>Removidos</dt>
-                <dd>{removedCount}</dd>
-              </div>
-            </dl>
-          </div>
-          <div className="services-overview">
-            <div className="services-overview-heading">
-              <h3>Status dos serviços</h3>
-              <span>{services.length} identificados</span>
-            </div>
-            <div className="services-summary-grid">
-              {services.map((service) => (
-                <ServiceIndicator
-                  key={service.id}
-                  service={service}
-                  onSelect={(id) =>
-                    setSelection((previous) => ({
-                      id,
-                      key: (previous?.key ?? 0) + 1,
-                    }))
-                  }
-                />
-              ))}
-            </div>
-            <ul className="services-legend" aria-label="Legenda dos status">
-              <li>
-                <span className="service-indicator active" aria-hidden="true" />
-                Ativo
-              </li>
-              <li>
-                <span
-                  className="service-indicator no_metrics"
-                  aria-hidden="true"
-                />
-                Sem métricas
-              </li>
-              <li>
-                <span className="service-indicator new" aria-hidden="true" />
-                Novo
-              </li>
-              <li>
-                <span
-                  className="service-indicator returned"
-                  aria-hidden="true"
-                />
-                Retornou
-              </li>
-              <li>
-                <span
-                  className="service-indicator unavailable"
-                  aria-hidden="true"
-                />
-                Indisponível
-              </li>
-              <li>
-                <span
-                  className="service-indicator removed"
-                  aria-hidden="true"
-                />
-                Removido
-              </li>
-            </ul>
-            <p className="services-overview-note">
-              Selecione um indicador para ver os detalhes.
+            <h2>Buscando serviços</h2>
+
+            <p>
+              Estamos consultando os serviços
+              disponíveis no seu ambiente.
             </p>
           </div>
+        )}
+
+      {!loading &&
+        !error &&
+        services.length === 0 && (
+          <div
+            className="monitoring-empty"
+            role="status"
+          >
+            <h2>
+              Nenhum serviço encontrado
+            </h2>
+
+            <p>
+              Os serviços aparecerão aqui
+              assim que forem identificados.
+              A consulta continua
+              automaticamente.
+            </p>
+          </div>
+        )}
+
+      {services.length > 0 && (
+        <section
+          className="services-map-section"
+          aria-labelledby="services-map-title"
+        >
+          <div className="services-map-heading">
+            <div>
+              <p className="monitoring-section-label">
+                LOCALIZAÇÃO DOS SERVIÇOS
+              </p>
+
+              <h2 id="services-map-title">
+                Onde seus serviços estão
+              </h2>
+            </div>
+
+            <span>
+              {servicesWithLocation} de{" "}
+              {services.length}{" "}
+              {services.length === 1
+                ? "serviço localizado"
+                : "serviços localizados"}
+            </span>
+          </div>
+
+          <Suspense
+            fallback={
+              <div
+                className="services-map-loading"
+                role="status"
+                aria-label="Carregando mapa"
+              >
+                <span
+                  className="monitoring-loader"
+                  aria-hidden="true"
+                />
+              </div>
+            }
+          >
+            <ServicesMap
+              services={services}
+              focus={mapFocus}
+            />
+          </Suspense>
         </section>
       )}
+
       <DashboardSummary
         dashboard={dashboard}
         loading={dashboardLoading}
@@ -281,21 +378,37 @@ export function Monitoring() {
         <>
           <div className="monitoring-list-heading">
             <div>
-              <p className="monitoring-section-label">SERVIÇOS</p>
-              <h2 id="service-list-title">Detalhes do ambiente</h2>
+              <p className="monitoring-section-label">
+                SERVIÇOS
+              </p>
+
+              <h2 id="service-list-title">
+                Detalhes do ambiente
+              </h2>
             </div>
 
             <span>
-              {services.length} {services.length === 1 ? "serviço" : "serviços"}
+              {services.length}{" "}
+              {services.length === 1
+                ? "serviço"
+                : "serviços"}
             </span>
           </div>
 
           <ServiceList
             services={services}
             selection={selection}
-            indicators={serviceIndicators?.services ?? []}
-            indicatorsLoading={indicatorsLoading}
-            indicatorsError={indicatorsError}
+            onSelect={focusServiceOnMap}
+            indicators={
+              serviceIndicators?.services ??
+              []
+            }
+            indicatorsLoading={
+              indicatorsLoading
+            }
+            indicatorsError={
+              indicatorsError
+            }
           />
         </>
       )}
