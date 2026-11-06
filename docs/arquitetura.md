@@ -230,7 +230,7 @@ flowchart TD
 
 > O intervalo usado por esse job deve ser distinguido do intervalo de **coleta de métricas**. Na Sprint 2, a nomenclatura e a configuração desses intervalos devem permanecer separadas para evitar ambiguidade.
 
-Além da sincronização do catálogo, `server.ts` inicia o job de coleta periódica de métricas. Os ciclos usam configurações independentes: `SERVICE_SYNC_INTERVAL_MS` para o catálogo e `COLLECTION_INTERVAL_MS` para métricas.
+Além da sincronização do catálogo, `server.ts` inicia os jobs de coleta periódica de métricas e sincronização das intensidades de carbono. Os ciclos usam configurações independentes: `SERVICE_SYNC_INTERVAL_MS` para o catálogo, `COLLECTION_INTERVAL_MS` para métricas e `CARBON_INTENSITY_SYNC_INTERVAL_MS` para snapshots de carbono.
 
 ---
 
@@ -691,11 +691,11 @@ em vez de depender da recriação do volume.
 - evolução do schema realizada por migration;
 - classificação das respostas de `/metrics/{id}` em `success`, `no_metrics`, `unavailable` e `error`;
 - energia e CO₂e são calculados sob demanda e não são persistidos na entidade `collection`;
-- jobs de sincronização do catálogo e coleta de métricas iniciados pelo backend;
+- jobs de sincronização do catálogo, coleta de métricas e sincronização de intensidades de carbono iniciados pelo backend;
 - consulta de histórico de coletas por serviço protegida por JWT;
 - cálculo de indicadores por período protegido por JWT;
 - associação temporal da intensidade pelo código regional e instante da tentativa, limitada por `CARBON_INTENSITY_MAX_AGE_MS`;
-- `COLLECTION_INTERVAL_MS` permanece separado de `SERVICE_SYNC_INTERVAL_MS`.
+- `COLLECTION_INTERVAL_MS`, `SERVICE_SYNC_INTERVAL_MS` e `CARBON_INTENSITY_SYNC_INTERVAL_MS` permanecem independentes.
 - `collection_interval_seconds` é validado, persistido por amostra e usado nos cálculos; amostras sem duração são lacunas.
 
 ### Decisões ainda pendentes

@@ -647,14 +647,15 @@ curl -X POST http://localhost:3000/api/metricas/collect \
 
 **Sinalização de ausência de métricas:** o estado `no_metrics` também é exposto em `last_collection_status`, mas não remove o serviço nem altera `service.status`. A tela de monitoramento exibe o serviço como `Sem métricas`, com contador próprio e destaque distinto de `Indisponível`, e o cartão informa que o serviço continua ativo no catálogo e o horário da última tentativa de coleta.
 
-### Descoberta e coleta automáticas
+### Jobs automáticos
 
-Ao subir, o backend dispara dois ciclos independentes:
+Ao subir, o backend dispara três ciclos independentes:
 
 - `startServiceSync()` em `backend/src/jobs/service-sync.job.ts` consulta `/services` e sincroniza o catálogo a cada `SERVICE_SYNC_INTERVAL_MS`.
 - `startMetricsCollection()` em `backend/src/jobs/metrics-collection.job.ts` coleta as métricas dos serviços ativos a cada `COLLECTION_INTERVAL_MS`.
+- `startCarbonIntensitySync()` em `backend/src/jobs/carbon-intensity-sync.job.ts` consulta a Carbon API e persiste snapshots regionais a cada `CARBON_INTENSITY_SYNC_INTERVAL_MS`.
 
-Cada job executa um ciclo imediatamente ao iniciar e reagenda o próximo com `setTimeout` somente depois que o ciclo atual termina, então um mesmo job nunca inicia um ciclo enquanto o anterior está em andamento. Falhas de descoberta ou de coleta são registradas no log e não encerram o backend nem interrompem o ciclo automático.
+Cada job executa um ciclo imediatamente ao iniciar e reagenda o próximo com `setTimeout` somente depois que o ciclo atual termina, evitando sobreposição dentro do mesmo job. Falhas de descoberta, coleta ou sincronização são registradas no log e não encerram o backend nem interrompem o ciclo automático.
 
 Os logs identificam cada ciclo pelo número sequencial:
 
@@ -665,6 +666,9 @@ Os logs identificam cada ciclo pelo número sequencial:
 🕒 Coleta automática ativa: intervalo de 60000 ms
 🔄 Iniciando coleta automática #1...
 ✅ Coleta #1 concluída: 9 sucessos, 1 sem métricas, 1 indisponíveis, 1 falhas
+🕒 Sincronização automática de intensidades ativa: intervalo de 300000 ms
+🔄 Iniciando sincronização de intensidades #1...
+✅ Sincronização de intensidades #1 concluída: 5 snapshots inseridos
 ```
 
 Quando uma coleta automática coincide com uma coleta manual em andamento, o ciclo é pulado e registrado como `⚠️ Coleta #N ignorada: ciclo anterior ainda em execução.`
@@ -673,6 +677,7 @@ Quando uma coleta automática coincide com uma coleta manual em andamento, o cic
 |---|---:|---|
 | `COLLECTION_INTERVAL_MS` | `60000` | Intervalo entre ciclos de coleta de métricas |
 | `SERVICE_SYNC_INTERVAL_MS` | `300000` | Intervalo da sincronização do catálogo de serviços |
+| `CARBON_INTENSITY_SYNC_INTERVAL_MS` | `300000` | Intervalo da sincronização dos snapshots de intensidade de carbono |
 | `EXTERNAL_API_TIMEOUT_MS` | `10000` | Timeout de cada requisição às APIs externas |
 
 Os intervalos devem ser inteiros positivos; valores inválidos interrompem a inicialização do backend com mensagem explícita.
