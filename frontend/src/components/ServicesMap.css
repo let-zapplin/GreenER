@@ -1,0 +1,273 @@
+.services-map-shell {
+  position: relative;
+  height: clamp(320px, 38vw, 500px);
+  overflow: hidden;
+  border: 1px solid #426c60;
+  border-radius: 18px;
+  background: #0e0e0e;
+  box-shadow: 0 10px 24px #0002;
+  isolation: isolate;
+}
+
+.services-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.services-map-overview-button {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 1px solid #426c60;
+  border-radius: 999px;
+  background: #0c282be6;
+  color: #e2ece6;
+  font-family: inherit;
+  font-size: var(--font-size-small, 13px);
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.services-map-overview-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.services-map-overview-button:focus-visible {
+  outline: 2px solid #f4f8f5;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .services-map-overview-button:hover {
+    border-color: var(--monitoring-accent, #87e46c);
+    background: #103335f2;
+  }
+}
+
+.services-map-canvas .maplibregl-canvas {
+  outline: none;
+}
+
+.services-map-canvas .maplibregl-ctrl-attrib {
+  border-radius: 6px 0 0;
+  background: #0c282bcc;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 10px;
+}
+
+.services-map-canvas .maplibregl-ctrl-attrib a {
+  color: #a7c993;
+}
+
+.services-map-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 5px #0009);
+  touch-action: manipulation;
+}
+
+.services-map-marker:focus-visible {
+  outline: 2px solid #f4f8f5;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .services-map-marker:hover .services-map-marker-dot,
+  .services-map-marker:focus-visible .services-map-marker-dot {
+    transform: scale(1.2);
+  }
+}
+
+.services-map-marker-dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #0c282b;
+  border-radius: 50%;
+  background: var(--status-active, #87e46c);
+  transition: transform 160ms ease;
+}
+
+.services-map-marker.active .services-map-marker-dot {
+  background: var(--status-active, #87e46c);
+  box-shadow: 0 0 0 4px #87e46c26;
+}
+
+.services-map-marker.new .services-map-marker-dot {
+  background: var(--status-new, #e5e65d);
+  box-shadow: 0 0 0 4px #e5e65d26;
+}
+
+.services-map-marker.returned .services-map-marker-dot {
+  background: var(--status-returned, #7dd3fc);
+  box-shadow: 0 0 0 4px #7dd3fc26;
+}
+
+.services-map-marker.no_metrics .services-map-marker-dot {
+  background: var(--status-no-metrics, #facc15);
+  box-shadow: 0 0 0 4px #facc1526;
+}
+
+.services-map-marker.unavailable .services-map-marker-dot {
+  background: var(--status-unavailable, #ee1e41);
+  box-shadow: 0 0 0 4px #ee1e4126;
+}
+
+.services-map-marker.removed .services-map-marker-dot {
+  background: var(--status-removed, #323261);
+  box-shadow: 0 0 0 4px #32326140;
+}
+
+.services-map-marker-count {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 1px solid #0c282b;
+  border-radius: 999px;
+  background: #f4f8f5;
+  color: #0c282b;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.services-map-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 12px 16px;
+  border: 1px solid #426c60;
+  border-radius: 10px;
+  background: #103335e6;
+  color: #d7e0df;
+  font-size: var(--font-size-small, 13px);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.services-map-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  margin-top: 14px;
+}
+
+.services-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--monitoring-muted, #a7c993);
+  font-size: var(--font-size-small, 13px);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.services-map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.services-map-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.services-map-legend-dot.active {
+  background: var(--status-active, #87e46c);
+}
+
+.services-map-legend-dot.new {
+  background: var(--status-new, #e5e65d);
+}
+
+.services-map-legend-dot.returned {
+  background: var(--status-returned, #7dd3fc);
+}
+
+.services-map-legend-dot.no_metrics {
+  background: var(--status-no-metrics, #facc15);
+}
+
+.services-map-legend-dot.unavailable {
+  background: var(--status-unavailable, #ee1e41);
+}
+
+.services-map-legend-dot.removed {
+  background: var(--status-removed, #323261);
+}
+
+.services-map-note {
+  margin: 0;
+  color: var(--monitoring-muted, #a7c993);
+  font-size: var(--font-size-small, 13px);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.services-map-notice {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  min-height: 240px;
+  padding: 32px 24px;
+  border: 1px dashed #426c60;
+  border-radius: 18px;
+  background: #103335;
+  text-align: center;
+}
+
+.services-map-notice strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.services-map-notice p {
+  max-width: 520px;
+  color: var(--monitoring-muted, #a7c993);
+  font-size: var(--font-size-small, 13px);
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.services-map-notice code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #0c282b;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.92em;
+}

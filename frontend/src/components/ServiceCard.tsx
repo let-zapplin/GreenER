@@ -9,6 +9,7 @@ type ServiceCardProps = {
   indicatorsLoading: boolean;
   indicatorsError: string | null;
   selectionKey?: number;
+  onSelect: (id: string) => void;
 };
 
 function getStatusLabel(status: MonitoredService["status"]) {
@@ -39,9 +40,12 @@ export function ServiceCard({
   indicatorsLoading,
   indicatorsError,
   selectionKey,
+  onSelect,
 }: ServiceCardProps) {
   const cardRef = useRef<HTMLElement>(null);
   const titleId = useId();
+  const hasLocation =
+    service.location.latitude !== null && service.location.longitude !== null;
 
   useLayoutEffect(() => {
     if (selectionKey === undefined) return;
@@ -71,7 +75,8 @@ export function ServiceCard({
       ref={cardRef}
       tabIndex={-1}
       aria-labelledby={titleId}
-      className={`service-card ${service.status}${selectionKey !== undefined ? " is-selected" : ""}`}
+      onClick={hasLocation ? () => onSelect(service.id) : undefined}
+      className={`service-card ${service.status}${selectionKey !== undefined ? " is-selected" : ""}${hasLocation ? " is-focusable" : ""}`}
     >
       <div className="service-card-header">
         <div className="service-card-identity">
@@ -98,9 +103,39 @@ export function ServiceCard({
           </div>
         </div>
 
-        <span className={`service-status-badge ${service.status}`}>
-          {getStatusLabel(service.status)}
-        </span>
+        <div className="service-card-header-actions">
+          <span className={`service-status-badge ${service.status}`}>
+            {getStatusLabel(service.status)}
+          </span>
+
+          <button
+            type="button"
+            className="service-card-map-button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect(service.id);
+            }}
+            disabled={!hasLocation}
+            aria-label={`Ver ${service.name} no mapa`}
+            title={
+              hasLocation
+                ? `Aproximar o mapa em ${service.location.city ?? service.location.region}`
+                : "Serviço sem localização cadastrada"
+            }
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
+              <circle cx="12" cy="12" r="6" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" strokeLinecap="round" />
+            </svg>
+            Ver no mapa
+          </button>
+        </div>
       </div>
 
 <div className="service-card-location">

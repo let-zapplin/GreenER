@@ -1,11 +1,17 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import type { MapFocusRequest } from "../components/ServicesMap";
 import { ServiceList } from "../components/ServiceList";
-import { ServiceIndicator } from "../components/ServiceIndicator";
 import "./Monitoring.css";
 import { DashboardSummary } from "../components/DashboardSummary";
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useDashboardSummary } from "../hooks/useDashboardSummary";
 import { useServiceIndicators } from "../hooks/useServiceIndicators";
+
+const ServicesMap = lazy(() =>
+  import("../components/ServicesMap").then((module) => ({
+    default: module.ServicesMap,
+  })),
+);
 
 export function Monitoring() {
   const { snapshot, loading, error } = useMonitoring();
@@ -23,30 +29,38 @@ export function Monitoring() {
     id: string;
     key: number;
   } | null>(null);
+  const [mapFocus, setMapFocus] = useState<MapFocusRequest | null>(null);
+  const focusKeyRef = useRef(0);
   const { services, lastUpdated } = snapshot;
 
-  const removedCount = services.filter(
-    (service) => service.status === "removed",
+  const servicesWithLocation = services.filter(
+    (service) =>
+      service.location.latitude !== null &&
+      service.location.longitude !== null,
   ).length;
-  const unavailableCount = services.filter(
-    (service) => service.status === "unavailable",
-  ).length;
-  const noMetricsCount = services.filter(
-    (service) => service.status === "no_metrics",
-  ).length;
-
-  const activeCount =
-    services.length - removedCount - unavailableCount - noMetricsCount;
 
   const stale = lastUpdated !== null && error !== null;
+
+  function focusServiceOnMap(id: string) {
+    const service = services.find((item) => item.id === id);
+    if (!service) return;
+
+    focusKeyRef.current += 1;
+    const key = focusKeyRef.current;
+    setSelection({ id, key });
+
+    const { latitude, longitude } = service.location;
+    if (latitude === null || longitude === null) return;
+
+    setMapFocus({ key, latitude, longitude, label: service.name });
+  }
 
   useEffect(() => {
     if (!selection) return;
     function deselectOutside(event: PointerEvent) {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (target.closest(".service-card.is-selected, button.service-indicator"))
-        return;
+      if (target.closest(".service-card.is-selected")) return;
       setSelection(null);
     }
     function deselectOnEscape(event: KeyboardEvent) {
@@ -133,106 +147,36 @@ export function Monitoring() {
       )}
       {services.length > 0 && (
         <section
-          className="services-summary"
-          aria-labelledby="services-summary-title"
+          className="services-map-section"
+          aria-labelledby="services-map-title"
         >
-          <div className="services-summary-info">
-            <p className="monitoring-section-label">VISÃO GERAL</p>
-            <h2 id="services-summary-title">Seu ambiente agora</h2>
-            <div className="services-total">
-              <strong>{activeCount}</strong>
-              <span>
-                de {services.length} serviços
-                <br />
-                {stale ? "ativos na última consulta" : "ativos na descoberta"}
-              </span>
+          <div className="services-map-heading">
+            <div>
+              <p className="monitoring-section-label">
+                LOCALIZAÇÃO DOS SERVIÇOS
+              </p>
+              <h2 id="services-map-title">Onde seus serviços estão</h2>
             </div>
-            <dl className="services-counts">
-              <div>
-                <dt>Detectados</dt>
-                <dd>{services.length}</dd>
-              </div>
-              <div className="services-count-active">
-                <dt>Ativos</dt>
-                <dd>{activeCount}</dd>
-              </div>
-
-              <div className="services-count-no-metrics">
-                <dt>Sem métricas</dt>
-                <dd>{noMetricsCount}</dd>
-              </div>
-
-              <div className="services-count-unavailable">
-                <dt>Indisponíveis</dt>
-                <dd>{unavailableCount}</dd>
-              </div>
-              <div className="services-count-removed">
-                <dt>Removidos</dt>
-                <dd>{removedCount}</dd>
-              </div>
-            </dl>
+            <span>
+              {servicesWithLocation} de {services.length}{" "}
+              {services.length === 1
+                ? "serviço localizado"
+                : "serviços localizados"}
+            </span>
           </div>
-          <div className="services-overview">
-            <div className="services-overview-heading">
-              <h3>Status dos serviços</h3>
-              <span>{services.length} identificados</span>
-            </div>
-            <div className="services-summary-grid">
-              {services.map((service) => (
-                <ServiceIndicator
-                  key={service.id}
-                  service={service}
-                  onSelect={(id) =>
-                    setSelection((previous) => ({
-                      id,
-                      key: (previous?.key ?? 0) + 1,
-                    }))
-                  }
-                />
-              ))}
-            </div>
-            <ul className="services-legend" aria-label="Legenda dos status">
-              <li>
-                <span className="service-indicator active" aria-hidden="true" />
-                Ativo
-              </li>
-              <li>
-                <span
-                  className="service-indicator no_metrics"
-                  aria-hidden="true"
-                />
-                Sem métricas
-              </li>
-              <li>
-                <span className="service-indicator new" aria-hidden="true" />
-                Novo
-              </li>
-              <li>
-                <span
-                  className="service-indicator returned"
-                  aria-hidden="true"
-                />
-                Retornou
-              </li>
-              <li>
-                <span
-                  className="service-indicator unavailable"
-                  aria-hidden="true"
-                />
-                Indisponível
-              </li>
-              <li>
-                <span
-                  className="service-indicator removed"
-                  aria-hidden="true"
-                />
-                Removido
-              </li>
-            </ul>
-            <p className="services-overview-note">
-              Selecione um indicador para ver os detalhes.
-            </p>
-          </div>
+          <Suspense
+            fallback={
+              <div
+                className="services-map-loading"
+                role="status"
+                aria-label="Carregando mapa"
+              >
+                <span className="monitoring-loader" aria-hidden="true" />
+              </div>
+            }
+          >
+            <ServicesMap services={services} focus={mapFocus} />
+          </Suspense>
         </section>
       )}
       <DashboardSummary
@@ -255,12 +199,13 @@ export function Monitoring() {
           </div>
 
           <ServiceList
-  services={services}
-  selection={selection}
-  indicators={serviceIndicators?.services ?? []}
-  indicatorsLoading={indicatorsLoading}
-  indicatorsError={indicatorsError}
-/>
+            services={services}
+            selection={selection}
+            onSelect={focusServiceOnMap}
+            indicators={serviceIndicators?.services ?? []}
+            indicatorsLoading={indicatorsLoading}
+            indicatorsError={indicatorsError}
+          />
         </>
       )}
     </main>
