@@ -115,11 +115,11 @@ function buildPopupContent(title: string, subtitle: string) {
 
 const statusPriority: ServiceStatus[] = [
   "unavailable",
+  "removed",
   "no_metrics",
   "new",
   "returned",
   "active",
-  "removed",
 ];
 
 const statusLabels: Record<ServiceStatus, string> = {
@@ -138,6 +138,74 @@ type ServiceGroup = {
   status: ServiceStatus;
   services: MonitoredService[];
 };
+
+function buildGroupPopupContent(
+  group: ServiceGroup,
+  onSelect: (service: MonitoredService) => void,
+) {
+  const content = document.createElement("div");
+
+  content.className = "services-map-group-popup";
+
+  const heading = document.createElement("strong");
+
+  heading.textContent = `${group.services.length} serviços neste local`;
+
+  const place = document.createElement("span");
+
+  place.className = "services-map-group-popup-place";
+
+  place.textContent = formatPlace(group.services[0].location);
+
+  const list = document.createElement("div");
+
+  list.className = "services-map-group-popup-list";
+
+  for (const service of group.services) {
+    const button = document.createElement("button");
+
+    button.type = "button";
+
+    button.className = `services-map-group-service ${service.status}`;
+
+    button.setAttribute(
+      "aria-label",
+      `Selecionar ${service.name}. ${statusLabels[service.status]}.`,
+    );
+
+    const dot = document.createElement("span");
+
+    dot.className = "services-map-group-service-dot";
+
+    dot.setAttribute("aria-hidden", "true");
+
+    const name = document.createElement("span");
+
+    name.className = "services-map-group-service-name";
+
+    name.textContent = service.name;
+
+    const status = document.createElement("span");
+
+    status.className = "services-map-group-service-status";
+
+    status.textContent = statusLabels[service.status];
+
+    button.append(dot, name, status);
+
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+
+      onSelect(service);
+    });
+
+    list.append(button);
+  }
+
+  content.append(heading, place, list);
+
+  return content;
+}
 
 function groupServices(services: MonitoredService[]) {
   const grouped = new Map<string, ServiceGroup>();
@@ -189,11 +257,21 @@ export type MapFocusRequest = {
 type ServicesMapProps = {
   services: MonitoredService[];
   focus?: MapFocusRequest | null;
+
+  onSelectService?: (serviceId: string) => void;
+
+  onClearSelection?: () => void;
 };
 
-export function ServicesMap({ services, focus }: ServicesMapProps) {
+export function ServicesMap({
+  services,
+  focus,
+  onSelectService,
+  onClearSelection,
+}: ServicesMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const onSelectServiceRef = useRef(onSelectService);
   const loadedRef = useRef(false);
   const orbitFrameRef = useRef<number | null>(null);
   const popupRef = useRef<Popup | null>(null);
@@ -204,6 +282,9 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
   const pendingFocusRef = useRef<MapFocusRequest | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    onSelectServiceRef.current = onSelectService;
+  }, [onSelectService]);
 
   const { groups, withoutLocation } = useMemo(
     () => groupServices(services),
@@ -216,7 +297,7 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
         .map(
           (group) =>
             `${group.key}:${group.status}:${group.services
-              .map((service) => service.id)
+              .map((service) => `${service.id}:${service.status}`)
               .sort()
               .join(",")}`,
         )
@@ -225,7 +306,7 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
   );
 
   const legendStatuses = statusPriority.filter((status) =>
-    groups.some((group) => group.status === status),
+    services.some((service) => service.status === status),
   );
 
   const focusKey = focus?.key;
@@ -333,6 +414,63 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
     openPopup(map, longitude, latitude, title, subtitle);
   };
 
+  const selectServiceFromMap = (
+    map: MapLibreMap,
+    service: MonitoredService,
+  ) => {
+    popupRef.current?.remove();
+
+    const callback = onSelectServiceRef.current;
+
+    if (callback) {
+      callback(service.id);
+      return;
+    }
+
+    const { latitude, longitude, city } = service.location;
+
+    if (latitude === null || longitude === null) {
+      return;
+    }
+
+    focusPoint(
+      map,
+      longitude,
+      latitude,
+      city,
+      service.name,
+      formatPlace(service.location),
+    );
+  };
+
+  const openServiceGroupPopup = (map: MapLibreMap, group: ServiceGroup) => {
+    const popup =
+      popupRef.current ??
+      new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: true,
+        focusAfterOpen: false,
+        offset: 18,
+        maxWidth: "320px",
+        className: "services-map-popup",
+      });
+
+    popupRef.current = popup;
+
+    popup.setMaxWidth("320px");
+
+    popup
+      .setLngLat([group.longitude, group.latitude])
+      .setDOMContent(
+        buildGroupPopupContent(group, (service) => {
+          popup.remove();
+
+          selectServiceFromMap(map, service);
+        }),
+      )
+      .addTo(map);
+  };
+
   const showOverview = () => {
     const map = mapRef.current;
     if (!map || !loadedRef.current) return;
@@ -340,6 +478,7 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
     cancelOrbit();
     popupRef.current?.remove();
     map.stop();
+    onClearSelection?.();
 
     const reducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
@@ -367,8 +506,9 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
         zoom: 1.2,
         bearing: 0,
         pitch: 0,
-        minZoom: -1,
+        minZoom: 0.5,
         maxZoom: 19,
+       
         maxPitch: 70,
         dragRotate: false,
         pitchWithRotate: false,
@@ -509,14 +649,14 @@ export function ServicesMap({ services, focus }: ServicesMapProps) {
 
       element.addEventListener("click", (event) => {
         event.stopPropagation();
-        focusPoint(
-          map,
-          group.longitude,
-          group.latitude,
-          group.services[0].location.city,
-          names,
-          formatPlace(group.services[0].location),
-        );
+
+        if (group.services.length === 1) {
+          selectServiceFromMap(map, group.services[0]);
+
+          return;
+        }
+
+        openServiceGroupPopup(map, group);
       });
 
       return new maplibregl.Marker({ element, anchor: "center" })

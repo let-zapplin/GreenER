@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { HistoryChart } from "../components/HistoryChart";
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
@@ -47,6 +48,17 @@ function getServiceInitials(name: string): string {
 }
 
 export function Analyses() {
+  const [searchParams] = useSearchParams();
+
+  const requestedServiceIdParam = searchParams.get("serviceId");
+
+  const requestedServiceId =
+    requestedServiceIdParam !== null &&
+    Number.isInteger(Number(requestedServiceIdParam))
+      ? Number(requestedServiceIdParam)
+      : null;
+
+  const appliedQueryServiceRef = useRef<number | null>(null);
   const {
     snapshot,
     loading: servicesLoading,
@@ -93,25 +105,53 @@ export function Analyses() {
 
   const [isChartTransitioning, setIsChartTransitioning] = useState(false);
 
-  useEffect(() => {
-    if (services.length === 0) {
-      setSelectedServiceId(null);
-      return;
-    }
+useEffect(() => {
+  if (services.length === 0) {
+    setSelectedServiceId(null);
+    return;
+  }
 
-    setSelectedServiceId((currentServiceId) => {
+  const requestedServiceExists =
+    requestedServiceId !== null &&
+    services.some(
+      (service) =>
+        service.serviceId ===
+        requestedServiceId,
+    );
+
+  if (
+    requestedServiceExists &&
+    appliedQueryServiceRef.current !==
+      requestedServiceId
+  ) {
+    appliedQueryServiceRef.current =
+      requestedServiceId;
+
+    setSelectedServiceId(
+      requestedServiceId,
+    );
+
+    return;
+  }
+
+  setSelectedServiceId(
+    (currentServiceId) => {
       const currentServiceStillExists =
         currentServiceId !== null &&
-        services.some((service) => service.serviceId === currentServiceId);
+        services.some(
+          (service) =>
+            service.serviceId ===
+            currentServiceId,
+        );
 
       if (currentServiceStillExists) {
         return currentServiceId;
       }
 
       return services[0].serviceId;
-    });
-  }, [services]);
-
+    },
+  );
+}, [services, requestedServiceId]);
   useEffect(() => {
     if (selectedServiceId === null) {
       return;
@@ -176,25 +216,19 @@ export function Analyses() {
   }, [selectedServiceId, analysisLayout, isOverviewCollapsed]);
 
   useEffect(() => {
-  localStorage.setItem(
-    ANALYSES_LAYOUT_STORAGE_KEY,
-    analysisLayout,
-  );
-}, [analysisLayout]);
+    localStorage.setItem(ANALYSES_LAYOUT_STORAGE_KEY, analysisLayout);
+  }, [analysisLayout]);
 
-useEffect(() => {
-  localStorage.setItem(
-    ANALYSES_OVERVIEW_STORAGE_KEY,
-    String(isOverviewCollapsed),
-  );
-}, [isOverviewCollapsed]);
+  useEffect(() => {
+    localStorage.setItem(
+      ANALYSES_OVERVIEW_STORAGE_KEY,
+      String(isOverviewCollapsed),
+    );
+  }, [isOverviewCollapsed]);
 
-useEffect(() => {
-  localStorage.setItem(
-    ANALYSES_PERIOD_STORAGE_KEY,
-    String(historyPeriodMs),
-  );
-}, [historyPeriodMs]);
+  useEffect(() => {
+    localStorage.setItem(ANALYSES_PERIOD_STORAGE_KEY, String(historyPeriodMs));
+  }, [historyPeriodMs]);
 
   const selectedService =
     services.find((service) => service.serviceId === selectedServiceId) ?? null;
