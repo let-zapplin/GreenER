@@ -69,6 +69,10 @@ export const env = {
     "SERVICE_SYNC_INTERVAL_MS",
     300_000,
   ),
+  carbonIntensitySyncIntervalMs: optionalPositiveInt(
+    "CARBON_INTENSITY_SYNC_INTERVAL_MS",
+    300_000,
+  ),
   metricsCollectionIntervalMs: optionalPositiveInt(
     "COLLECTION_INTERVAL_MS",
     60_000,
