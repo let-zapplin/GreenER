@@ -44,12 +44,68 @@
 .service-card {
   scroll-margin-block: 32px;
 }
+.service-card.is-focusable {
+  cursor: pointer;
+}
+
 .service-card-header {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.service-card-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.service-card-map-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border: 1px solid #ffffff1f;
+  border-radius: 999px;
+  background: #0c282b;
+  color: #b8d7c1;
+  font-family: inherit;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.service-card-map-button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.service-card-map-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.service-card-map-button:focus-visible {
+  outline: 2px solid var(--monitoring-accent, #87e46c);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .service-card-map-button:not(:disabled):hover {
+    border-color: color-mix(in srgb, var(--service-color) 55%, transparent);
+    background: #103335;
+    color: #f4f8f5;
+  }
 }
 .service-card-identity {
   display: flex;

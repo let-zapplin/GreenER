@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Map as MapTilerMap } from "@maptiler/sdk";
+import { SpinnerGapIcon } from "@phosphor-icons/react";
 import "@maptiler/sdk/dist/maptiler-sdk.css";
 import globeFallback from "../../assets/globe-fallback.png";
 
@@ -52,6 +53,19 @@ export default function LandingGlobe() {
       visible = entry.isIntersecting;
     });
     observer.observe(element);
+
+    // jumpTo() resets MapLibre's gesture handlers, so rotation must stop as soon
+    // as the pointer goes down; waiting for dragstart can cancel slow drags.
+    const pauseRotation = () => {
+      dragging = true;
+    };
+    const resumeRotation = () => {
+      dragging = false;
+    };
+    element.addEventListener("pointerdown", pauseRotation);
+    window.addEventListener("pointerup", resumeRotation);
+    window.addEventListener("pointercancel", resumeRotation);
+    window.addEventListener("blur", resumeRotation);
 
     async function initialize() {
       try {
@@ -249,6 +263,10 @@ export default function LandingGlobe() {
       cancelAnimationFrame(frame);
       observer.disconnect();
       resize.disconnect();
+      element.removeEventListener("pointerdown", pauseRotation);
+      window.removeEventListener("pointerup", resumeRotation);
+      window.removeEventListener("pointercancel", resumeRotation);
+      window.removeEventListener("blur", resumeRotation);
       motion.removeEventListener("change", motionChange);
       cleanups.forEach((cleanup) => cleanup());
       selectRegion.current = () => {};
@@ -262,7 +280,20 @@ export default function LandingGlobe() {
       <div
         className={`landing-globe-sphere${ready && !failed ? " is-ready" : ""}`}
       >
-        {(!ready || failed) && (
+        {!ready && !failed && (
+          <div
+            className="landing-globe-loading"
+            role="status"
+            aria-label="Preparando o planeta…"
+          >
+            <SpinnerGapIcon
+              className="landing-spinner"
+              size={32}
+              aria-hidden="true"
+            />
+          </div>
+        )}
+        {failed && (
           <img
             className="landing-globe-fallback"
             src={globeFallback}
@@ -294,11 +325,9 @@ export default function LandingGlobe() {
           ))}
         </div>
       )}
-      {(!ready || failed) && (
+      {failed && (
         <p className="landing-globe-caption">
-          {failed
-            ? "Visualização ilustrativa do planeta"
-            : "Preparando o planeta…"}
+          Visualização ilustrativa do planeta
         </p>
       )}
     </div>
