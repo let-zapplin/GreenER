@@ -1,12 +1,8 @@
 .services-map-shell {
-  position: relative;
-  height: clamp(320px, 38vw, 500px);
-  overflow: hidden;
-  border: 1px solid #426c60;
-  border-radius: 18px;
-  background: #0e0e0e;
-  box-shadow: 0 10px 24px #0002;
-  isolation: isolate;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .services-map-canvas {

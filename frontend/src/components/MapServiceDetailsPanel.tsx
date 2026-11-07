@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 import type { ServiceIndicators } from "../types/indicators";
 import type { MonitoredService } from "../types/service";
-
+import { ServiceMiniHistoryChart } from "./ServiceMiniHistoryChart";
 import "./MapServiceDetailsPanel.css";
 
 type MapServiceDetailsPanelProps = {
@@ -13,9 +13,7 @@ type MapServiceDetailsPanelProps = {
   onClose: () => void;
 };
 
-function getStatusLabel(
-  status: MonitoredService["status"],
-) {
+function getStatusLabel(status: MonitoredService["status"]) {
   switch (status) {
     case "active":
       return "Ativo";
@@ -44,17 +42,13 @@ export function MapServiceDetailsPanel({
   error,
   onClose,
 }: MapServiceDetailsPanelProps) {
-  const latestSample =
-    indicator?.latestSampleInPeriod ?? null;
+  const latestSample = indicator?.latestSampleInPeriod ?? null;
 
-  const metrics =
-    latestSample?.metrics ?? null;
+  const metrics = latestSample?.metrics ?? null;
 
-  const energyKwh =
-    indicator?.periodTotals.energyKwh ?? null;
+  const energyKwh = indicator?.periodTotals.energyKwh ?? null;
 
-  const emissionsGco2e =
-    indicator?.periodTotals.emissionsGco2e ?? null;
+  const emissionsGco2e = indicator?.periodTotals.emissionsGco2e ?? null;
 
   const location = [
     service.location.city,
@@ -73,9 +67,7 @@ export function MapServiceDetailsPanel({
 
       <div className="map-service-panel-header">
         <div>
-          <span className="map-service-panel-eyebrow">
-            SERVIÇO SELECIONADO
-          </span>
+          <span className="map-service-panel-eyebrow">SERVIÇO SELECIONADO</span>
 
           <h3>{service.name}</h3>
 
@@ -95,17 +87,13 @@ export function MapServiceDetailsPanel({
       </div>
 
       <div className="map-service-panel-status-row">
-        <span
-          className={`map-service-panel-status ${service.status}`}
-        >
+        <span className={`map-service-panel-status ${service.status}`}>
           <span aria-hidden="true" />
           {getStatusLabel(service.status)}
         </span>
 
         {indicator?.periodTotals.isPartial && (
-          <span className="map-service-panel-partial">
-            Dados parciais
-          </span>
+          <span className="map-service-panel-partial">Dados parciais</span>
         )}
       </div>
 
@@ -120,13 +108,10 @@ export function MapServiceDetailsPanel({
 
           <strong>
             {energyKwh !== null
-              ? `${energyKwh.toLocaleString(
-                  "pt-BR",
-                  {
-                    minimumFractionDigits: 4,
-                    maximumFractionDigits: 6,
-                  },
-                )} kWh`
+              ? `${energyKwh.toLocaleString("pt-BR", {
+                  minimumFractionDigits: 4,
+                  maximumFractionDigits: 6,
+                })} kWh`
               : "—"}
           </strong>
         </div>
@@ -136,13 +121,10 @@ export function MapServiceDetailsPanel({
 
           <strong>
             {emissionsGco2e !== null
-              ? `${emissionsGco2e.toLocaleString(
-                  "pt-BR",
-                  {
-                    minimumFractionDigits: 4,
-                    maximumFractionDigits: 6,
-                  },
-                )} gCO₂e`
+              ? `${emissionsGco2e.toLocaleString("pt-BR", {
+                  minimumFractionDigits: 4,
+                  maximumFractionDigits: 6,
+                })} gCO₂e`
               : "—"}
           </strong>
         </div>
@@ -153,12 +135,9 @@ export function MapServiceDetailsPanel({
           <span>CPU</span>
           <strong>
             {metrics
-              ? `${metrics.cpuPercent.toLocaleString(
-                  "pt-BR",
-                  {
-                    maximumFractionDigits: 2,
-                  },
-                )}%`
+              ? `${metrics.cpuPercent.toLocaleString("pt-BR", {
+                  maximumFractionDigits: 2,
+                })}%`
               : "—"}
           </strong>
         </div>
@@ -167,12 +146,9 @@ export function MapServiceDetailsPanel({
           <span>Memória</span>
           <strong>
             {metrics
-              ? `${metrics.memoryGb.toLocaleString(
-                  "pt-BR",
-                  {
-                    maximumFractionDigits: 2,
-                  },
-                )} GB`
+              ? `${metrics.memoryGb.toLocaleString("pt-BR", {
+                  maximumFractionDigits: 2,
+                })} GB`
               : "—"}
           </strong>
         </div>
@@ -181,12 +157,9 @@ export function MapServiceDetailsPanel({
           <span>Disco</span>
           <strong>
             {metrics
-              ? `${metrics.diskGb.toLocaleString(
-                  "pt-BR",
-                  {
-                    maximumFractionDigits: 2,
-                  },
-                )} GB`
+              ? `${metrics.diskGb.toLocaleString("pt-BR", {
+                  maximumFractionDigits: 2,
+                })} GB`
               : "—"}
           </strong>
         </div>
@@ -195,32 +168,26 @@ export function MapServiceDetailsPanel({
           <span>Rede</span>
           <strong>
             {metrics
-              ? `${metrics.networkGb.toLocaleString(
-                  "pt-BR",
-                  {
-                    maximumFractionDigits: 2,
-                  },
-                )} GB`
+              ? `${metrics.networkGb.toLocaleString("pt-BR", {
+                  maximumFractionDigits: 2,
+                })} GB`
               : "—"}
           </strong>
         </div>
       </div>
 
+      <ServiceMiniHistoryChart serviceId={service.serviceId} />
       {latestSample && (
         <div className="map-service-panel-updated">
           Última coleta
           <time dateTime={latestSample.attemptedAt}>
-            {new Date(
-              latestSample.attemptedAt,
-            ).toLocaleString("pt-BR")}
+            {new Date(latestSample.attemptedAt).toLocaleString("pt-BR")}
           </time>
         </div>
       )}
 
       {loading && !indicator && (
-        <p className="map-service-panel-message">
-          Carregando indicadores...
-        </p>
+        <p className="map-service-panel-message">Carregando indicadores...</p>
       )}
 
       {error && !indicator && (

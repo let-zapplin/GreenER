@@ -294,7 +294,7 @@
   min-width: 0;
   overflow: hidden;
 
-  border-radius: 18px;
+  border-radius: 0;
 }
 
 .services-map-stage .services-map-shell {
@@ -327,6 +327,34 @@
   overflow-y: auto;
 
   pointer-events: auto;
+}
+
+.environment-overview-dock {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.monitoring-map-shell {
+  overflow: hidden;
+
+  border: 1px solid rgba(88, 154, 144, 0.32);
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(11, 54, 56, 0.96) 0%,
+      rgba(8, 44, 46, 0.96) 100%
+    );
+
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(151, 255, 185, 0.08);
+}
+
+.monitoring-map-shell > * + * {
+  border-top: 1px solid rgba(88, 154, 144, 0.18);
 }
 
 @media (hover: hover) and (pointer: fine) {

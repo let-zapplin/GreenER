@@ -4,11 +4,12 @@ import type { MapFocusRequest } from "../components/ServicesMap";
 import { ServiceList } from "../components/ServiceList";
 import { ServiceHud } from "../components/ServiceHud";
 import "./Monitoring.css";
-import { DashboardSummary } from "../components/DashboardSummary";
+
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useDashboardSummary } from "../hooks/useDashboardSummary";
 import { useServiceIndicators } from "../hooks/useServiceIndicators";
 import { MapServiceDetailsPanel } from "../components/MapServiceDetailsPanel";
+import { EnvironmentOverviewDock } from "../components/EnvironmentOverviewDock";
 
 const ServicesMap = lazy(() =>
   import("../components/ServicesMap").then((module) => ({
@@ -264,7 +265,21 @@ export function Monitoring() {
               />
             </div>
           </div>
-
+          <div className="monitoring-map-shell">
+          <EnvironmentOverviewDock
+            energyKwh={dashboard?.summary.energyKwh ?? null}
+            emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
+            activeServiceCount={dashboard?.summary.activeServiceCount ?? 0}
+            noMetricsServiceCount={
+              dashboard?.summary.noMetricsServiceCount ?? 0
+            }
+            unavailableServiceCount={
+              dashboard?.summary.unavailableServiceCount ?? 0
+            }
+            isPartial={dashboard?.summary.isPartial ?? false}
+            loading={dashboardLoading}
+            error={dashboardError}
+          />
           <div
             className={`services-map-workspace ${
               selectedService ? "is-focused" : ""
@@ -291,7 +306,7 @@ export function Monitoring() {
                   onClearSelection={closeServiceFocus}
                 />
               </Suspense>
-
+              
               {selectedService && (
                 <div className="services-map-overlay">
                   <MapServiceDetailsPanel
@@ -305,15 +320,11 @@ export function Monitoring() {
               )}
             </div>
           </div>
+          </div>
         </section>
       )}
 
-      <DashboardSummary
-        dashboard={dashboard}
-        loading={dashboardLoading}
-        error={dashboardError}
-      />
-
+    
       {services.length > 0 && (
         <>
           <div className="monitoring-list-heading">
