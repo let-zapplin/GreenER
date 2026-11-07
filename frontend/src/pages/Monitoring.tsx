@@ -4,6 +4,7 @@ import type { MapFocusRequest } from "../components/ServicesMap";
 import { ServiceList } from "../components/ServiceList";
 import { ServiceHud } from "../components/ServiceHud";
 import "./Monitoring.css";
+import logoMin from "../../assets/logo_min.png";
 
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useDashboardSummary } from "../hooks/useDashboardSummary";
@@ -40,6 +41,8 @@ export function Monitoring() {
   } | null>(null);
 
   const [mapFocus, setMapFocus] = useState<MapFocusRequest | null>(null);
+
+  const [mapLoading, setMapLoading] = useState(true);
 
   const focusKeyRef = useRef(0);
 
@@ -107,7 +110,7 @@ export function Monitoring() {
 
       if (
         target.closest(
-          ".service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell",
+          ".service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell, .map-loading-overlay",
         )
       ) {
         return;
@@ -266,65 +269,65 @@ export function Monitoring() {
             </div>
           </div>
           <div className="monitoring-map-shell">
-          <EnvironmentOverviewDock
-            energyKwh={dashboard?.summary.energyKwh ?? null}
-            emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
-            activeServiceCount={dashboard?.summary.activeServiceCount ?? 0}
-            noMetricsServiceCount={
-              dashboard?.summary.noMetricsServiceCount ?? 0
-            }
-            unavailableServiceCount={
-              dashboard?.summary.unavailableServiceCount ?? 0
-            }
-            isPartial={dashboard?.summary.isPartial ?? false}
-            loading={dashboardLoading}
-            error={dashboardError}
-          />
-          <div
-            className={`services-map-workspace ${
-              selectedService ? "is-focused" : ""
-            }`}
-          >
-            <div className="services-map-stage">
-              <Suspense
-                fallback={
+            <EnvironmentOverviewDock
+              energyKwh={dashboard?.summary.energyKwh ?? null}
+              emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
+              activeServiceCount={dashboard?.summary.activeServiceCount ?? 0}
+              noMetricsServiceCount={
+                dashboard?.summary.noMetricsServiceCount ?? 0
+              }
+              unavailableServiceCount={
+                dashboard?.summary.unavailableServiceCount ?? 0
+              }
+              isPartial={dashboard?.summary.isPartial ?? false}
+              loading={dashboardLoading}
+              error={dashboardError}
+            />
+            <div
+              className={`services-map-workspace ${
+                selectedService ? "is-focused" : ""
+              }`}
+            >
+              <div className="services-map-stage">
+                <Suspense fallback={null}>
+                  <ServicesMap
+                    services={services}
+                    onLoadingChange={setMapLoading}
+                    focus={mapFocus}
+                    onSelectService={(serviceId) =>
+                      focusServiceOnMap(serviceId, { scroll: false })
+                    }
+                    onClearSelection={closeServiceFocus}
+                  />
+                </Suspense>
+
+                {mapLoading && (
                   <div
-                    className="services-map-loading"
+                    className="map-loading-overlay"
                     role="status"
                     aria-label="Carregando mapa"
                   >
-                    <span className="monitoring-loader" aria-hidden="true" />
+                    <img src={logoMin} alt="" className="map-loading-logo" />
                   </div>
-                }
-              >
-                <ServicesMap
-                  services={services}
-                  focus={mapFocus}
-                  onSelectService={(serviceId) =>
-                    focusServiceOnMap(serviceId, { scroll: false })
-                  }
-                  onClearSelection={closeServiceFocus}
-                />
-              </Suspense>
-              
-              {selectedService && (
-                <div className="services-map-overlay">
-                  <MapServiceDetailsPanel
-                    service={selectedService}
-                    indicator={selectedIndicator}
-                    loading={indicatorsLoading}
-                    error={indicatorsError}
-                    onClose={closeServiceFocus}
-                  />
-                </div>
-              )}
+                )}
+
+                {selectedService && (
+                  <div className="services-map-overlay">
+                    <MapServiceDetailsPanel
+                      service={selectedService}
+                      indicator={selectedIndicator}
+                      loading={indicatorsLoading}
+                      error={indicatorsError}
+                      onClose={closeServiceFocus}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
           </div>
         </section>
       )}
 
-    
       {services.length > 0 && (
         <>
           <div className="monitoring-list-heading">
