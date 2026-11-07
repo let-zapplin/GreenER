@@ -257,10 +257,9 @@ export type MapFocusRequest = {
 type ServicesMapProps = {
   services: MonitoredService[];
   focus?: MapFocusRequest | null;
-
   onSelectService?: (serviceId: string) => void;
-
   onClearSelection?: () => void;
+  onLoadingChange?: (loading: boolean) => void;
 };
 
 export function ServicesMap({
@@ -268,6 +267,7 @@ export function ServicesMap({
   focus,
   onSelectService,
   onClearSelection,
+  onLoadingChange,
 }: ServicesMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -279,9 +279,37 @@ export function ServicesMap({
     map: MapLibreMap;
     handler: () => void;
   } | null>(null);
+  const pendingIdleRef = useRef<{
+    map: MapLibreMap;
+    handler: () => void;
+  } | null>(null);
   const pendingFocusRef = useRef<MapFocusRequest | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
+
+  function clearLoadingTimeout() {
+    if (loadingTimeoutRef.current !== null) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  }
+
+  function startLoadingTimeout() {
+    clearLoadingTimeout();
+    setLoadingError(null);
+
+    loadingTimeoutRef.current = setTimeout(() => {
+      loadingTimeoutRef.current = null;
+      onLoadingChange?.(false);
+
+      setLoadingError(
+        "O mapa está demorando para carregar. Verifique sua conexão.",
+      );
+    }, 30_000);
+  }
   useEffect(() => {
     onSelectServiceRef.current = onSelectService;
   }, [onSelectService]);
@@ -322,6 +350,17 @@ export function ServicesMap({
       pending.map.off("moveend", pending.handler);
       pendingArrivalRef.current = null;
     }
+
+    // Cancela também a espera pelos detalhes do destino anterior.
+    const pendingIdle = pendingIdleRef.current;
+    if (pendingIdle) {
+      pendingIdle.map.off("idle", pendingIdle.handler);
+      pendingIdleRef.current = null;
+    }
+
+    if (pending || pendingIdle) {
+      onLoadingChange?.(false);
+    }
   };
 
   const startOrbit = (
@@ -354,11 +393,28 @@ export function ServicesMap({
     city?: string | null,
   ) => {
     cancelOrbit();
+    onLoadingChange?.(true);
 
     const onArrive = () => {
+      if (pendingArrivalRef.current?.handler !== onArrive) return;
       pendingArrivalRef.current = null;
-      startOrbit(map, longitude, latitude);
+
+      const finishLoading = () => {
+        // Ignora uma conclusão antiga caso o destino já tenha mudado.
+        if (pendingIdleRef.current?.handler !== finishLoading) return;
+        pendingIdleRef.current = null;
+        onLoadingChange?.(false);
+        startOrbit(map, longitude, latitude);
+      };
+
+      pendingIdleRef.current = { map, handler: finishLoading };
+      if (map.loaded()) {
+        finishLoading();
+      } else {
+        map.once("idle", finishLoading);
+      }
     };
+
     pendingArrivalRef.current = { map, handler: onArrive };
     map.once("moveend", onArrive);
 
@@ -508,7 +564,7 @@ export function ServicesMap({
         pitch: 0,
         minZoom: 0.5,
         maxZoom: 19,
-       
+
         maxPitch: 70,
         dragRotate: false,
         pitchWithRotate: false,
@@ -518,6 +574,7 @@ export function ServicesMap({
     } catch (error) {
       console.error("Não foi possível inicializar o mapa:", error);
       setFailed(true);
+      onLoadingChange?.(false);
       return;
     }
 
@@ -535,6 +592,7 @@ export function ServicesMap({
 
     const onLoad = () => {
       loadedRef.current = true;
+      onLoadingChange?.(false);
       applyMapLayers();
 
       const pending = pendingFocusRef.current;
