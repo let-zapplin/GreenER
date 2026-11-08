@@ -25,7 +25,7 @@ Pré-requisitos:
 
 - Docker Desktop/Engine em execução;
 - `.env` configurado a partir de `.env.example`;
-- acesso de rede à Metrics Aggregator API.
+- acesso de rede à Metrics Aggregator API e à Carbon Intensity API para os cenários ambientais.
 
 Na pasta que contém `compose.yaml`:
 
@@ -55,6 +55,21 @@ Resultado esperado: HTTP `200` e corpo semelhante a:
 
 Essa rota confirma apenas a resposta HTTP do backend.
 
+### Obter JWT para os próximos passos
+
+No Insomnia, envie `POST http://localhost:3000/auth/login`, com Body do tipo JSON e `Content-Type: application/json`, usando uma conta já cadastrada:
+
+```json
+{
+  "email": "seu-email-cadastrado",
+  "password": "sua-senha"
+}
+```
+
+Copie o campo `token` da resposta. Nos comandos seguintes, substitua `<token>` pelo valor obtido, sem os sinais `<` e `>`. Não publique tokens ou senhas nas evidências.
+
+As consultas protegidas de histórico, indicadores, dashboard e intensidades exigem JWT válido. A sincronização manual de serviços também exige JWT. A coleta manual exige, adicionalmente, uma conta administradora. Descoberta e listagem de serviços permanecem públicas nesta versão.
+
 ---
 
 ## 3. Validar descoberta externa
@@ -78,7 +93,7 @@ Verificar:
 Executar:
 
 ```bash
-curl.exe -i -X POST http://localhost:3000/api/servicos/sync
+curl.exe -i -X POST http://localhost:3000/api/servicos/sync -H "Authorization: Bearer <token>"
 ```
 
 Resposta esperada semelhante a:
@@ -151,7 +166,9 @@ Comparar a resposta com os registros consultados no PostgreSQL.
 
 Resultado esperado: o React consome a **listagem persistida** do GreenER e representa os dados retornados pelo backend.
 
-> O intervalo de atualização deve ser conferido no código/configuração da versão testada e documentado em `docs/api.md` ou `docs/arquitetura.md` quando estabilizado.
+O monitoramento já utiliza `useDashboardSummary` e `useServiceIndicators`, além da listagem de serviços. Confira também as chamadas a `/api/dashboard` e `/api/indicadores`, as unidades exibidas e o tratamento de dados parciais. A implementação existente não equivale a uma validação manual já aprovada.
+
+> Os hooks `useMonitoring` e `useDashboardSummary` utilizam intervalo de 60 segundos e timeout de 15 segundos nesta versão. O intervalo das demais consultas deve ser conferido no respectivo hook. Registre a configuração do commit testado.
 
 ---
 
@@ -166,7 +183,7 @@ serviço deixa /services
     ↓
 backend marca o serviço como removido (`removed`)
     ↓
-frontend sinaliza indisponibilidade
+frontend sinaliza remoção do catálogo
     ↓
 serviço retorna
     ↓
@@ -177,21 +194,49 @@ frontend sinaliza retorno temporariamente
 
 Consultar o banco para confirmar que o registro não é apagado e que `last_seen_at` representa a última vez em que o serviço foi efetivamente observado.
 
-> Esse cenário não substitui a validação futura de **RF05 durante coleta individual** nem de **RF06 serviço ativo sem métricas**.
+### Coleta individual: indisponibilidade e ausência de métricas
+
+RF05 e RF06 já possuem implementação e testes automatizados. Valide separadamente do desaparecimento do catálogo:
+
+- serviço presente no catálogo com tentativa `unavailable`: indisponibilidade da coleta, com motivo técnico preservado;
+- serviço presente no catálogo com tentativa `no_metrics`: ausência de métricas, sem confundir com remoção ou indisponibilidade;
+- tentativa `success` após uma falha: recuperação dos dados apresentados;
+- falha isolada: os demais serviços continuam sendo processados.
+
+Observe os estados nas respostas e no PostgreSQL. Use cenários controlados de desenvolvimento ou ocorrências reais da API; não provoque falhas em produção. Os testes automatizados simulam essas situações, mas não substituem a conferência da interface.
 
 ---
 
 ## 8. Validar persistência após reinicialização
 
-Essa verificação é importante para a evolução do histórico.
+Essa verificação comprova a preservação do histórico no volume da aplicação; é diferente da suíte de integração com banco temporário.
 
-1. registre a quantidade de serviços:
+1. Escolha um serviço e salve o resultado abaixo, substituindo `7` pelo seu `id_service` interno:
 
 ```sql
-SELECT COUNT(*) FROM service;
+SELECT
+    c.id_collection,
+    c.service_id_service,
+    c.status,
+    c.attempted_at,
+    c.failure_reason,
+    c.http_status,
+    m.recorded_at,
+    m.cpu_percent,
+    m.memory_gb,
+    m.disk_gb,
+    m.network_gb,
+    m.collection_interval_seconds
+FROM collection c
+LEFT JOIN metrics m ON m.collection_id_collection = c.id_collection
+WHERE c.service_id_service = 7
+ORDER BY c.attempted_at DESC, c.id_collection DESC
+LIMIT 10;
 ```
 
-2. pare os containers **sem remover volumes**:
+Anote os `id_collection` e seus valores. Se não houver registros, aguarde a coleta automática ou execute a coleta manual com conta administradora, conforme a seção 12.
+
+2. Pare os containers **sem remover volumes**:
 
 ```bash
 docker compose down
@@ -203,9 +248,20 @@ docker compose down
 docker compose up -d
 ```
 
-4. execute a mesma consulta SQL.
+4. Consulte os IDs anotados, substituindo os exemplos abaixo pelos IDs da primeira consulta:
 
-Resultado esperado: os registros persistidos anteriormente continuam disponíveis.
+```sql
+SELECT
+    c.id_collection, c.service_id_service, c.status, c.attempted_at,
+    c.failure_reason, c.http_status, m.recorded_at, m.cpu_percent,
+    m.memory_gb, m.disk_gb, m.network_gb, m.collection_interval_seconds
+FROM collection c
+LEFT JOIN metrics m ON m.collection_id_collection = c.id_collection
+WHERE c.id_collection IN (101, 102)
+ORDER BY c.attempted_at DESC, c.id_collection DESC;
+```
+
+Resultado esperado: todos os IDs anotados continuam disponíveis com os mesmos valores. Novos registros dos jobs automáticos podem surgir; comparar apenas a contagem ou as dez linhas mais recentes não comprova preservação das coletas anteriores.
 
 > Não utilizar `docker compose down -v` neste teste. `-v` remove o volume do PostgreSQL.
 
@@ -239,9 +295,9 @@ Não manter alterações artificiais de teste no código após a validação.
 
 ---
 
-## 11. Validar indicadores ambientais — backend (US07 parcial)
+## 11. Validar indicadores ambientais — backend
 
-Este roteiro verifica o endpoint `GET /api/indicadores` diretamente. Ele não valida a integração do dashboard/frontend, que continua pendente.
+Este roteiro verifica o endpoint `GET /api/indicadores` diretamente. A integração com dashboard/frontend já existe no código, mas precisa ser validada separadamente conforme a seção 6. Não interpretar implementação existente como evidência de execução aprovada.
 
 ### Pré-requisitos
 
@@ -256,6 +312,8 @@ O endpoint de indicadores exige JWT, mas não exige usuário administrador. O di
 ### Preparar ou localizar dados
 
 Se necessário, sincronize snapshots regionais usando um JWT válido:
+
+O backend também inicia a sincronização automática ao subir, por meio de `startCarbonIntensitySync()`. O intervalo é definido em `CARBON_INTENSITY_SYNC_INTERVAL_MS`, com padrão de 300.000 ms, contado após o término de cada ciclo. A sincronização do catálogo usa `SERVICE_SYNC_INTERVAL_MS`; a coleta de métricas usa `COLLECTION_INTERVAL_MS`. Os ciclos são independentes: após a primeira inicialização, aguarde novas coletas para obter tentativas posteriores ao primeiro snapshot regional.
 
 ```bash
 curl.exe -i -X POST http://localhost:3000/api/intensidades/sync -H "Authorization: Bearer <token>"
@@ -352,14 +410,62 @@ Sempre que possível, use dados já existentes; não altere registros de produç
 
 Uma resposta parcial não deve ser interpretada como consumo zero para os períodos sem registros. A cobertura representa somente as tentativas registradas no banco e não detecta intervalos sem tentativa.
 
-## Validar dados consolidados do dashboard — TEC19
+## 12. Validar coleta manual e histórico por serviço
+
+Use `GET /api/servicos` para escolher o `id_service` interno numérico. Não utilize o `external_id` no caminho do histórico.
+
+### Coleta manual
+
+```bash
+curl.exe -i -X POST http://localhost:3000/api/metricas/collect -H "Authorization: Bearer <token>"
+```
+
+Com token de administrador, o esperado é `200` com o resumo da operação. Confira contadores e falhas: HTTP 200 não garante que todas as tentativas foram gravadas com sucesso. Com usuário comum, espere `403`; sem token, `401`. A coleta ocorre para os serviços elegíveis do catálogo, não apenas para um serviço escolhido. Os jobs automáticos também podem gerar registros.
+
+### Histórico bruto de coletas
+
+```bash
+curl.exe -i http://localhost:3000/api/metricas/historico/7 -H "Authorization: Bearer <token>"
+```
+
+Substitua `7` pelo ID escolhido. Espere `200` com `service_id` e `collections`, da tentativa mais recente para a mais antiga. Compare os IDs, estados e datas com a consulta SQL da seção 8. Tentativas sem métricas devem continuar presentes com campos de métricas nulos.
+
+| Cenário | Resultado esperado |
+|---|---|
+| ID válido sem registros, inclusive inexistente | `200` com `collections: []`, conforme o contrato atual |
+| ID inválido, com JWT válido | `400` com `INVALID_SERVICE_ID` |
+| JWT ausente ou inválido | `401` |
+
+Essa rota não oferece filtro por período nesta versão. Ela lê os dados persistidos e não inicia uma nova coleta.
+
+### Histórico ambiental por período
+
+```bash
+curl.exe -i "http://localhost:3000/api/indicadores/7/historico?start=2026-11-03T00:00:00.000Z&end=2026-11-04T00:00:00.000Z" -H "Authorization: Bearer <token>"
+```
+
+Substitua ID e datas por valores do seu ambiente. A rota exige JWT e período semiaberto válido (`start` incluído, `end` excluído). Espere `200` com `period`, `service` e `samples`. Confira os cálculos conforme a seção 11 e preserve lacunas como valores nulos, sem interpretá-las como consumo zero.
+
+Para períodos com mais de 500 tentativas, o histórico ambiental reduz os pontos retornados em blocos. Cada bloco preserva uma amostra sem energia quando existir; caso contrário, utiliza a última amostra do bloco. Essa seleção não apaga registros do banco nem soma as amostras. `period.displayIntervalMs` informa o intervalo de exibição calculado pelo espaçamento dos blocos. Não espere correspondência de uma linha retornada para cada tentativa em períodos extensos; use o histórico bruto para conferir os registros completos.
+
+| Cenário | Resultado esperado |
+|---|---|
+| Serviço existente, sem coletas no período | `200` com `samples: []` |
+| Serviço inexistente | `404` com `SERVICE_NOT_FOUND` |
+| ID inválido, com token e período válidos | `400` com `INVALID_SERVICE_ID` |
+| Período ausente ou inválido, com token válido | `400` com `INVALID_INDICATOR_PERIOD` |
+| JWT ausente ou inválido | `401` |
+
+O histórico bruto recupera tentativas e métricas; o histórico ambiental calcula energia e emissão a partir das amostras do período. Não confundir os dois contratos.
+
+## 13. Validar dados consolidados do dashboard — TEC19
 
 Este roteiro verifica o endpoint `GET /api/dashboard`, protegido por JWT e disponível para usuários autenticados sem exigir perfil administrador.
 
 ### Consultar o período padrão
 
 ```bash
-curl.exe -i http://localhost:3000/api/dashboard -H "Authorization: ******"
+curl.exe -i http://localhost:3000/api/dashboard -H "Authorization: Bearer <token>"
 ```
 
 Verificar na resposta `200 OK`:
@@ -388,7 +494,7 @@ As contagens usam a última tentativa registrada, mesmo que seja anterior ao per
 ### Consultar período explícito e validar erros
 
 ```bash
-curl.exe -i "http://localhost:3000/api/dashboard?start=2026-10-30T12:00:00.000Z&end=2026-10-31T12:00:00.000Z" -H "Authorization: ******"
+curl.exe -i "http://localhost:3000/api/dashboard?start=2026-10-30T12:00:00.000Z&end=2026-10-31T12:00:00.000Z" -H "Authorization: Bearer <token>"
 ```
 
 | Cenário | Resultado esperado |
@@ -479,3 +585,6 @@ docker compose logs --tail=50 postgres
 O Compose publica o banco em `127.0.0.1:5433` para ferramentas como DBeaver. O backend utiliza `postgres:5432` dentro da rede Docker.
 
 Alterar uma senha no `.env` não modifica automaticamente as credenciais de um volume PostgreSQL já inicializado.
+
+### Para o futuro
+Esse é um projeto ainda em desenvolvimento, futuramente irá abarcar um circuito maior de validação.
