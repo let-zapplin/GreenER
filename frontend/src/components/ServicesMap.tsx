@@ -4,6 +4,7 @@ import type { Map as MapLibreMap, Marker, Popup } from "maplibre-gl";
 import "maplibre-gl-original/dist/maplibre-gl.css";
 import type { MonitoredService, ServiceStatus } from "../types/service";
 import "./ServicesMap.css";
+import { isSameMapTarget, type MapCameraTarget } from "../lib/mapFocus";
 
 const WORLD_BOUNDS: [[number, number], [number, number]] = [
   [-180, -85],
@@ -284,6 +285,7 @@ export function ServicesMap({
     handler: () => void;
   } | null>(null);
   const pendingFocusRef = useRef<MapFocusRequest | null>(null);
+  const activeTargetRef = useRef<MapCameraTarget | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -340,6 +342,7 @@ export function ServicesMap({
   const focusKey = focus?.key;
 
   const cancelOrbit = () => {
+    activeTargetRef.current = null;
     if (orbitFrameRef.current !== null) {
       cancelAnimationFrame(orbitFrameRef.current);
       orbitFrameRef.current = null;
@@ -392,7 +395,55 @@ export function ServicesMap({
     latitude: number,
     city?: string | null,
   ) => {
+    const target: MapCameraTarget = {
+      longitude,
+      latitude,
+      zoom: (city && FOCUS_ZOOM_BY_CITY[city]) || FOCUS_ZOOM,
+      pitch: FOCUS_PITCH,
+    };
+
+    // Outro serviço no mesmo destino mantém o voo/carregamento já iniciado.
+    if (
+      activeTargetRef.current &&
+      isSameMapTarget(activeTargetRef.current, target)
+    ) {
+      return;
+    }
+
+    const center = map.getCenter();
+    const alreadyFramed = isSameMapTarget(
+      {
+        longitude: center.lng,
+        latitude: center.lat,
+        zoom: map.getZoom(),
+        pitch: map.getPitch(),
+      },
+      target,
+    );
+
+    // Não interrompe a órbita nem reinicia o loading se a câmera já está no ponto.
+    if (
+      alreadyFramed &&
+      !activeTargetRef.current &&
+      (!map.isMoving() || orbitFrameRef.current !== null)
+    ) {
+      // O pointerdown no marcador/popup pode ter pausado a órbita.
+      // Retoma sem deslocar a câmera ou reabrir o indicador de carregamento.
+      if (orbitFrameRef.current === null) {
+        startOrbit(map, longitude, latitude);
+      }
+      return;
+    }
+
     cancelOrbit();
+    // Encerra o voo anterior antes de registrar o moveend do novo destino.
+    map.stop();
+    if (alreadyFramed) {
+      startOrbit(map, longitude, latitude);
+      return;
+    }
+
+    activeTargetRef.current = target;
     onLoadingChange?.(true);
 
     const onArrive = () => {
@@ -403,6 +454,7 @@ export function ServicesMap({
         // Ignora uma conclusão antiga caso o destino já tenha mudado.
         if (pendingIdleRef.current?.handler !== finishLoading) return;
         pendingIdleRef.current = null;
+        activeTargetRef.current = null;
         onLoadingChange?.(false);
         startOrbit(map, longitude, latitude);
       };
@@ -424,8 +476,8 @@ export function ServicesMap({
 
     map.flyTo({
       center: [longitude, latitude],
-      zoom: (city && FOCUS_ZOOM_BY_CITY[city]) || FOCUS_ZOOM,
-      pitch: FOCUS_PITCH,
+      zoom: target.zoom,
+      pitch: target.pitch,
       bearing: 0,
       duration: reducedMotion ? 0 : FLY_DURATION,
       curve: 1.42,
