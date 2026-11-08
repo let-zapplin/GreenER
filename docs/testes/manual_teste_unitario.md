@@ -70,11 +70,11 @@ docker compose exec backend npm test
 
 O comando executa `vitest run` dentro do container. O Vitest encontra automaticamente os arquivos `*.test.ts`; não é necessário cadastrar novos testes em uma lista.
 
-Resumo de referência para a versão descrita neste manual:
+Resumo esperado conforme o inventário revisado em 08/11/2026, caso todos os cenários comuns sejam aprovados (não representa uma nova execução validada):
 
 ~~~text
-Test Files  25 passed | 1 skipped (26)
-     Tests  139 passed | 7 skipped (146)
+Test Files  26 passed | 1 skipped (27)
+     Tests  156 passed | 7 skipped (163)
 ~~~
 
 O arquivo ignorado é `coletas.integration.test.ts`. Seus sete testes precisam do banco exclusivo e são executados separadamente. **`Skipped` não significa que a persistência foi validada.**
@@ -101,11 +101,12 @@ Os caminhos do backend abaixo são relativos a `backend/src/`. As quantidades in
 | `integrations/carbon-api.test.ts` | 6 | Catálogo regional, payload inválido, códigos duplicados, HTTP, conexão e timeout |
 | `jobs/metrics-collection.job.test.ts` | 3 | Coleta imediata, repetição, continuidade após falha e logs |
 | `jobs/service-sync.job.test.ts` | 4 | Descoberta imediata, repetição, falhas, bloqueio de sobreposição e logs |
+| `jobs/carbon-intensity-sync.job.test.ts` | 3 | Sincronização imediata de snapshots, repetição, continuidade após falha e logs |
 | `modules/servicos/servicos.service.test.ts` | 7 | Descoberta, falhas externas, localização, atualização e remoção de serviços |
 | `modules/coletas/coletas.service.test.ts` | 18 | Coleta por serviço, estados, falhas isoladas, amostras sucessivas, concorrência e validação do histórico |
 | `modules/coletas/coletas.repository.test.ts` | 4 | Transação, gravação, indisponibilidade, ausência de métricas e erro de rollback, com banco simulado |
-| `modules/indicadores/indicadores.service.test.ts` | 5 | Energia, emissão, duração ausente, intensidade ausente, lacunas e período inválido |
-| `modules/indicadores/indicadores.controller.test.ts` | 3 | Período, parâmetros ausentes ou repetidos e propagação de erros |
+| `modules/indicadores/indicadores.service.test.ts` | 9 | Energia, emissão, duração e intensidade ausentes, lacunas, período inválido e histórico ambiental por serviço |
+| `modules/indicadores/indicadores.controller.test.ts` | 7 | Período, parâmetros ausentes ou repetidos, histórico por ID e propagação de erros |
 | `modules/intensidades/intensidades.service.test.ts` | 3 | Catálogo, snapshots regionais e configuração de idade máxima |
 | `modules/intensidades/intensidades.repository.test.ts` | 3 | Critérios da consulta temporal e regional, com conexão simulada |
 | `modules/intensidades/intensidades.controller.test.ts` | 3 | Contrato das respostas, quantidade sincronizada e erros |
@@ -139,7 +140,7 @@ Arquivo: [coletas.http.test.ts](../../backend/src/modules/coletas/coletas.http.t
 
 A consulta ao histórico, a consulta de permissão e a operação de coleta são simuladas conforme o cenário. O teste de administrador não inicia uma coleta real nem grava métricas.
 
-### HTTP de indicadores: dez testes
+### HTTP de indicadores: 16 testes
 
 Arquivo: [indicadores.http.test.ts](../../backend/src/modules/indicadores/indicadores.http.test.ts).
 
@@ -157,6 +158,19 @@ Arquivo: [indicadores.http.test.ts](../../backend/src/modules/indicadores/indica
 | Coleta válida com métricas e intensidade | 200 com energia e emissão calculadas |
 
 A consulta é simulada. No cenário com coleta, o cálculo usa duração de 60 segundos e intensidade de 200 gCO₂e/kWh. O teste confere aproximadamente `0,000849166667 kWh` e `0,169833333333 gCO₂e` no resumo e na amostra do serviço.
+
+O mesmo arquivo contém seis testes de `GET /api/indicadores/:serviceId/historico`:
+
+| Cenário | Resultado esperado |
+|---|---|
+| Sem token | 401, sem consultar o histórico |
+| Sem período, com token válido | 400 com `INVALID_INDICATOR_PERIOD` |
+| ID inválido, com token e período válidos | 400 com `INVALID_SERVICE_ID` |
+| Serviço inexistente | 404 com `SERVICE_NOT_FOUND` |
+| Serviço existente sem coletas no período | 200 com `samples: []` |
+| Serviço com coleta válida no período | 200 com identificação, datas e histórico ambiental calculado |
+
+Esses cenários simulam a consulta do repository, mantendo o cálculo e a autenticação reais. O histórico ambiental é diferente do histórico bruto em `/api/metricas/historico/:serviceId`.
 
 ### HTTP do dashboard: quatro testes
 
@@ -191,7 +205,7 @@ docker compose exec backend npm test -- src/modules/indicadores/indicadores.http
 docker compose exec backend npm test -- src/modules/dashboard/dashboard.http.test.ts
 ~~~
 
-Os resultados esperados são, respectivamente, **oito, dez e quatro testes aprovados**.
+Os resultados esperados são, respectivamente, **oito, 16 e quatro testes aprovados**.
 
 ### Todos os testes comuns de um módulo
 
@@ -202,7 +216,7 @@ docker compose exec backend npm test -- src/modules/dashboard
 docker compose exec backend npm test -- src/modules/intensidades
 ~~~
 
-No módulo de coletas, os sete testes de integração ficam ignorados na execução comum. O módulo de indicadores executa service, controller e HTTP, totalizando **18 testes** na versão descrita.
+No módulo de coletas, os sete testes de integração ficam ignorados na execução comum. O módulo de indicadores executa service, controller e HTTP, totalizando **32 testes** na versão descrita.
 
 ### Outros grupos
 
@@ -364,3 +378,6 @@ O comando preserva o volume do PostgreSQL. A opção `-v` remove os volumes e n�
 - [Manual de integração com PostgreSQL](./manual_integracao_postgres.md).
 - [Roteiro de validação manual](./manualdevalidacao.md).
 - [Fórmulas e unidades dos cálculos](../calculos.md).
+
+### Para o futuro
+Esse é um projeto ainda em desenvolvimento, futuramente irá abarcar mais testes
