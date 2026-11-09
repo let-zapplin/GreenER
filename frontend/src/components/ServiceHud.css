@@ -1,0 +1,191 @@
+.service-hud {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+
+  max-width: 100%;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  padding: 4px 2px 8px;
+
+  scrollbar-width: thin;
+}
+
+.service-hud-item {
+  --service-status-color: #74e866;
+
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+
+  flex: 0 0 auto;
+
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  color: inherit;
+
+  font: inherit;
+
+  cursor: pointer;
+
+  opacity: 0.82;
+
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.service-hud-item:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.service-hud-item:focus-visible {
+  outline: 2px solid var(--service-status-color);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.service-hud-hexagon {
+  position: relative;
+
+  display: grid;
+  place-items: center;
+
+  width: 46px;
+  height: 42px;
+
+  background: color-mix(in srgb, var(--service-status-color) 30%, #0b2d2d);
+
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  filter: drop-shadow(
+    0 0 5px color-mix(in srgb, var(--service-status-color) 30%, transparent)
+  );
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    filter 180ms ease;
+}
+
+.service-hud-hexagon::before {
+  content: "";
+
+  position: absolute;
+  inset: 2px;
+
+  background: #0e3535;
+
+  clip-path: inherit;
+}
+
+.service-hud-hexagon::after {
+  content: "";
+
+  position: absolute;
+
+  width: 7px;
+  height: 7px;
+
+  right: 5px;
+  top: 5px;
+
+  border-radius: 50%;
+
+  background: var(--service-status-color);
+
+  box-shadow:
+    0 0 5px var(--service-status-color),
+    0 0 12px var(--service-status-color),
+    0 0 20px color-mix(in srgb, var(--service-status-color) 55%, transparent);
+}
+
+.service-hud-hexagon span {
+  position: relative;
+  z-index: 1;
+
+  color: #f4ffff;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.service-hud-item:hover .service-hud-hexagon {
+  filter: brightness(1.15);
+}
+
+.service-hud-item.is-selected
+  .service-hud-hexagon {
+  transform: scale(1.14);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--service-status-color) 62%,
+      #0b2d2d
+    );
+
+  filter:
+    drop-shadow(
+      0 0 7px
+      var(--service-status-color)
+    )
+    drop-shadow(
+      0 0 15px
+      color-mix(
+        in srgb,
+        var(--service-status-color) 55%,
+        transparent
+      )
+    );
+}
+.service-hud-name {
+  display: none;
+}
+
+/* Estados */
+
+.service-hud-item[data-status="active"] {
+  --service-status-color: #74e866;
+}
+
+.service-hud-item[data-status="new"] {
+  --service-status-color: #ffd84a;
+}
+
+.service-hud-item[data-status="no_metrics"] {
+  --service-status-color: #ffb84d;
+}
+
+.service-hud-item[data-status="returned"] {
+  --service-status-color: #59dbe8;
+}
+
+.service-hud-item[data-status="unavailable"] {
+  --service-status-color: #ff5e57;
+}
+
+.service-hud-item[data-status="removed"] {
+  --service-status-color: #b58cff;
+}
+
+.service-hud-item.is-unlocated {
+  opacity: 0.45;
+}
+
+@media (max-width: 760px) {
+  .service-hud {
+    justify-content: flex-start;
+  }
+
+  .service-hud-hexagon {
+    width: 42px;
+    height: 38px;
+  }
+}

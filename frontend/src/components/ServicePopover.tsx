@@ -16,8 +16,14 @@ function getStatusLabel(status: MonitoredService["status"]) {
     case "returned":
       return "Retornou";
 
+    case "no_metrics":
+      return "Sem métricas";
+
     case "unavailable":
       return "Indisponível";
+
+    case "removed":
+      return "Removido";
   }
 }
 
@@ -31,6 +37,12 @@ export function ServicePopover({ service }: ServicePopoverProps) {
           {getStatusLabel(service.status)}
         </span>
       </div>
+
+      {service.status === "no_metrics" && (
+        <p className="service-popover-note">
+          Segue ativo no catálogo; a última coleta não retornou métricas.
+        </p>
+      )}
 
       <div className="service-popover-location">
         <span>{service.location.city ?? "Cidade não informada"}</span>

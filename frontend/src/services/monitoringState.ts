@@ -31,11 +31,36 @@ export function reconcileServices(
   return current.map((service): MonitoredService => {
     const previousService = previousById.get(service.id);
 
-    // O backend é a fonte oficial da indisponibilidade.
+    // O backend é a fonte oficial do status de remoção.
+    if (service.status === "removed") {
+      return {
+        ...service,
+        status: "removed",
+      };
+    }
+
+    // Indisponibilidade vem da última coleta e tem prioridade sobre os
+    // destaques temporários de descoberta.
     if (service.status === "unavailable") {
       return {
         ...service,
         status: "unavailable",
+        statusExpiresAt: undefined,
+        lastConfirmedAt:
+          previousService?.lastConfirmedAt ?? service.lastConfirmedAt,
+      };
+    }
+
+    // O serviço respondeu, mas não forneceu métricas.
+    if (service.status === "no_metrics") {
+      return {
+        ...service,
+        status: "no_metrics",
+        statusExpiresAt: undefined,
+        lastConfirmedAt:
+          service.lastConfirmedAt ??
+          previousService?.lastConfirmedAt ??
+          new Date(now).toISOString(),
       };
     }
 
@@ -59,8 +84,8 @@ export function reconcileServices(
       };
     }
 
-    // Antes estava indisponível e agora o backend diz que está ativo.
-    if (previousService.status === "unavailable") {
+    // Antes estava removido e agora o backend diz que está ativo.
+    if (previousService.status === "removed") {
       return {
         ...service,
         status: "returned",

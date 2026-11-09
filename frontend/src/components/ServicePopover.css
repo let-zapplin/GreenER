@@ -94,9 +94,31 @@
   background: #7dd3fc16;
 }
 
+.service-popover-status.no_metrics {
+  color: #facc15;
+  background: #facc1516;
+}
+
 .service-popover-status.unavailable {
+  color: #fb923c;
+  background: #fb923c16;
+}
+
+.service-popover-status.removed {
   color: #fca5a5;
   background: #fca5a516;
+}
+
+.service-popover-note {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-left: 2px solid #facc15;
+  border-radius: 0 6px 6px 0;
+  background: #facc1514;
+  color: #f4f8f5;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  font-weight: 500;
 }
 
 .service-popover-location {

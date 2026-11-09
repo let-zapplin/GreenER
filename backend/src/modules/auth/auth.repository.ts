@@ -2,12 +2,18 @@
 import pool from "../../db/connection.js";
 import type { PoolClient } from "pg";
 import { randomBytes } from "crypto";
-import {
-  hashPassword,
-  verifyPassword,
-} from "../../shared/utils/password.util.js";
+import { hashPassword } from "../../shared/utils/password.util.js";
 
 export class UserRepository {
+  async findAdminStatus(userId: number): Promise<boolean | null> {
+    const result = await pool.query<{ admin: boolean } & Record<string, unknown>>(
+      `SELECT admin FROM users WHERE id_users = $1`,
+      [userId],
+    );
+
+    return result.rows[0]?.admin ?? null;
+  }
+
   private async insertUser(
     client: PoolClient,
     name: string,
@@ -86,6 +92,10 @@ export class UserRepository {
       [email],
     );
     const user = result.rows[0];
+
+    if (!user) {
+      return null;
+    }
 
     return {
       id_users: user.id_users,

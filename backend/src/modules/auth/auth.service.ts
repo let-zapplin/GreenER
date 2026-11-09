@@ -1,5 +1,5 @@
 import { createToken } from "../../shared/utils/jwt.util.js";
-import { UnauthorizedError } from "../../shared/errors/AppError.js";
+import { ConflictError, UnauthorizedError } from "../../shared/errors/AppError.js";
 import { verifyPassword } from "../../shared/utils/password.util.js";
 import { UserRepository } from "./auth.repository.js";
 
@@ -10,7 +10,7 @@ export class AuthService {
     const emailAlreadyExists = await this.repo.emailExists(email);
 
     if (emailAlreadyExists) {
-      throw new Error("Email já cadastrado");
+      throw new ConflictError("Email já cadastrado");
     }
 
     const user = await this.repo.createUser(name, email, password);

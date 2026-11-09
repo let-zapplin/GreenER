@@ -30,8 +30,8 @@ A equipe iniciou com a definição dos fluxos, a modelagem de dados e a prototip
 | [Casos de uso](../uml/UseCase.png) | Interações e funcionalidades previstas |
 | [Diagrama de sequência](../uml/Sequence%20Diagram0.png) | Comunicação entre componentes |
 | [Diagrama de classes](../uml/Class%20Diagram0.png) | Organização inicial dos elementos de domínio |
-| [Modelo lógico do banco](../bd_models/logical-model-greener.png) | Entidades e relacionamentos para persistência |
-| [Protótipos de interface](../prototipos/) | Navegação, hierarquia visual e telas previstas |
+| [Modelo lógico do banco](../prototipos/database/logical-model-greener.png) | Entidades e relacionamentos para persistência |
+| [Protótipos de interface](../prototipos/frontend) | Navegação, hierarquia visual e telas previstas |
 
 ## 03 · Construção da base tecnológica
 

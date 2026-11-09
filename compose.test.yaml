@@ -1,0 +1,37 @@
+name: greener-tests
+
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: greener_test
+      POSTGRES_USER: greener_test
+      POSTGRES_PASSWORD: greener_test_password
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U greener_test -d greener_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  backend-test:
+    build:
+      context: ./backend
+    environment:
+      NODE_ENV: test
+      RUN_DB_INTEGRATION_TESTS: "true"
+      POSTGRES_HOST: postgres-test
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: greener_test
+      POSTGRES_USER: greener_test
+      POSTGRES_PASSWORD: greener_test_password
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: ["npm", "test", "--", "src/modules/coletas/coletas.integration.test.ts"]
