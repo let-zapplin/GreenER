@@ -1,62 +1,75 @@
-# 🗄️ GreenER: Banco de Dados
+# 🗄️ GreenER — Banco de Dados
 
-Banco de dados relacional do GreenER, responsável por armazenar serviços monitorados, localizações, tentativas de coleta, métricas e os dados utilizados pelas funcionalidades de monitoramento e análise ambiental.
+Banco de dados relacional do GreenER, responsável por armazenar usuários, serviços monitorados, localizações, tentativas de coleta, métricas e snapshots de intensidade de carbono utilizados pelo Monitoramento e pelas Análises.
 
 [← Voltar para o README principal](../README.md)
+
+> **Referência atualizada no fechamento da Sprint 2 — 09/11/2026.**  
+> O projeto utiliza PostgreSQL com **DDL e DML explícitos**, sem ORM.
 
 ---
 
 ## 📋 Índice
 
-- [🛠 Tecnologias](#-tecnologias)
-- [📂 Arquivos](#-arquivos)
-- [🧱 Modelo de Dados](#-modelo-de-dados)
-- [📊 Histórico de Coletas](#-histórico-de-coletas)
-- [🔄 Evolução do Schema](#-evolução-do-schema)
-- [▶️ Como Aplicar os Scripts](#️-como-aplicar-os-scripts)
-- [🔎 Onde Ficam as Consultas da Aplicação](#-onde-ficam-as-consultas-da-aplicação)
-- [📚 Documentação Relacionada](#-documentação-relacionada)
+- [Tecnologias](#-tecnologias)
+- [Arquivos](#-arquivos)
+- [Modelo de dados](#-modelo-de-dados)
+- [Histórico de coletas](#-histórico-de-coletas)
+- [Dados ambientais](#-dados-ambientais)
+- [Evolução do schema](#-evolução-do-schema)
+- [Ordem das migrations](#-ordem-das-migrations)
+- [Como aplicar os scripts](#️-como-aplicar-os-scripts)
+- [Persistência do volume](#-persistência-do-volume)
+- [Onde ficam as consultas DML](#-onde-ficam-as-consultas-dml)
+- [Validações da Sprint 2](#-validações-da-sprint-2)
+- [Documentação relacionada](#-documentação-relacionada)
 
 ---
 
 ## 🛠 Tecnologias
 
-- PostgreSQL 17
-- SQL explícito para DDL e DML
-- Docker e Docker Compose
-- Volume persistente para preservação dos dados após reinicialização dos containers
+- PostgreSQL 17;
+- SQL explícito para DDL e DML;
+- biblioteca `pg` no backend Node.js;
+- Docker e Docker Compose;
+- volume persistente para preservar dados após reinicialização dos containers.
 
 ---
 
 ## 📂 Arquivos
 
-| Arquivo / Diretório | Conteúdo |
+| Arquivo / diretório | Conteúdo |
 | --- | --- |
-| [`schema.sql`](schema.sql) | Estado completo atual do banco: tabelas, chaves, relacionamentos, restrições e índices |
-| [`migrations/`](migrations/) | Alterações incrementais utilizadas para atualizar bancos já existentes |
-| [`migrations/001_add_collection.sql`](migrations/001_add_collection.sql) | Introduz a entidade `collection` e migra o relacionamento entre serviços e métricas |
-| [`migrations/002_refactor_location.sql`](migrations/002_refactor_location.sql) | Ajusta a unicidade das localizações e adiciona índice para snapshots de intensidade |
-| [`migrations/003_add_collection_interval_seconds.sql`](migrations/003_add_collection_interval_seconds.sql) | Persiste a duração real da amostra em `metrics`; mantém o campo nulo para registros existentes |
+| [`schema.sql`](schema.sql) | Estado completo atual do banco para criação de um banco novo |
+| [`migrations/`](migrations/) | Evoluções incrementais para bancos existentes |
+| [`migrations/001_add_collection.sql`](migrations/001_add_collection.sql) | Introduz `collection` e migra a relação histórica entre serviços e métricas |
+| [`migrations/002_refactor_location.sql`](migrations/002_refactor_location.sql) | Ajusta a unicidade de localização e cria índice para histórico de intensidade de carbono |
+| [`migrations/003_add_collection_interval_seconds.sql`](migrations/003_add_collection_interval_seconds.sql) | Adiciona a duração real da amostra em `metrics` |
 
-O `schema.sql` deve representar sempre a estrutura completa esperada para um banco criado do zero.
+O `schema.sql` representa a **estrutura final esperada para um banco criado do zero**.
 
-As migrations representam a evolução entre versões do modelo sem exigir a remoção dos dados já persistidos.
+As migrations existem para atualizar bancos que já possuíam versões anteriores do schema. Portanto:
+
+```text
+banco novo → schema.sql
+banco existente → migrations necessárias, na ordem
+```
+
+Não é necessário aplicar as migrations `001`, `002` e `003` após criar um banco novo com o `schema.sql` atual, porque essas alterações já estão incorporadas ao schema completo.
 
 ---
 
-## 🧱 Modelo de Dados
+## 🧱 Modelo de dados
 
-> Esta seção deve permanecer sincronizada com o conteúdo de [`schema.sql`](schema.sql).
-
-| Tabela | Descrição |
+| Tabela | Responsabilidade |
 | --- | --- |
-| `location` | Localizações associadas aos serviços, contendo código da região, país, região, cidade quando disponível, latitude e longitude. |
-| `users` | Usuários do sistema, contendo nome, e-mail, hashes utilizados pela autenticação e indicação administrativa. |
-| `service` | Serviços monitorados, associados a uma localização e contendo informações como identificador externo, nome, estado atual e instante da última identificação. |
-| `collection` | Cada tentativa de coleta realizada para um serviço, incluindo estado, instante da tentativa e informações de falha quando aplicáveis. |
-| `metrics` | Conjuntos de métricas válidos obtidos em uma coleta, incluindo CPU, memória, disco, rede, duração real da amostra em segundos e timestamp da métrica. A duração é nula em registros anteriores à migration 003. |
-| `carbon_intensity` | Histórico de intensidade de carbono e participação de energia renovável associado a uma localização. |
-| `favorites` | Associação entre usuários e serviços favoritados. |
+| `location` | Região, país, cidade e coordenadas utilizadas pelos serviços e fatores ambientais |
+| `users` | Usuários, hashes de autenticação e indicação administrativa |
+| `service` | Serviços descobertos no catálogo externo e seu estado atual |
+| `collection` | Cada tentativa de coleta feita para um serviço |
+| `metrics` | Métricas válidas obtidas em uma coleta bem-sucedida |
+| `carbon_intensity` | Histórico de intensidade de carbono e participação renovável |
+| `favorites` | Associação entre usuários e serviços favoritados |
 
 ### Relacionamentos principais
 
@@ -76,7 +89,7 @@ location
    └────< carbon_intensity
 ```
 
-Além disso:
+Também existe:
 
 ```text
 users
@@ -84,19 +97,31 @@ users
    └────< favorites >──── service
 ```
 
+### Localização
+
+A tabela `location` utiliza:
+
+```text
+UNIQUE NULLS NOT DISTINCT (region_code, city)
+```
+
+Isso permite tratar corretamente localizações regionais em que `city` é `NULL`, evitando múltiplas linhas equivalentes para a mesma região.
+
+Latitude e longitude são opcionais, porque um serviço pode continuar monitorável mesmo quando a origem externa não fornece coordenadas.
+
 ---
 
-## 📊 Histórico de Coletas
+## 📊 Histórico de coletas
 
-A partir da Sprint 2, o GreenER separa o **evento de coleta** dos **dados de métricas obtidos**.
+A Sprint 2 separou o **evento de coleta** dos **dados válidos obtidos na coleta**.
 
-Anteriormente, a tabela `metrics` estava relacionada diretamente ao serviço:
+O modelo anterior:
 
 ```text
 service → metrics
 ```
 
-O modelo passou a utilizar:
+foi evoluído para:
 
 ```text
 service
@@ -110,28 +135,31 @@ collection
 metrics
 ```
 
-Essa separação permite registrar uma tentativa mesmo quando nenhuma métrica válida é retornada.
+Essa separação é importante porque uma tentativa deve continuar registrada mesmo quando não existe uma amostra válida de métricas.
 
 ### `collection`
 
-A tabela `collection` representa cada tentativa de consultar as métricas de um serviço.
+Cada linha representa uma tentativa de coleta.
 
-Cada registro contém:
+Campos centrais:
 
-- serviço consultado;
-- estado da tentativa;
-- instante em que a tentativa ocorreu;
-- motivo da falha, quando aplicável;
-- status HTTP, quando houver resposta HTTP.
+```text
+id_collection
+service_id_service
+status
+failure_reason
+http_status
+attempted_at
+```
 
-Os estados atualmente suportados são:
+Estados aceitos:
 
 | Estado | Significado |
 | --- | --- |
-| `success` | A consulta retornou métricas válidas |
-| `no_metrics` | O serviço está disponível, mas não forneceu métricas válidas |
-| `unavailable` | Não foi possível consultar o serviço |
-| `error` | Ocorreu erro durante o processamento da coleta |
+| `success` | A Metrics API retornou métricas válidas |
+| `no_metrics` | O serviço permanece no catálogo, mas a tentativa não forneceu métricas válidas |
+| `unavailable` | Não foi possível obter as métricas por indisponibilidade, timeout ou conexão |
+| `error` | Ocorreu erro inesperado de resposta, processamento ou persistência |
 
 Exemplo:
 
@@ -144,29 +172,23 @@ Billing API
    └── collection #4 → unavailable
 ```
 
-Isso permite preservar o histórico mesmo quando uma tentativa não gera dados suficientes para criar um registro em `metrics`.
-
 ### `metrics`
 
-A tabela `metrics` armazena apenas conjuntos de métricas válidos.
+A tabela `metrics` armazena apenas amostras válidas.
 
-Cada registro referencia a coleta que o originou através de:
+Ela referencia a coleta por:
 
 ```text
 collection_id_collection
 ```
 
-Assim, o serviço correspondente pode ser obtido pelo relacionamento:
+Portanto:
 
 ```text
 metrics → collection → service
 ```
 
-A referência direta de `metrics` para `service` foi removida para evitar redundância.
-
-A restrição `UNIQUE` aplicada a `collection_id_collection` garante que uma tentativa possua, no máximo, um conjunto de métricas.
-
-Portanto:
+A restrição `UNIQUE` nessa chave estrangeira garante que uma coleta tenha no máximo um registro em `metrics`.
 
 ```text
 success
@@ -184,18 +206,29 @@ error
 collection sem metrics
 ```
 
-### Integridade das coletas
+### Duração real da amostra
 
-O banco utiliza restrições para impedir estados inconsistentes.
+A coluna:
 
-Entre as regras atuais:
+```text
+collection_interval_seconds
+```
 
-- `collection.status` aceita somente `success`, `no_metrics`, `unavailable` e `error`;
-- `http_status`, quando informado, deve estar entre `100` e `599`;
-- uma coleta com estado `success` não pode possuir `failure_reason`;
-- toda coleta deve estar associada a um serviço existente;
-- toda métrica deve estar associada a uma coleta existente;
-- uma coleta pode possuir no máximo um conjunto de métricas.
+registra a duração real da amostra utilizada no cálculo energético.
+
+Ela pode ser `NULL` em registros históricos criados antes da Migration 003. Nesses casos, os indicadores tratam a amostra como lacuna, em vez de assumir um intervalo artificial.
+
+### Integridade
+
+O schema impõe restrições como:
+
+- `collection.status` limitado aos estados suportados;
+- `http_status`, quando presente, entre `100` e `599`;
+- coleta `success` sem `failure_reason`;
+- associação obrigatória de `collection` a `service`;
+- associação obrigatória de `metrics` a uma `collection`;
+- no máximo uma métrica por coleta;
+- `collection_interval_seconds` nulo ou finito e maior que zero.
 
 Também existe o índice:
 
@@ -209,28 +242,60 @@ sobre:
 (service_id_service, attempted_at DESC)
 ```
 
-para favorecer consultas históricas por serviço ordenadas pelas tentativas mais recentes.
+para favorecer consultas históricas por serviço.
 
 ---
 
 ## 🌱 Dados ambientais
 
-A tabela `carbon_intensity` mantém registros históricos de intensidade de carbono associados a uma localização.
-
-Ela armazena:
+A tabela `carbon_intensity` mantém snapshots regionais de:
 
 - intensidade de carbono em `gCO₂e/kWh`;
-- percentual de energia renovável;
-- instante de registro;
-- localização correspondente.
+- participação de energia renovável;
+- instante em que o valor foi registrado;
+- localização associada.
 
-Os resultados calculados de consumo energético e emissão de CO₂e **não são persistidos na entidade `collection`**. O backend calcula esses indicadores sob demanda a partir das tentativas de coleta, métricas e snapshots regionais de intensidade de carbono persistidos.
+Existe um índice específico para consultas temporais:
 
-A associação temporal utiliza o código regional e o instante da tentativa de coleta para selecionar um snapshot de intensidade aplicável, respeitando o limite de idade configurado. A duração real da amostra, `collection_interval_seconds`, é persistida em `metrics`; registros antigos sem esse valor permanecem sem duração conhecida e são tratados como lacunas no cálculo. Fórmulas e premissas estão em [`docs/calculos.md`](../docs/calculos.md).
+```text
+idx_carbon_intensity_location_registered
+```
+
+sobre:
+
+```text
+(
+  location_id_location,
+  registered_at DESC,
+  id_carbon_intensity DESC
+)
+```
+
+Esse índice auxilia a seleção do snapshot ambiental mais recente e elegível para uma tentativa de coleta.
+
+Os valores calculados de energia e CO₂e **não são persistidos diretamente em `collection`**.
+
+Eles são calculados sob demanda a partir de:
+
+```text
+collection
+  +
+metrics
+  +
+location / region_code
+  +
+carbon_intensity
+  ↓
+energia + CO₂e
+```
+
+A associação temporal respeita o instante da coleta e a idade máxima configurada para o fator ambiental.
+
+As fórmulas e premissas estão em [`docs/calculos.md`](../docs/calculos.md).
 
 ---
 
-## 🔄 Evolução do Schema
+## 🔄 Evolução do schema
 
 O arquivo:
 
@@ -238,125 +303,137 @@ O arquivo:
 database/schema.sql
 ```
 
-representa o estado completo atual do banco e deve permitir a criação da estrutura em um PostgreSQL vazio.
+representa o estado completo atual do banco.
 
-Para bancos já existentes, as alterações incrementais ficam em:
+Para bancos existentes:
 
 ```text
 database/migrations/
 ```
 
-### Migration 001 — entidade de coleta
+contém as alterações incrementais.
 
-A migration:
+### Migration 001 — `001_add_collection.sql`
 
-```text
-001_add_collection.sql
-```
-
-realiza a transição:
+Introduz a entidade `collection` e transforma:
 
 ```text
 service → metrics
 ```
 
-para:
+em:
 
 ```text
 service → collection → metrics
 ```
 
-sem exigir a remoção do volume PostgreSQL.
+Durante a migração:
 
-Durante a migration:
+1. `collection` é criada;
+2. métricas antigas recebem uma coleta retroativa `success`;
+3. `metrics` passa a referenciar a coleta;
+4. a relação direta anterior entre `metrics` e `service` é removida;
+5. a coluna temporária `legacy_metrics_id` é descartada;
+6. tudo ocorre em transação.
 
-1. a tabela `collection` é criada;
-2. métricas antigas, caso existam, recebem uma coleta retroativa com estado `success`;
-3. `metrics` passa a referenciar `collection`;
-4. a FK antiga entre `metrics` e `service` é removida;
-5. a coluna temporária utilizada na associação dos registros antigos é removida.
-
-Para registros anteriores à migration:
+Para métricas existentes:
 
 ```text
 collection.attempted_at = metrics.recorded_at
 ```
 
-é utilizado como referência temporal disponível para reconstruir a relação histórica.
+é usado como referência temporal disponível.
 
-A coluna:
+### Migration 002 — `002_refactor_location.sql`
 
-```text
-legacy_metrics_id
-```
-
-existe somente durante a execução da migration e é removida antes do `COMMIT`.
-
-A migration utiliza uma transação:
+Ajusta a estrutura de localização para:
 
 ```text
-BEGIN
-   ↓
-alterações
-   ↓
-COMMIT
+UNIQUE NULLS NOT DISTINCT (region_code, city)
 ```
 
-evitando deixar o banco parcialmente atualizado caso alguma etapa falhe.
+Esse comportamento evita duplicação de localizações regionais com `city = NULL`.
 
-### Aplicando a migration
+Também cria:
 
-A migration deve ser utilizada somente em bancos que ainda possuam o modelo anterior.
-
-Com o PostgreSQL em execução:
-
-```bash
-docker compose cp database/migrations/001_add_collection.sql postgres:/tmp/001_add_collection.sql
+```text
+idx_carbon_intensity_location_registered
 ```
 
-Em seguida:
+para otimizar consultas temporais dos snapshots de carbono.
 
-```bash
-docker compose exec postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/001_add_collection.sql'
+A migration também é transacional.
+
+### Migration 003 — `003_add_collection_interval_seconds.sql`
+
+Adiciona:
+
+```text
+metrics.collection_interval_seconds
 ```
 
-> A migration deve ser aplicada apenas uma vez em cada banco que ainda utilize o relacionamento direto `service → metrics`.
+como `DOUBLE PRECISION`.
+
+Também cria uma restrição para aceitar apenas:
+
+```text
+NULL
+ou
+valor > 0 e finito
+```
+
+A coluna é nullable propositalmente: amostras anteriores permanecem sem uma duração inventada.
 
 ---
 
-## ▶️ Como Aplicar os Scripts
+## 🔢 Ordem das migrations
 
-Existem dois cenários diferentes.
+Para um banco antigo que ainda não recebeu nenhuma dessas evoluções:
+
+```text
+001_add_collection.sql
+        ↓
+002_refactor_location.sql
+        ↓
+003_add_collection_interval_seconds.sql
+```
+
+Aplique apenas as migrations que ainda não foram executadas naquele banco.
+
+### Importante
+
+- **Banco novo:** execute apenas o `schema.sql` atual.
+- **Banco existente:** aplique as migrations faltantes na sequência.
+- Não aplique a mesma migration mais de uma vez sem verificar se ela foi criada para ser idempotente.
+- Não use `docker compose down -v` como método de atualização do schema, pois isso apaga os dados.
+
+---
+
+## ▶️ Como aplicar os scripts
 
 ### Banco novo
 
-Para um banco vazio, o [`schema.sql`](schema.sql) contém toda a estrutura necessária.
+Suba o ambiente normalmente:
 
-No ambiente Docker do projeto, o arquivo é utilizado durante a inicialização de um volume PostgreSQL novo.
+```bash
+docker compose up -d
+```
 
-Para executar manualmente em um banco vazio, copie o script para o container:
+Ao inicializar um volume PostgreSQL novo, o `schema.sql` atual fornece a estrutura completa esperada.
+
+Para aplicar o schema manualmente:
 
 ```bash
 docker compose cp database/schema.sql postgres:/tmp/schema.sql
 ```
 
-Depois execute:
+Depois:
 
 ```bash
 docker compose exec postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/schema.sql'
 ```
 
-### Banco existente
-
-Não remova o volume apenas para aplicar uma evolução do modelo.
-
-Utilize a migration correspondente em:
-
-```text
-database/migrations/
-```
-
-Por exemplo:
+### Banco existente — Migration 001
 
 ```bash
 docker compose cp database/migrations/001_add_collection.sql postgres:/tmp/001_add_collection.sql
@@ -366,7 +443,17 @@ docker compose cp database/migrations/001_add_collection.sql postgres:/tmp/001_a
 docker compose exec postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/001_add_collection.sql'
 ```
 
-Em bancos que já possuem a estrutura de `collection` e `metrics`, aplique a migration da duração real da amostra:
+### Banco existente — Migration 002
+
+```bash
+docker compose cp database/migrations/002_refactor_location.sql postgres:/tmp/002_refactor_location.sql
+```
+
+```bash
+docker compose exec postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/002_refactor_location.sql'
+```
+
+### Banco existente — Migration 003
 
 ```bash
 docker compose cp database/migrations/003_add_collection_interval_seconds.sql postgres:/tmp/003_add_collection_interval_seconds.sql
@@ -376,87 +463,217 @@ docker compose cp database/migrations/003_add_collection_interval_seconds.sql po
 docker compose exec postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/003_add_collection_interval_seconds.sql'
 ```
 
-Essa migration adiciona uma coluna nullable: os registros anteriores permanecem sem duração conhecida e os indicadores os tratam como lacunas. Aplique cada migration somente uma vez e na ordem necessária para o estado atual do banco.
+O uso de:
 
-### Persistência
+```text
+-v ON_ERROR_STOP=1
+```
 
-Encerrar os containers normalmente:
+faz o `psql` interromper a execução quando encontra erro, evitando que falhas sejam ignoradas durante a atualização.
+
+---
+
+## 💾 Persistência do volume
+
+Encerrar os containers com:
 
 ```bash
 docker compose down
 ```
 
-não remove o volume do PostgreSQL.
+não remove os dados do PostgreSQL.
 
-Portanto, os registros continuam disponíveis após:
+Depois:
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
-O comando:
+o volume é reutilizado.
+
+Já:
 
 ```bash
 docker compose down -v
 ```
 
-remove também os volumes e, consequentemente, os dados persistidos.
+remove também o volume e, consequentemente, os registros persistidos.
 
-> Não utilize `docker compose down -v` quando o objetivo for testar persistência ou preservar dados existentes.
+> Não use `docker compose down -v` quando o objetivo for verificar persistência ou preservar o banco.
 
----
+No Compose do GreenER:
 
-## ✅ Validações da estrutura de coletas
+```text
+host:      localhost:5433
+container: postgres:5432
+```
 
-Durante a implementação da TEC02 foram registrados os seguintes resultados:
-
-- criação do `schema.sql` em PostgreSQL vazio;
-- criação da tabela `collection`;
-- relacionamento entre `service` e `collection`;
-- relacionamento entre `collection` e `metrics`;
-- chaves primárias e estrangeiras;
-- restrições `CHECK`;
-- restrição `UNIQUE` entre coleta e métricas;
-- índice utilizado pelo histórico;
-- inserção de coleta `success`;
-- inserção de coleta `no_metrics`;
-- inserção de coleta `unavailable`;
-- rejeição de estados inválidos;
-- rejeição de `success` combinado com `failure_reason`;
-- aplicação da migration em banco existente;
-- preservação da estrutura e dos registros após reinicialização do PostgreSQL;
-- inicialização do backend após a evolução do schema;
-- execução da suíte automatizada existente naquele momento, com 20 de 20 testes aprovados.
-
-Esses números são evidências históricas daquela etapa, não o resultado atual da suíte. Os testes automatizados vigentes e como executá-los estão documentados em [`docs/testes/manual_teste_unitario.md`](../docs/testes/manual_teste_unitario.md).
+O backend se conecta internamente pela rede Docker utilizando o nome do serviço `postgres`.
 
 ---
 
-## 🔎 Onde Ficam as Consultas da Aplicação
+## 🔎 Onde ficam as consultas DML
 
-As operações de inserção, consulta, atualização e exclusão utilizadas pela aplicação devem permanecer nos **repositories** do backend.
+O GreenER não utiliza ORM.
 
-A organização segue o padrão:
+As operações `SELECT`, `INSERT`, `UPDATE` e demais consultas da aplicação ficam nos **repositories do backend**.
+
+Padrão:
 
 ```text
 backend/src/modules/<modulo>/<modulo>.repository.ts
 ```
 
-Os repositories utilizam SQL explícito e parâmetros separados dos valores recebidos pela aplicação, sem concatenação direta de dados no texto SQL.
+Principais repositories relacionados ao banco:
 
-O módulo de coletas implementa as operações de persistência e consulta de tentativas e histórico em:
+| Arquivo | Responsabilidade |
+| --- | --- |
+| `backend/src/modules/auth/auth.repository.ts` | usuários, autenticação e consulta de permissão administrativa |
+| `backend/src/modules/localidades/localidades.repository.ts` | criação, atualização e consulta de localizações |
+| `backend/src/modules/servicos/servicos.repository.ts` | catálogo de serviços e última tentativa de coleta |
+| `backend/src/modules/coletas/coletas.repository.ts` | persistência transacional das coletas/métricas e histórico bruto |
+| `backend/src/modules/intensidades/intensidades.repository.ts` | snapshots e seleção temporal da intensidade de carbono |
+| `backend/src/modules/indicadores/indicadores.repository.ts` | consulta histórica por período e associação temporal do fator ambiental |
+| `backend/src/modules/dashboard/dashboard.repository.ts` | consolidação dos estados atuais dos serviços |
 
-```text
-backend/src/modules/coletas/
+### SQL parametrizado
+
+Os valores são enviados separadamente da consulta.
+
+Exemplo conceitual:
+
+```ts
+pool.query(
+  "SELECT * FROM service WHERE id = $1",
+  [externalId],
+);
 ```
 
-Veja também a organização do backend em [`backend/README.md`](../backend/README.md).
+O projeto evita concatenar diretamente os dados recebidos no texto SQL.
+
+### Transação da coleta
+
+A persistência de uma coleta `success` usa uma transação:
+
+```text
+BEGIN
+  ↓
+INSERT collection
+  ↓
+INSERT metrics
+  ↓
+COMMIT
+```
+
+Se a inserção da métrica falhar:
+
+```text
+ROLLBACK
+```
+
+evita deixar uma coleta `success` sem a respectiva amostra.
+
+Nos estados `no_metrics`, `unavailable` e `error`, somente a tentativa em `collection` é persistida.
 
 ---
 
-## 📚 Documentação Relacionada
+## ✅ Validações da Sprint 2
 
-- [`backend/README.md`](../backend/README.md) — organização do backend e conexão com o PostgreSQL
-- [`docs/arquitetura.md`](../docs/arquitetura.md) — arquitetura e fluxo dos dados entre as partes da aplicação
-- [`docs/calculos.md`](../docs/calculos.md) — fórmulas, unidades e premissas para energia e CO₂e
-- [`docs/sprints/sprint-2.md`](../docs/sprints/sprint-2.md) — planejamento, decisões e evidências da Sprint 2
+### Integração PostgreSQL
+
+A suíte específica com PostgreSQL real foi executada por Docker:
+
+```bash
+docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test
+```
+
+Resultado:
+
+```text
+7/7 testes de integração aprovados
+backend-test exit code 0
+```
+
+Entre os cenários testados houve também violação proposital de constraint para validar rollback e integridade transacional.
+
+### Persistência após reinicialização
+
+Antes da reinicialização, foram identificados:
+
+```text
+collection:
+id_collection = 4642
+service_id_service = 1
+status = success
+```
+
+e:
+
+```text
+metrics:
+id_metrics = 4587
+collection_id_collection = 4642
+```
+
+Depois de:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+sem `-v`, a métrica `4587` continuou associada à coleta `4642`.
+
+Isso confirma a persistência pelo volume PostgreSQL.
+
+### Coleta periódica
+
+Sem disparar uma coleta manual, a quantidade registrada evoluiu de:
+
+```text
+4687 coletas
+```
+
+para:
+
+```text
+4735 coletas
+```
+
+confirmando que o job periódico continuou persistindo novas tentativas.
+
+### Estados históricos
+
+Na validação final foram encontrados no banco:
+
+```text
+no_metrics   13
+success      4695
+unavailable  43
+```
+
+Isso confirma que o histórico preserva estados distintos e não registra toda tentativa como sucesso.
+
+### Testes automatizados do projeto
+
+No fechamento da Sprint 2:
+
+- 156 testes aprovados na suíte comum do backend;
+- 7 testes de integração PostgreSQL aprovados separadamente;
+- 26 testes do frontend aprovados;
+- **189 testes automatizados únicos validados** no projeto.
+
+Os comandos e evidências completas estão em:
+
+[`docs/testes/manualdevalidacao.md`](../docs/testes/manualdevalidacao.md)
+
+---
+
+## 📚 Documentação relacionada
+
+- [`backend/README.md`](../backend/README.md) — backend, variáveis e integrações;
+- [`docs/arquitetura.md`](../docs/arquitetura.md) — fluxo de dados e responsabilidades;
+- [`docs/calculos.md`](../docs/calculos.md) — fórmulas, unidades e premissas ambientais;
+- [`docs/api.md`](../docs/api.md) — endpoints e contratos HTTP;
+- [`docs/sprints/sprint-2.md`](../docs/sprints/sprint-2.md) — planejamento e evidências da Sprint 2;
+- [`docs/testes/manualdevalidacao.md`](../docs/testes/manualdevalidacao.md) — evidências de validação ponta a ponta.
