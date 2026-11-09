@@ -44,44 +44,26 @@ Na tabela de status, **Integrado** indica que a implementação está presente n
 ---
 
 ## 2. Sprint Backlog
+
 | Ordem | ID | Tipo | Item | Requisitos | Rubrica relacionada | Área | Prioridade | SP | Responsável | Apoio / revisão | Dependências | Status | Entrega esperada |
-
 | ---: | --- | --- | --- | --- | --- | --- | :---: | ---: | --- | --- | --- | --- | --- |
-
 | 1 | TEC02 | Técnico | Revisar a estrutura base do banco e criar a entidade de coleta | RF03, RF10, RP03 | BD01, BD03 | Backend / DB | **P0** | **5** | **Vitor** | Gustavo + Patricia | - | ✅ Concluído | Modelo capaz de registrar tentativas de coleta, histórico e estados sem sobrescrever registros anteriores. |
-
 | 2 | TEC29 | Técnico | Completar autenticação JWT e proteção das rotas configuráveis | RP06 | DW06, TP03 | Backend / Frontend | **P0** | **5** | **Marcello** | Vitor | - | ✅ Concluído | Backend validando JWT em recursos protegidos, rejeitando acesso não autenticado e mantendo tratamento seguro de senha e segredo. |
-
 | 3 | US03 | User Story | Coletar métricas de todos os serviços disponíveis | RF03 | DW02, DW03, TP02, TP03 | Backend | **P0** | **5** | **Marcello** | Igor | TEC02 | ✅ Concluído | Consulta real a `/metrics/{id_servico}` para cada serviço identificado, com respostas tipadas e tratamento de falhas. |
-
 | 4 | US04 | User Story | Implementar coleta periódica e tratamento da variação das métricas | RF03, RF04 | DW02, TP02, TP03 | Backend | **P0** | **5** | **Igor** | Marcello | US03 | ✅ Concluído | Novas coletas executadas em intervalo definido, preservando cada amostra e aceitando valores variáveis entre requisições. |
-
 | 5 | TEC17 | Técnico | Consolidar a orquestração automática de descoberta e coleta | RF02, RF03 | DW02, DW03, TP03 | Backend | **P0** | **3** | **Igor** | Vitor | US03, US04 | ✅ Concluído | Processo automático executando descoberta e coleta sem ação manual e sem sobrepor execuções anteriores. |
-
 | 6 | US05 | User Story | Detectar indisponibilidade durante a coleta individual | RF05, RNF04 | DW02, TP03 | Backend / Frontend | **P0** | **3** | **Igor** | Patricia | US03, US04 | ✅ Concluído | Falha ou timeout de um serviço identificado e apresentado sem interromper o monitoramento dos demais. |
-
 | 7 | US06 | User Story | Detectar serviço ativo sem métricas | RF06 | DW02, TP02, TP03 | Backend / Frontend | **P0** | **5** | **Igor** | Patricia + Marcello | US03, US04 | ✅ Concluído | Diferenciação clara entre coleta `unavailable` e serviço presente em `/services` que não exporta métricas. |
-
 | 8 | TEC18 | Técnico | Integrar Carbon Intensity API | RF07 | DW02, TP02, TP03 | Backend | **P1** | **5** | **Gustavo** | Igor | TEC02 | ✅ Concluído | Consulta do fator de intensidade de carbono por região, com tipagem, timeout e tratamento de erro. |
-
 | 9 | US07 | User Story | Calcular impacto ambiental individual dos serviços | RF07 | DW03, TP01, TP02, TP03 | Backend | **P1** | **8** | **Gustavo** | Marcello | US03, TEC18 | ✅ Concluído | Energia e CO₂e calculados a partir das métricas e do fator de carbono; fórmula, unidades e premissas documentadas e testadas. |
-
 | 10 | US11 | User Story | Persistir e consultar histórico de coletas | RF10 | BD02, BD03, DW03 | Backend / DB / Frontend | **P1** | **8** | **Patricia** | Vitor + Marcello | TEC02, US03 | ✅ Concluído | Histórico associado ao serviço, consultável por período e preservado após reinicialização dos containers. |
-
 | 11 | TEC19 | Técnico | Criar endpoint de dados consolidados do dashboard | RF08, RF09 | DW03, BD02 | Backend | **P1** | **5** | **Marcello** | Gustavo | US07, US11 | ✅ Concluído | Endpoint entrega indicadores gerais reais para cards e visualizações, com resposta JSON documentada. |
-
 | 12 | US08 | User Story | Visualizar indicadores gerais | RF08 | DW04, DW05 | Backend / Frontend | **P1** | **5** | **Marcello** | Patricia | TEC19 | ✅ Concluído | Consumo total, emissão total e quantidade de serviços ativos/indisponíveis exibidos com dados reais. |
-
 | 13 | TEC22 | Frontend / UI | Implementar visualizações iniciais do dashboard | RF08, RF09 | DW04, DW05 | Frontend | **P1** | **5** | **Patricia** | Vitor | TEC19 | ✅ Concluído | Cards e componentes reutilizáveis para indicadores, estado e impacto dos serviços. |
-
 | 14 | US09 | User Story | Consolidar dashboard operacional | RF09 | DW04, DW05 | Frontend | **P1** | **5** | **Vitor** | Patricia | US07, US08, TEC22 | ✅ Concluído | Dashboard apresenta status, localização, métricas, energia e CO₂e com leitura clara. |
-
 | 15 | US10 | User Story | Atualizar dashboard automaticamente | RF11, RNF02 | DW05 | Frontend / Backend | **P1** | **3** | **Vitor** | Igor | TEC17, US09 | ✅ Concluído | Atualização sem reload, intervalo definido/documentado e data/hora da última atualização visível. |
-
 | 16 | TEC23 | Frontend / UI | Implementar gráfico inicial de histórico | RF10 | DW04, DW05 | Frontend | **P1** | **5** | **Vitor** | Patricia | US11, US07 | ✅ Concluído | Um gráfico temporal real e legível de energia ou CO₂e de um serviço. |
-
 | 17 | TEC20 | Técnico | Ampliar testes automatizados | Qualidade | TP03, ES07 | Backend / Frontend | **P1** | **5** | **Patricia** | Todos | Durante toda a Sprint | ✅ Concluído | Cobertura de coleta, cálculos, estados, persistência, JWT e endpoints críticos. Cada responsável testa sua própria entrega. |
-
 | 18 | TEC21 | Técnico | Atualizar documentação técnica da Sprint 2 | RNF05 | ES06, ES08 | Geral | **P1** | **3** | **Gustavo** | Vitor + todos | Durante toda a Sprint | 🔄 Em fechamento | README, arquitetura, API, banco, cálculos, plano de entregas e registro da Sprint coerentes com a versão entregue. |
 | 19 | TEC36 | Técnico / UX | Prototipação mobile | RNF01, RF09 | DW04 | Frontend / UX | **P2** | **3** | **Igor + Patricia** | Vitor | Sprint inicial / dashboard existente | ✅ Concluído | Protótipo e direcionamentos de responsividade para o Monitoramento, preservando hierarquia e leitura dos indicadores em telas menores. |
 | 20 | TEC37 | Técnico / UI | Reformular a apresentação dos indicadores do dashboard de Monitoramento | RF08, RF09, RF11, RNF01, RNF02 | DW04, DW05 | Frontend / UX | **P1** | **—** | **Igor + Vitor** | Patricia | US09, US10, TEC22, TEC36 | 🔄 In review | Monitoramento reorganizado em blocos analíticos, com indicadores e visualizações alimentados por dados reais, atualização contínua e tratamento independente de loading/erro. [Issue #140](https://github.com/let-zapplin/GreenER/issues/140). |
