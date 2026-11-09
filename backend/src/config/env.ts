@@ -33,14 +33,13 @@ function optionalPositiveInt(key: string, defaultValue: number): number {
   return value;
 }
 
-// Vazio/ausente desabilita o uso do fator; valor não numérico ou negativo
-// interrompe a inicialização para não aplicar uma janela inválida.
+// Vazio/ausente usa 15 minutos; valor não numérico ou negativo interrompe a inicialização.
 const carbonIntensityMaxAgeValue = process.env.CARBON_INTENSITY_MAX_AGE_MS;
 
 const carbonIntensityMaxAgeMs =
   carbonIntensityMaxAgeValue === undefined ||
   carbonIntensityMaxAgeValue.trim() === ""
-    ? undefined
+    ? 900_000
     : Number(carbonIntensityMaxAgeValue);
 
 if (
