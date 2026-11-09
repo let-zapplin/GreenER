@@ -174,7 +174,12 @@ rodar esta suíte no banco normal; use o ambiente separado.
 
 ## 7. Evidências da task
 
-Registre a data, o commit testado, o comando e o resumo de sete testes aprovados.
-Execute também as suítes comuns do backend e frontend e registre seus resultados.
+**Resultado informado pela equipe em 08/11/2026:** os sete testes de integração
+PostgreSQL foram aprovados usando o ambiente `compose.test.yaml`. O commit
+específico dessa execução não foi informado.
+
+Em futuras execuções, registre a data, o commit testado, o comando e o resumo
+dos testes aprovados. Execute também as suítes comuns do backend e frontend e
+registre seus resultados.
 A verificação manual de preservação após restart continua sendo outra evidência:
 o banco temporário de testes foi projetado para ser descartado ao parar.

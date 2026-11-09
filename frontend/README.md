@@ -71,24 +71,22 @@ frontend/
 
 ## 🧭 Telas
 
-> Esta tabela é atualizada a cada sprint, com as telas que já foram implementadas.
+> Esta tabela descreve as telas presentes na versão integrada.
 
 | Tela | Descrição | Situação |
 | --- | --- | --- |
 | Home, Sobre e Funcionamento | Apresentação do projeto e de seu funcionamento | Implementadas |
-| Monitoramento | Descoberta de serviços, localização e mudanças na lista | Implementada |
-| Análises | Aviso “Coming soon” e acesso ao monitoramento | Página provisória |
-| Dashboard | Apresentação dos dados dos serviços, do consumo de energia e das emissões de CO₂e | ⏳ Planejada |
+| Monitoramento | Serviços, estados de coleta, indicadores ambientais, mapa e detalhes por serviço | Implementada |
+| Análises | Histórico ambiental por serviço, seleção de período e modos de visualização | Implementada |
 | Login | Autenticação pela landing page e acesso às rotas protegidas | Implementada |
-| Configuração | Ajustes do monitoramento, com acesso protegido | ⏳ Planejada |
 
-O monitoramento consulta `/api/servicos` imediatamente ao abrir a tela, com uma sessão autenticada, para obter os serviços armazenados no backend e seus status. A cada 1 segundo, verifica se pode iniciar uma nova consulta; se a anterior ainda estiver em andamento, aguarda o próximo ciclo, sem sobrepor requisições. O timeout de cada consulta no frontend é de 15 segundos, definido em `src/hooks/useMonitoring.ts`.
+O Monitoramento consulta `/api/servicos` e `/api/dashboard` com a sessão autenticada, para obter serviços, estados e indicadores ambientais. As consultas são iniciadas ao abrir a tela e repetidas a cada 60 segundos, reagendando o próximo ciclo após a resposta anterior. O timeout das consultas é de 15 segundos. O resumo exibe totais ambientais, estados de coleta e horários da última atualização bem-sucedida.
 
-A tela informa a última atualização bem-sucedida e sinaliza dados desatualizados quando uma consulta falha. Ao voltar à página, o cabeçalho indica que os dados estão sendo atualizados, sem exibir um aviso de falha. O histórico de serviços permanece disponível durante a navegação na mesma aba; recarregar a aplicação reinicia esse histórico. Uma primeira resposta vazia também conta como consulta bem-sucedida, permitindo detectar como novos os serviços que surgirem depois.
+Quando uma consulta falha, os últimos dados válidos permanecem disponíveis e a interface sinaliza a falha ou desatualização. O histórico de serviços usado para destacar entradas e retornos permanece disponível durante a navegação na mesma aba; recarregar a aplicação reinicia esse histórico. Uma primeira resposta vazia também conta como consulta bem-sucedida, permitindo detectar como novos os serviços que surgirem depois.
 
-Os status exibidos combinam a disponibilidade informada pelo backend com os destaques temporários “Novo” e “Retornou”, definidos pelo frontend. O status “Indisponível” depende do valor enviado pelo backend; a ausência de um serviço na resposta apenas o remove da lista exibida. A coleta de métricas e os indicadores ambientais ainda não estão implementados. Os indicadores têm legenda e acesso por teclado; ao clicar ou ativar um indicador, a página rola até o card correspondente e destaca o serviço. Clicar fora do card ou pressionar Escape remove a seleção.
+Os status exibidos combinam a disponibilidade e o resultado da coleta enviados pelo backend com os destaques temporários “Novo” e “Retornou”, definidos pelo frontend. Serviços ativos sem métricas são diferenciados dos indisponíveis. O mapa e a lista de serviços são interativos: selecionar um serviço destaca sua localização e seus detalhes; a seleção pode ser removida clicando fora do card ou pressionando Escape.
 
-Os cards mostram nome, região, status e localização. As informações de atualização do ambiente ficam recolhidas no cabeçalho e podem ser abertas manualmente; recolher esse painel não interrompe as consultas automáticas.
+O painel de visão geral do ambiente pode ser recolhido sem interromper as consultas automáticas. A página de Análises apresenta histórico ambiental em kWh por serviço, com seleção de períodos de 1h, 6h, 24h ou 7d, estados de carregamento/erro/ausência de dados e visualizações em diferentes layouts. O gráfico permite ampliar um intervalo e restaurar a janela temporal.
 
 Os destaques “Novo” e “Retornou” têm prazo de 3 segundos a partir da detecção, sem renovar esse prazo nas consultas seguintes. Depois desse período, a próxima consulta bem-sucedida que confirmar o serviço como disponível muda seu status para “Ativo”. Se uma consulta retornar o status “Indisponível”, esse status substitui imediatamente o destaque. Se uma consulta posterior informar que o serviço está disponível novamente, ele recebe o destaque “Retornou”, iniciando outro período de 3 segundos.
 
@@ -101,6 +99,7 @@ O frontend se comunica com o [backend](../backend/README.md) por meio de uma URL
 | Variável | Descrição |
 | --- | --- |
 | `VITE_API_URL` | URL pública da API do backend; exemplo: `http://localhost:3000` |
+| `VITE_MAPTILER_API_KEY` | Chave pública opcional para recursos de mapa que dependam de tiles do MapTiler |
 
 
 ---
@@ -125,9 +124,9 @@ npm install
 npm run dev
 ```
 
-Acesse `http://localhost:5173` para a landing page. Após o login, a Home fica em `/home`, e os serviços em `/monitoramento`.
+Acesse `http://localhost:5173` para a landing page. Após o login, a Home fica em `/home`, o Monitoramento em `/monitoramento` e as Análises em `/analises`.
 
-O `AuthProvider` compartilha a sessão pelo `useAuth`. O formulário usa `useAuthForm`, e as consultas autenticadas ficam no `useMonitoring`. As rotas `/home`, `/monitoramento` e `/analises` exigem uma sessão no frontend; a autorização dos endpoints continua sendo responsabilidade do backend.
+O `AuthProvider` compartilha a sessão pelo `useAuth`. O formulário usa `useAuthForm`; as consultas autenticadas usam os hooks de Monitoramento, indicadores e histórico. As rotas `/home`, `/monitoramento` e `/analises` exigem uma sessão no frontend; a autorização dos endpoints continua sendo responsabilidade do backend.
 
 O globo usa `@maptiler/sdk` e cartografia local. Para imagens de satélite, configure `VITE_MAPTILER_API_KEY` no `.env` da raiz e reinicie o frontend.
 
@@ -135,7 +134,7 @@ O globo usa `@maptiler/sdk` e cartografia local. Para imagens de satélite, conf
 | --- | --- |
 | `npm run dev` | Inicia o servidor de desenvolvimento |
 | `npm run typecheck` | Verifica os tipos sem gerar arquivos |
-| `npm test` | Verifica descoberta, mudanças de status e histórico durante a navegação |
+| `npm test` | Verifica sessão, descoberta e mudanças de status e histórico durante a navegação |
 | `npm run build` | Verifica os tipos e gera o build em `dist/` |
 | `npm run preview` | Serve o build localmente para conferência |
 

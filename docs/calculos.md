@@ -2,7 +2,7 @@
 
 ← [Voltar ao índice da documentação](../README.md)
 
-> **Situação:** cálculo de energia e CO₂e disponível no backend, ainda parcial.
+> **Situação:** cálculo de energia e CO₂e implementado no backend; validação das premissas e das unidades de origem ainda pendente.
 > Este documento descreve o comportamento atual de `GET /api/indicadores`, incluindo as premissas provisórias. Os fatores do modelo são os valores do exemplo fornecido pelo cliente; não são medições diretas de potência do hardware.
 
 ---
@@ -108,9 +108,9 @@ O backend usa o campo `carbon_intensity_gco2e_per_kwh`, recebido da Carbon API e
 
 1. pertence à mesma `region_code` do serviço;
 2. foi registrado em ou antes de `attempted_at`;
-3. está dentro da idade máxima configurada em `CARBON_INTENSITY_MAX_AGE_MS`.
+3. está dentro da idade máxima definida por `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão).
 
-Se essa variável não estiver configurada, nenhum snapshot é considerado utilizável pelo cálculo. Não há fallback silencioso para um fator antigo. Se não existir intensidade elegível, o endpoint ainda pode retornar a energia estimada, mas a emissão da amostra fica indisponível e a lacuna é indicada como `carbon_intensity_unavailable`.
+Se não existir intensidade elegível, o endpoint ainda pode retornar a energia estimada, mas a emissão da amostra fica indisponível e a lacuna é indicada como `carbon_intensity_unavailable`. Não há fallback silencioso para um fator mais antigo que o limite.
 
 ### Fórmula
 
@@ -136,7 +136,7 @@ O campo `renewable_share_percent` é armazenado, mas não entra nessa fórmula n
 - CPU fora de 0–100%, valores negativos ou valores ausentes/não finitos invalidam as métricas da amostra.
 - Estados `no_metrics`, `unavailable` e `error` são apresentados como lacunas; não são preenchidos com valores estimados ou simulados.
 - Energia é somada para amostras com métricas válidas. Emissões são somadas apenas quando a amostra também possui intensidade válida.
-- A resposta informa contagem de tentativas, contagens válidas, coberturas, `isPartial` e a lista `gaps`.
+- A resposta informa contagem de tentativas, contagens válidas, coberturas, `isPartial` e a lista `gaps`. `validMetricCount` e `metricCoveragePercent` contam amostras com energia calculável (métricas válidas e duração válida), sobre todas as tentativas; `validCarbonIntensityCount` e `carbonIntensityCoveragePercent` contam emissões calculáveis, sobre as amostras com energia calculável.
 - A cobertura é calculada sobre tentativas registradas no banco. Intervalos sem uma linha de tentativa não são detectados nem incluídos no denominador.
 - `latestSampleInPeriod` representa a tentativa registrada mais recente no período; não representa necessariamente uma amostra válida.
 

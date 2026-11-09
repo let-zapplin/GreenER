@@ -1,6 +1,6 @@
 # Documentação da API — GreenER
 
-> **Referência técnica | Implementação em evolução na Sprint 2**
+> **Referência técnica | Implementação integrada na Sprint 2**
 > Esta documentação separa endpoints **já implementados** de endpoints **planejados**. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução.
 
 ## 01. Visão geral
@@ -30,17 +30,18 @@ flowchart LR
 | `POST` | `/auth/login` | Autenticar usuário e receber token JWT | Autenticação |
 | `GET` | `/auth/me` | Validar token e obter dados do usuário logado (Rota Protegida) | TEC29 |
 | `GET` | `/api/servicos/discover` | Buscar serviços diretamente na API externa | US01 |
-| `POST` | `/api/servicos/sync` | Sincronizar serviços externos com o banco | US02 |
+| `POST` | `/api/servicos/sync` (JWT) | Sincronizar serviços externos com o banco | US02 |
 | `GET` | `/api/servicos` | Listar serviços persistidos no banco | RF01 / RF02 / apoio ao monitoramento |
-| `GET` | `/api/intensidades/discover` | Consultar catálogo regional da Carbon API | Intensidades |
-| `POST` | `/api/intensidades/sync` | Registrar snapshots regionais | Intensidades |
-| `GET` | `/api/intensidades` | Listar snapshots regionais registrados | Intensidades |
-| `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Calcular indicadores ambientais no período | US07 (backend parcial) |
-| `GET` | `/api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>` | Consultar histórico ambiental calculado de um serviço | TEC23 / RF10 |
-| `GET` | `/api/dashboard` | Obter indicadores consolidados para o dashboard | TEC19 |
+| `GET` | `/api/intensidades/discover` (JWT) | Consultar catálogo regional da Carbon API | Intensidades |
+| `POST` | `/api/intensidades/sync` (JWT) | Registrar snapshots regionais | Intensidades |
+| `GET` | `/api/intensidades` (JWT) | Listar snapshots regionais registrados | Intensidades |
+| `POST` | `/api/metricas/collect` (JWT + administrador) | Disparar coleta manual de métricas | US03 |
+| `GET` | `/api/metricas/historico/:serviceId` (JWT) | Consultar histórico bruto de coletas de um serviço | US11 |
+| `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` (JWT) | Calcular indicadores ambientais no período | US07 |
+| `GET` | `/api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>` (JWT) | Consultar histórico ambiental calculado de um serviço | TEC23 / RF10 |
+| `GET` | `/api/dashboard` (JWT) | Obter indicadores consolidados para o dashboard | TEC19 |
 
-**Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
-O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me` e todas as rotas de intensidades. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
+**Situação de acesso:** as rotas protegidas usam middleware de autenticação JWT. Envie o token recebido no login no cabeçalho `Authorization: Bearer SEU_TOKEN_JWT`.
 
 ---
 
@@ -162,9 +163,7 @@ curl -X POST http://localhost:3000/auth/login \
   -d '{"email":"exemplo@dominio.com","password":"senha-de-exemplo"}'
 ```
 
-**Ponto de atenção conhecido:** a função `UserRepository.findUser()` não verifica se `result.rows[0]` é `undefined` antes de acessar suas propriedades. Portanto, na versão analisada, um e-mail inexistente pode produzir um erro diferente de `Credenciais inválidas`, embora o controller ainda retorne HTTP `401` com uma mensagem de erro. Esse caso precisa de correção e teste.
-
-**Sobre JWT:** o token é assinado com `JWT_SECRET`, com expiração controlada por `JWT_EXPIRES_IN`. O projeto contém utilitário para verificar JWT, mas **não aplica** essa verificação às rotas registradas em `app.ts` na versão analisada.
+**Sobre JWT:** o token é assinado com `JWT_SECRET`, com expiração controlada por `JWT_EXPIRES_IN`. O middleware valida o token nas rotas protegidas e rejeita tokens ausentes, inválidos, expirados ou vinculados a usuário inexistente. A coleta manual também exige autorização administrativa.
 
 ---
 
@@ -261,7 +260,7 @@ flowchart TD
   G --> H[Retornar created, updated, removed]
 ```
 
-> **Execução automática:** além dos endpoints manuais, `server.ts` inicia dois jobs independentes quando o backend sobe: `startServiceSync()` (sincronização do catálogo, a cada `SERVICE_SYNC_INTERVAL_MS`) e `startMetricsCollection()` (coleta de métricas, a cada `COLLECTION_INTERVAL_MS`). Cada ciclo só é reagendado depois que o anterior termina. Detalhes na seção 05.
+> **Execução automática:** além dos endpoints manuais, `server.ts` inicia três jobs independentes quando o backend sobe: `startServiceSync()` (sincronização do catálogo), `startMetricsCollection()` (coleta de métricas) e `startCarbonIntensitySync()` (sincronização de intensidades). Cada ciclo só é reagendado depois que o anterior termina. Intervalos e detalhes estão na seção 05.
 
 ### `GET /api/servicos` — listagem persistida
 
@@ -313,7 +312,7 @@ curl http://localhost:3000/api/servicos
 
 ### Intensidades de carbono
 
-As três rotas exigem `Authorization: Bearer <token>`. A descoberta consulta `GET {CARBON_API_URL}/regions`, valida o envelope `{ regions, total }` e converte os campos externos para o modelo interno. A API externa não fornece histórico nem vigência; `registered_at` registra quando o backend observou os valores.
+As três rotas exigem JWT (`Authorization: Bearer SEU_TOKEN_JWT`). A descoberta consulta `GET {CARBON_API_URL}/regions`, valida o envelope `{ regions, total }` e converte os campos externos para o modelo interno. A API externa não fornece histórico nem vigência; `registered_at` registra quando o backend observou os valores.
 
 #### `GET /api/intensidades/discover`
 
@@ -334,7 +333,7 @@ Insere um snapshot por região em cada sincronização, sem substituir registros
 
 Lista os snapshots persistidos, incluindo `region_code` e `registered_at`. Os fatores são associados ao código regional e não a uma cidade arbitrária.
 
-`CARBON_INTENSITY_MAX_AGE_MS` configura a idade máxima em milissegundos para a seleção temporal usada pelos cálculos. A variável não tem valor padrão definido: sem configuração, a busca de fator utilizável retorna ausência, em vez de selecionar silenciosamente um snapshot antigo.
+`CARBON_INTENSITY_MAX_AGE_MS` configura a idade máxima em milissegundos para a seleção temporal usada pelos cálculos. O padrão do backend é `900000` ms (15 minutos). Se não existir snapshot elegível dentro desse limite, a emissão fica indisponível; não há fallback para um fator mais antigo.
 
 Falhas HTTP, conexão, timeout ou formato inválido da Carbon API resultam em `502 Bad Gateway`. Rotas chamadas sem JWT válido resultam em `401 Unauthorized`.
 
@@ -357,7 +356,7 @@ Quando ambos são omitidos, o período corresponde às últimas 24 horas, usando
 
 ```bash
 curl "http://localhost:3000/api/dashboard" \
-  -H "Authorization: Bearer <token>"
+  -H "Authorization: Bearer SEU_TOKEN_JWT"
 ```
 
 **Resposta `200 OK`:**
@@ -398,7 +397,7 @@ A soma dessas três contagens corresponde ao total de serviços atualmente ativo
 
 Parâmetros inválidos, repetidos, enviados sem o par correspondente ou com `end` não posterior a `start` retornam `400 Bad Request` com `code: "INVALID_DASHBOARD_PERIOD"`. A ausência de JWT válido retorna `401 Unauthorized`; falhas inesperadas, inclusive de acesso ao banco, seguem o middleware global de erros.
 
-### Indicadores ambientais — US07 (backend parcial)
+### Indicadores ambientais — US07
 
 #### `GET /api/indicadores`
 
@@ -417,10 +416,10 @@ O intervalo consultado é semiaberto: inclui tentativas com `attempted_at >= sta
 
 ```bash
 curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2026-10-02T00:00:00.000Z" \
-  -H "Authorization: Bearer <token>"
+  -H "Authorization: Bearer SEU_TOKEN_JWT"
 ```
 
-**Resposta `200 OK` (estrutura resumida):**
+**Resposta `200 OK`:**
 
 ```json
 {
@@ -512,10 +511,10 @@ O período consultado é definido pelo frontend conforme o intervalo selecionado
 
 ```bash
 curl "http://localhost:3000/api/indicadores/7/historico?start=2026-11-04T00:00:00.000Z&end=2026-11-05T00:00:00.000Z" \
-  -H "Authorization: Bearer <token>"
+  -H "Authorization: Bearer SEU_TOKEN_JWT"
 ```
 
-**Resposta `200 OK` — estrutura resumida:**
+**Resposta `200 OK`:**
 
 ```json
 {
@@ -636,7 +635,7 @@ Para registrar uma amostra como válida, a resposta da Metrics API deve conter `
 
 ```bash
 curl -X POST http://localhost:3000/api/metricas/collect \
-  -H "Authorization: Bearer <token-de-administrador>"
+  -H "Authorization: Bearer SEU_TOKEN_JWT"
 ```
 
 **Estados persistidos:** `success` (coleta + métricas), `no_metrics` (serviço disponível sem métricas), `unavailable` (não foi possível consultar o serviço: timeout, conexão recusada ou HTTP 500 do agregador) e `error` (resposta inválida, outro erro HTTP inesperado ou falha no processamento). Cada execução insere novos registros; amostras anteriores não são atualizadas nem removidas, mesmo quando os valores variam entre coletas.
@@ -646,6 +645,7 @@ curl -X POST http://localhost:3000/api/metricas/collect \
 **Sinalização de indisponibilidade:** o estado `unavailable` fica registrado em `collection.failure_reason` e é exposto ao frontend em `GET /api/servicos` pelo campo `last_collection_status`. A tela de monitoramento exibe o serviço como `Indisponível`, com contador próprio na visão geral, e volta ao normal quando uma coleta seguinte obtém sucesso.
 
 **Sinalização de ausência de métricas:** o estado `no_metrics` também é exposto em `last_collection_status`, mas não remove o serviço nem altera `service.status`. A tela de monitoramento exibe o serviço como `Sem métricas`, com contador próprio e destaque distinto de `Indisponível`, e o cartão informa que o serviço continua ativo no catálogo e o horário da última tentativa de coleta.
+
 
 ### Jobs automáticos
 
@@ -678,7 +678,9 @@ Quando uma coleta automática coincide com uma coleta manual em andamento, o cic
 | `COLLECTION_INTERVAL_MS` | `60000` | Intervalo entre ciclos de coleta de métricas |
 | `SERVICE_SYNC_INTERVAL_MS` | `300000` | Intervalo da sincronização do catálogo de serviços |
 | `CARBON_INTENSITY_SYNC_INTERVAL_MS` | `300000` | Intervalo da sincronização dos snapshots de intensidade de carbono |
-| `EXTERNAL_API_TIMEOUT_MS` | `10000` | Timeout de cada requisição às APIs externas |
+| `EXTERNAL_API_TIMEOUT_MS` | `5000` | Fallback do backend para o timeout de cada requisição às APIs externas |
+
+> O `.env.example` e o `compose.yaml` configuram `EXTERNAL_API_TIMEOUT_MS=10000`; esse valor configurado prevalece sobre o fallback de `5000` ms do código.
 
 Os intervalos devem ser inteiros positivos; valores inválidos interrompem a inicialização do backend com mensagem explícita.
 
@@ -733,7 +735,7 @@ Os endpoints de serviços e intensidades encaminham exceções ao middleware glo
 
    ```bash
    curl -X POST http://localhost:3000/api/metricas/collect \
-     -H "Authorization: Bearer <token-de-administrador>"
+     -H "Authorization: Bearer SEU_TOKEN_JWT"
    ```
 
    A descoberta e a coleta automáticas também rodam ao iniciar o backend, nos intervalos configurados; os logs do container mostram cada ciclo numerado.
@@ -755,27 +757,27 @@ Os recursos abaixo continuam no planejamento e **ainda não possuem endpoints in
 
 - ranking e comparações entre serviços.
 
-O endpoint de indicadores descrito nesta documentação já calcula energia e CO₂e no backend. Isso não significa que o dashboard/frontend esteja integrado ou que todos os indicadores previstos estejam concluídos.
+Ranking e comparação entre serviços permanecem planejados para a Sprint 3, sem endpoints internos nesta versão.
 
-## 09. Integrações e funcionalidades futuras
+## 09. Integrações e funcionalidades atuais
 
 A Metrics API externa fornece a rota `/services`, utilizada na descoberta e sincronização, e a rota `/metrics/{id_servico}`, consumida pela coleta manual (restrita a administradores) e pelo job periódico. 
 
-| Recurso | Situação na versão analisada |
+| Recurso | Situação na versão integrada da Sprint 2 |
 |---|---|
 | Descoberta e sincronização de serviços | Implementadas |
-| Cadastro e login com emissão de JWT | Implementados, com ressalvas descritas acima |
-| Proteção de endpoints por JWT | Aplicada seletivamente; coleta manual restrita a administradores |
-| Coleta de métricas | Implementada (manual com administrador e automática); histórico planejado |
-| Cálculo de consumo energético e CO₂e | Implementado parcialmente em `/api/indicadores`; intervalo por amostra ainda provisório |
+| Cadastro e login com emissão de JWT | Implementados; rotas protegidas exigem JWT no esquema Bearer |
+| Proteção de endpoints por JWT | Aplicada seletivamente conforme a tabela de endpoints; coleta manual também exige perfil administrador |
+| Coleta de métricas | Implementada com execução manual e automática; histórico bruto disponível |
+| Cálculo de consumo energético e CO₂e | Implementado sob demanda usando duração real por amostra e intensidade regional elegível |
 | Descoberta e snapshots da Carbon Intensity API | Implementados nas rotas de intensidades |
-| Endpoint de indicadores por período | Implementado no backend; integração com frontend e validação de ponta a ponta pendentes |
-| Endpoint consolidado do dashboard | Implementado em `/api/dashboard`; integração com frontend pendente |
+| Endpoint de indicadores por período | Implementado e integrado ao frontend; lacunas são sinalizadas na resposta |
+| Endpoint consolidado do dashboard | Implementado em `/api/dashboard` e integrado ao Monitoramento |
 | Ranking e comparações | Planejados |
 
 O módulo de indicadores consulta dados persistidos; não busca métricas ou intensidades diretamente nas APIs externas durante a requisição. As lacunas de coleta e de intensidade são representadas na resposta, sem imputação de valores.
 
-**Importante:** nomes e caminhos de endpoints futuros somente devem entrar na tabela oficial quando forem definidos pela equipe e registrados no código. Isso evita que o frontend dependa de rotas ainda inexistentes.
+**Importante:** nomes e caminhos de endpoints futuros somente devem entrar na tabela quando forem definidos pela equipe e registrados no código.
 ---
 
 ## 10. Onde encontrar os endpoints no projeto
@@ -790,6 +792,11 @@ backend/src/
 │   │   ├── auth.controller.ts     # Entrada e saída HTTP
 │   │   ├── auth.service.ts        # Regras de autenticação
 │   │   └── auth.repository.ts     # Consultas SQL de usuários
+│   ├── coletas/
+│   │   ├── coletas.routes.ts     # POST /collect e GET /historico/:serviceId
+│   │   ├── coletas.controller.ts
+│   │   ├── coletas.service.ts
+│   │   └── coletas.repository.ts
 │   ├── servicos/
 │   │   ├── servicos.routes.ts     # GET /discover, POST /sync, GET /
 │   │   ├── servicos.controller.ts # Entrada e saída HTTP
@@ -814,7 +821,8 @@ backend/src/
 │   └── carbon-api.ts              # Consulta e validação da Carbon API
 ├── jobs/
 │   ├── service-sync.job.ts        # Sincronização periódica do catálogo
-│   └── metrics-collection.job.ts  # Coleta periódica de métricas
+│   ├── metrics-collection.job.ts  # Coleta periódica de métricas
+│   └── carbon-intensity-sync.job.ts # Sincronização de intensidades
 └── shared/
     ├── middlewares/error.middleware.ts
     └── errors/AppError.ts
@@ -835,4 +843,4 @@ Sempre que um endpoint for criado ou alterado, atualizar:
 - Exemplo de teste;
 - Estado de implementação e vínculo com a user story correspondente.
 
-**Código-fonte de referência:** snapshot do repositório enviado para revisão em 18/10/2026. A versão publicada na branch `develop` deve ser conferida novamente antes de considerar este documento um contrato definitivo.
+**Código-fonte de referência:** versão integrada na Sprint 2. Confirme a implementação na branch de entrega antes de tratar este documento como contrato definitivo.

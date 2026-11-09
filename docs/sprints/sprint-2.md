@@ -39,30 +39,32 @@ Uma tarefa só entra em **In progress** quando o responsável iniciar efetivamen
 
 A tarefa entra em **In review** quando possuir Pull Request aberto e passa para **Done** somente após atender à Definition of Done da Sprint.
 
+Na tabela de status, **Integrado** indica que a implementação está presente na `develop`; **Concluído** indica que os critérios da Definition of Done também foram confirmados. A documentação desta Sprint foi atualizada para revisão final.
+
 ---
 
 ## 2. Sprint Backlog
 
 | Ordem | ID | Tipo | Item | Requisitos | Rubrica relacionada | Área | Prioridade | SP | Responsável | Apoio / revisão | Dependências | Status | Entrega esperada |
 | ---: | --- | --- | --- | --- | --- | --- | :---: | ---: | --- | --- | --- | --- | --- |
-| 1 | TEC02 | Técnico | Revisar a estrutura base do banco e criar a entidade de coleta | RF03, RF10, RP03 | BD01, BD03 | Backend / DB | **P0** | **5** | **Vitor** | Gustavo + Patricia | - | 🔵 Em revisão | Modelo capaz de registrar tentativas de coleta, histórico e estados sem sobrescrever registros anteriores. |
-| 2 | TEC29 | Técnico | Completar autenticação JWT e proteção das rotas configuráveis | RP06 | DW06, TP03 | Backend / Frontend | **P0** | **3** | **Marcello** | Vitor | - | ⬜ A fazer | Backend validando JWT em recursos protegidos, rejeitando acesso não autenticado e mantendo tratamento seguro de senha e segredo. |
-| 3 | US03 | User Story | Coletar métricas de todos os serviços disponíveis | RF03 | DW02, DW03, TP02, TP03 | Backend | **P0** | **5** | **Marcello** | Igor | TEC02 | ⬜ A fazer | Consulta real a `/metrics/{id_servico}` para cada serviço identificado, com respostas tipadas e tratamento de falhas. |
-| 4 | US04 | User Story | Implementar coleta periódica e tratamento da variação das métricas | RF03, RF04 | DW02, TP02, TP03 | Backend | **P0** | **5** | **Igor** | Marcello | US03 | ⬜ A fazer | Novas coletas executadas em intervalo definido, preservando cada amostra e aceitando valores variáveis entre requisições. |
-| 5 | TEC17 | Técnico | Consolidar a orquestração automática de descoberta e coleta | RF02, RF03 | DW02, DW03, TP03 | Backend | **P0** | **3** | **Igor** | Vitor | US03, US04 | ⬜ A fazer | Processo automático executando descoberta e coleta sem ação manual e sem sobrepor execuções anteriores. |
-| 6 | US05 | User Story | Detectar indisponibilidade durante a coleta individual | RF05, RNF04 | DW02, TP03 | Backend / Frontend | **P0** | **3** | **Igor** | Patricia | US03, US04 | ⬜ A fazer | Falha ou timeout de um serviço identificado e apresentado sem interromper o monitoramento dos demais. |
-| 7 | US06 | User Story | Detectar serviço ativo sem métricas | RF06 | DW02, TP02, TP03 | Backend / Frontend | **P0** | **5** | **Igor** | Patricia + Marcello | US03, US04 | 🔵 Em revisão | Diferenciação clara entre coleta `unavailable` e serviço presente em `/services` que não exporta métricas. |
-| 8 | TEC18 | Técnico | Integrar Carbon Intensity API | RF07 | DW02, TP02, TP03 | Backend | **P1** | **5** | **Gustavo** | Igor | TEC02 | ⬜ A fazer | Consulta do fator de intensidade de carbono por região, com tipagem, timeout e tratamento de erro. |
-| 9 | US07 | User Story | Calcular impacto ambiental individual dos serviços | RF07 | DW03, TP01, TP02, TP03 | Backend | **P1** | **8** | **Gustavo** | Marcello | US03, TEC18 | ⬜ A fazer | Energia e CO₂e calculados a partir das métricas e do fator de carbono; fórmula, unidades e premissas documentadas e testadas. |
-| 10 | US11 | User Story | Persistir e consultar histórico de coletas | RF10 | BD02, BD03, DW03 | Backend / DB / Frontend | **P1** | **5** | **Patricia** | Vitor + Marcello | TEC02, US03 | ⬜ A fazer | Histórico associado ao serviço, consultável por período e preservado após reinicialização dos containers. |
-| 11 | TEC19 | Técnico | Criar endpoint de dados consolidados do dashboard | RF08, RF09 | DW03, BD02 | Backend | **P1** | **5** | **Marcello** | Gustavo | US07, US11 | ⬜ A fazer | Endpoint entrega indicadores gerais reais para cards e visualizações, com resposta JSON documentada. |
-| 12 | US08 | User Story | Visualizar indicadores gerais | RF08 | DW04, DW05 | Backend / Frontend | **P1** | **3** | **Marcello** | Patricia | TEC19 | ⬜ A fazer | Consumo total, emissão total e quantidade de serviços ativos/indisponíveis exibidos com dados reais. |
-| 13 | TEC22 | Frontend / UI | Implementar visualizações iniciais do dashboard | RF08, RF09 | DW04, DW05 | Frontend | **P1** | **5** | **Patricia** | Vitor | TEC19 | ⬜ A fazer | Cards e componentes reutilizáveis para indicadores, estado e impacto dos serviços. |
-| 14 | US09 | User Story | Consolidar dashboard operacional | RF09 | DW04, DW05 | Frontend | **P1** | **3** | **Vitor** | Patricia | US07, US08, TEC22 | ⬜ A fazer | Dashboard apresenta status, localização, métricas, energia e CO₂e com leitura clara. |
-| 15 | US10 | User Story | Atualizar dashboard automaticamente | RF11, RNF02 | DW05 | Frontend / Backend | **P1** | **3** | **Vitor** | Igor | TEC17, US09 | ⬜ A fazer | Atualização sem reload, intervalo definido/documentado e data/hora da última atualização visível. |
-| 16 | TEC23 | Frontend / UI | Implementar gráfico inicial de histórico | RF10 | DW04, DW05 | Frontend | **P1** | **3** | **Vitor** | Patricia | US11, US07 | 🔵 Em revisão | Um gráfico temporal real e legível de energia ou CO₂e de um serviço. |
-| 17 | TEC20 | Técnico | Ampliar testes automatizados | Qualidade | TP03, ES07 | Backend / Frontend | **P1** | **5** | **Patricia** | Todos | Durante toda a Sprint | ⬜ A fazer | Cobertura de coleta, cálculos, estados, persistência, JWT e endpoints críticos. Cada responsável testa sua própria entrega. |
-| 18 | TEC21 | Técnico | Atualizar documentação técnica da Sprint 2 | RNF05 | ES06, ES08 | Geral | **P1** | **3** | **Gustavo** | Vitor + todos | Durante toda a Sprint | ⬜ A fazer | README, arquitetura, API, banco, cálculos, plano de entregas e registro da Sprint coerentes com a versão entregue. |
+| 1 | TEC02 | Técnico | Revisar a estrutura base do banco e criar a entidade de coleta | RF03, RF10, RP03 | BD01, BD03 | Backend / DB | **P0** | **5** | **Vitor** | Gustavo + Patricia | - | ✅ Concluído | Modelo capaz de registrar tentativas de coleta, histórico e estados sem sobrescrever registros anteriores. |
+| 2 | TEC29 | Técnico | Completar autenticação JWT e proteção das rotas configuráveis | RP06 | DW06, TP03 | Backend / Frontend | **P0** | **3** | **Marcello** | Vitor | - | ✅ Concluído | Backend validando JWT em recursos protegidos, rejeitando acesso não autenticado e mantendo tratamento seguro de senha e segredo. |
+| 3 | US03 | User Story | Coletar métricas de todos os serviços disponíveis | RF03 | DW02, DW03, TP02, TP03 | Backend | **P0** | **5** | **Marcello** | Igor | TEC02 | ✅ Concluído | Consulta real a `/metrics/{id_servico}` para cada serviço identificado, com respostas tipadas e tratamento de falhas. |
+| 4 | US04 | User Story | Implementar coleta periódica e tratamento da variação das métricas | RF03, RF04 | DW02, TP02, TP03 | Backend | **P0** | **5** | **Igor** | Marcello | US03 | ✅ Concluído | Novas coletas executadas em intervalo definido, preservando cada amostra e aceitando valores variáveis entre requisições. |
+| 5 | TEC17 | Técnico | Consolidar a orquestração automática de descoberta e coleta | RF02, RF03 | DW02, DW03, TP03 | Backend | **P0** | **3** | **Igor** | Vitor | US03, US04 | ✅ Concluído | Processo automático executando descoberta e coleta sem ação manual e sem sobrepor execuções anteriores. |
+| 6 | US05 | User Story | Detectar indisponibilidade durante a coleta individual | RF05, RNF04 | DW02, TP03 | Backend / Frontend | **P0** | **3** | **Igor** | Patricia | US03, US04 | ✅ Concluído | Falha ou timeout de um serviço identificado e apresentado sem interromper o monitoramento dos demais. |
+| 7 | US06 | User Story | Detectar serviço ativo sem métricas | RF06 | DW02, TP02, TP03 | Backend / Frontend | **P0** | **5** | **Igor** | Patricia + Marcello | US03, US04 | ✅ Concluído | Diferenciação clara entre coleta `unavailable` e serviço presente em `/services` que não exporta métricas. |
+| 8 | TEC18 | Técnico | Integrar Carbon Intensity API | RF07 | DW02, TP02, TP03 | Backend | **P1** | **5** | **Gustavo** | Igor | TEC02 | ✅ Concluído | Consulta do fator de intensidade de carbono por região, com tipagem, timeout e tratamento de erro. |
+| 9 | US07 | User Story | Calcular impacto ambiental individual dos serviços | RF07 | DW03, TP01, TP02, TP03 | Backend | **P1** | **8** | **Gustavo** | Marcello | US03, TEC18 | ✅ Concluído | Energia e CO₂e calculados a partir das métricas e do fator de carbono; fórmula, unidades e premissas documentadas e testadas. |
+| 10 | US11 | User Story | Persistir e consultar histórico de coletas | RF10 | BD02, BD03, DW03 | Backend / DB / Frontend | **P1** | **5** | **Patricia** | Vitor + Marcello | TEC02, US03 | ✅ Concluído | Histórico associado ao serviço, consultável por período e preservado após reinicialização dos containers. |
+| 11 | TEC19 | Técnico | Criar endpoint de dados consolidados do dashboard | RF08, RF09 | DW03, BD02 | Backend | **P1** | **5** | **Marcello** | Gustavo | US07, US11 | ✅ Concluído | Endpoint entrega indicadores gerais reais para cards e visualizações, com resposta JSON documentada. |
+| 12 | US08 | User Story | Visualizar indicadores gerais | RF08 | DW04, DW05 | Backend / Frontend | **P1** | **3** | **Marcello** | Patricia | TEC19 | ✅ Concluído | Consumo total, emissão total e quantidade de serviços ativos/indisponíveis exibidos com dados reais. |
+| 13 | TEC22 | Frontend / UI | Implementar visualizações iniciais do dashboard | RF08, RF09 | DW04, DW05 | Frontend | **P1** | **5** | **Patricia** | Vitor | TEC19 | ✅ Concluído | Cards e componentes reutilizáveis para indicadores, estado e impacto dos serviços. |
+| 14 | US09 | User Story | Consolidar dashboard operacional | RF09 | DW04, DW05 | Frontend | **P1** | **3** | **Vitor** | Patricia | US07, US08, TEC22 | ✅ Concluído | Dashboard apresenta status, localização, métricas, energia e CO₂e com leitura clara. |
+| 15 | US10 | User Story | Atualizar dashboard automaticamente | RF11, RNF02 | DW05 | Frontend / Backend | **P1** | **3** | **Vitor** | Igor | TEC17, US09 | ✅ Concluído | Atualização sem reload, intervalo definido/documentado e data/hora da última atualização visível. |
+| 16 | TEC23 | Frontend / UI | Implementar gráfico inicial de histórico | RF10 | DW04, DW05 | Frontend | **P1** | **3** | **Vitor** | Patricia | US11, US07 | ✅ Concluído | Um gráfico temporal real e legível de energia ou CO₂e de um serviço. |
+| 17 | TEC20 | Técnico | Ampliar testes automatizados | Qualidade | TP03, ES07 | Backend / Frontend | **P1** | **5** | **Patricia** | Todos | Durante toda a Sprint | ✅ Concluído | Cobertura de coleta, cálculos, estados, persistência, JWT e endpoints críticos. Cada responsável testa sua própria entrega. |
+| 18 | TEC21 | Técnico | Atualizar documentação técnica da Sprint 2 | RNF05 | ES06, ES08 | Geral | **P1** | **3** | **Gustavo** | Vitor + todos | Durante toda a Sprint | ✅ Concluído | README, arquitetura, API, banco, cálculos, plano de entregas e registro da Sprint coerentes com a versão entregue. |
 
 **Total planejado:** 77 SP
 
@@ -123,22 +125,24 @@ A carga principal foi mantida em uma faixa estreita, tomando a Sprint 1 como ref
 
 Uma tarefa só pode ser movida para **Done** quando:
 
-- [ ] critérios de aceite estiverem atendidos;
-- [ ] código estiver integrado à `develop`;
-- [ ] build/execução via Docker estiver funcionando;
-- [ ] testes relacionados estiverem passando;
-- [ ] cenários de erro relevantes estiverem tratados;
-- [ ] não houver `any` sem justificativa;
-- [ ] SQL variável estiver parametrizado, quando aplicável;
-- [ ] documentação relacionada estiver atualizada;
-- [ ] PR contiver descrição, requisito relacionado e evidência de validação;
-- [ ] pelo menos outro integrante tiver revisado a entrega.
+- [x] critérios de aceite estiverem atendidos;
+- [x] código estiver integrado à `develop`;
+- [x] build/execução via Docker estiver funcionando (execução confirmada pela equipe);
+- [x] testes relacionados estiverem passando;
+- [x] cenários de erro relevantes estiverem tratados;
+- [x] não houver `any` sem justificativa;
+- [x] SQL variável estiver parametrizado, quando aplicável;
+- [x] documentação relacionada estiver atualizada;
+- [x] PR contiver descrição, requisito relacionado e evidência de validação;
+- [x] pelo menos outro integrante tiver revisado a entrega.
+
+> O grupo confirmou o aceite da DoD em 08/11/2026. A confirmação inclui a execução via Docker, as suítes automatizadas, os cenários de erro, a revisão dos PRs e o aceite dos critérios de cada entrega.
 
 ---
 
 ## 6. Critério de sucesso da Sprint
 
-Ao final da Sprint 2, deve ser possível demonstrar o seguinte fluxo ponta a ponta:
+O incremento integrado da Sprint 2 cobre o seguinte fluxo:
 
 ```text
 serviço descoberto
@@ -153,18 +157,18 @@ energia/CO₂e calculados
     ↓
 histórico consultável
     ↓
-indicadores e gráfico exibidos no dashboard
+indicadores exibidos no Monitoramento e histórico visual disponível em Análises
 ```
 
-A entrega não deve depender de dados simulados no frontend para os indicadores principais.
+O fluxo usa dados persistidos, sem depender de dados simulados no frontend para os indicadores principais. O grupo confirmou o critério de sucesso e a Definition of Done em 08/11/2026.
 
 ---
 
 ## 7. Decisões e evidências da Sprint
 
-Esta seção registra decisões técnicas e evidências conforme as tarefas avançam.
+Esta seção registra decisões técnicas e evidências da implementação integrada. As contagens de testes nos registros individuais são fotografias do momento em que cada alteração foi validada; o resultado mais recente desta Sprint está consolidado ao final da seção.
 
-Uma implementação registrada nesta seção **não significa automaticamente que a task está Done**. O status final continua condicionado à Definition of Done, integração em `develop`, PR e revisão.
+O status **Integrado** indica que a implementação está presente na `develop`; as tarefas que atenderam à DoD foram atualizadas para **Concluído** após a confirmação do grupo.
 
 ### TEC02 — Revisão do banco e entidade de coleta
 
@@ -305,9 +309,9 @@ collection
 metrics
 ```
 
-A integração real com `/metrics/{id_servico}` e a criação automática desses registros serão implementadas pelas tarefas seguintes da Sprint.
+As tarefas US03 e US04 passaram a consultar `/metrics/{id_servico}` e criar esses registros nos ciclos de coleta; os detalhes estão nas seções correspondentes e nos testes da suíte.
 
-A TEC02 permanece **em andamento** até a conclusão do fluxo de PR, revisão e integração em `develop`.
+O código da TEC02 está integrado à `develop`, e o grupo confirmou o atendimento de seus critérios de aceite e da Definition of Done.
 
 ### US04 — Coleta periódica e variação das métricas
 
@@ -332,7 +336,7 @@ A coleta passou a ser executada automaticamente, sem depender da rota manual cri
 - teste do job executando imediatamente, repetindo no intervalo e continuando após falha;
 - suíte do backend com **32 testes aprovados em 32** (6 novos) e `npm run typecheck` sem erros.
 
-A US04 permanece **em andamento** até a conclusão do fluxo de PR, revisão e integração em `develop`.
+O código da US04 está integrado à `develop`, e o grupo confirmou o atendimento de seus critérios de aceite e da Definition of Done.
 
 ### US06 — Serviço ativo sem métricas
 
@@ -354,7 +358,7 @@ Um serviço que continua presente em `/services` mas deixa de exportar métricas
 - teste do mapeamento de `last_collection_status` para o estado da interface;
 - suíte do backend com **73 testes aprovados em 73** e suíte do frontend com **26 testes aprovados em 26**, ambas com typecheck sem erros (29/10/2026).
 
-A US06 permanece em revisão até a validação do fluxo completo com a API real e a conclusão do fluxo de PR.
+O código da US06 está integrado à `develop`, e o grupo confirmou o atendimento de seus critérios de aceite e da Definition of Done. A classificação e a apresentação de `no_metrics` possuem cobertura automatizada; essa evidência não equivale a uma validação independente contra a API real.
 
 ### TEC23 — Gráfico inicial de histórico ambiental
 
@@ -393,7 +397,7 @@ A interface diferencia:
 - build do frontend executado com sucesso após a integração;
 - validação manual da troca de serviços, períodos, tooltip, lacunas e navegação por zoom.
 
-A TEC23 encontra-se **em revisão**, aguardando aprovação e integração da Pull Request na `develop`.
+O código da TEC23 está integrado à `develop`. A validação manual descrita acima é evidência registrada durante a implementação; o grupo confirmou o aceite final e a Definition of Done.
 
 ### US10 — Atualização automática do dashboard
 
@@ -424,3 +428,18 @@ bem-sucedida dos indicadores e dos serviços.
 - ausência de acúmulo de requisições;
 - backend interrompido propositalmente sem derrubar a interface;
 - recuperação automática após retorno do backend.
+
+O código da US10 está integrado à `develop`, e o grupo confirmou o atendimento de seus critérios de aceite e da Definition of Done.
+
+### Verificação automatizada nesta revisão documental — 08/11/2026
+
+As suítes automatizadas executadas nesta revisão apresentaram:
+
+- **Backend:** 156 testes aprovados e 7 ignorados, distribuídos em 26 arquivos aprovados e 1 ignorado.
+- **Frontend:** 26 testes aprovados.
+- **Integração PostgreSQL:** 7 testes aprovados pelo grupo com `compose.test.yaml`.
+- **Typecheck do backend:** concluído sem erros.
+- **Typecheck do frontend:** concluído sem erros.
+- **Build de produção do frontend:** concluído com sucesso; o Vite emitiu apenas um aviso de chunks maiores que 500 kB.
+
+Esses resultados registram as verificações desta revisão; o grupo também confirmou a revisão dos PRs, o tratamento dos cenários de erro e o aceite dos critérios da Sprint. A execução via Docker e os sete testes de integração PostgreSQL foram confirmados pela equipe.

@@ -24,7 +24,7 @@ flowchart LR
 | Sprint | Período | Objetivo | Marco de entrega | Situação documental |
 |---|---|---|---|---|
 | [**1 — Fundação**](sprints/sprint-1.md) | 28/09–19/10/2026 | Disponibilizar o ambiente e o primeiro fluxo ponta a ponta | Serviços descobertos, persistidos e exibidos no React | Registro da sprint aponta tarefas concluídas; consultar evidências |
-| [**2 — Indicadores**](sprints/sprint-2.md) | 20/10–09/11/2026 | Capturar métricas e estimar energia e CO₂e | Dashboard operacional com dados históricos | Planejada |
+| [**2 — Indicadores**](sprints/sprint-2.md) | 20/10–09/11/2026 | Capturar métricas e estimar energia e CO₂e | Coleta periódica e histórica, indicadores no Monitoramento e histórico visual em Análises | Concluída; aceite da DoD confirmado pelo grupo em 08/11/2026 |
 | [**3 — Análises**](sprints/sprint-3.md) | 10/11–23/11/2026 | Comparar serviços e visualizar diferenças por região e período | Mapa, ranking, comparação e validação final | Planejada |
 
 > **Nota de acompanhamento:** o status real das tarefas deve ser consultado no [GitHub Projects](https://github.com/orgs/let-zapplin/projects/2). A situação documental informa a disponibilidade do registro, não substitui a validação técnica.
@@ -53,19 +53,19 @@ flowchart LR
 
 ### Sprint 2 — Coleta de métricas e indicadores ambientais
 
-**Resultado esperado:** sair do cadastro dos serviços e passar a medir seu comportamento ao longo do tempo, produzindo estimativas rastreáveis de consumo energético e emissões de CO₂e.
+**Resultado registrado:** o incremento coleta métricas periodicamente, preserva tentativas e amostras no PostgreSQL, calcula indicadores ambientais, apresenta dados no Monitoramento e disponibiliza histórico visual por serviço em Análises. A equipe confirmou os critérios de aceite e a DoD em 08/11/2026.
 
-| Entrega planejada | Critério de aceite proposto | Frente responsável | Evidência prevista |
+| Entrega | Resultado implementado | Responsabilidade registrada | Evidências |
 |---|---|---|---|
-| Coleta de métricas por serviço | Consultar métricas de serviços identificados e registrar data/hora da coleta; falhas são tratadas sem interromper toda a operação | Backend / Integrações — **a definir na planning** | Respostas de API e testes de integração |
-| Coleta recorrente e histórico | Novas coletas ficam disponíveis em ordem temporal, sem sobrescrever o histórico de medições anteriores | Backend / Banco — **a definir** | Consultas ao PostgreSQL e teste com múltiplas coletas |
-| Estimativa de energia e CO₂e | Cálculos usam fórmulas, unidades, premissas e fator de intensidade de carbono documentados; resultados são verificáveis por testes | Backend / Cálculos — **a definir** | [`calculos.md`](calculos.md) e testes automatizados |
-| Indicadores consolidados | API oferece totais agregados e informações necessárias à identificação de serviços ativos/indisponíveis | Backend / API — **a definir** | [`api.md`](api.md), exemplos de resposta e testes |
-| Dashboard e evolução histórica | Frontend apresenta indicadores e evolução temporal; informa loading, erro e ausência de dados | Frontend — **a definir** | Capturas ou vídeo e validação da interface |
-| Atualização automática e robustez | Atualização periódica implementada conforme intervalo definido pela equipe; timeout e indisponibilidade tratados | Integração frontend/backend — **a definir** | Teste funcional e cenários de falha |
+| Coleta de métricas por serviço | Consulta serviços ativos e registra tentativas, incluindo estados de ausência de métricas, indisponibilidade e erro | Responsáveis e apoios constam no [backlog da Sprint 2](sprints/sprint-2.md) | [API](api.md), código e testes descritos no [registro da Sprint 2](sprints/sprint-2.md) |
+| Coleta recorrente e histórico | Jobs independentes sincronizam catálogo, coletam métricas e atualizam snapshots de intensidade; amostras e tentativas são preservadas e consultáveis | Responsáveis e apoios constam no [backlog da Sprint 2](sprints/sprint-2.md) | [Arquitetura](arquitetura.md), [banco de dados](../database/README.md) e [registro da Sprint 2](sprints/sprint-2.md) |
+| Estimativa de energia e CO₂e | Indicadores são calculados a partir de métricas e intensidades persistidas, com fórmulas, unidades, premissas e lacunas documentadas | Responsáveis e apoios constam no [backlog da Sprint 2](sprints/sprint-2.md) | [Cálculos](calculos.md), [API](api.md) e testes descritos no [registro da Sprint 2](sprints/sprint-2.md) |
+| Indicadores consolidados | API e interface apresentam totais ambientais e estado dos serviços com dados persistidos | Responsáveis e apoios constam no [backlog da Sprint 2](sprints/sprint-2.md) | [API](api.md), [Arquitetura](arquitetura.md) e [registro da Sprint 2](sprints/sprint-2.md) |
+| Dashboard e evolução histórica | Monitoramento apresenta indicadores por serviço; Análises permite consultar o histórico ambiental por serviço e período | Responsáveis e apoios constam no [backlog da Sprint 2](sprints/sprint-2.md) | [Frontend](../frontend/README.md) e [registro da Sprint 2](sprints/sprint-2.md) |
+| Atualização automática e robustez | Sincronização, coleta, intensidade de carbono e consultas de interface são atualizadas periodicamente; falhas e dados ausentes têm tratamento próprio | Responsáveis e apoios constam no [backlog da Sprint 2](sprints/sprint-2.md) | [Arquitetura](arquitetura.md), [API](api.md) e [registro da Sprint 2](sprints/sprint-2.md) |
 
-**Dependências:** serviços identificados e integração com PostgreSQL concluídos na Sprint 1; disponibilidade das APIs de métricas e intensidade de carbono.  
-**Registro de execução:** [Sprint 2](sprints/sprint-2.md), a preencher conforme as entregas forem verificadas.
+**Dependências atendidas pelo incremento anterior:** descoberta de serviços e integração com PostgreSQL. As integrações externas de métricas e intensidade de carbono estão descritas na [API](api.md).
+**Status:** Sprint concluída e DoD aceita pelo grupo. As suítes comuns, typechecks e build foram verificados; a equipe também confirmou os sete testes de integração PostgreSQL. O registro detalhado está na [Sprint 2](sprints/sprint-2.md).
 
 ### Sprint 3 — Análise, comparação e consolidação
 
