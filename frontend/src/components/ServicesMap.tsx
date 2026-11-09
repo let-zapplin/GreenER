@@ -4,6 +4,7 @@ import type { Map as MapLibreMap, Marker, Popup } from "maplibre-gl";
 import "maplibre-gl-original/dist/maplibre-gl.css";
 import type { MonitoredService, ServiceStatus } from "../types/service";
 import "./ServicesMap.css";
+import { isSameMapTarget, type MapCameraTarget } from "../lib/mapFocus";
 
 const WORLD_BOUNDS: [[number, number], [number, number]] = [
   [-180, -85],
@@ -257,10 +258,9 @@ export type MapFocusRequest = {
 type ServicesMapProps = {
   services: MonitoredService[];
   focus?: MapFocusRequest | null;
-
   onSelectService?: (serviceId: string) => void;
-
   onClearSelection?: () => void;
+  onLoadingChange?: (loading: boolean) => void;
 };
 
 export function ServicesMap({
@@ -268,6 +268,7 @@ export function ServicesMap({
   focus,
   onSelectService,
   onClearSelection,
+  onLoadingChange,
 }: ServicesMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -279,9 +280,38 @@ export function ServicesMap({
     map: MapLibreMap;
     handler: () => void;
   } | null>(null);
+  const pendingIdleRef = useRef<{
+    map: MapLibreMap;
+    handler: () => void;
+  } | null>(null);
   const pendingFocusRef = useRef<MapFocusRequest | null>(null);
+  const activeTargetRef = useRef<MapCameraTarget | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
+
+  function clearLoadingTimeout() {
+    if (loadingTimeoutRef.current !== null) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  }
+
+  function startLoadingTimeout() {
+    clearLoadingTimeout();
+    setLoadingError(null);
+
+    loadingTimeoutRef.current = setTimeout(() => {
+      loadingTimeoutRef.current = null;
+      onLoadingChange?.(false);
+
+      setLoadingError(
+        "O mapa está demorando para carregar. Verifique sua conexão.",
+      );
+    }, 30_000);
+  }
   useEffect(() => {
     onSelectServiceRef.current = onSelectService;
   }, [onSelectService]);
@@ -312,6 +342,7 @@ export function ServicesMap({
   const focusKey = focus?.key;
 
   const cancelOrbit = () => {
+    activeTargetRef.current = null;
     if (orbitFrameRef.current !== null) {
       cancelAnimationFrame(orbitFrameRef.current);
       orbitFrameRef.current = null;
@@ -321,6 +352,17 @@ export function ServicesMap({
     if (pending) {
       pending.map.off("moveend", pending.handler);
       pendingArrivalRef.current = null;
+    }
+
+    // Cancela também a espera pelos detalhes do destino anterior.
+    const pendingIdle = pendingIdleRef.current;
+    if (pendingIdle) {
+      pendingIdle.map.off("idle", pendingIdle.handler);
+      pendingIdleRef.current = null;
+    }
+
+    if (pending || pendingIdle) {
+      onLoadingChange?.(false);
     }
   };
 
@@ -353,12 +395,78 @@ export function ServicesMap({
     latitude: number,
     city?: string | null,
   ) => {
+    const target: MapCameraTarget = {
+      longitude,
+      latitude,
+      zoom: (city && FOCUS_ZOOM_BY_CITY[city]) || FOCUS_ZOOM,
+      pitch: FOCUS_PITCH,
+    };
+
+    // Outro serviço no mesmo destino mantém o voo/carregamento já iniciado.
+    if (
+      activeTargetRef.current &&
+      isSameMapTarget(activeTargetRef.current, target)
+    ) {
+      return;
+    }
+
+    const center = map.getCenter();
+    const alreadyFramed = isSameMapTarget(
+      {
+        longitude: center.lng,
+        latitude: center.lat,
+        zoom: map.getZoom(),
+        pitch: map.getPitch(),
+      },
+      target,
+    );
+
+    // Não interrompe a órbita nem reinicia o loading se a câmera já está no ponto.
+    if (
+      alreadyFramed &&
+      !activeTargetRef.current &&
+      (!map.isMoving() || orbitFrameRef.current !== null)
+    ) {
+      // O pointerdown no marcador/popup pode ter pausado a órbita.
+      // Retoma sem deslocar a câmera ou reabrir o indicador de carregamento.
+      if (orbitFrameRef.current === null) {
+        startOrbit(map, longitude, latitude);
+      }
+      return;
+    }
+
     cancelOrbit();
+    // Encerra o voo anterior antes de registrar o moveend do novo destino.
+    map.stop();
+    if (alreadyFramed) {
+      startOrbit(map, longitude, latitude);
+      return;
+    }
+
+    activeTargetRef.current = target;
+    onLoadingChange?.(true);
 
     const onArrive = () => {
+      if (pendingArrivalRef.current?.handler !== onArrive) return;
       pendingArrivalRef.current = null;
-      startOrbit(map, longitude, latitude);
+
+      const finishLoading = () => {
+        // Ignora uma conclusão antiga caso o destino já tenha mudado.
+        if (pendingIdleRef.current?.handler !== finishLoading) return;
+        pendingIdleRef.current = null;
+        activeTargetRef.current = null;
+        onLoadingChange?.(false);
+        startOrbit(map, longitude, latitude);
+      };
+
+      pendingIdleRef.current = { map, handler: finishLoading };
+      if (map.loaded()) {
+        finishLoading();
+      } else {
+        map.once("idle", finishLoading);
+      }
     };
+
     pendingArrivalRef.current = { map, handler: onArrive };
     map.once("moveend", onArrive);
 
@@ -368,8 +476,8 @@ export function ServicesMap({
 
     map.flyTo({
       center: [longitude, latitude],
-      zoom: (city && FOCUS_ZOOM_BY_CITY[city]) || FOCUS_ZOOM,
-      pitch: FOCUS_PITCH,
+      zoom: target.zoom,
+      pitch: target.pitch,
       bearing: 0,
       duration: reducedMotion ? 0 : FLY_DURATION,
       curve: 1.42,
@@ -508,7 +616,7 @@ export function ServicesMap({
         pitch: 0,
         minZoom: 0.5,
         maxZoom: 19,
-       
+
         maxPitch: 70,
         dragRotate: false,
         pitchWithRotate: false,
@@ -518,6 +626,7 @@ export function ServicesMap({
     } catch (error) {
       console.error("Não foi possível inicializar o mapa:", error);
       setFailed(true);
+      onLoadingChange?.(false);
       return;
     }
 
@@ -535,6 +644,7 @@ export function ServicesMap({
 
     const onLoad = () => {
       loadedRef.current = true;
+      onLoadingChange?.(false);
       applyMapLayers();
 
       const pending = pendingFocusRef.current;
