@@ -17,6 +17,51 @@ Carbon API ───→ snapshots regionais ──→ PostgreSQL
 
 O endpoint de indicadores calcula energia e CO₂e no backend a partir dos dados persistidos. A validação manual descrita neste documento deve ser realizada contra o ambiente em execução; testes unitários isolados não comprovam a integração com PostgreSQL, as APIs externas ou o frontend.
 
+## Registro da validação — fechamento da Sprint 2
+
+| Campo | Registro |
+|---|---|
+| Data | 09/11/2026 |
+| Responsável | Vitor |
+| Branch de validação | `chore/sprint2-finalizacao` |
+| Commit final validado | A preencher após o fechamento da branch |
+| Ambiente | Windows 11 + WSL2 + Docker Desktop / Docker Compose |
+| Situação | **Validação funcional da Sprint 2 concluída; pendente apenas registrar o commit final da branch** |
+
+### Evidências automatizadas confirmadas
+
+- Backend: **163 testes únicos**, sendo **156 aprovados na suíte comum** e **7 testes de integração executados separadamente com PostgreSQL real**.
+- Frontend: **26 testes aprovados**, sem falhas e sem testes ignorados.
+- Total validado no projeto: **189 testes automatizados únicos aprovados**, considerando a suíte de integração executada separadamente.
+- Integração PostgreSQL real: **7/7 testes aprovados**, com `exit code 0`.
+- TypeScript do backend: `tsc --noEmit` concluído **sem erros**.
+- TypeScript do frontend: `tsc --noEmit` concluído **sem erros**.
+- Build de produção do frontend: **concluído com sucesso**, com 5030 módulos transformados e finalização do Vite em 1,93 s.
+- A configuração do Vitest foi ajustada para executar apenas os testes-fonte, evitando execução duplicada de arquivos compilados em `dist`.
+
+> Durante a suíte de integração, um dos testes provoca propositalmente uma violação da constraint `chk_metrics_collection_interval_seconds` usando um intervalo inválido. A mensagem de erro do PostgreSQL faz parte do cenário esperado: o teste verifica que a transação é revertida corretamente. A suíte foi concluída com **7/7 testes aprovados** e código de saída `0`.
+
+> O build do frontend apresentou apenas um aviso de tamanho de alguns chunks acima de 500 kB. O aviso não impediu a geração do build e fica registrado como oportunidade de otimização relacionada ao RNF03 — Desempenho.
+
+### Resumo da validação manual concluída em 09/11/2026
+
+Foram comprovados no ambiente em execução:
+
+- containers `backend` e `postgres` em estado `healthy` e frontend em execução;
+- proteção JWT com `401` sem token;
+- cadastro e login válidos, com acesso autenticado a `/auth/me`;
+- autorização administrativa com `403` para usuário comum e `200` após promoção controlada a administrador;
+- coleta manual concluída mesmo com falha parcial de um serviço;
+- listagem de **8 serviços** com localização e última coleta;
+- indicadores ambientais individuais e agregados;
+- consistência exata entre os totais do endpoint de indicadores e o dashboard;
+- histórico ambiental do serviço Billing API;
+- preservação de dados após `docker compose down` e `docker compose up -d`, sem remoção do volume;
+- execução automática de novos ciclos de coleta;
+- atualização automática do frontend sem recarregar a página;
+- persistência diferenciada dos estados `no_metrics` e `unavailable`.
+
+
 ---
 
 ## 1. Iniciar o ambiente
@@ -35,6 +80,16 @@ docker compose ps
 ```
 
 Resultado esperado: `postgres`, `backend` e `frontend` em execução, com os healthchecks configurados sem falha.
+
+**Resultado observado em 09/11/2026:** ✅ Aprovado.
+
+```text
+backend  → running / healthy
+postgres → running / healthy
+frontend → running
+```
+
+O Compose recriou a rede e os containers normalmente quando necessário durante a validação.
 
 ---
 
@@ -170,6 +225,12 @@ O monitoramento já utiliza `useDashboardSummary` e `useServiceIndicators`, alé
 
 > Os hooks `useMonitoring` e `useDashboardSummary` utilizam intervalo de 60 segundos e timeout de 15 segundos nesta versão. O intervalo das demais consultas deve ser conferido no respectivo hook. Registre a configuração do commit testado.
 
+### Resultado observado em 09/11/2026
+
+A tela de Monitoramento foi mantida aberta sem recarregamento manual. Após aproximadamente um ciclo de atualização, os dados/horário de atualização foram renovados automaticamente, sem uso de `F5` ou nova navegação.
+
+Resultado: ✅ **Aprovado** para atualização automática do frontend.
+
 ---
 
 ## 7. Validar indisponibilidade e retorno do catálogo
@@ -204,6 +265,34 @@ RF05 e RF06 já possuem implementação e testes automatizados. Valide separadam
 - falha isolada: os demais serviços continuam sendo processados.
 
 Observe os estados nas respostas e no PostgreSQL. Use cenários controlados de desenvolvimento ou ocorrências reais da API; não provoque falhas em produção. Os testes automatizados simulam essas situações, mas não substituem a conferência da interface.
+
+### Evidência observada em 09/11/2026
+
+Consulta ao histórico persistido:
+
+```sql
+SELECT status, COUNT(*) AS quantidade
+FROM collection
+GROUP BY status
+ORDER BY status;
+```
+
+Resultado:
+
+```text
+no_metrics  → 13
+success     → 4695
+unavailable → 43
+```
+
+Também foram encontrados registros concretos:
+
+- `collection 3833` — serviço `5` — status `no_metrics`;
+- `collection 4702` — serviço `3` — status `unavailable`;
+- motivo observado: `A API de métricas informou serviço ou exportador de métricas indisponível.`;
+- outros registros `unavailable` preservaram o motivo `Não foi possível conectar à API de métricas.`.
+
+Resultado: ✅ **Aprovado** para persistência diferenciada de `no_metrics` e `unavailable`.
 
 ---
 
@@ -264,6 +353,43 @@ ORDER BY c.attempted_at DESC, c.id_collection DESC;
 Resultado esperado: todos os IDs anotados continuam disponíveis com os mesmos valores. Novos registros dos jobs automáticos podem surgir; comparar apenas a contagem ou as dez linhas mais recentes não comprova preservação das coletas anteriores.
 
 > Não utilizar `docker compose down -v` neste teste. `-v` remove o volume do PostgreSQL.
+
+### Resultado observado em 09/11/2026
+
+Foi utilizada como evidência uma coleta que já existia antes da reinicialização:
+
+```text
+id_collection: 4642
+service_id_service: 1 (Billing API)
+status: success
+attempted_at: 2026-11-09 13:58:33.456154+00
+```
+
+Métrica associada:
+
+```text
+id_metrics: 4587
+collection_id_collection: 4642
+recorded_at: 2026-11-09 13:58:33.456+00
+```
+
+Durante a validação, o banco também registrava:
+
+```text
+total_collections: 4687
+ultimo_id: 4687
+```
+
+O ambiente foi reiniciado com:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+sem `-v`. Após a recriação dos containers, a métrica `4587` continuou associada à coleta `4642`.
+
+Resultado: ✅ **Aprovado**. O histórico permaneceu disponível após a reinicialização dos containers, comprovando persistência no volume PostgreSQL.
 
 ---
 
@@ -410,6 +536,36 @@ Sempre que possível, use dados já existentes; não altere registros de produç
 
 Uma resposta parcial não deve ser interpretada como consumo zero para os períodos sem registros. A cobertura representa somente as tentativas registradas no banco e não detecta intervalos sem tentativa.
 
+### Resultado observado em 09/11/2026
+
+Período utilizado:
+
+```text
+start: 2026-11-08T13:59:32.000Z
+end:   2026-11-09T13:59:32.000Z
+```
+
+O endpoint `GET /api/indicadores` retornou:
+
+```text
+serviceCount: 8
+activeServiceCount: 7
+energyKwh: 0.42272948956661666
+emissionsGco2e: 102.99165469044364
+collectionCount: 770
+validMetricCount: 769
+validCarbonIntensityCount: 769
+metricCoveragePercent: 99.87012987012987
+carbonIntensityCoveragePercent: 100
+isPartial: true
+```
+
+O estado parcial foi explicado por uma tentativa `unavailable` do serviço `Recommendation AI`. O serviço apresentou `91` tentativas no período e `90` métricas válidas, com a lacuna preservada na resposta em `gaps`.
+
+Os totais individuais de energia e emissão dos serviços somaram os mesmos valores do `summary`, confirmando consistência da agregação.
+
+Resultado: ✅ **Aprovado**.
+
 ## 12. Validar coleta manual e histórico por serviço
 
 Use `GET /api/servicos` para escolher o `id_service` interno numérico. Não utilize o `external_id` no caminho do histórico.
@@ -458,6 +614,38 @@ Para períodos com mais de 500 tentativas, o histórico ambiental reduz os ponto
 
 O histórico bruto recupera tentativas e métricas; o histórico ambiental calcula energia e emissão a partir das amostras do período. Não confundir os dois contratos.
 
+### Resultado observado em 09/11/2026
+
+A validação de autenticação/autorização foi realizada com um usuário temporário:
+
+| Verificação | Resultado observado | Situação |
+|---|---|---|
+| `POST /auth/register` | `201 Created` | ✅ Aprovado |
+| `GET /auth/me` sem JWT | `401 Unauthorized` | ✅ Aprovado |
+| Login válido | JWT emitido | ✅ Aprovado |
+| `GET /auth/me` com JWT | `200 OK` | ✅ Aprovado |
+| `POST /api/metricas/collect` com usuário comum | `403 Forbidden` | ✅ Aprovado |
+| Mesmo usuário promovido a administrador | permissão reconhecida sem novo login | ✅ Aprovado |
+| `POST /api/metricas/collect` como administrador | `200 OK` | ✅ Aprovado |
+| Remoção do usuário temporário | registro excluído após a validação | ✅ Aprovado |
+
+A coleta administrativa retornou:
+
+```text
+totalServices: 8
+successCount: 7
+unavailableCount: 1
+errorCount: 0
+```
+
+A falha de um serviço não impediu o processamento dos demais.
+
+O histórico ambiental de `Billing API` (`serviceId = 1`) foi consultado para o período de 24 horas e retornou múltiplas amostras anteriores com CPU, memória, disco, rede, intervalo de coleta, energia, emissão e intensidade de carbono.
+
+Resultado: ✅ **Aprovado** para autenticação, autorização administrativa, tolerância a falhas e histórico ambiental.
+
+> Observação: a rota de histórico bruto `GET /api/metricas/historico/:serviceId` não foi executada manualmente nesta sessão; sua cobertura permanece apoiada pelos testes automatizados e pela documentação do contrato.
+
 ## 13. Validar dados consolidados do dashboard — TEC19
 
 Este roteiro verifica o endpoint `GET /api/dashboard`, protegido por JWT e disponível para usuários autenticados sem exigir perfil administrador.
@@ -504,6 +692,26 @@ curl.exe -i "http://localhost:3000/api/dashboard?start=2026-10-30T12:00:00.000Z&
 | JWT ausente ou inválido | HTTP `401 Unauthorized` |
 | Amostra sem `collection_interval_seconds` ou sem intensidade de carbono elegível | `isPartial: true`; nenhum valor ausente é estimado por fallback |
 
+### Resultado observado em 09/11/2026
+
+A consulta ao período padrão retornou os mesmos totais do endpoint de indicadores:
+
+```text
+energyKwh: 0.42272948956661666
+emissionsGco2e: 102.99165469044364
+```
+
+Esses valores coincidiram exatamente com o `summary` de `GET /api/indicadores` e com a soma dos totais individuais por serviço.
+
+Durante a mesma janela foram observados:
+
+- **8 serviços** no período;
+- **7 serviços ativos** no resumo;
+- uma lacuna `unavailable` que tornou o resultado parcial;
+- mudança dinâmica de estado de serviço no ambiente, incluindo serviço posteriormente marcado como `removed`.
+
+Resultado: ✅ **Aprovado** para consolidação do dashboard e consistência com os indicadores ambientais.
+
 ### Registro da validação manual
 
 Registre separadamente as verificações de API, PostgreSQL, preservação após reinicialização e frontend. A aprovação de uma dessas partes não comprova automaticamente o funcionamento das demais.
@@ -512,11 +720,11 @@ Preencha os dados da execução:
 
 | Campo | Registro |
 |---|---|
-| Data e horário | A preencher |
-| Responsável | A preencher |
-| Branch e commit testado | A preencher |
-| Ambiente utilizado | A preencher |
-| Período consultado nos indicadores | A preencher |
+| Data e horário | 09/11/2026 |
+| Responsável | Vitor |
+| Branch e commit testado | `chore/sprint2-finalizacao` — commit final a preencher após o fechamento da branch |
+| Ambiente utilizado | Windows 11 + WSL2 + Docker Desktop / Docker Compose |
+| Período consultado nos indicadores | `2026-11-08T13:59:32.000Z` até `2026-11-09T13:59:32.000Z` |
 
 #### Evidências por área
 
@@ -524,19 +732,21 @@ Preencha o resultado obtido e vincule as evidências após executar cada verific
 
 | Área | Verificação | Resultado esperado | Resultado obtido | Situação | Evidência |
 |---|---|---|---|---|---|
-| API | Consultar histórico com JWT válido | HTTP 200 com o ID do serviço e suas coletas | A preencher | Não executado | Resposta salva ou captura do Insomnia |
-| API | Consultar rota protegida sem JWT | HTTP 401 | A preencher | Não executado | Captura da resposta |
-| API | Solicitar coleta com usuário comum | HTTP 403, sem iniciar coleta | A preencher | Não executado | Resposta e verificação da operação |
-| API | Solicitar coleta com administrador | HTTP 200 com o resumo da operação | A preencher | Não executado | Resposta e registros do ciclo |
-| API | Consultar indicadores e dashboard com período válido | HTTP 200 com resultados coerentes com os dados do período | A preencher | Não executado | Respostas e cálculo de conferência |
-| PostgreSQL | Consultar uma coleta com métricas | Valores, datas e duração correspondem aos dados gravados | A preencher | Não executado | SQL e resultado da consulta |
-| PostgreSQL | Consultar coletas sucessivas | Registros distintos, sem sobrescrever os anteriores | A preencher | Não executado | IDs e valores recuperados |
-| PostgreSQL | Consultar tentativa `no_metrics` | Tentativa registrada sem linha associada em `metrics` | A preencher | Não executado | SQL e resultado da consulta |
-| PostgreSQL | Consultar tentativa `unavailable` | Status e motivo da falha preservados | A preencher | Não executado | SQL e resultado da consulta |
-| Reinicialização | Comparar registros antes e depois de reiniciar os containers sem remover volumes | Mesmos IDs e valores continuam disponíveis | A preencher | Não executado | Consultas e capturas antes e depois |
-| Frontend | Abrir o monitoramento | Serviços, localização e estados correspondem à API | A preencher | Não executado | Tela e resposta na aba Network |
-| Frontend | Aguardar atualização automática | Novas consultas e atualização sem reload manual | A preencher | Não executado | Vídeo ou capturas com horários |
-| Frontend | Conferir indicadores apresentados | Valores e unidades correspondem à resposta do backend | A preencher | Não executado | Tela e resposta da API |
+| API | Histórico ambiental com JWT válido | HTTP 200 com serviço e amostras do período | Billing API retornou múltiplas amostras históricas | ✅ Aprovado | Execução de `GET /api/indicadores/1/historico` em 09/11/2026 |
+| API | Rota protegida sem JWT | HTTP 401 | `401 Unauthorized` em `/auth/me` | ✅ Aprovado | Saída do `curl` |
+| API | Login e acesso autenticado | JWT válido e HTTP 200 em rota protegida | Token emitido; `/auth/me` retornou `200 OK` | ✅ Aprovado | Saída do `curl` |
+| API | Coleta com usuário comum | HTTP 403, sem autorização administrativa | `403 Forbidden` | ✅ Aprovado | Saída do `curl` |
+| API | Coleta com administrador | HTTP 200 com resumo da operação | `200 OK`; 8 serviços, 7 sucessos e 1 indisponível | ✅ Aprovado | Resposta da coleta manual |
+| API | Indicadores e dashboard | Resultados coerentes no mesmo período | Totais de energia e CO₂e coincidiram exatamente | ✅ Aprovado | Respostas de `/api/indicadores` e `/api/dashboard` |
+| PostgreSQL | Coleta com métricas | Registro e métrica associados persistidos | `collection 4642` + `metrics 4587` | ✅ Aprovado | Consultas SQL |
+| PostgreSQL | Histórico acumulado | Novos registros sem sobrescrever os anteriores | Banco chegou a 4687 coletas e continuou crescendo | ✅ Aprovado | `COUNT(*)` e `MAX(id_collection)` |
+| PostgreSQL | Estado `no_metrics` | Estado persistido separadamente | 13 registros; exemplo `collection 3833` | ✅ Aprovado | Consulta agrupada e histórico |
+| PostgreSQL | Estado `unavailable` | Status e motivo preservados | 43 registros; motivos técnicos preservados | ✅ Aprovado | Consulta agrupada e histórico |
+| Reinicialização | Preservar registros sem remover volume | IDs anteriores permanecem disponíveis | Métrica `4587` da coleta `4642` permaneceu após restart | ✅ Aprovado | Consultas antes/depois + `docker compose down/up -d` |
+| Automação | Coleta periódica | Novos registros sem chamada manual | Total avançou de 4687 para 4735; última coleta `2026-11-09 14:09:31.851626+00` | ✅ Aprovado | Consulta SQL após ciclo automático |
+| Frontend | Aguardar atualização automática | Atualização sem reload manual | Dados/horário foram renovados sem `F5` | ✅ Aprovado | Observação manual em 09/11/2026 |
+| Frontend | Correspondência visual completa com API | Valores/estados/unidades devem corresponder ao backend | Não foi registrada comparação campo a campo nesta sessão | ⏳ Parcial | Recomenda-se captura final para a Sprint Review |
+| API | Histórico bruto `/api/metricas/historico/:serviceId` | HTTP 200 com coletas persistidas | Não executado manualmente nesta sessão | ⏳ Pendente | Coberto por testes automatizados/documentação |
 
 **Situações utilizadas:**
 
@@ -553,19 +763,43 @@ Não utilize `docker compose down -v`: essa opção remove o volume do PostgreSQ
 
 Os resultados automatizados devem ser registrados separadamente da validação manual.
 
-| Suíte | Comando | Resultado obtido | Evidência |
-|---|---|---|---|
-| Backend: testes unitários e HTTP | `docker compose exec backend npm test` | A preencher, distinguindo aprovados, falhas e ignorados | Log ou captura |
-| Frontend | `docker compose exec frontend npm test` | A preencher | Log ou captura |
-| Integração com PostgreSQL real | `docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test` | A preencher | Log ou captura |
-| TypeScript do backend | `docker compose exec backend npm run typecheck` | A preencher | Log ou captura |
-| TypeScript do frontend | `docker compose exec frontend npm run typecheck` | A preencher | Log ou captura |
+| Suíte | Comando | Resultado obtido | Situação | Evidência |
+|---|---|---|---|---|
+| Backend: testes unitários e HTTP | `docker compose exec backend npm test` | **26 arquivos aprovados + 1 de integração ignorado na suíte comum; 156 testes aprovados + 7 ignorados; duração 2,41 s** | ✅ Aprovado | Execução de 09/11/2026 |
+| Frontend | `docker compose exec frontend npm test` | **26 testes aprovados; 0 falhas; 0 ignorados; duração ~275 ms** | ✅ Aprovado | Execução de 09/11/2026 |
+| Integração com PostgreSQL real | `docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test` | **1 arquivo aprovado; 7 testes aprovados; exit code 0; duração 536 ms** | ✅ Aprovado | Execução de 09/11/2026 |
+| TypeScript do backend | `docker compose exec backend npm run typecheck` | **`tsc --noEmit` concluído sem erros** | ✅ Aprovado | Execução de 09/11/2026 |
+| TypeScript do frontend | `docker compose exec frontend npm run typecheck` | **`tsc --noEmit` concluído sem erros** | ✅ Aprovado | Execução de 09/11/2026 |
+| Build do frontend | `docker compose exec frontend npm run build` | **Build concluído; 5030 módulos transformados; Vite finalizado em 1,93 s** | ✅ Aprovado | Execução de 09/11/2026 |
 
-Os sete testes de integração aparecem como `skipped` na execução comum do backend. Para validar a persistência automatizada, execute também a suíte com `compose.test.yaml`.
+Os sete testes de integração aparecem como `skipped` na execução comum do backend. Isso é esperado: eles são executados separadamente pelo `compose.test.yaml`, com `RUN_DB_INTEGRATION_TESTS=true`.
 
-O banco dessa suíte é temporário. Portanto, sua aprovação não substitui a verificação manual de preservação após reinicialização do ambiente da aplicação.
+Na validação de 09/11/2026, essa suíte foi executada separadamente e concluiu **7/7 testes com sucesso**. Um dos cenários gera intencionalmente uma violação de constraint no PostgreSQL para confirmar o rollback; portanto, a presença desse erro no log não representa falha da suíte.
+
+O banco dessa suíte é temporário. Portanto, sua aprovação **não substitui** a verificação manual de preservação após reinicialização do ambiente da aplicação, que deve ser executada sem `docker compose down -v`.
 
 Consulte o [manual de testes automatizados](./manual_teste_unitario.md) e o [manual de integração com PostgreSQL](./manual_integracao_postgres.md) para as instruções completas.
+
+### Evidência adicional — coleta periódica automática
+
+Sem nova chamada manual ao endpoint de coleta, o banco avançou de:
+
+```text
+total_collections = 4687
+ultimo_id = 4687
+```
+
+para:
+
+```text
+total = 4735
+ultimo_id = 4735
+ultima_coleta = 2026-11-09 14:09:31.851626+00
+```
+
+Foram persistidas **48 novas tentativas de coleta automaticamente** durante a validação.
+
+Resultado: ✅ **Aprovado**.
 
 ---
 
@@ -586,5 +820,32 @@ O Compose publica o banco em `127.0.0.1:5433` para ferramentas como DBeaver. O b
 
 Alterar uma senha no `.env` não modifica automaticamente as credenciais de um volume PostgreSQL já inicializado.
 
-### Para o futuro
-Esse é um projeto ainda em desenvolvimento, futuramente irá abarcar um circuito maior de validação.
+### Fechamento da validação da Sprint 2
+
+A validação funcional principal da Sprint 2 foi concluída em 09/11/2026.
+
+Foram aprovados:
+
+- execução via Docker Compose;
+- testes automatizados de backend e frontend;
+- integração com PostgreSQL real;
+- typecheck de backend e frontend;
+- build de produção;
+- autenticação JWT;
+- autorização administrativa;
+- coleta manual e tolerância a falhas;
+- indicadores ambientais;
+- dashboard consolidado;
+- histórico ambiental;
+- persistência após reinicialização;
+- coleta periódica automática;
+- atualização automática do frontend;
+- diferenciação e persistência de `no_metrics` e `unavailable`.
+
+Pendências documentais antes do commit final:
+
+1. preencher o hash do commit final desta branch;
+2. opcionalmente registrar uma captura final comparando visualmente os valores do frontend com as respostas da API;
+3. opcionalmente executar manualmente a rota de histórico bruto `GET /api/metricas/historico/:serviceId`, embora o comportamento já possua cobertura automatizada.
+
+Não alterar a situação de uma evidência para “Aprovado” sem manter o log, captura ou registro correspondente no material da Sprint.

@@ -2,76 +2,71 @@
 
 ← [Voltar ao índice da documentação](../README.md)
 
-> Este documento descreve a arquitetura integrada até a Sprint 2 e distingue essas funcionalidades da evolução planejada para a Sprint 3. O grupo confirmou o aceite da Definition of Done da Sprint 2 em 08/11/2026.
+> **Referência arquitetural atualizada no fechamento da Sprint 2 — 09/11/2026.**  
+> Este documento descreve a arquitetura efetivamente utilizada pelo GreenER e separa o que já compõe o incremento funcional do que permanece planejado para a Sprint 3.
 
 ---
 
 ## 1. Visão geral
 
-O GreenER utiliza arquitetura web cliente-servidor, com frontend em React + TypeScript, backend em Node.js + Express + TypeScript, persistência PostgreSQL e execução por Docker Compose.
+O GreenER utiliza uma arquitetura web cliente-servidor com:
 
-### Estado atual da aplicação
+- **Frontend:** React + TypeScript + Vite;
+- **Backend:** Node.js + Express + TypeScript;
+- **Banco de dados:** PostgreSQL;
+- **Execução:** Docker Compose;
+- **APIs auxiliares:** Metrics Aggregator API e Carbon Intensity API;
+- **Visualizações:** Recharts para histórico e MapLibre GL com OpenFreeMap para o mapa do Monitoramento.
 
-```mermaid
-flowchart TD
-    U[Usuário] --> F[Frontend React + Vite :5173]
-    F -->|HTTP / JSON| B[Backend Express :3000]
-    B -->|SQL explícito| P[(PostgreSQL 17)]
-    B -->|GET /services e /metrics/:id| M[Metrics Aggregator API]
-    B -->|GET /regions| CI[Carbon Intensity API]
-```
+A aplicação mantém as regras de negócio e os cálculos ambientais no backend. O frontend consome respostas estruturadas e não recalcula energia ou CO₂e.
 
-O backend mantém sincronização do catálogo e coleta periódica de métricas. Também oferece rotas protegidas para consulta e sincronização manual, além de cálculo sob demanda dos indicadores a partir dos dados persistidos:
-
-```text
-Metrics Aggregator API ──→ sincronização/coleta ──→ PostgreSQL
-Carbon Intensity API ────→ sincronização regional ─→ PostgreSQL
-                                                    ↓
-                                       GET /api/indicadores?start=...&end=...
-```
-
-O endpoint de indicadores calcula energia e CO₂e no backend usando `collection_interval_seconds` validado e persistido por amostra. `COLLECTION_INTERVAL_MS` continua configurando apenas o intervalo entre ciclos do job. Amostras históricas sem esse dado são lacunas, sem fallback para o intervalo do job. O Monitoramento consome o resumo do dashboard e a tela de Análises consome o histórico ambiental por serviço e período.
-
-### Fluxo integrado e evolução planejada
+### Arquitetura atual
 
 ```mermaid
 flowchart LR
-    M[Metrics Aggregator API] -->|/services| S[Sincronização de serviços]
-    M -->|/metrics/:id| C[Coleta periódica e manual]
+    U[Usuário] --> F[Frontend React + Vite :5173]
 
-    S --> DB[(PostgreSQL)]
-    C --> DB
+    F -->|HTTP / JSON + JWT| B[Backend Express :3000]
 
-    CI[Carbon Intensity API] -->|descoberta/sincronização| DB
-    DB --> CALC[Cálculos sob demanda de indicadores]
+    B -->|SQL explícito e parametrizado| P[(PostgreSQL 17)]
 
-    CALC --> API[GET /api/indicadores]
-    DB --> API
-    API --> DASHAPI[GET /api/dashboard]
-    API --> HISTORY[GET /api/indicadores/:serviceId/historico]
+    B -->|GET /services| M[Metrics Aggregator API]
+    B -->|GET /metrics/:id| M
 
-    DASHAPI --> DASH[Frontend / Monitoramento]
-    HISTORY --> ANA[Frontend / Análises - histórico ambiental]
-    API -.-> FUTURO[Ranking e comparação - Sprint 3]
+    B -->|GET /regions| C[Carbon Intensity API]
+
+    P --> I[Indicadores e histórico]
+    I --> B
+
+    B --> F
+
+    F --> MON[Monitoramento]
+    F --> ANA[Análises]
+    MON --> MAP[Mapa MapLibre / OpenFreeMap]
+    ANA --> CHART[Histórico Recharts]
 ```
 
-O fluxo implementado no backend cobre:
+O fluxo principal validado ao final da Sprint 2 é:
 
 ```text
+descoberta de serviços
+        ↓
 sincronização do catálogo
-    ↓
+        ↓
 coleta periódica de métricas
-    ↓
-persistência
-    ↓
-consulta do histórico
-    ↓
-cálculo ambiental por período
-    ↓
-indicadores
+        ↓
+persistência de tentativas e amostras
+        ↓
+snapshots de intensidade de carbono
+        ↓
+cálculo de energia e CO₂e
+        ↓
+indicadores e consolidação
+        ↓
+Monitoramento + Análises
 ```
 
-Os indicadores operacionais estão integrados ao Monitoramento e a primeira visualização histórica ambiental está disponível em Análises. Ranking e comparação entre serviços permanecem planejados para a Sprint 3.
+A visualização geográfica da US13 foi antecipada da Sprint 3 e incorporada ao Monitoramento durante o fechamento da Sprint 2. Como a tarefa ainda estava em revisão no fechamento documental, seus refinamentos finais permanecem sujeitos à integração definitiva.
 
 ---
 
@@ -79,21 +74,24 @@ Os indicadores operacionais estão integrados ao Monitoramento e a primeira visu
 
 | Camada | Responsabilidade |
 | --- | --- |
-| **Frontend** | Navegação, autenticação de interface, apresentação dos serviços, estados de consulta e visualizações analíticas. |
-| **Routes** | Definir recursos e métodos HTTP e encaminhar chamadas para controllers. |
-| **Controllers** | Tratar entrada/saída HTTP, códigos de resposta e delegar regras de negócio. |
-| **Services** | Implementar regras de negócio, orquestração de integrações, cálculos e estados. |
-| **Repositories** | Concentrar SQL explícito e parametrizado de acesso ao PostgreSQL. |
-| **Jobs** | Executar processos recorrentes sem ação manual, incluindo sincronização do catálogo e coleta de métricas. |
-| **PostgreSQL** | Persistir usuários, serviços, localizações, estrutura de coletas, métricas e demais dados históricos utilizados pela aplicação. |
-| **Metrics Aggregator API** | Fornecer catálogo de serviços e métricas por serviço. |
-| **Carbon Intensity API** | Fornecer intensidade de carbono por região para cálculo de CO₂e. |
+| **Frontend** | Navegação, autenticação de interface, consumo da API, Monitoramento, Análises, estados visuais e visualizações. |
+| **Routes** | Definir métodos e caminhos HTTP e aplicar middlewares adequados. |
+| **Controllers** | Validar entrada HTTP, delegar regras de negócio e formatar respostas. |
+| **Services** | Implementar regras de negócio, orquestração, cálculos, estados e tratamento de casos de uso. |
+| **Repositories** | Executar SQL explícito e parametrizado no PostgreSQL. |
+| **Jobs** | Executar sincronização, coleta e atualização de dados externos em ciclos independentes. |
+| **Middlewares** | Autenticação JWT, autorização e tratamento global de erros. |
+| **PostgreSQL** | Persistir usuários, serviços, localização, tentativas de coleta, métricas e intensidade de carbono. |
+| **Metrics Aggregator API** | Fornecer catálogo de serviços e métricas de cada serviço. |
+| **Carbon Intensity API** | Fornecer fatores regionais utilizados para estimar emissões de CO₂e. |
+
+A arquitetura procura impedir duplicação de regra de negócio entre frontend e backend. Por exemplo, o frontend exibe os valores ambientais retornados pela API, mas não implementa novamente as fórmulas de energia ou emissão.
 
 ---
 
 ## 3. Organização do backend
 
-O backend segue a separação:
+O padrão principal é:
 
 ```text
 route
@@ -107,255 +105,203 @@ repository
 PostgreSQL
 ```
 
-Exemplo atual para listagem de serviços:
+Exemplo de consulta de serviços:
 
 ```text
 GET /api/servicos
   ↓
 servicos.routes.ts
   ↓
-ServicosController.list()
+ServicosController
   ↓
-ServicosService.listAll()
+ServicosService
   ↓
-ServicosRepository.listAll()
+ServicosRepository
   ↓
 PostgreSQL
 ```
 
-A coleta manual preserva esse padrão em camadas:
+O mesmo princípio é utilizado nos módulos de:
+
+- autenticação;
+- serviços;
+- coletas;
+- intensidades de carbono;
+- indicadores;
+- dashboard.
+
+Estrutura conceitual:
 
 ```text
-POST /api/metricas/collect
-  ↓
-coletas.routes.ts
-  ↓
-ColetasController.collect()
-  ↓
-ColetasService.collectAllMetrics()
-  ├── ServicosService.listAll()
-  ├── Metrics API /metrics/{external_id}
-  └── ColetasRepository.saveCollection()
-        ↓
-      PostgreSQL
+backend/src/
+├── modules/
+│   ├── auth/
+│   ├── servicos/
+│   ├── coletas/
+│   ├── intensidades/
+│   ├── indicadores/
+│   └── dashboard/
+├── integrations/
+├── jobs/
+└── shared/
 ```
 
-O middleware JWT autentica a requisição e o middleware administrativo consulta `users.admin` no PostgreSQL antes de permitir a coleta manual.
+### Separação de responsabilidades
 
-O cálculo de indicadores também segue as camadas do módulo:
+O controller não deve concentrar cálculo ambiental ou SQL.
 
-```text
-GET /api/indicadores?start=<ISO>&end=<ISO>
-  ↓
-indicadores.routes.ts (JWT)
-  ↓
-IndicadoresController.list()
-  ↓
-IndicadoresService.getIndicators()
-  ↓
-IndicadoresRepository.findCollectionsForPeriod()
-  ↓
-PostgreSQL: service, location, collection, metrics e carbon_intensity
-```
+O service não acessa o PostgreSQL diretamente quando existe repository responsável por essa persistência.
 
-O histórico ambiental por serviço reutiliza o mesmo módulo e o mesmo cálculo por amostra:
+O repository não decide regras de interface ou comportamento de domínio além do necessário para executar consultas e persistência.
 
-```text
-GET /api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>
-  ↓
-indicadores.routes.ts (JWT)
-  ↓
-IndicadoresController.history()
-  ↓
-IndicadoresService.getServiceHistory()
-  ↓
-IndicadoresRepository.findCollectionsForPeriod(..., serviceId)
-  ↓
-PostgreSQL: service, location, collection, metrics e carbon_intensity
-  ↓
-Frontend / Análises
-  ↓
-useServiceIndicatorHistory()
-  ↓
-HistoryChart
-```
-
-O repository seleciona tentativas no período e associa, quando elegível, o snapshot de carbono mais recente da mesma região, anterior ou igual a `attempted_at` e dentro de `CARBON_INTENSITY_MAX_AGE_MS`. O service calcula energia, emissões, totais, cobertura e lacunas; resultados calculados não são persistidos.
-
-O endpoint consolidado do dashboard segue um módulo próprio, reutiliza o cálculo de indicadores e consulta a última tentativa para classificar serviços ativos no catálogo:
-
-```text
-GET /api/dashboard?start=<ISO>&end=<ISO> (JWT; datas opcionais)
-  ↓
-dashboard.routes.ts → DashboardController
-  ↓
-DashboardService
-  ├── IndicadoresService (energia, CO₂e e lacunas no período)
-  └── DashboardRepository (último estado de coleta dos serviços ativos)
-```
-
-Sem datas, o período é de 24 horas até o horário atual do backend. Contagens incluem somente serviços ativos no catálogo: última coleta `unavailable`/`error` conta como indisponível; `success`, `no_metrics` ou ausência de coleta conta como ativo. Categorias não se sobrepõem. Totais ambientais parciais são sinalizados em `isPartial`.
-
-A estrutura atual do módulo de coletas é:
-
-```text
-modules/coletas/
-├── coletas.routes.ts
-├── coletas.controller.ts
-├── coletas.service.ts
-└── coletas.repository.ts
-```
-
-O endpoint manual coleta somente serviços com status `active`. Cada chamada externa tem timeout; uma falha individual é registrada e não interrompe os serviços seguintes. Coletas bem-sucedidas gravam a tentativa e as métricas na mesma transação; resultados sem métricas ou com erro gravam apenas a tentativa.
+Essa separação atende à organização esperada para o backend Node.js + TypeScript do projeto.
 
 ---
 
-## 4. Sincronização automática de serviços
+## 4. Processos automáticos
 
-Ao iniciar, o backend dispara um job de sincronização do catálogo de serviços.
+O backend executa processos independentes para manter os dados atualizados.
 
-O job consulta `/services`, cria ou atualiza registros e marca como `removed` serviços persistidos que deixaram de aparecer na resposta externa.
+### 4.1 Sincronização do catálogo
+
+O job de serviços consulta periodicamente:
+
+```text
+GET {METRICS_API_URL}/services
+```
+
+O fluxo é:
 
 ```mermaid
 flowchart TD
-    J[Job de sincronização] --> D[GET /services]
-    D --> E{Serviço existe?}
+    J[Job de sincronização] --> S[GET /services]
+    S --> E{Serviço existe?}
 
-    E -->|Não| I[INSERT]
+    E -->|Não| I[INSERT service]
     E -->|Sim| U[UPDATE + last_seen_at]
 
-    I --> A[Comparar IDs ativos]
+    I --> A[Comparar catálogo atual]
     U --> A
 
-    A --> X[Marcar ausentes como removed]
-    X --> W[Esperar próximo intervalo]
+    A --> R[Marcar ausentes como removed]
+    R --> W[Reagendar próximo ciclo]
     W --> J
 ```
 
-> O intervalo usado por esse job deve ser distinguido do intervalo de **coleta de métricas**. Na Sprint 2, a nomenclatura e a configuração desses intervalos devem permanecer separadas para evitar ambiguidade.
+Serviços que deixam de aparecer não são apagados do banco. Seu estado é atualizado para `removed`, preservando histórico e rastreabilidade.
 
-Além da sincronização do catálogo, `server.ts` inicia os jobs de coleta periódica de métricas e sincronização das intensidades de carbono. Os ciclos usam configurações independentes: `SERVICE_SYNC_INTERVAL_MS` para o catálogo, `COLLECTION_INTERVAL_MS` para métricas e `CARBON_INTENSITY_SYNC_INTERVAL_MS` para snapshots de carbono.
+### 4.2 Coleta periódica de métricas
+
+Para cada serviço ativo, o backend consulta:
+
+```text
+GET {METRICS_API_URL}/metrics/{id_servico}
+```
+
+Cada ciclo cria uma nova tentativa em `collection`.
+
+Quando existem métricas válidas, uma linha correspondente é criada em `metrics`.
+
+```mermaid
+flowchart TD
+    J[Job de coleta] --> L[Buscar serviços ativos]
+    L --> N[Para cada serviço]
+    N --> M[GET /metrics/:id]
+
+    M -->|Métricas válidas| S[collection: success]
+    S --> P[INSERT metrics]
+
+    M -->|Sem métricas| NM[collection: no_metrics]
+    M -->|Indisponível| UN[collection: unavailable]
+    M -->|Erro inesperado| ER[collection: error]
+
+    P --> X[Próximo serviço]
+    NM --> X
+    UN --> X
+    ER --> X
+
+    X --> W[Reagendar próximo ciclo]
+```
+
+Uma falha de serviço não interrompe o restante do ciclo.
+
+### 4.3 Estratégia de agendamento
+
+Os jobs utilizam reagendamento após o término da execução anterior, evitando empilhamento de ciclos do mesmo job.
+
+A configuração utilizada na entrega diferencia:
+
+| Processo | Configuração |
+| --- | --- |
+| Coleta de métricas | `COLLECTION_INTERVAL_MS` |
+| Sincronização do catálogo | `SERVICE_SYNC_INTERVAL_MS` |
+| Sincronização de intensidade | `CARBON_INTENSITY_SYNC_INTERVAL_MS` |
+| Timeout de API externa | `EXTERNAL_API_TIMEOUT_MS` |
+
+Na configuração de entrega, coleta e atualização principal foram utilizadas em ciclos de aproximadamente **60 segundos**, enquanto a intensidade de carbono possui ciclo próprio mais longo.
 
 ---
 
-## 5. Estados dos serviços e das coletas
+## 5. Estado do serviço x estado da coleta
 
-A arquitetura passa a distinguir dois conceitos diferentes:
+A arquitetura distingue:
 
 ```text
-estado atual do serviço
+estado do catálogo
 ≠
 resultado de uma tentativa de coleta
 ```
 
-### Estado atual do serviço
+### Estado do serviço
 
-A tabela `service` mantém informações relacionadas ao estado atual conhecido do serviço, utilizando principalmente:
+A tabela `service` representa o estado atual conhecido no catálogo externo.
 
-```text
-service.status
-service.last_seen_at
-```
-
-Os estados persistidos atualmente têm foco em:
+Estados principais:
 
 - `active`;
 - `removed`.
 
-Esses dados permitem consultas rápidas sobre a situação atual do catálogo.
-
-### Estados transitórios da interface
-
-O frontend pode representar estados visuais temporários, como:
+O frontend também pode derivar estados transitórios como:
 
 - `new`;
 - `returned`.
 
-Esses estados não substituem o estado persistido no backend.
+Esses estados visuais não substituem a persistência de domínio.
 
 ### Estado da coleta
 
-A partir da TEC02, cada tentativa de coleta pode possuir um dos seguintes estados no banco:
+Cada tentativa em `collection` possui um estado:
 
 | Estado | Significado |
 | --- | --- |
-| `success` | A consulta retornou métricas válidas |
-| `no_metrics` | O serviço está disponível, mas não forneceu métricas válidas |
-| `unavailable` | Não foi possível consultar o serviço |
-| `error` | Ocorreu erro durante o processamento da coleta |
+| `success` | Foram obtidas métricas válidas. |
+| `no_metrics` | O serviço continua disponível, mas não forneceu métricas válidas. |
+| `unavailable` | Não foi possível obter métricas por indisponibilidade, timeout ou falha de conexão. |
+| `error` | Houve erro inesperado de resposta, processamento ou persistência. |
 
-Isso permite representar, por exemplo:
+Exemplo válido:
 
 ```text
-serviço: active
-última coleta: no_metrics
+service.status = active
+última collection.status = no_metrics
 ```
 
-sem confundir ausência de métricas com indisponibilidade durante uma tentativa de coleta.
+Isso permite comunicar ausência de métricas sem declarar incorretamente que o serviço foi removido do catálogo.
 
-A causa técnica de uma falha pode ser registrada separadamente em `collection.failure_reason`, enquanto `http_status` pode armazenar o código HTTP quando houver resposta.
-
-#### Classificação das respostas de `/metrics/{id}`
-
-| Resposta externa | Estado persistido |
-| --- | --- |
-| `200` com métricas válidas | `success` |
-| `200` com `metrics` ausente, `null` ou vazio | `no_metrics` |
-| `404` (serviço listado, métricas inexistentes) | `no_metrics` |
-| `500` (serviço ou exportador de métricas indisponível) | `unavailable` |
-| Timeout ou falha de conexão | `unavailable` |
-| Outro HTTP inesperado, JSON inválido ou payload incompleto | `error` |
-
-O agregador de métricas documenta `404` como "serviço removido ou métricas inexistentes" e `500` como "serviço indisponível ou exportador de métricas indisponível". Por isso, `no_metrics` representa um serviço que continua no catálogo mas não exporta métricas, enquanto `unavailable` representa a impossibilidade de consultá-lo.
-
----
-
-## 6. Autenticação
-
-### Implementado
-
-- cadastro de usuário e hash de senha;
-- login e geração de JWT;
-- proteção de rotas no backend e de navegação no frontend;
-- autorização administrativa para disparo manual de coleta.
-
-### Fluxo atual
-
-O backend valida JWT nas rotas protegidas por meio de `authMiddleware`. O token deve ser enviado no cabeçalho `Authorization: Bearer SEU_TOKEN_JWT`. A coleta manual também exige autorização administrativa consultada no banco. Rotas de cadastro, login, descoberta e leitura do catálogo de serviços permanecem públicas; indicadores, dashboard, histórico e operações de sincronização protegidas exigem JWT.
+Detalhes técnicos podem ser preservados em:
 
 ```text
-requisição
-  ↓
-Authorization: Bearer SEU_TOKEN_JWT
-  ↓
-authMiddleware
-  ├─ token ausente, inválido ou expirado → 401 Unauthorized
-  └─ token válido → rota protegida
-                         ↓
-               middleware administrativo (coleta manual)
-                 ├─ não administrador → 403 Forbidden
-                 └─ administrador → controller
+collection.failure_reason
+collection.http_status
 ```
 
 ---
 
-## 7. Persistência e histórico
+## 6. Persistência e modelo histórico
 
-A revisão da modelagem do banco foi iniciada pela TEC02 antes da implementação da coleta periódica.
+A Sprint 2 consolidou a entidade `collection`.
 
-O objetivo foi garantir que o modelo consiga preservar o histórico das tentativas de coleta sem criar registros vazios em `metrics`.
-
-### Modelo implementado
-
-O relacionamento anterior:
-
-```text
-service
-   ↓
-metrics
-```
-
-foi substituído por:
+O relacionamento principal é:
 
 ```text
 service
@@ -369,15 +315,15 @@ collection
 metrics
 ```
 
-A tabela `collection` representa o **evento de coleta**.
+### `service`
 
-A tabela `metrics` representa os **dados válidos obtidos naquela coleta**.
+Representa o serviço descoberto no catálogo externo e sua localização conhecida.
 
-Essa separação é importante porque uma tentativa pode existir mesmo quando nenhuma métrica válida é retornada.
+### `collection`
 
-### Collection
+Representa uma **tentativa de coleta**, mesmo quando nenhuma métrica válida foi retornada.
 
-Cada registro em `collection` contém:
+Campos relevantes:
 
 ```text
 id_collection
@@ -388,52 +334,17 @@ http_status
 attempted_at
 ```
 
-A entidade registra:
+### `metrics`
 
-- qual serviço foi consultado;
-- quando a tentativa ocorreu;
-- qual foi o resultado da tentativa;
-- qual foi o motivo da falha, quando aplicável;
-- qual código HTTP foi retornado, quando aplicável.
+Representa somente os dados válidos associados a uma coleta bem-sucedida.
 
-Um serviço pode possuir múltiplas coletas:
-
-```text
-Billing API
-    │
-    ├── collection #1 → success
-    ├── collection #2 → success
-    ├── collection #3 → no_metrics
-    └── collection #4 → unavailable
-```
-
-Isso preserva eventos que anteriormente não poderiam ser registrados apenas na tabela `metrics`.
-
-### Metrics
-
-A tabela `metrics` armazena somente dados válidos.
-
-Seu relacionamento com o serviço passa a ser indireto:
-
-```text
-metrics
-   ↓
-collection
-   ↓
-service
-```
-
-A referência direta anterior entre `metrics` e `service` foi removida para evitar redundância.
-
-Cada registro de `metrics` possui:
+A ligação é feita por:
 
 ```text
 collection_id_collection
 ```
 
-como chave estrangeira para a coleta correspondente.
-
-A restrição `UNIQUE` aplicada a essa referência garante a cardinalidade:
+A restrição `UNIQUE` garante:
 
 ```text
 collection 1 → 0..1 metrics
@@ -443,7 +354,7 @@ Assim:
 
 ```text
 success
-    ↓
+  ↓
 collection + metrics
 ```
 
@@ -453,253 +364,398 @@ enquanto:
 no_metrics
 unavailable
 error
-    ↓
+  ↓
 collection sem metrics
 ```
 
-### Integridade do modelo
-
-O banco utiliza restrições para proteger o domínio.
-
-O campo `collection.status` aceita somente:
-
-```text
-success
-no_metrics
-unavailable
-error
-```
-
-Também são validados:
-
-- códigos HTTP entre `100` e `599`, quando existentes;
-- impossibilidade de uma coleta `success` possuir `failure_reason`;
-- associação obrigatória da coleta a um serviço;
-- associação obrigatória de uma métrica à coleta que a originou;
-- no máximo um conjunto de métricas por coleta.
-
-### Consultas históricas
-
-O índice:
-
-```text
-(service_id_service, attempted_at DESC)
-```
-
-foi criado para favorecer consultas como:
-
-```text
-histórico de determinado serviço
-ordenado da coleta mais recente para a mais antiga
-```
-
-O endpoint de histórico por serviço já permite consultar tentativas registradas. A estrutura também permite evoluir para consultas agregadas e visões analíticas, como:
-
-- gráficos temporais;
-- ranking;
-- comparação entre serviços.
-
-### Cálculos ambientais
-
-Os resultados calculados de energia e CO₂e **não são persistidos em `collection` nesta etapa**.
-
-O endpoint `GET /api/indicadores` calcula esses valores sob demanda a partir das tentativas de coleta, métricas e snapshots regionais persistidos. A intensidade é associada pela região do serviço e pelo instante da tentativa: seleciona-se o snapshot mais recente registrado até `attempted_at`, desde que esteja dentro de `CARBON_INTENSITY_MAX_AGE_MS`.
-
-Quando não há dados de métricas válidos, a tentativa é descrita como lacuna e não produz consumo. Quando falta intensidade utilizável, a energia ainda pode ser calculada, mas a emissão correspondente fica indisponível. A resposta apresenta totais e cobertura para sinalizar resultados parciais.
-
-O cálculo usa o `collection_interval_seconds` validado da Metrics API e persistido junto com cada amostra. `COLLECTION_INTERVAL_MS` permanece como intervalo de agendamento do job e não é usado como fallback. Dados históricos sem duração geram a lacuna `collection_interval_unavailable`.
+Esse modelo evita criar métricas artificiais ou valores zero para representar falhas.
 
 ---
 
-## 8. Evolução do schema e migrations
+## 7. Histórico, energia e CO₂e
 
-O arquivo:
+Os valores calculados de energia e CO₂e não precisam ser gravados diretamente em `collection`.
 
-```text
-database/schema.sql
+O backend utiliza os dados históricos persistidos para calcular os indicadores no período solicitado.
+
+Fluxo simplificado:
+
+```mermaid
+flowchart LR
+    S[(service)] --> C[(collection)]
+    C --> M[(metrics)]
+    S --> L[region_code]
+    L --> CI[(carbon_intensity)]
+
+    M --> CALC[Cálculo energético]
+    C --> CALC
+    CI --> CALC
+
+    CALC --> E[energyKwh]
+    CALC --> CO2[emissionsGco2e]
 ```
 
-representa o estado completo atual do banco e foi validado através da criação de um PostgreSQL vazio.
+### Seleção temporal
 
-Para atualizar bancos que já utilizavam o modelo anterior, foi criada:
+Para cada tentativa elegível, o módulo de indicadores associa:
 
-```text
-database/migrations/001_add_collection.sql
-```
+- métricas válidas da coleta;
+- intervalo real da amostra;
+- região do serviço;
+- snapshot de intensidade de carbono temporalmente elegível.
 
-A migration transforma:
+Dados ausentes são representados como lacunas. A arquitetura não substitui automaticamente ausência de informação por consumo zero.
 
-```text
-service → metrics
-```
+### Agregação
 
-em:
+O backend produz:
 
-```text
-service → collection → metrics
-```
+- indicadores individuais por serviço;
+- totais no período;
+- cobertura de métricas;
+- cobertura de intensidade de carbono;
+- sinalização `isPartial`;
+- lista de lacunas quando aplicável.
 
-sem exigir a exclusão do volume PostgreSQL.
+O dashboard reutiliza essas regras em vez de implementar cálculos ambientais separados.
 
-A migration [`database/migrations/003_add_collection_interval_seconds.sql`](../database/migrations/003_add_collection_interval_seconds.sql) adiciona a duração da amostra a `metrics`. O campo é nullable para preservar registros antigos sem inferir a duração real; indicadores tratam esses registros como lacunas.
-
-Caso existam métricas anteriores à alteração, a migration cria uma coleta de estado `success` para cada registro antigo e utiliza `metrics.recorded_at` como referência temporal disponível durante a conversão.
-
-Uma coluna temporária:
-
-```text
-legacy_metrics_id
-```
-
-é utilizada somente durante a migration para relacionar registros antigos às novas coletas e é removida antes do `COMMIT`.
-
-A migration é executada dentro de uma transação para evitar que o banco permaneça parcialmente atualizado caso alguma operação falhe.
-
-### Validações realizadas na TEC02
-
-Foram verificados:
-
-- criação do `schema.sql` em PostgreSQL vazio;
-- criação da tabela `collection`;
-- relacionamento `service → collection`;
-- relacionamento `collection → metrics`;
-- PKs e FKs;
-- restrições `CHECK`;
-- restrição `UNIQUE` entre coleta e métricas;
-- índice para consultas históricas;
-- cenário de coleta `success`;
-- cenário `no_metrics`;
-- cenário `unavailable`;
-- rejeição de estado inválido;
-- rejeição de `success` associado a `failure_reason`;
-- aplicação da migration no banco existente;
-- persistência após reinicialização do PostgreSQL;
-- inicialização do backend após alteração do schema;
-- execução da suíte automatizada existente com **20 de 20 testes aprovados**.
+As fórmulas e premissas estão documentadas em [`docs/calculos.md`](calculos.md).
 
 ---
 
-## 9. Integrações externas
+## 8. Carbon Intensity API
 
-### Metrics Aggregator API
+A Carbon Intensity API fornece os fatores ambientais regionais.
 
-É utilizada para descoberta dos serviços através de:
+O backend consulta o catálogo e persiste **snapshots**, mantendo o instante em que cada valor foi observado.
 
-```text
-GET /services
+```mermaid
+flowchart LR
+    API[Carbon Intensity API] -->|GET /regions| S[Sincronização]
+    S --> DB[(carbon_intensity)]
+    DB --> IND[Indicadores ambientais]
 ```
 
-O fluxo manual de coleta consulta cada serviço ativo individualmente:
+O cálculo seleciona um snapshot compatível com:
 
-```text
-GET /metrics/{id_servico}
-```
+- `region_code` do serviço;
+- instante da tentativa de coleta;
+- idade máxima configurada em `CARBON_INTENSITY_MAX_AGE_MS`.
 
-O módulo de integração trata:
-
-- timeout;
-- erro HTTP;
-- ausência de métricas;
-- resposta válida;
-- falhas individuais sem interromper a coleta dos demais serviços.
-
-A coleta é disparada periodicamente pelo job iniciado junto ao backend e também pode ser iniciada manualmente por `POST /api/metricas/collect`, protegido por JWT e restrito a usuários administradores. O histórico por serviço está disponível em `GET /api/metricas/historico/:serviceId`, protegido por JWT.
-
-### Carbon Intensity API
-
-Fornece os fatores ambientais regionais. As rotas protegidas de intensidades permitem descobrir, sincronizar snapshots e listar os dados persistidos.
-
-O módulo de indicadores associa cada tentativa ao snapshot da mesma região mais recente até o instante da coleta, limitado por `CARBON_INTENSITY_MAX_AGE_MS`, cujo padrão é `900000` ms (15 minutos). Sem snapshot elegível nesse limite, a emissão fica indisponível; não há fallback para um fator mais antigo.
+Caso nenhum fator seja elegível, a energia pode continuar calculável, mas a emissão daquele ponto permanece indisponível.
 
 ---
 
-## 10. Endpoints confirmados na versão atual
+## 9. Autenticação e autorização
 
-| Método | Rota | Finalidade |
-| --- | --- | --- |
-| `GET` | `/health` | Saúde básica do backend |
-| `POST` | `/auth/register` | Cadastro de usuário |
-| `POST` | `/auth/login` | Login e emissão de JWT |
-| `GET` | `/auth/me` | Validar token e retornar usuário autenticado |
-| `GET` | `/api/servicos/discover` | Descoberta direta na Metrics API |
-| `POST` | `/api/servicos/sync` | Sincronização manual do catálogo |
-| `GET` | `/api/servicos` | Listagem persistida de serviços |
-| `POST` | `/api/metricas/collect` | Disparo manual de coleta (JWT e administrador) |
-| `GET` | `/api/metricas/historico/:serviceId` | Histórico de coletas do serviço (JWT) |
-| `GET` | `/api/intensidades/discover` | Descoberta de snapshots da Carbon API (JWT) |
-| `POST` | `/api/intensidades/sync` | Persistência de snapshots regionais (JWT) |
-| `GET` | `/api/intensidades` | Listagem de snapshots persistidos (JWT) |
-| `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Indicadores ambientais por período (JWT) |
-| `GET` | `/api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>` | Histórico ambiental por serviço (JWT) |
-| `GET` | `/api/dashboard` | Resumo consolidado para o dashboard (JWT; período opcional) |
+A autenticação JWT está aplicada no backend.
 
-Os indicadores ambientais, o resumo do dashboard e o histórico por serviço estão integrados ao frontend. Ranking e comparação entre serviços permanecem planejados para a Sprint 3.
+Fluxo:
+
+```mermaid
+flowchart TD
+    R[Requisição] --> H[Authorization: Bearer token]
+    H --> A[Middleware JWT]
+    A --> V{Token válido?}
+
+    V -->|Não| U[401 Unauthorized]
+    V -->|Sim| C[Controller]
+
+    C --> P{Rota exige admin?}
+    P -->|Não| S[Executar caso de uso]
+    P -->|Sim| D[Consultar permissão no banco]
+
+    D -->|admin = false| F[403 Forbidden]
+    D -->|admin = true| S
+```
+
+Exemplos:
+
+- `/auth/me`: exige JWT;
+- indicadores e dashboard: exigem JWT;
+- coleta manual de métricas: exige JWT + administrador.
+
+A autorização administrativa é consultada no banco, evitando depender apenas de estado do frontend.
 
 ---
 
-## 11. Execução local
+## 10. Arquitetura do frontend
 
-O `compose.yaml` executa:
-
-- `postgres` — PostgreSQL 17;
-- `backend` — Node.js + TypeScript;
-- `frontend` — React + TypeScript.
-
-O volume do PostgreSQL preserva os registros quando os containers são reiniciados com:
+O frontend separa responsabilidades entre:
 
 ```text
-docker compose down
-docker compose up
+pages
+  ↓
+components
+  ↓
+hooks / services
+  ↓
+API GreenER
 ```
 
-O comando:
+### Monitoramento
+
+A página de **Monitoramento** concentra a leitura operacional do ambiente:
+
+- serviços monitorados;
+- estados atuais;
+- última coleta;
+- indicadores ambientais;
+- energia e CO₂e consolidados;
+- localização;
+- mapa geográfico;
+- atualização automática.
+
+O Monitoramento não deve se tornar uma tela de análise histórica profunda.
+
+### Análises
+
+A página de **Análises** concentra exploração temporal:
+
+- seleção de serviço;
+- seleção de período;
+- histórico ambiental;
+- gráfico de energia;
+- lacunas no histórico;
+- navegação entre serviços.
+
+Ranking e comparação permanecem planejados para a Sprint 3.
+
+### Atualização automática
+
+Os hooks mantêm os últimos dados válidos em falhas transitórias e executam novas consultas periodicamente.
+
+Fluxo simplificado:
 
 ```text
-docker compose down -v
+hook
+  ↓
+requisição autenticada
+  ↓
+sucesso?
+ ├─ sim → substitui dados + atualiza horário
+ └─ não → mantém dados anteriores + sinaliza erro
+  ↓
+agenda próxima consulta
 ```
 
-remove o volume e, portanto, não deve ser utilizado em testes cujo objetivo seja validar persistência.
+Esse comportamento evita apagar a interface durante uma falha temporária de rede/backend.
 
-Alterações incrementais no modelo de um banco já inicializado devem utilizar as migrations disponíveis em:
+---
+
+## 11. Visualização geográfica — US13
+
+A US13 foi antecipada da Sprint 3 durante a reformulação do Monitoramento.
+
+O mapa utiliza:
+
+- **MapLibre GL**;
+- estilo/tile source do **OpenFreeMap**;
+- latitude e longitude recebidas pelo backend;
+- estado de monitoramento para diferenciar marcadores;
+- agrupamento de serviços que compartilham coordenadas.
+
+```mermaid
+flowchart LR
+    DB[(service + location)] --> API[GET /api/servicos]
+    API --> HOOK[useMonitoring]
+    HOOK --> MAP[ServicesMap]
+    MAP --> MARK[Marcadores / grupos]
+    MARK --> PANEL[Detalhes do serviço]
+```
+
+A ausência de coordenadas não remove o serviço do Monitoramento. O mapa é uma visualização complementar, atendendo ao RF13 sem tornar a localização geográfica a única forma de consultar os serviços.
+
+No fechamento documental da Sprint 2, a US13 permanece em revisão antes de ser considerada definitivamente integrada.
+
+---
+
+## 12. Histórico visual — TEC23
+
+A página de Análises utiliza Recharts para representar os dados históricos retornados por:
+
+```text
+GET /api/indicadores/:serviceId/historico
+```
+
+O backend continua responsável por:
+
+- consulta do período;
+- associação de intensidade de carbono;
+- cálculo ambiental;
+- detecção de lacunas.
+
+O gráfico é responsável apenas pela representação.
+
+Amostras sem energia calculável permanecem `null`, permitindo interrupções visuais no gráfico em vez de criar uma linha falsa em zero.
+
+---
+
+## 13. Evolução do schema e migrations
+
+`database/schema.sql` representa o estado completo esperado para um banco criado do zero.
+
+Para bancos existentes, a evolução deve ocorrer por scripts de migration em:
 
 ```text
 database/migrations/
 ```
 
-em vez de depender da recriação do volume.
+A migration:
+
+```text
+001_add_collection.sql
+```
+
+introduziu a estrutura:
+
+```text
+service → collection → metrics
+```
+
+sem exigir a remoção do volume PostgreSQL.
+
+Essa estratégia é importante porque:
+
+- preserva histórico já existente;
+- permite evolução incremental do banco;
+- reduz dependência de `docker compose down -v`;
+- torna a atualização do ambiente reproduzível.
+
+Detalhes operacionais ficam em [`database/README.md`](../database/README.md).
 
 ---
 
-## 12. Decisões arquiteturais da Sprint 2
+## 14. Persistência Docker
 
-### Decisões já registradas
+O Compose executa:
 
-- adoção da entidade `collection`;
-- separação entre tentativa de coleta e métricas válidas;
-- relacionamento `service → collection → metrics`;
-- cardinalidade de zero ou um registro de métricas por coleta;
-- estados de coleta:
-  - `success`;
-  - `no_metrics`;
-  - `unavailable`;
-  - `error`;
-- `service.status` e `service.last_seen_at` permanecem responsáveis pelo estado atual conhecido do serviço;
-- `collection` preserva o histórico das tentativas;
-- falhas não geram registros vazios em `metrics`;
-- evolução do schema realizada por migration;
-- classificação das respostas de `/metrics/{id}` em `success`, `no_metrics`, `unavailable` e `error`;
-- energia e CO₂e são calculados sob demanda e não são persistidos na entidade `collection`;
-- jobs de sincronização do catálogo, coleta de métricas e sincronização de intensidades de carbono iniciados pelo backend;
-- consulta de histórico de coletas por serviço protegida por JWT;
-- cálculo de indicadores por período protegido por JWT;
-- associação temporal da intensidade pelo código regional e instante da tentativa, limitada por `CARBON_INTENSITY_MAX_AGE_MS`;
-- `COLLECTION_INTERVAL_MS`, `SERVICE_SYNC_INTERVAL_MS` e `CARBON_INTENSITY_SYNC_INTERVAL_MS` permanecem independentes.
-- `collection_interval_seconds` é validado, persistido por amostra e usado nos cálculos; amostras sem duração são lacunas.
+- `postgres`;
+- `backend`;
+- `frontend`.
 
-### Decisões ainda pendentes
+O volume do PostgreSQL preserva os dados quando o ambiente é reiniciado com:
 
-- confirmar com o fornecedor as unidades e a semântica das métricas de memória, disco e rede;
-- definir e implementar comparações e rankings entre serviços, planejados para a Sprint 3;
-- definir eventual uso de `renewable_share_percent` sem duplicar o benefício já refletido na intensidade de carbono.
+```bash
+docker compose down
+docker compose up -d
+```
 
-As pendências devem ser documentadas conforme forem implementadas e validadas, evitando apresentar comportamento planejado como funcionalidade concluída.
+O comando:
+
+```bash
+docker compose down -v
+```
+
+remove o volume e não deve ser usado quando o objetivo é validar persistência.
+
+Na validação de 09/11/2026, uma coleta e sua métrica associada permaneceram disponíveis após a remoção e recriação dos containers, confirmando o comportamento do volume.
+
+---
+
+## 15. Tolerância a falhas
+
+A arquitetura busca impedir que falhas isoladas derrubem o monitoramento completo.
+
+### Falha de um serviço
+
+Cada serviço é processado individualmente durante o ciclo de coleta.
+
+```text
+serviço A → success
+serviço B → unavailable
+serviço C → success
+```
+
+A indisponibilidade de B não impede C de ser processado.
+
+### Falha de API externa
+
+As integrações possuem timeout e tratamento de erro.
+
+Falhas são convertidas em estados ou erros controlados e não devem encerrar o processo principal do backend.
+
+### Falha temporária no frontend
+
+Os hooks preservam os últimos dados válidos quando uma atualização falha e tentam novamente no próximo ciclo.
+
+### Dados incompletos
+
+O backend utiliza `isPartial`, coberturas e lacunas para comunicar que um resultado não está completo, evitando apresentar ausência como valor zero.
+
+---
+
+## 16. Endpoints arquiteturalmente relevantes
+
+A lista detalhada de contratos está em [`docs/api.md`](api.md).
+
+Principais fluxos:
+
+| Método | Endpoint | Papel arquitetural |
+| --- | --- | --- |
+| `POST` | `/auth/login` | Emissão do JWT |
+| `GET` | `/auth/me` | Validação da sessão |
+| `GET` | `/api/servicos` | Catálogo persistido e localização |
+| `POST` | `/api/servicos/sync` | Sincronização manual do catálogo |
+| `POST` | `/api/metricas/collect` | Disparo administrativo da coleta |
+| `GET` | `/api/metricas/historico/:serviceId` | Histórico bruto |
+| `GET` | `/api/intensidades` | Snapshots de carbono |
+| `GET` | `/api/indicadores` | Indicadores ambientais por período |
+| `GET` | `/api/indicadores/:serviceId/historico` | Histórico ambiental |
+| `GET` | `/api/dashboard` | Resumo operacional |
+
+---
+
+## 17. Arquitetura validada no fechamento da Sprint 2
+
+Em 09/11/2026 foram confirmados no ambiente Docker:
+
+- backend e PostgreSQL com healthcheck;
+- coleta periódica ativa;
+- histórico persistente;
+- estados `success`, `no_metrics` e `unavailable`;
+- persistência após reinicialização dos containers;
+- cálculo e consolidação de energia e CO₂e;
+- consistência entre indicadores e dashboard;
+- histórico ambiental;
+- autenticação JWT;
+- autorização administrativa;
+- atualização automática do frontend;
+- tolerância à falha de um serviço.
+
+As evidências e comandos estão registrados em:
+
+[`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md)
+
+---
+
+## 18. Evolução planejada para a Sprint 3
+
+A arquitetura base necessária para a Sprint 3 já está disponível.
+
+Os principais recursos ainda previstos são:
+
+- filtros analíticos reutilizáveis;
+- ranking por energia e CO₂e;
+- comparação entre dois ou mais serviços no mesmo período;
+- refinamentos de responsividade;
+- consolidação do mapa antecipado na Sprint 2;
+- otimizações de desempenho;
+- ampliação de testes e validação final do MVP.
+
+Essas funcionalidades devem reutilizar os dados históricos e cálculos existentes, evitando criar fluxos paralelos ou duplicar regras já consolidadas no backend.
+
+---
+
+## 19. Princípios arquiteturais mantidos
+
+1. **Regra de negócio no backend:** cálculos e consolidações não são duplicados no React.
+2. **SQL explícito e parametrizado:** sem ORM.
+3. **Histórico imutável:** novas coletas geram novos registros.
+4. **Falha não equivale a zero:** dados ausentes são representados por estados/lacunas.
+5. **Falha isolada não interrompe o todo:** serviços são processados independentemente.
+6. **Jobs independentes:** catálogo, métricas e intensidade possuem ciclos próprios.
+7. **Frontend orientado a dados reais:** indicadores principais vêm da API GreenER.
+8. **Evolução por migrations:** bancos existentes não dependem de recriação do volume.
+9. **Monitoramento e Análises têm papéis distintos:** operação atual x exploração histórica.
+10. **Visualização geográfica é complementar:** serviços continuam acessíveis mesmo sem coordenadas.

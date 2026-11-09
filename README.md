@@ -1,98 +1,199 @@
-# 🌱 GreenER: Monitoramento de Consumo Energético e Emissões de CO₂e
+<div align="center">
 
-Projeto de **Aprendizagem Baseada em Projetos (ABP)** do 2º semestre de 2026 do curso de **Desenvolvimento de Software Multiplataforma (DSM)** da **FATEC Jacareí**, desenvolvido em parceria com a **Unilaunch**.
+# 🌱 GreenER
 
-O GreenER é um sistema que monitora aplicações e serviços de uma infraestrutura digital e estima o **consumo de energia** e a **emissão de CO₂e** associados a eles, exibindo tudo em um dashboard.
+### Monitoramento de consumo energético e emissões de CO₂e em serviços digitais
 
----
+**ABP · DSM · FATEC Jacareí · 2º semestre de 2026**
 
-## 🧭 Navegação
+[![React](https://img.shields.io/badge/React-19-20232A?logo=react&logoColor=61DAFB)](frontend/README.md)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Frontend%20%2B%20Backend-3178C6?logo=typescript&logoColor=white)](docs/arquitetura.md)
+[![Node.js](https://img.shields.io/badge/Node.js-Backend-339933?logo=node.js&logoColor=white)](backend/README.md)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](database/README.md)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](compose.yaml)
 
-[_Sobre o Projeto_](#-sobre-o-projeto) • [_Funcionalidades_](#-funcionalidades) • [_Tecnologias_](#-tecnologias-utilizadas) • [_Como Executar_](#️-como-executar-o-ambiente-com-docker) • [_Documentação_](#-documentação) • [_Equipe_](#-equipe)
+**Projeto desenvolvido pela equipe Let:zApplin em parceria com a Unilaunch.**
 
-### 🚀 Acompanhe a evolução do GreenER
-
-| Sprint 01 | Sprint 02 | Sprint 03 |
-| :---: | :---: | :---: |
-| ✅ Concluída | ✅ Concluída | ⏳ Planejada |
-| [📄 Documentação](docs/sprints/sprint-1.md) | [📄 Documentação](docs/sprints/sprint-2.md) | [📄 Documentação](docs/sprints/sprint-3.md) |
-| [▶️ Demonstração](https://youtu.be/pGdiciJxTPw) | Em breve | Em breve |
+</div>
 
 ---
 
-## 📌 Sobre o Projeto
+## 🌍 O projeto
 
-Hoje, empresas monitoram CPU, memória e disponibilidade de suas aplicações, mas essas métricas dizem pouco sobre o **impacto ambiental** da infraestrutura digital.
+Empresas já monitoram CPU, memória, armazenamento, rede e disponibilidade de suas aplicações. O GreenER amplia esse olhar: utiliza essas métricas para estimar o **consumo de energia** e a **emissão de CO₂e** dos serviços, preservando o histórico operacional e permitindo analisar a evolução do ambiente ao longo do tempo.
 
-O GreenER busca preencher essa lacuna: a partir das métricas dos serviços monitorados e da intensidade de carbono da região onde eles operam, o sistema estima quanta energia é consumida e quanto CO₂e é emitido, por serviço e para o ambiente como um todo.
+```text
+métricas computacionais
+        ↓
+potência estimada
+        ↓
+energia estimada
+        ↓
+intensidade de carbono regional
+        ↓
+emissão estimada de CO₂e
+```
 
-O projeto consome duas APIs auxiliares fornecidas pela Unilaunch:
-
-| API                               | Para que serve                                                 | Documentação                                                     |
-| --------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Agregador de Métricas             | Descoberta dos serviços e coleta das métricas de cada um       | [metrics.unilaunch.org/docs](https://metrics.unilaunch.org/docs) |
-| Serviço de Intensidade de Carbono | Consulta da intensidade de carbono para o cálculo das emissões | [carbon.unilaunch.org/docs](https://carbon.unilaunch.org/docs)   |
-
----
-
-## ✨ Funcionalidades
-
-> Esta lista resume funcionalidades implementadas e verificadas. O grupo confirmou a Definition of Done da Sprint 2 em 08/11/2026.
-
-- [x] Descoberta e sincronização dos serviços disponíveis
-- [x] Coleta periódica de métricas e preservação do histórico
-- [x] Identificação de serviços indisponíveis e de serviços sem métricas
-- [x] Estimativa de consumo de energia e emissão de CO₂e
-- [x] Indicadores consolidados e por serviço no Monitoramento
-- [x] Atualização periódica do dashboard sem recarregamento manual
-- [x] Autenticação JWT e proteção de endpoints
-- [x] Consulta visual do histórico ambiental por serviço e período
+> O GreenER trabalha com **estimativas ambientais**, não com medições físicas diretas de energia.
 
 ---
 
-## 🛠 Tecnologias Utilizadas
+## ⚡ Acesso rápido
 
-- React com TypeScript (frontend)
-- Node.js com TypeScript (backend)
-- PostgreSQL (banco de dados relacional)
-- Docker e Docker Compose
-- Git & GitHub
+| Quero acessar... | Link |
+| --- | --- |
+| 🖥️ **Frontend** | [`frontend/README.md`](frontend/README.md) |
+| ⚙️ **Backend / API** | [`backend/README.md`](backend/README.md) · [`docs/api.md`](docs/api.md) |
+| 🗄️ **Banco de dados** | [`database/README.md`](database/README.md) |
+| 🧩 **Arquitetura** | [`docs/arquitetura.md`](docs/arquitetura.md) |
+| 🌱 **Cálculos ambientais** | [`docs/calculos.md`](docs/calculos.md) |
+| 📦 **Plano de entregas** | [`docs/plano-de-entregas.md`](docs/plano-de-entregas.md) |
+| ✅ **Validação técnica** | [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md) |
 
-Os detalhes de cada parte estão nos READMEs indicados na seção [Organização do Repositório](#-organização-do-repositório).
+### Sprints
 
----
+| Sprint | Período | Registro | Demonstração | Situação |
+| --- | --- | --- | --- | --- |
+| **Sprint 1** | 28/09–19/10/2026 | [`sprint-1.md`](docs/sprints/sprint-1.md) | [▶ Vídeo](https://youtu.be/pGdiciJxTPw) | ✅ Finalizada |
+| **Sprint 2** | 20/10–09/11/2026 | [`sprint-2.md`](docs/sprints/sprint-2.md) | [▶ Vídeo](https://youtu.be/qW38NnthF8Q) | 🟡 Incremento tecnicamente validado; Sprint Review pendente |
+| **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | A definir | ⏳ Planejada |
 
-## 🚀 Como Funciona
-
-1. O backend consulta o **Agregador de Métricas** para descobrir os serviços e coletar suas métricas
-2. O backend consulta o **Serviço de Intensidade de Carbono** para obter os fatores de emissão
-3. As coletas, métricas e snapshots de intensidade de carbono são armazenados no **PostgreSQL**; energia e emissões de CO₂e são calculadas sob demanda a partir desses dados
-4. O usuário acompanha tudo pelo **dashboard web**
-
-O fluxo completo está descrito em [`docs/arquitetura.md`](docs/arquitetura.md).
-
----
-
-## 📂 Organização do Repositório
-
-| Pasta / Arquivo                   | O que contém                                                    |
-| --------------------------------- | --------------------------------------------------------------- |
-| [`frontend/`](frontend/README.md) | Aplicação web (dashboard e telas)                               |
-| [`backend/`](backend/README.md)   | API, regras de negócio e integração com as APIs auxiliares      |
-| [`database/`](database/README.md) | Scripts SQL do banco de dados                                   |
-| [`docs/`](docs/)                  | Planejamento, arquitetura, cálculos, API e registro das sprints |
-| [`compose.yaml`](compose.yaml)    | Execução do projeto com Docker                                  |
-| [`.env.example`](.env.example)    | Modelo das variáveis de ambiente                                |
+> A visualização geográfica começou antecipadamente no fim da Sprint 2 e será consolidada na Sprint 3.
 
 ---
 
-## ▶️ Como Executar o Ambiente com Docker
+## ✨ O que o GreenER já faz
 
-O GreenER utiliza Docker Compose para executar os principais serviços da aplicação:
+<table>
+<tr>
+<td width="50%" valign="top">
 
-- Frontend em React + TypeScript
-- Backend em Node.js + TypeScript + Express
-- Banco de dados PostgreSQL
+### 🔎 Monitoramento
+
+- descoberta e sincronização automática dos serviços;
+- coleta periódica de CPU, memória, disco e rede;
+- identificação de serviços removidos;
+- estados `success`, `no_metrics`, `unavailable` e `error`;
+- indicadores ambientais consolidados;
+- atualização automática;
+- localização e visualização geográfica.
+
+</td>
+<td width="50%" valign="top">
+
+### 📈 Análises
+
+- seleção de serviço;
+- seleção de período;
+- histórico de energia;
+- gráfico temporal;
+- identificação de lacunas;
+- navegação a partir do Monitoramento;
+- base preparada para ranking, comparação e filtros na Sprint 3.
+
+</td>
+</tr>
+</table>
+
+Também estão implementados:
+
+- ✅ integração com intensidade de carbono por região;
+- ✅ estimativa de energia por serviço;
+- ✅ estimativa de emissão de CO₂e por serviço;
+- ✅ autenticação JWT;
+- ✅ autorização administrativa para coleta manual;
+- ✅ persistência PostgreSQL após reinicialização dos containers;
+- 🔄 reformulação visual do Monitoramento — TEC37 em revisão;
+- 🔄 visualização geográfica — US13 antecipada da Sprint 3 e em revisão no fechamento da Sprint 2.
+
+---
+
+## 🧠 Como funciona
+
+```text
+Metrics Aggregator /services
+        ↓
+sincronização do catálogo
+        ↓
+Metrics Aggregator /metrics/{id}
+        ↓
+coleta periódica
+        ↓
+PostgreSQL
+service → collection → metrics
+        ↓
+Carbon Intensity API
+        ↓
+snapshots regionais
+        ↓
+cálculo de energia + CO₂e
+        ↓
+indicadores / dashboard / histórico
+        ↓
+Monitoramento + Análises
+```
+
+### Etapas principais
+
+**1. Descoberta** — o backend consulta o Agregador de Métricas e sincroniza o catálogo de serviços.
+
+**2. Coleta** — cada serviço ativo é consultado periodicamente. Uma tentativa pode ser preservada em `collection` mesmo quando não existem métricas válidas.
+
+**3. Persistência** — PostgreSQL armazena serviços, localizações, tentativas de coleta, métricas válidas, snapshots de intensidade de carbono e usuários.
+
+**4. Cálculo ambiental** — energia e CO₂e são calculados a partir do histórico conforme o modelo documentado em [`docs/calculos.md`](docs/calculos.md).
+
+**5. Apresentação** — o Monitoramento exibe a situação operacional; Análises concentra a exploração histórica.
+
+---
+
+## 🔌 APIs auxiliares
+
+| API | Uso no GreenER | Documentação |
+| --- | --- | --- |
+| **Agregador de Métricas** | Descoberta dos serviços e coleta periódica de métricas | [metrics.unilaunch.org/docs](https://metrics.unilaunch.org/docs) |
+| **Serviço de Intensidade de Carbono** | Fatores regionais usados no cálculo de CO₂e | [carbon.unilaunch.org/docs](https://carbon.unilaunch.org/docs) |
+
+O ambiente monitorado é dinâmico: serviços podem surgir, desaparecer, tornar-se indisponíveis ou deixar de fornecer métricas.
+
+---
+
+## 🛠️ Tecnologias
+
+| Camada | Tecnologias |
+| --- | --- |
+| **Frontend** | React 19 · TypeScript · Vite · React Router · Recharts · MapLibre GL · OpenFreeMap · MapTiler SDK · Phosphor Icons |
+| **Backend** | Node.js · Express · TypeScript · JWT · `pg` |
+| **Dados** | PostgreSQL 17 · SQL explícito e parametrizado |
+| **Infraestrutura** | Docker · Docker Compose · Git · GitHub |
+
+---
+
+## 📂 Organização do repositório
+
+```text
+GreenER/
+├── frontend/          # React, Monitoramento, Análises, mapa e gráficos
+├── backend/           # API REST, autenticação, regras, jobs e integrações
+├── database/          # Schema, migrations e documentação SQL
+├── docs/              # Planejamento, arquitetura, cálculos, API e sprints
+├── compose.yaml       # Ambiente integrado
+├── compose.test.yaml  # Integração PostgreSQL
+└── .env.example       # Modelo das variáveis de ambiente
+```
+
+| Pasta / arquivo | Referência |
+| --- | --- |
+| `frontend/` | [`frontend/README.md`](frontend/README.md) |
+| `backend/` | [`backend/README.md`](backend/README.md) |
+| `database/` | [`database/README.md`](database/README.md) |
+| `docs/` | Documentação técnica e registros das sprints |
+| `compose.yaml` | Execução integrada com Docker Compose |
+| `compose.test.yaml` | Ambiente para testes de integração PostgreSQL |
+
+---
+
+## ▶️ Como executar
 
 ### 1. Clone o repositório
 
@@ -101,158 +202,155 @@ git clone https://github.com/LetzApplin/GreenER.git
 cd GreenER
 ```
 
-### 2. Crie o arquivo de variáveis de ambiente
+### 2. Crie o arquivo de ambiente
 
-Crie o arquivo `.env` a partir do modelo disponível no projeto:
+Linux/macOS:
 
 ```bash
 cp .env.example .env
 ```
 
-Revise os valores do arquivo `.env` e ajuste-os caso necessário.
+PowerShell:
 
-### 3. Suba a aplicação com Docker
+```powershell
+Copy-Item .env.example .env
+```
 
-Na raiz do projeto, execute:
+Revise as variáveis antes de iniciar a aplicação.
+
+### 3. Suba o ambiente
 
 ```bash
 docker compose up --build
 ```
 
-Esse comando irá construir e iniciar os containers do:
+O Compose inicia **PostgreSQL + backend + frontend**.
 
-- PostgreSQL
-- Backend
-- Frontend
+### 4. Acesse
 
-### 4. Acesse os serviços
+| Serviço | Endereço |
+| --- | --- |
+| Frontend | `http://localhost:5173` |
+| Backend | `http://localhost:3000` |
+| Healthcheck | `http://localhost:3000/health` |
+| PostgreSQL no host | `localhost:5433` |
+| PostgreSQL na rede Docker | `postgres:5432` |
 
-Após a inicialização dos containers:
-
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:3000`
-- Healthcheck do backend: `http://localhost:3000/health`
-- PostgreSQL no host: `localhost:5433`
-
-Internamente, o backend acessa o PostgreSQL através de:
-
-```text
-postgres:5432
-```
-
-A porta `5433` é utilizada apenas para acesso ao banco a partir da máquina host.
-
-### 5. Executar em segundo plano
-
-Para subir os containers sem manter os logs no terminal:
+### Comandos úteis
 
 ```bash
+# Segundo plano
 docker compose up -d
-```
 
-### 6. Verificar o status dos containers
-
-```bash
+# Conferir containers
 docker compose ps
-```
 
-### 7. Encerrar o ambiente
-
-```bash
+# Encerrar preservando o volume
 docker compose down
-```
 
-Os dados do PostgreSQL permanecem armazenados no volume Docker após o encerramento dos containers.
-
-Para remover também os volumes:
-
-```bash
+# Encerrar removendo também os dados
 docker compose down -v
 ```
 
-> ⚠️ O comando acima remove os dados persistidos do PostgreSQL.
+> ⚠️ `docker compose down -v` remove o volume PostgreSQL. Não use quando precisar preservar o histórico ou validar persistência.
 
-## 🔄 Hot Reload
+---
 
-O ambiente de desenvolvimento foi configurado para refletir alterações no código automaticamente.
+## 🔄 Desenvolvimento e hot reload
 
-Alterações em arquivos como:
+Alterações em `.ts`, `.tsx` e `.css` são refletidas pelo ambiente de desenvolvimento sem reconstrução completa da imagem.
 
-```text
-.ts
-.tsx
-.css
-```
-
-não exigem reconstrução das imagens.
-
-Já alterações em arquivos como:
-
-```text
-package.json
-package-lock.json
-Dockerfile
-```
-
-podem exigir uma nova construção:
+Mudanças em `package.json`, `package-lock.json` ou `Dockerfile` podem exigir:
 
 ```bash
 docker compose up --build
 ```
 
-<!-- Confirmar comandos e portas de acesso quando o Docker estiver pronto -->
-
-Para instruções específicas de cada parte, consulte os READMEs do [frontend](frontend/README.md), do [backend](backend/README.md) e do [banco de dados](database/README.md).
-
 ---
 
-## ✅ Como testar e validar
+## ✅ Testes e validação
 
-Para fazer testes unitários
+### Frontend
 
-- [`docs/testes/manual_teste_unitario.md`](docs/testes/manual_teste_unitario.md) - Manual com instruções para testes unitários
+```bash
+cd frontend
+npm test
+npm run typecheck
+npm run build
+```
 
-- [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md) - Manual de validação de fluxo de Metrics API ao React
+### Backend — suíte comum
+
+```bash
+cd backend
+npm test
+npm run typecheck
+```
+
+### Integração PostgreSQL
+
+Na raiz do projeto:
+
+```bash
+docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test
+```
+
+Ao terminar:
+
+```bash
+docker compose -f compose.test.yaml down -v
+```
+
+### Resultado do fechamento técnico da Sprint 2
+
+| Validação | Resultado |
+| --- | ---: |
+| Backend — suíte comum | **156 testes aprovados** |
+| Integração PostgreSQL | **7/7 aprovados** |
+| Frontend | **26/26 aprovados** |
+| Total automatizado único | **189 testes** |
+| Typecheck backend | ✅ |
+| Typecheck frontend | ✅ |
+| Build de produção | ✅ |
+
+Também foram validados: persistência após restart, coleta automática, atualização automática do frontend, autenticação JWT, autorização `401 / 403 / 200`, estados `no_metrics` e `unavailable`, consistência entre dashboard e indicadores e histórico ambiental por serviço.
+
+Evidências:
+
+- [`docs/testes/manual_teste_unitario.md`](docs/testes/manual_teste_unitario.md)
+- [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md)
 
 ---
 
 ## 📚 Documentação
 
-| Documento                                                | Conteúdo                                                           |
-| -------------------------------------------------------- | ------------------------------------------------------------------ |
-| [`docs/plano-de-entregas.md`](docs/plano-de-entregas.md) | Planejamento das três sprints, entregas, responsáveis e evidências |
-| [`docs/arquitetura.md`](docs/arquitetura.md)             | Partes da aplicação e fluxo dos dados                              |
-| [`docs/calculos.md`](docs/calculos.md)                   | Fórmulas e premissas do cálculo de energia e CO₂e                  |
-| [`docs/api.md`](docs/api.md)                             | Endpoints da API do projeto                                        |
+| Documento | Conteúdo |
+| --- | --- |
+| [`docs/plano-de-entregas.md`](docs/plano-de-entregas.md) | Planejamento das sprints, critérios, responsáveis e evidências |
+| [`docs/arquitetura.md`](docs/arquitetura.md) | Camadas, responsabilidades e fluxo dos dados |
+| [`docs/calculos.md`](docs/calculos.md) | Fórmulas, unidades, fatores, premissas e exemplo de cálculo |
+| [`docs/api.md`](docs/api.md) | Endpoints, parâmetros, respostas e autenticação |
+| [`database/README.md`](database/README.md) | Schema, migrations, DML e persistência |
+| [`frontend/README.md`](frontend/README.md) | Organização das telas e execução do frontend |
+| [`backend/README.md`](backend/README.md) | Organização do backend, integrações e configuração |
+| [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md) | Validação técnica ponta a ponta |
 
-Materiais do desafio:
+### Materiais do desafio
 
-- [Documentação do projeto (Unilaunch)](https://docs.unilaunch.org/share/x29w8jgwdb/p/greener-abp-2-semestre-b7FiqU6UC1)
-- [Documentos escritos da ABP (Google Docs)](https://docs.google.com/document/d/1X6rmJBm1bTjtur5AG_jwcQY1v6v7jn2c4BwI4HIcfgg/edit?usp=sharing)
-
----
-
-## 🗓 Sprints
-
-O projeto é desenvolvido em três sprints. O registro de cada uma (objetivo, itens concluídos e pendentes, decisões da Sprint Review) fica em `docs/sprints/`.
-
-| Sprint                                     | Período            | Principais Entregas                                                                         | Status        |
-| ------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------- | ------------- |
-| [**Sprint 1**](./docs/sprints/sprint-1.md) | 28/09 — 19/10/2026 | Prototipação · Diagramas UML · Modelagem BD · Conexão API e BD · Teste unitário e validação | ✔️ Finalizada |
-| [**Sprint 2**](./docs/sprints/sprint-2.md) | 20/10 — 09/11/2026 | Coleta periódica e histórica · Indicadores ambientais · Dashboard operacional · Histórico visual | ✔️ Concluída |
-| [**Sprint 3**](./docs/sprints/sprint-3.md) | 10/11 — 23/11/2026 | A ser definido                                                                              | ⏳            |
+- [Documentação do projeto — Unilaunch](https://docs.unilaunch.org/share/x29w8jgwdb/p/greener-abp-2-semestre-b7FiqU6UC1)
+- [Documentos escritos da ABP](https://docs.google.com/document/d/1X6rmJBm1bTjtur5AG_jwcQY1v6v7jn2c4BwI4HIcfgg/edit?usp=sharing)
 
 ---
 
 ## 👥 Equipe
 
-| Nome                | Papel         | GitHub                                                             |
-| ------------------- | ------------- | ------------------------------------------------------------------ |
-| Vitor Hirch         | Scrum Master  | [@vitorhirch](https://github.com/vitorhirch)                       |
-| Gustavo Koiti       | Product Owner | [@gustavokoitiyoshimura](https://github.com/gustavokoitiyoshimura) |
-| Igor Souza          | Desenvolvedor | [@igorcsouzaa](https://github.com/igorcsouzaa)                     |
-| Marcello Campbell   | Desenvolvedor | [@mparise28-dev](https://github.com/mparise28-dev)                 |
-| Patricia R. Maidana | Desenvolvedor | [@PatyMaidana](https://github.com/PatyMaidana)                     |
+| Nome | Papel | GitHub |
+| --- | --- | --- |
+| **Vitor Hirch** | Scrum Master | [@vitorhirch](https://github.com/vitorhirch) |
+| **Gustavo Koiti** | Product Owner | [@gustavokoitiyoshimura](https://github.com/gustavokoitiyoshimura) |
+| **Igor Souza** | Desenvolvedor | [@igorcsouzaa](https://github.com/igorcsouzaa) |
+| **Marcello Campbell** | Desenvolvedor | [@mparise28-dev](https://github.com/mparise28-dev) |
+| **Patricia R. Maidana** | Desenvolvedora | [@PatyMaidana](https://github.com/PatyMaidana) |
 
-**Instituição:** FATEC Jacareí, curso de Desenvolvimento de Software Multiplataforma (DSM)
+**Instituição:** FATEC Jacareí — Desenvolvimento de Software Multiplataforma (DSM)  
 **Parceiro:** Unilaunch
