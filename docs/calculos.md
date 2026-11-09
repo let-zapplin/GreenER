@@ -2,190 +2,700 @@
 
 ← [Voltar ao índice da documentação](../README.md)
 
-> **Situação:** cálculo de energia e CO₂e implementado no backend; validação das premissas e das unidades de origem ainda pendente.
-> Este documento descreve o comportamento atual de `GET /api/indicadores`, incluindo as premissas provisórias. Os fatores do modelo são os valores do exemplo fornecido pelo cliente; não são medições diretas de potência do hardware.
+> **Referência atualizada no fechamento da Sprint 2 — 09/11/2026.**  
+> O GreenER transforma métricas de infraestrutura em **estimativas** de potência, energia e emissão de CO₂e. Os resultados não representam medição elétrica direta do hardware.
 
 ---
 
-## 1. Objetivo e fluxo
+## 1. Objetivo
 
-O módulo transforma métricas técnicas persistidas em estimativas de consumo energético e emissão de CO₂ equivalente:
+O GreenER utiliza as métricas coletadas de cada serviço para estimar:
+
+1. potência computacional aproximada;
+2. energia consumida durante a duração real da amostra;
+3. emissão de CO₂e associada à região do serviço.
+
+Fluxo:
 
 ```text
-tentativas de coleta e métricas salvas
-      ↓
-estimativa de potência do serviço
-      ↓
-energia estimada por amostra
-      ↓
-intensidade de carbono regional salva
-      ↓
-emissão estimada de CO₂e
+CPU + memória + disco + rede
+          ↓
+potência estimada (W)
+          ↓
+duração real da amostra
+          ↓
+energia estimada (kWh)
+          ↓
+intensidade de carbono regional
+          ↓
+emissão estimada (gCO₂e)
 ```
 
-O endpoint consulta o PostgreSQL, não as APIs externas. Os resultados são calculados a cada requisição e não são persistidos como registros de indicadores.
+O cálculo é centralizado no backend e reutilizado pelos endpoints de indicadores, dashboard e histórico.
 
 ---
 
-## 2. Entradas, unidades e limitações
+## 2. Métricas utilizadas
 
-| Dado | Campo persistido / API | Unidade usada pelo cálculo | Uso e observações |
-|---|---|---|---|
-| Uso da CPU | `cpu_percent` | percentual (%) | Convertido para fração dividindo por 100; valores fora de 0 a 100 são inválidos |
-| Memória | `memory_gb` | GB | Multiplicada pelo fator de potência de memória |
-| Disco | `disk_gb` | GB | Multiplicado pelo fator de potência de disco |
-| Rede | `network_gb` | GB | Multiplicada pelo fator de potência de rede |
-| Duração da amostra | `collection_interval_seconds` na resposta da Metrics API | segundos | Validado como número finito positivo e persistido por amostra; amostras antigas podem ter `NULL` |
-| Intervalo entre coletas | `COLLECTION_INTERVAL_MS` | milissegundos | Configura o intervalo entre ciclos do job; não é usado como duração da amostra no cálculo |
-| Intensidade de carbono | `carbon_intensity_gco2e_per_kwh` | gCO₂e/kWh | Snapshot regional salvo, associado à coleta segundo região e tempo |
-| Participação renovável | `renewable_share_percent` | percentual (%) | Persistida, mas não utilizada nos cálculos atuais |
+Cada amostra válida pode fornecer:
 
-Os sufixos `_gb` são tratados como GB porque esse é o contrato refletido nos nomes dos campos, mas a semântica exata dos valores de memória, disco e rede ainda deve ser confirmada com a documentação do fornecedor. Em particular, é necessário confirmar se `network_gb` representa volume transferido durante uma amostra ou outra medida; o modelo atual aplica diretamente o fator em W/GB.
+| Campo | Unidade usada no modelo | Significado |
+| --- | --- | --- |
+| `cpuPercent` | `%` | utilização de CPU |
+| `memoryGb` | `GB` | memória associada à amostra |
+| `diskGb` | `GB` | volume de disco associado à amostra |
+| `networkGb` | `GB` | volume de rede associado à amostra |
+| `collectionIntervalSeconds` | `s` | duração real representada pela amostra |
 
-`COLLECTION_INTERVAL_MS` controla o intervalo entre ciclos automáticos de coleta, não a duração representada por cada amostra. A energia e as emissões usam `collection_interval_seconds` persistido para cada amostra. Valores ausentes ou inválidos não são substituídos pelo intervalo do job: a amostra é registrada como lacuna `collection_interval_unavailable`.
+O campo `collectionIntervalSeconds` é essencial para transformar potência em energia.
+
+> O intervalo configurado do job (`COLLECTION_INTERVAL_MS`) indica quando o backend tenta iniciar novos ciclos. Ele **não substitui** a duração real da amostra no cálculo energético.
 
 ---
 
-## 3. Modelo de potência e energia
+## 3. Modelo de potência — versão 1
 
-### Fatores do modelo atual
+O backend expõe o modelo utilizado em `powerModel`.
 
-| Recurso | Fator | Unidade | Fonte |
-|---|---:|---|---|
-| CPU | 100 W de potência máxima | W | Parâmetro do exemplo de cálculo fornecido pelo cliente |
-| Memória | 0,375 W/GB | W/GB | Parâmetro do exemplo de cálculo fornecido pelo cliente |
-| Disco | 0,01 W/GB | W/GB | Parâmetro do exemplo de cálculo fornecido pelo cliente |
-| Rede | 0,02 W/GB | W/GB | Parâmetro do exemplo de cálculo fornecido pelo cliente |
+No fechamento da Sprint 2:
 
-Esses fatores estão definidos no código como modelo versão `1`. Ainda não são configuráveis por usuário nem carregados do banco.
+```json
+{
+  "version": "1",
+  "cpuMaximumWatts": 100,
+  "memoryWattsPerGb": 0.375,
+  "diskWattsPerGb": 0.01,
+  "networkWattsPerGb": 0.02
+}
+```
 
-### Fórmulas
+### Parâmetros
+
+| Parâmetro | Valor | Unidade |
+| --- | ---: | --- |
+| Potência máxima de CPU | `100` | W |
+| Memória | `0.375` | W/GB |
+| Disco | `0.01` | W/GB |
+| Rede | `0.02` | W/GB |
+
+Esses valores são **coeficientes adotados pelo modelo estimativo do GreenER**.
+
+Eles devem ser interpretados como premissas da versão atual do sistema e não como constantes físicas universais aplicáveis a qualquer equipamento.
+
+Caso esses fatores sejam alterados futuramente, a versão do modelo deve ser atualizada para manter rastreabilidade.
+
+---
+
+## 4. Potência estimada
+
+A potência total estimada é a soma das quatro parcelas:
 
 ```text
-potência_CPU (W) = (cpu_percent / 100) × 100 W
-potência_memória (W) = memory_gb × 0,375 W/GB
-potência_disco (W) = disk_gb × 0,01 W/GB
-potência_rede (W) = network_gb × 0,02 W/GB
-
-potência_total (W) =
-    potência_CPU + potência_memória + potência_disco + potência_rede
-
-energia (kWh) =
-    potência_total (W) × collection_interval_seconds / 3.600.000
+P_total = P_cpu + P_memoria + P_disco + P_rede
 ```
 
-O divisor converte segundos em horas e watt-hora em quilowatt-hora. Cada cálculo usa a duração declarada para aquela amostra, não a configuração do job.
+onde `P_total` é medido em watts.
 
-### Exemplo manual reproduzível
+### 4.1 CPU
 
-Considere uma tentativa com status `success`, `collection_interval_seconds=45` e os seguintes valores:
+A CPU é proporcional à utilização observada:
 
 ```text
-CPU = 50%
-memória = 2 GB
-disco = 10 GB
-rede = 5 GB
+P_cpu = (cpuPercent / 100) × cpuMaximumWatts
+```
+
+Com o modelo atual:
+
+```text
+P_cpu = (cpuPercent / 100) × 100 W
+```
+
+Exemplo para `75.73%`:
+
+```text
+P_cpu = 0.7573 × 100
+P_cpu = 75.73 W
+```
+
+### 4.2 Memória
+
+```text
+P_memoria = memoryGb × memoryWattsPerGb
+```
+
+Com o modelo atual:
+
+```text
+P_memoria = memoryGb × 0.375 W/GB
+```
+
+### 4.3 Disco
+
+```text
+P_disco = diskGb × diskWattsPerGb
+```
+
+Com o modelo atual:
+
+```text
+P_disco = diskGb × 0.01 W/GB
+```
+
+### 4.4 Rede
+
+```text
+P_rede = networkGb × networkWattsPerGb
+```
+
+Com o modelo atual:
+
+```text
+P_rede = networkGb × 0.02 W/GB
+```
+
+---
+
+## 5. Conversão de potência para energia
+
+Potência é medida em watts, enquanto o indicador ambiental do GreenER utiliza energia em quilowatt-hora.
+
+Para uma amostra com duração `t` em segundos:
+
+```text
+horas = t / 3600
+```
+
+e:
+
+```text
+kW = W / 1000
+```
+
+Portanto:
+
+```text
+E_kWh = P_total × (t / 3600) / 1000
+```
+
+Forma equivalente:
+
+```text
+E_kWh = (P_total × t) / 3.600.000
+```
+
+onde:
+
+- `P_total` está em W;
+- `t` está em segundos;
+- `E_kWh` é retornado em kWh.
+
+---
+
+## 6. Intensidade de carbono
+
+A Carbon Intensity API fornece fatores regionais expressos em:
+
+```text
+gCO₂e/kWh
+```
+
+O GreenER persiste snapshots desses valores no PostgreSQL.
+
+Para uma tentativa de coleta, o backend associa a intensidade de carbono usando:
+
+1. o `region_code` do serviço;
+2. o instante `attempted_at` da coleta;
+3. o snapshot mais recente registrado até aquele instante;
+4. o limite de idade configurado em `CARBON_INTENSITY_MAX_AGE_MS`.
+
+Fluxo:
+
+```text
+service.region_code
+        +
+collection.attempted_at
+        ↓
+snapshot de carbon_intensity elegível
+        ↓
+gCO₂e/kWh
+```
+
+A requisição de indicadores não consulta a Carbon API em tempo real: utiliza os snapshots previamente persistidos.
+
+Isso evita recalcular arbitrariamente o passado com um fator ambiental atual.
+
+---
+
+## 7. Cálculo de CO₂e
+
+Depois de estimar a energia:
+
+```text
+CO₂e_g = E_kWh × intensidade_carbono
+```
+
+onde:
+
+- `E_kWh` está em kWh;
+- `intensidade_carbono` está em gCO₂e/kWh;
+- o resultado está em gCO₂e.
+
+Exemplo:
+
+```text
+E = 0.001 kWh
+I = 400 gCO₂e/kWh
+
+CO₂e = 0.001 × 400
+CO₂e = 0.4 gCO₂e
+```
+
+---
+
+## 8. Exemplo real validado — Billing API
+
+Na validação de 09/11/2026, a coleta `4642` do serviço **Billing API** retornou:
+
+```text
+cpuPercent                 = 75.73 %
+memoryGb                   = 2.852416 GB
+diskGb                     = 18.31104 GB
+networkGb                  = 0.54594 GB
+collectionIntervalSeconds  = 51 s
+carbonIntensity            = 85 gCO₂e/kWh
+```
+
+### 8.1 Potência da CPU
+
+```text
+P_cpu = (75.73 / 100) × 100
+P_cpu = 75.73 W
+```
+
+### 8.2 Potência da memória
+
+```text
+P_memoria = 2.852416 × 0.375
+P_memoria = 1.069656 W
+```
+
+### 8.3 Potência do disco
+
+```text
+P_disco = 18.31104 × 0.01
+P_disco = 0.1831104 W
+```
+
+### 8.4 Potência da rede
+
+```text
+P_rede = 0.54594 × 0.02
+P_rede = 0.0109188 W
+```
+
+### 8.5 Potência total
+
+```text
+P_total =
+75.73
++ 1.069656
++ 0.1831104
++ 0.0109188
+
+P_total = 76.9936852 W
+```
+
+### 8.6 Energia
+
+```text
+E_kWh =
+(76.9936852 × 51)
+/
+3.600.000
+```
+
+Resultado:
+
+```text
+E_kWh = 0.0010907438736666665 kWh
+```
+
+A API retornou:
+
+```json
+"energyKwh": 0.0010907438736666667
+```
+
+A pequena diferença na última casa decimal é resultado normal da representação de ponto flutuante.
+
+### 8.7 Emissão
+
+```text
+CO₂e =
+0.0010907438736666665
+× 85
+```
+
+Resultado:
+
+```text
+CO₂e = 0.09271322926166665 gCO₂e
+```
+
+A API retornou:
+
+```json
+"emissionsGco2e": 0.09271322926166667
+```
+
+Portanto, o cálculo manual reproduz o valor entregue pelo backend.
+
+---
+
+## 9. Cálculo por período
+
+O endpoint:
+
+```text
+GET /api/indicadores?start=<ISO>&end=<ISO>
+```
+
+utiliza um intervalo semiaberto:
+
+```text
+start <= attempted_at < end
+```
+
+Isso evita contar duas vezes uma amostra exatamente na fronteira quando períodos consecutivos são consultados.
+
+Para cada serviço, o backend soma as amostras calculáveis do período:
+
+```text
+energia_periodo =
+Σ energia_amostra
+```
+
+e:
+
+```text
+emissao_periodo =
+Σ emissao_amostra
+```
+
+Os mesmos princípios são utilizados na consolidação do dashboard.
+
+### Validação de 24 horas
+
+No período:
+
+```text
+start = 2026-11-08T13:59:32.000Z
+end   = 2026-11-09T13:59:32.000Z
+```
+
+o endpoint de indicadores retornou:
+
+```text
+energyKwh        = 0.42272948956661666
+emissionsGco2e   = 102.99165469044364
+collectionCount  = 770
+validMetricCount = 769
+isPartial        = true
+```
+
+O dashboard retornou os mesmos totais ambientais na validação realizada no mesmo fechamento, confirmando que ambos reutilizam a mesma lógica de consolidação.
+
+---
+
+## 10. Cobertura e resultados parciais
+
+Nem toda tentativa possui dados suficientes para todos os cálculos.
+
+Possíveis lacunas incluem:
+
+```text
+no_metrics
+unavailable
+error
+invalid_metrics
+collection_interval_unavailable
+carbon_intensity_unavailable
+```
+
+### Sem métricas válidas
+
+Quando não existe amostra válida:
+
+```text
+energyKwh = null
+emissionsGco2e = null
+```
+
+O sistema não assume consumo zero.
+
+### Sem duração da amostra
+
+Registros históricos anteriores à persistência de `collection_interval_seconds` podem não possuir duração conhecida.
+
+Nesses casos:
+
+```text
+energyKwh = null
+```
+
+e o GreenER **não utiliza `COLLECTION_INTERVAL_MS` como fallback**.
+
+### Sem intensidade de carbono
+
+Uma amostra pode ter energia calculável, mas não possuir um fator regional elegível.
+
+Nesse caso:
+
+```text
+energyKwh = valor calculado
+emissionsGco2e = null
+```
+
+Assim, energia ainda pode contribuir para o total enquanto a emissão permanece parcial.
+
+### `isPartial`
+
+`isPartial = true` indica que existem lacunas relevantes no período.
+
+Um total parcial não deve ser interpretado como medição completa do impacto real.
+
+---
+
+## 11. Intervalo do job x duração da amostra
+
+Há dois conceitos diferentes:
+
+```text
+COLLECTION_INTERVAL_MS
+```
+
+e:
+
+```text
+collection_interval_seconds
+```
+
+### `COLLECTION_INTERVAL_MS`
+
+Configura aproximadamente quando um novo ciclo automático é iniciado.
+
+Na configuração de entrega:
+
+```text
+60000 ms = 60 s
+```
+
+### `collection_interval_seconds`
+
+É fornecido pela amostra e representa a duração efetivamente usada no cálculo.
+
+Na coleta real do Billing API:
+
+```text
+collectionIntervalSeconds = 51
+```
+
+Mesmo com o job configurado para 60 segundos, o cálculo utiliza:
+
+```text
+51 segundos
+```
+
+e não:
+
+```text
+60 segundos
+```
+
+Essa distinção é necessária para evitar superestimar ou subestimar energia.
+
+---
+
+## 12. Precisão numérica
+
+O backend trabalha com números de ponto flutuante.
+
+Por isso, valores como:
+
+```text
+0.09271322926166665
+```
+
+podem aparecer como:
+
+```text
+0.09271322926166667
+```
+
+Esse comportamento é esperado em cálculos computacionais com `number`.
+
+A interface pode arredondar valores para apresentação, mas o backend preserva maior precisão no contrato da API.
+
+---
+
+## 13. Premissas e limitações
+
+O GreenER realiza **estimativas**, não medições elétricas.
+
+### Premissas principais
+
+- CPU é convertida em potência por proporcionalidade linear;
+- memória, disco e rede utilizam coeficientes fixos;
+- a duração real da amostra representa o período de consumo considerado;
+- a emissão é calculada multiplicando a energia estimada pelo fator regional;
+- snapshots ambientais persistidos representam a melhor informação regional disponível ao sistema naquele instante.
+
+### Limitações
+
+O modelo atual não considera diretamente:
+
+- modelo físico específico do processador;
+- eficiência da fonte de alimentação;
+- PUE do datacenter;
+- virtualização e compartilhamento de hardware;
+- frequência dinâmica de CPU;
+- consumo base/idle independente da utilização;
+- eficiência específica de disco ou rede;
+- perdas de infraestrutura;
+- emissões incorporadas na fabricação do hardware.
+
+Consequentemente, o GreenER deve apresentar seus valores como:
+
+```text
+energia estimada
+emissão estimada
+```
+
+e não como consumo elétrico certificado.
+
+### Origem dos coeficientes
+
+Os coeficientes `100 W`, `0.375 W/GB`, `0.01 W/GB` e `0.02 W/GB` constituem o **modelo v1 adotado pelo projeto**.
+
+Os materiais disponíveis nesta revisão documentam os valores utilizados pelo sistema, mas não registram uma fonte externa específica que estabeleça esses quatro números como padrão científico universal.
+
+Por isso, esta documentação não atribui uma origem que não esteja comprovada no repositório. Caso a equipe adote posteriormente uma referência científica ou um modelo calibrado, essa fonte deve ser registrada aqui juntamente com a nova versão do modelo.
+
+---
+
+## 14. Rastreabilidade no sistema
+
+Os cálculos aparecem principalmente em:
+
+```text
+backend/src/modules/indicadores/
+```
+
+O repository obtém os dados históricos.
+
+O service:
+
+```text
+métricas
+  ↓
+modelo de potência
+  ↓
+energia
+  ↓
+intensidade regional
+  ↓
+CO₂e
+  ↓
+agregação e cobertura
+```
+
+O frontend apenas apresenta esses resultados.
+
+Endpoints principais:
+
+```text
+GET /api/indicadores
+GET /api/indicadores/:serviceId/historico
+GET /api/dashboard
+```
+
+Os contratos estão documentados em [`docs/api.md`](api.md).
+
+---
+
+## 15. Evidências do fechamento da Sprint 2
+
+Na validação de 09/11/2026 foram confirmados:
+
+- modelo de potência retornado explicitamente pela API;
+- cálculo energético usando `collectionIntervalSeconds`;
+- associação da intensidade de carbono regional;
+- histórico por serviço;
+- totais por período;
+- lacunas sem imputação de valores;
+- consistência entre indicadores e dashboard;
+- caso real do Billing API reproduzido manualmente;
+- testes automatizados cobrindo cálculo e tratamento de cenários incompletos.
+
+As evidências completas estão em:
+
+[`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md)
+
+---
+
+## 16. Resumo das fórmulas
+
+### Potência
+
+```text
+P_cpu =
+(cpuPercent / 100) × 100
 ```
 
 ```text
-potência_CPU      = (50 / 100) × 100 W = 50 W
-potência_memória  = 2 × 0,375 W/GB    = 0,75 W
-potência_disco    = 10 × 0,01 W/GB   = 0,10 W
-potência_rede     = 5 × 0,02 W/GB    = 0,10 W
-potência_total    = 50 + 0,75 + 0,10 + 0,10 = 50,95 W
-
-energia = 50,95 W × 45 s / 3.600.000
-        ≈ 0,000636875 kWh
+P_memoria =
+memoryGb × 0.375
 ```
-
-Com `COLLECTION_INTERVAL_MS=60000`, o job agenda ciclos a cada 60 segundos, mas essa configuração não altera o cálculo da amostra de 45 segundos. Este exemplo verifica a aritmética do modelo, não a precisão física das premissas nem as unidades/semântica das métricas do fornecedor.
-
----
-
-## 4. Intensidade de carbono e CO₂e
-
-O backend usa o campo `carbon_intensity_gco2e_per_kwh`, recebido da Carbon API e persistido em snapshots regionais. Para uma tentativa, seleciona o snapshot mais recente que:
-
-1. pertence à mesma `region_code` do serviço;
-2. foi registrado em ou antes de `attempted_at`;
-3. está dentro da idade máxima definida por `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão).
-
-Se não existir intensidade elegível, o endpoint ainda pode retornar a energia estimada, mas a emissão da amostra fica indisponível e a lacuna é indicada como `carbon_intensity_unavailable`. Não há fallback silencioso para um fator mais antigo que o limite.
-
-### Fórmula
 
 ```text
-emissão (gCO₂e) = energia (kWh) × intensidade (gCO₂e/kWh)
+P_disco =
+diskGb × 0.01
 ```
-
-Usando a energia do exemplo anterior e uma intensidade ilustrativa de `200 gCO₂e/kWh`:
 
 ```text
-emissão = 0,000636875 kWh × 200 gCO₂e/kWh
-        = 0,127375 gCO₂e
+P_rede =
+networkGb × 0.02
 ```
 
-O campo `renewable_share_percent` é armazenado, mas não entra nessa fórmula nem reduz a intensidade. Utilizá-lo como desconto junto com a intensidade atual poderia contar o benefício renovável duas vezes; qualquer indicador derivado deve ser definido separadamente antes de ser implementado.
+```text
+P_total =
+P_cpu + P_memoria + P_disco + P_rede
+```
 
----
+### Energia
 
-## 5. Tentativas incompletas e agregação
+```text
+E_kWh =
+(P_total × collectionIntervalSeconds)
+/
+3.600.000
+```
 
-- Só tentativas com status `success` e valores numéricos válidos de CPU, memória, disco e rede produzem energia.
-- Uma amostra sem `collection_interval_seconds` finito e positivo não produz energia nem emissões e gera a lacuna `collection_interval_unavailable`. Isso inclui registros históricos cujo intervalo não foi persistido.
-- CPU fora de 0–100%, valores negativos ou valores ausentes/não finitos invalidam as métricas da amostra.
-- Estados `no_metrics`, `unavailable` e `error` são apresentados como lacunas; não são preenchidos com valores estimados ou simulados.
-- Energia é somada para amostras com métricas válidas. Emissões são somadas apenas quando a amostra também possui intensidade válida.
-- A resposta informa contagem de tentativas, contagens válidas, coberturas, `isPartial` e a lista `gaps`. `validMetricCount` e `metricCoveragePercent` contam amostras com energia calculável (métricas válidas e duração válida), sobre todas as tentativas; `validCarbonIntensityCount` e `carbonIntensityCoveragePercent` contam emissões calculáveis, sobre as amostras com energia calculável.
-- A cobertura é calculada sobre tentativas registradas no banco. Intervalos sem uma linha de tentativa não são detectados nem incluídos no denominador.
-- `latestSampleInPeriod` representa a tentativa registrada mais recente no período; não representa necessariamente uma amostra válida.
+### CO₂e
 
----
+```text
+CO₂e_g =
+E_kWh × carbonIntensityGco2ePerKwh
+```
 
-## 6. Precisão e apresentação
+### Agregação
 
-O serviço calcula com números JavaScript (`number`) e não aplica arredondamento explícito antes de retornar os valores. Portanto, pequenas diferenças de representação decimal podem aparecer na resposta JSON. O frontend deverá definir a formatação de exibição sem arredondar os valores usados em cálculos agregados.
+```text
+energia_periodo =
+Σ E_kWh
+```
 
-Unidades retornadas:
-
-| Campo | Unidade |
-|---|---|
-| `energyKwh` | kWh |
-| `emissionsGco2e` | gCO₂e |
-| `carbonIntensityGco2ePerKwh` | gCO₂e/kWh |
-| `collectionIntervalSeconds` | s; duração real usada no cálculo por amostra |
-| `collectionIntervalMs` | ms |
-| coberturas | percentual de 0 a 100 |
-
-O contrato HTTP e o exemplo completo de resposta estão em [`docs/api.md`](./api.md).
-
----
-
-## 7. Histórico e reprodutibilidade
-
-O endpoint calcula resultados sob demanda a partir das tentativas, métricas e snapshots já persistidos; não grava um resultado calculado para cada consulta. Cada tentativa é identificada por `collectionId` e `attemptedAt`, e a resposta contém o fator aplicado quando disponível.
-
-Os snapshots regionais e as datas de registro permitem selecionar o fator válido para o instante da tentativa, dentro do limite de idade configurado. A duração real usada é retornada em `collectionIntervalSeconds` por amostra. `period.collectionIntervalMs` continua representando somente a configuração do intervalo entre ciclos do job.
-
----
-
-## 8. Estado da validação
-
-- [x] Fórmulas de potência, energia e CO₂e registradas conforme a implementação atual.
-- [x] Fatores atualmente codificados e sua fonte documentados.
-- [x] Exemplo numérico reproduzível incluído.
-- [x] Lacunas de coleta e intensidade descritas.
-- [ ] Confirmar com o fornecedor as unidades e a semântica dos quatro campos de métricas.
-- [x] Validar, persistir e usar `collection_interval_seconds` por amostra; tratar valores ausentes ou inválidos como lacuna.
-- [ ] Validar o cálculo de ponta a ponta com dados de um PostgreSQL em execução.
-- [ ] Definir política de arredondamento de apresentação no frontend.
-
----
-
-## 9. Histórico de decisões
-
-| Data | Decisão | Motivo | Evidência |
-|---|---|---|---|
-| 20/10/2026 | Estrutura documental criada antes da implementação dos cálculos | Evitar fórmula implícita e garantir rastreabilidade da US07 | Sprint 2 / TEC21 |
-| 31/10/2026 | Documentar fórmulas, fatores e limitações conforme o módulo atual | Distinguir estimativa implementada de duração real e semântica ainda não confirmadas | `backend/src/modules/indicadores/indicadores.service.ts` |
-| 31/10/2026 | Usar a duração declarada e persistida de cada amostra; manter nulos históricos como lacunas | Não inferir duração real a partir do agendamento do job | `backend/src/modules/indicadores/indicadores.service.ts` |
+```text
+emissao_periodo =
+Σ CO₂e_g
+```
