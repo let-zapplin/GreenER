@@ -2,7 +2,7 @@
 
 ← [Voltar ao índice da documentação](../README.md)
 
-> Este documento separa a **arquitetura já implementada** da **evolução planejada**. Recursos das Sprints 2 e 3 não devem ser apresentados como concluídos antes de sua integração e validação.
+> Este documento descreve a arquitetura integrada até a Sprint 2 e distingue essas funcionalidades da evolução planejada para a Sprint 3. O grupo confirmou o aceite da Definition of Done da Sprint 2 em 08/11/2026.
 
 ---
 
@@ -30,9 +30,9 @@ Carbon Intensity API ────→ sincronização regional ─→ PostgreSQL
                                        GET /api/indicadores?start=...&end=...
 ```
 
-O endpoint de indicadores calcula energia e CO₂e no backend usando `collection_interval_seconds` validado e persistido por amostra. `COLLECTION_INTERVAL_MS` continua configurando apenas o intervalo entre ciclos do job. Amostras históricas sem esse dado são lacunas, sem fallback para o intervalo do job. A integração do dashboard/frontend e a validação de ponta a ponta continuam pendentes.
+O endpoint de indicadores calcula energia e CO₂e no backend usando `collection_interval_seconds` validado e persistido por amostra. `COLLECTION_INTERVAL_MS` continua configurando apenas o intervalo entre ciclos do job. Amostras históricas sem esse dado são lacunas, sem fallback para o intervalo do job. O Monitoramento consome o resumo do dashboard e a tela de Análises consome o histórico ambiental por serviço e período.
 
-### Fluxo atual e integrações planejadas
+### Fluxo integrado e evolução planejada
 
 ```mermaid
 flowchart LR
@@ -47,9 +47,12 @@ flowchart LR
 
     CALC --> API[GET /api/indicadores]
     DB --> API
+    API --> DASHAPI[GET /api/dashboard]
+    API --> HISTORY[GET /api/indicadores/:serviceId/historico]
 
-    API --> DASH[Frontend / Dashboard - integração pendente]
-    API --> ANA[Mapa / Ranking / Comparação - planejados]
+    DASHAPI --> DASH[Frontend / Monitoramento]
+    HISTORY --> ANA[Frontend / Análises - histórico ambiental]
+    API -.-> FUTURO[Ranking e comparação - Sprint 3]
 ```
 
 O fluxo implementado no backend cobre:
@@ -68,7 +71,7 @@ cálculo ambiental por período
 indicadores
 ```
 
-A integração dos indicadores operacionais com o frontend e a primeira visualização histórica ambiental já estão disponíveis. Ranking, comparação entre serviços e demais recursos analíticos permanecem planejados para as próximas entregas.
+Os indicadores operacionais estão integrados ao Monitoramento e a primeira visualização histórica ambiental está disponível em Análises. Ranking e comparação entre serviços permanecem planejados para a Sprint 3.
 
 ---
 
@@ -175,6 +178,7 @@ Frontend / Análises
 useServiceIndicatorHistory()
   ↓
 HistoryChart
+```
 
 O repository seleciona tentativas no período e associa, quando elegível, o snapshot de carbono mais recente da mesma região, anterior ou igual a `attempted_at` e dentro de `CARBON_INTENSITY_MAX_AGE_MS`. O service calcula energia, emissões, totais, cobertura e lacunas; resultados calculados não são persistidos.
 
@@ -310,35 +314,28 @@ O agregador de métricas documenta `404` como "serviço removido ou métricas in
 
 ### Implementado
 
-- cadastro de usuário;
-- hash de senha;
-- login;
-- geração de JWT;
-- sessão e proteção de navegação no frontend.
+- cadastro de usuário e hash de senha;
+- login e geração de JWT;
+- proteção de rotas no backend e de navegação no frontend;
+- autorização administrativa para disparo manual de coleta.
 
 ### Fluxo atual
 
-O backend valida JWT nas rotas protegidas por meio de `authMiddleware`. A coleta manual também exige autorização administrativa. A integração dos fluxos protegidos com todas as telas do frontend e sua validação ponta a ponta devem ser verificadas separadamente.
-
-O fluxo esperado é:
+O backend valida JWT nas rotas protegidas por meio de `authMiddleware`. O token deve ser enviado no cabeçalho `Authorization: Bearer SEU_TOKEN_JWT`. A coleta manual também exige autorização administrativa consultada no banco. Rotas de cadastro, login, descoberta e leitura do catálogo de serviços permanecem públicas; indicadores, dashboard, histórico e operações de sincronização protegidas exigem JWT.
 
 ```text
 requisição
   ↓
-Authorization: Bearer <token>
+Authorization: Bearer SEU_TOKEN_JWT
   ↓
-auth middleware
-  ↓
-verifyToken()
-  ↓
- token válido? ── não → 401
-      │
-     sim
-      ↓
-controller
+authMiddleware
+  ├─ token ausente, inválido ou expirado → 401 Unauthorized
+  └─ token válido → rota protegida
+                         ↓
+               middleware administrativo (coleta manual)
+                 ├─ não administrador → 403 Forbidden
+                 └─ administrador → controller
 ```
-
-O middleware está aplicado, entre outras, às rotas de histórico, intensidades e indicadores.
 
 ---
 
@@ -612,7 +609,7 @@ A coleta é disparada periodicamente pelo job iniciado junto ao backend e també
 
 Fornece os fatores ambientais regionais. As rotas protegidas de intensidades permitem descobrir, sincronizar snapshots e listar os dados persistidos.
 
-O módulo de indicadores associa cada tentativa ao snapshot da mesma região mais recente até o instante da coleta, limitado por `CARBON_INTENSITY_MAX_AGE_MS`. Sem configuração desse limite, o repository não seleciona um fator utilizável.
+O módulo de indicadores associa cada tentativa ao snapshot da mesma região mais recente até o instante da coleta, limitado por `CARBON_INTENSITY_MAX_AGE_MS`, cujo padrão é `900000` ms (15 minutos). Sem snapshot elegível nesse limite, a emissão fica indisponível; não há fallback para um fator mais antigo.
 
 ---
 
@@ -633,9 +630,10 @@ O módulo de indicadores associa cada tentativa ao snapshot da mesma região mai
 | `POST` | `/api/intensidades/sync` | Persistência de snapshots regionais (JWT) |
 | `GET` | `/api/intensidades` | Listagem de snapshots persistidos (JWT) |
 | `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Indicadores ambientais por período (JWT) |
+| `GET` | `/api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>` | Histórico ambiental por serviço (JWT) |
 | `GET` | `/api/dashboard` | Resumo consolidado para o dashboard (JWT; período opcional) |
 
-Os indicadores e o resumo consolidado estão implementados parcialmente no backend. A integração visual com o frontend e a validação de ponta a ponta ainda precisam ser concluídas.
+Os indicadores ambientais, o resumo do dashboard e o histórico por serviço estão integrados ao frontend. Ranking e comparação entre serviços permanecem planejados para a Sprint 3.
 
 ---
 
@@ -700,10 +698,8 @@ em vez de depender da recriação do volume.
 
 ### Decisões ainda pendentes
 
-- intervalo de atualização do frontend;
 - confirmar com o fornecedor as unidades e a semântica das métricas de memória, disco e rede;
-- integrar o endpoint de indicadores ao dashboard e validar o fluxo completo com o banco e frontend;
-- definir e implementar novos indicadores, comparações e rankings;
+- definir e implementar comparações e rankings entre serviços, planejados para a Sprint 3;
 - definir eventual uso de `renewable_share_percent` sem duplicar o benefício já refletido na intensidade de carbono.
 
 As pendências devem ser documentadas conforme forem implementadas e validadas, evitando apresentar comportamento planejado como funcionalidade concluída.

@@ -14,7 +14,7 @@ O GreenER é um sistema que monitora aplicações e serviços de uma infraestrut
 
 | Sprint 01 | Sprint 02 | Sprint 03 |
 | :---: | :---: | :---: |
-| ✅ Concluída | ⏳ Planejada | ⏳ Planejada |
+| ✅ Concluída | ✅ Concluída | ⏳ Planejada |
 | [📄 Documentação](docs/sprints/sprint-1.md) | [📄 Documentação](docs/sprints/sprint-2.md) | [📄 Documentação](docs/sprints/sprint-3.md) |
 | [▶️ Demonstração](https://youtu.be/pGdiciJxTPw) | Em breve | Em breve |
 
@@ -37,18 +37,16 @@ O projeto consome duas APIs auxiliares fornecidas pela Unilaunch:
 
 ## ✨ Funcionalidades
 
-> Esta lista é atualizada a cada sprint. Só marcamos como concluído o que já foi implementado e verificado.
+> Esta lista resume funcionalidades implementadas e verificadas. O grupo confirmou a Definition of Done da Sprint 2 em 08/11/2026.
 
-- [ ] Descoberta automática dos serviços disponíveis
-- [ ] Coleta periódica das métricas de cada serviço
-- [ ] Identificação de serviços indisponíveis
-- [ ] Estimativa de consumo de energia por serviço
-- [ ] Estimativa de emissão de CO₂e por serviço
-- [ ] Indicadores consolidados do ambiente monitorado
-- [ ] Dashboard com atualização periódica dos dados
-- [ ] Autenticação e área de configuração do monitoramento
-
-<!-- Adicionar/remover itens conforme o time definir o escopo de cada sprint -->
+- [x] Descoberta e sincronização dos serviços disponíveis
+- [x] Coleta periódica de métricas e preservação do histórico
+- [x] Identificação de serviços indisponíveis e de serviços sem métricas
+- [x] Estimativa de consumo de energia e emissão de CO₂e
+- [x] Indicadores consolidados e por serviço no Monitoramento
+- [x] Atualização periódica do dashboard sem recarregamento manual
+- [x] Autenticação JWT e proteção de endpoints
+- [x] Consulta visual do histórico ambiental por serviço e período
 
 ---
 
@@ -68,7 +66,7 @@ Os detalhes de cada parte estão nos READMEs indicados na seção [Organização
 
 1. O backend consulta o **Agregador de Métricas** para descobrir os serviços e coletar suas métricas
 2. O backend consulta o **Serviço de Intensidade de Carbono** para obter os fatores de emissão
-3. Os dados coletados e os cálculos de energia e CO₂e são armazenados no **PostgreSQL**
+3. As coletas, métricas e snapshots de intensidade de carbono são armazenados no **PostgreSQL**; energia e emissões de CO₂e são calculadas sob demanda a partir desses dados
 4. O usuário acompanha tudo pelo **dashboard web**
 
 O fluxo completo está descrito em [`docs/arquitetura.md`](docs/arquitetura.md).
@@ -241,7 +239,7 @@ O projeto é desenvolvido em três sprints. O registro de cada uma (objetivo, it
 | Sprint                                     | Período            | Principais Entregas                                                                         | Status        |
 | ------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------- | ------------- |
 | [**Sprint 1**](./docs/sprints/sprint-1.md) | 28/09 — 19/10/2026 | Prototipação · Diagramas UML · Modelagem BD · Conexão API e BD · Teste unitário e validação | ✔️ Finalizada |
-| [**Sprint 2**](./docs/sprints/sprint-2.md) | 20/10 — 09/11/2026 | A ser definido                                                                              | ⏳            |
+| [**Sprint 2**](./docs/sprints/sprint-2.md) | 20/10 — 09/11/2026 | Coleta periódica e histórica · Indicadores ambientais · Dashboard operacional · Histórico visual | ✔️ Concluída |
 | [**Sprint 3**](./docs/sprints/sprint-3.md) | 10/11 — 23/11/2026 | A ser definido                                                                              | ⏳            |
 
 ---

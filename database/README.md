@@ -224,9 +224,9 @@ Ela armazena:
 - instante de registro;
 - localização correspondente.
 
-Os resultados calculados de consumo energético e emissão de CO₂e **não são persistidos na entidade `collection` nesta etapa**.
+Os resultados calculados de consumo energético e emissão de CO₂e **não são persistidos na entidade `collection`**. O backend calcula esses indicadores sob demanda a partir das tentativas de coleta, métricas e snapshots regionais de intensidade de carbono persistidos.
 
-A estratégia definitiva de cálculo e associação temporal entre coleta, métricas e intensidade de carbono será definida na implementação específica do cálculo ambiental.
+A associação temporal utiliza o código regional e o instante da tentativa de coleta para selecionar um snapshot de intensidade aplicável, respeitando o limite de idade configurado. A duração real da amostra, `collection_interval_seconds`, é persistida em `metrics`; registros antigos sem esse valor permanecem sem duração conhecida e são tratados como lacunas no cálculo. Fórmulas e premissas estão em [`docs/calculos.md`](../docs/calculos.md).
 
 ---
 
@@ -408,7 +408,7 @@ remove também os volumes e, consequentemente, os dados persistidos.
 
 ## ✅ Validações da estrutura de coletas
 
-Durante a implementação da TEC02 foram validados:
+Durante a implementação da TEC02 foram registrados os seguintes resultados:
 
 - criação do `schema.sql` em PostgreSQL vazio;
 - criação da tabela `collection`;
@@ -426,7 +426,9 @@ Durante a implementação da TEC02 foram validados:
 - aplicação da migration em banco existente;
 - preservação da estrutura e dos registros após reinicialização do PostgreSQL;
 - inicialização do backend após a evolução do schema;
-- execução da suíte automatizada existente com 20 de 20 testes aprovados.
+- execução da suíte automatizada existente naquele momento, com 20 de 20 testes aprovados.
+
+Esses números são evidências históricas daquela etapa, não o resultado atual da suíte. Os testes automatizados vigentes e como executá-los estão documentados em [`docs/testes/manual_teste_unitario.md`](../docs/testes/manual_teste_unitario.md).
 
 ---
 
@@ -442,13 +444,11 @@ backend/src/modules/<modulo>/<modulo>.repository.ts
 
 Os repositories utilizam SQL explícito e parâmetros separados dos valores recebidos pela aplicação, sem concatenação direta de dados no texto SQL.
 
-O módulo de coletas já possui sua estrutura reservada em:
+O módulo de coletas implementa as operações de persistência e consulta de tentativas e histórico em:
 
 ```text
 backend/src/modules/coletas/
 ```
-
-A implementação efetiva das operações de coleta e persistência será realizada nas tarefas específicas da Sprint 2.
 
 Veja também a organização do backend em [`backend/README.md`](../backend/README.md).
 

@@ -25,7 +25,7 @@ Voltar para o [README principal](../README.md).
 - PostgreSQL, com SQL explícito (sem ORM)
 - Autenticação com JWT
 - Docker
-- Teste unitário
+- Vitest para testes automatizados
 
 ---
 
@@ -46,7 +46,7 @@ Estrutura geral:
 backend/
 ├── Dockerfile
 ├── package.json
-├── README.MD
+├── README.md
 ├── tsconfig.json
 └── src/
     ├── app.ts
@@ -59,6 +59,7 @@ backend/
     │   ├── carbon-api.ts
     │   └── metrics-api.ts
     ├── jobs/
+    │   ├── carbon-intensity-sync.job.ts
     │   ├── metrics-collection.job.ts
     │   └── service-sync.job.ts
     ├── modules/
@@ -73,7 +74,7 @@ backend/
     │   │   ├── auth.routes.ts
     │   │   └── auth.service.ts
     │   ├── coletas/
-    │   │   ├── coleta.repository.ts
+    │   │   ├── coletas.repository.ts
     │   │   ├── coletas.controller.ts
     │   │   ├── coletas.routes.ts
     │   │   └── coletas.service.ts
@@ -82,6 +83,13 @@ backend/
     │   │   ├── indicadores.repository.ts
     │   │   ├── indicadores.routes.ts
     │   │   └── indicadores.service.ts
+    │   ├── intensidades/
+    │   │   ├── intensidades.controller.ts
+    │   │   ├── intensidades.repository.ts
+    │   │   ├── intensidades.routes.ts
+    │   │   └── intensidades.service.ts
+    │   ├── localidades/
+    │   │   └── localidades.repository.ts
     │   └── servicos/
     │       ├── servicos.controller.ts
     │       ├── servicos.repository.ts
@@ -92,13 +100,16 @@ backend/
         ├── errors/
         │   └── AppError.ts
         ├── middlewares/
+        │   ├── admin.middleware.ts
+        │   ├── auth.middleware.ts
         │   └── error.middleware.ts
         └── utils/
+            ├── jwt-expiration.ts
             ├── jwt.util.ts
             └── password.util.ts
 ```
 
-<!-- Atualizar esta estrutura conforme os módulos forem criados -->
+O servidor inicia os ciclos automáticos de descoberta e sincronização do catálogo de serviços, coleta de métricas e sincronização de intensidades de carbono. As falhas em um ciclo são registradas e não impedem que o ciclo seguinte seja agendado.
 
 ---
 
@@ -111,7 +122,7 @@ backend/
 | Agregador de Métricas             | Descoberta dos serviços e coleta das métricas                  | [metrics.unilaunch.org/docs](https://metrics.unilaunch.org/docs) |
 | Serviço de Intensidade de Carbono | Consulta da intensidade de carbono para o cálculo das emissões | [carbon.unilaunch.org/docs](https://carbon.unilaunch.org/docs)   |
 
-As chamadas a essas APIs ficam na pasta `src/integrations/`, separadas das regras de negócio. Falhas nas APIs auxiliares são tratadas para que não interrompam o funcionamento do restante da aplicação.
+As chamadas a essas APIs ficam na pasta `src/integrations/`, separadas das regras de negócio. Se uma chamada falhar durante um ciclo automático, o erro é registrado e o próximo ciclo é agendado; nas requisições HTTP, os erros seguem pelo middleware de tratamento da API.
 
 ### PostgreSQL
 
@@ -121,21 +132,24 @@ A conexão com o banco é configurada em `src/db/connection.ts` e utilizada apen
 
 ## 🔐 Variáveis de Ambiente
 
-As variáveis ficam no arquivo `.env` na raiz do projeto. Use o [`.env.example`](../.env.example) como modelo e nunca envie o `.env` para o repositório.
+As variáveis ficam no arquivo `.env` na raiz do projeto. Use o [`.env.example`](../.env.example) como modelo e nunca envie o `.env` para o repositório. Os valores padrão abaixo são aplicados quando a variável é omitida; o arquivo de exemplo pode definir valores diferentes.
 
-| Variável                                                                                    | Descrição                                    |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `NODE_ENV` | Ambiente de execução da aplicação. |
-| `PORT` | Porta em que a API será executada. |
-| `POSTGRES_HOST`<br />`POSTGRES_PORT`<br />`POSTGRES_DB`<br />`POSTGRES_USER`<br />`POSTGRES_PASSWORD` | Dados de conexão com o PostgreSQL. |
-| `METRICS_API_URL`<br />`CARBON_API_URL` | URLs das APIs auxiliares de métricas e carbono. |
-| `JWT_SECRET` | Segredo usado na assinatura dos tokens JWT. |
-| `JWT_EXPIRES_IN` | Tempo de validade dos tokens JWT. |
+| Variável | Descrição |
+| --- | --- |
+| `NODE_ENV` | Ambiente de execução. Padrão: `development`. |
+| `PORT` | Porta da API. Padrão: `3000`. |
+| `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Dados de conexão com o PostgreSQL. `POSTGRES_PORT` tem padrão `5432`; configure os demais valores conforme o ambiente. |
+| `METRICS_API_URL`, `CARBON_API_URL` | URLs das APIs auxiliares de métricas e carbono; ambas são obrigatórias. |
+| `EXTERNAL_API_TIMEOUT_MS` | Tempo limite das requisições às APIs externas, em milissegundos. Padrão: `5000`. |
+| `JWT_SECRET` | Segredo obrigatório para assinar e verificar tokens JWT. |
+| `JWT_EXPIRES_IN` | Validade do token JWT em segundos ou duração, por exemplo `3600`, `15m` ou `1h`. Padrão: `3600` segundos. |
 | `COLLECTION_INTERVAL_MS` | Intervalo entre ciclos automáticos de coleta de métricas, em milissegundos. Padrão: `60000`. |
 | `SERVICE_SYNC_INTERVAL_MS` | Intervalo entre ciclos automáticos de descoberta e sincronização de serviços, em milissegundos. Padrão: `300000`. |
-| `EXTERNAL_API_TIMEOUT_MS` | Tempo limite das requisições às APIs externas, em milissegundos. |
-| `CORS_ORIGIN` | Origem do frontend permitida pelo CORS. |
-| `VITE_API_URL` | URL da API utilizada pelo frontend. |
+| `CARBON_INTENSITY_SYNC_INTERVAL_MS` | Intervalo entre ciclos de sincronização das intensidades de carbono, em milissegundos. Padrão: `300000`. |
+| `CARBON_INTENSITY_MAX_AGE_MS` | Idade máxima aceita para snapshots de intensidade usados nos cálculos, em milissegundos. Padrão: `900000` (15 minutos). |
+| `CORS_ORIGIN` | Origem do frontend permitida pelo CORS. Padrão: `http://localhost:5173`. |
+
+`VITE_API_URL` e `VITE_MAPTILER_API_KEY` são configurações do frontend, não da API; consulte o [README do frontend](../frontend/README.md).
 
 ---
 
@@ -159,13 +173,13 @@ npm install
 npm run dev
 ```
 
-| Comando               | Função                                                       |
-| --------------------- | -------------------------------------------------------------- |
-| `npm run dev`       | Executa`src/server.ts` com recarga ao salvar, usando `tsx` |
-| `npm run typecheck` | Verifica os tipos sem gerar arquivos                           |
-| `npm run build`     | Compila os arquivos de`src/` para `dist/`                  |
-| `npm start`         | Executa`dist/server.js` após o build                        |
-| `npm run test`       | Roda os testes unitários com Vitest                          |
+| Comando | Função |
+| --- | --- |
+| `npm run dev` | Executa `src/server.ts` com recarga ao salvar, usando `tsx`. |
+| `npm run typecheck` | Verifica os tipos sem gerar arquivos. |
+| `npm run build` | Compila os arquivos de `src/` para `dist/`. |
+| `npm start` | Executa `dist/server.js` após o build. |
+| `npm run test` | Executa os testes automatizados com Vitest. |
 
 ---
 
