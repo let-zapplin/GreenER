@@ -52,7 +52,7 @@ export class IndicadoresRepository {
   async findCollectionsForPeriod(
     start: Date,
     end: Date,
-    carbonIntensityMaxAgeMs: number | undefined,
+    carbonIntensityMaxAgeMs: number,
      serviceId?: number,
   ): Promise<ServiceIndicatorData[]> {
     // Mantém serviços sem tentativa no período e seleciona coletas no intervalo [start, end).
