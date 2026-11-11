@@ -33,6 +33,24 @@ function optionalPositiveInt(key: string, defaultValue: number): number {
   return value;
 }
 
+function optionalBoolean(key: string, defaultValue: boolean): boolean {
+  const raw = process.env[key]?.trim().toLowerCase();
+
+  if (!raw) {
+    return defaultValue;
+  }
+
+  if (["true", "1", "yes", "on"].includes(raw)) {
+    return true;
+  }
+
+  if (["false", "0", "no", "off"].includes(raw)) {
+    return false;
+  }
+
+  throw new Error(`❌ Variável ${key} deve ser booleana`);
+}
+
 // Vazio/ausente usa 15 minutos; valor não numérico ou negativo interrompe a inicialização.
 const carbonIntensityMaxAgeValue = process.env.CARBON_INTENSITY_MAX_AGE_MS;
 
@@ -76,4 +94,10 @@ export const env = {
     "COLLECTION_INTERVAL_MS",
     60_000,
   ),
+
+  // Assistente com Ollama (LLM local, sem custo por requisição)
+  ollamaUrl: optional("OLLAMA_URL", "http://localhost:11434"),
+  ollamaModel: optional("OLLAMA_MODEL", "qwen2.5:3b"),
+  ollamaTimeoutMs: optionalPositiveInt("OLLAMA_TIMEOUT_MS", 60_000),
+  ollamaEnabled: optionalBoolean("OLLAMA_ENABLED", true),
 } as const;

@@ -6,6 +6,7 @@ import metricasRoutes from "./modules/coletas/coletas.routes.js";
 import intensidadesRoutes from "./modules/intensidades/intensidades.routes.js";
 import indicadoresRoutes from "./modules/indicadores/indicadores.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
+import chatRoutes from "./modules/chat/chat.routes.js";
 import { errorMiddleware } from "./shared/middlewares/error.middleware.js";
 
 const app = express();
@@ -31,6 +32,7 @@ app.use("/api/metricas", metricasRoutes);
 app.use("/api/intensidades", intensidadesRoutes);
 app.use("/api/indicadores", indicadoresRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/chat", chatRoutes);
 app.use(errorMiddleware);
 
 export default app;

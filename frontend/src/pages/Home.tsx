@@ -4,6 +4,7 @@ import camaleaoVerde from "../../assets/camaleao-verde.png";
 import iconFolha from "../../assets/icones/icon-folha.png";
 import energiaIcon from "../../assets/icones/icon-dado.png";
 import evolucaoIcon from "../../assets/icones/icon-barras.png";
+import { AssistantChat } from "../components/AssistantChat";
 
 export function Home() {
   /* esses consts iniciais são os estados da transição*/
@@ -100,6 +101,8 @@ export function Home() {
         </div>
       </section>
 
+      <AssistantChat />
+
       <section className="analysis-selector">
         <button
           className="analysis-option"
@@ -145,8 +148,6 @@ export function Home() {
           </div>
         </button>
       </section>
-
-      <p className="view-debug">Perspectiva selecionada: {view ?? "nenhuma"}</p>
     </main>
   );
 }
