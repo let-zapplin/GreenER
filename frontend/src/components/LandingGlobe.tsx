@@ -76,6 +76,7 @@ export default function LandingGlobe() {
         const map = new sdk.Map({
           container: element,
           apiKey: key || undefined,
+          rtlTextPlugin: false,
           style: key
             ? sdk.MapStyle.SATELLITE
             : {
