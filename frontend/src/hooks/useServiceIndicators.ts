@@ -4,15 +4,15 @@ import { useAuth } from "./useAuth";
 import { ApiError } from "../services/api";
 import { getServiceIndicators } from "../services/indicatorsApi";
 import type { IndicatorsResponse } from "../types/indicators";
+import type { AnalysisPeriodWindow } from "../services/analysisPeriod";
 
 const PERIOD_MS = 24 * 60 * 60 * 1000;
 const REFRESH_INTERVAL_MS = 60_000;
 
-export function useServiceIndicators() {
+export function useServiceIndicators(period?: AnalysisPeriodWindow) {
   const { token, logout } = useAuth();
 
-  const [indicators, setIndicators] =
-    useState<IndicatorsResponse | null>(null);
+  const [indicators, setIndicators] = useState<IndicatorsResponse | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,15 +44,25 @@ export function useServiceIndicators() {
         15_000,
       );
 
-      const end = new Date();
-      const start = new Date(end.getTime() - PERIOD_MS);
+      const requestPeriod = period
+        ? {
+            start: period.start,
+            end: period.end,
+          }
+        : (() => {
+            const end = new Date();
+
+            const start = new Date(end.getTime() - PERIOD_MS);
+
+            return {
+              start: start.toISOString(),
+              end: end.toISOString(),
+            };
+          })();
 
       try {
         const data = await getServiceIndicators(
-          {
-            start: start.toISOString(),
-            end: end.toISOString(),
-          },
+          requestPeriod,
           requestController.signal,
           authToken,
         );
@@ -88,17 +98,19 @@ export function useServiceIndicators() {
 
     void loadIndicators(authToken);
 
-    const refreshTimer = setInterval(
-      () => void loadIndicators(authToken),
-      REFRESH_INTERVAL_MS,
-    );
+    const refreshTimer =
+      period === undefined
+        ? setInterval(() => void loadIndicators(authToken), REFRESH_INTERVAL_MS)
+        : null;
 
     return () => {
       disposed = true;
-      clearInterval(refreshTimer);
+      if (refreshTimer !== null) {
+        clearInterval(refreshTimer);
+      }
       controller?.abort();
     };
-  }, [token, logout]);
+  }, [token, logout, period]);
 
   return {
     indicators,

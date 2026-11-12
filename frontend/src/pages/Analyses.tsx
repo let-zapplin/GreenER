@@ -4,41 +4,15 @@ import { HistoryChart } from "../components/HistoryChart";
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
 import { ServiceHistoryPreview } from "../components/ServiceHistoryPreview";
+import { useAnalysisPeriod } from "../hooks/useAnalysisPeriod";
 
 import "./Analyses.css";
-type HistoryPeriod = {
-  label: string;
-  value: number;
-};
 
 type AnalysisLayout = "focus" | "overview" | "side";
-
-const HISTORY_PERIODS: HistoryPeriod[] = [
-  {
-    label: "1h",
-    value: 1 * 60 * 60 * 1000,
-  },
-  {
-    label: "6h",
-    value: 6 * 60 * 60 * 1000,
-  },
-  {
-    label: "24h",
-    value: 24 * 60 * 60 * 1000,
-  },
-  {
-    label: "7d",
-    value: 7 * 24 * 60 * 60 * 1000,
-  },
-];
-
-const DEFAULT_HISTORY_PERIOD_MS = 24 * 60 * 60 * 1000;
 
 const ANALYSES_LAYOUT_STORAGE_KEY = "greener:analyses:layout";
 
 const ANALYSES_OVERVIEW_STORAGE_KEY = "greener:analyses:overview-collapsed";
-
-const ANALYSES_PERIOD_STORAGE_KEY = "greener:analyses:period";
 
 function getServiceInitials(name: string): string {
   return name
@@ -71,17 +45,12 @@ export function Analyses() {
     null,
   );
 
-  const [historyPeriodMs, setHistoryPeriodMs] = useState(() => {
-    const savedPeriod = Number(
-      localStorage.getItem(ANALYSES_PERIOD_STORAGE_KEY),
-    );
-
-    const periodExists = HISTORY_PERIODS.some(
-      (period) => period.value === savedPeriod,
-    );
-
-    return periodExists ? savedPeriod : DEFAULT_HISTORY_PERIOD_MS;
-  });
+  const {
+    periods: analysisPeriods,
+    durationMs: historyPeriodMs,
+    period: analysisPeriod,
+    selectPeriod,
+  } = useAnalysisPeriod();
 
   const [analysisLayout, setAnalysisLayout] = useState<AnalysisLayout>(() => {
     const savedLayout = localStorage.getItem(ANALYSES_LAYOUT_STORAGE_KEY);
@@ -105,53 +74,39 @@ export function Analyses() {
 
   const [isChartTransitioning, setIsChartTransitioning] = useState(false);
 
-useEffect(() => {
-  if (services.length === 0) {
-    setSelectedServiceId(null);
-    return;
-  }
+  useEffect(() => {
+    if (services.length === 0) {
+      setSelectedServiceId(null);
+      return;
+    }
 
-  const requestedServiceExists =
-    requestedServiceId !== null &&
-    services.some(
-      (service) =>
-        service.serviceId ===
-        requestedServiceId,
-    );
+    const requestedServiceExists =
+      requestedServiceId !== null &&
+      services.some((service) => service.serviceId === requestedServiceId);
 
-  if (
-    requestedServiceExists &&
-    appliedQueryServiceRef.current !==
-      requestedServiceId
-  ) {
-    appliedQueryServiceRef.current =
-      requestedServiceId;
+    if (
+      requestedServiceExists &&
+      appliedQueryServiceRef.current !== requestedServiceId
+    ) {
+      appliedQueryServiceRef.current = requestedServiceId;
 
-    setSelectedServiceId(
-      requestedServiceId,
-    );
+      setSelectedServiceId(requestedServiceId);
 
-    return;
-  }
+      return;
+    }
 
-  setSelectedServiceId(
-    (currentServiceId) => {
+    setSelectedServiceId((currentServiceId) => {
       const currentServiceStillExists =
         currentServiceId !== null &&
-        services.some(
-          (service) =>
-            service.serviceId ===
-            currentServiceId,
-        );
+        services.some((service) => service.serviceId === currentServiceId);
 
       if (currentServiceStillExists) {
         return currentServiceId;
       }
 
       return services[0].serviceId;
-    },
-  );
-}, [services, requestedServiceId]);
+    });
+  }, [services, requestedServiceId]);
   useEffect(() => {
     if (selectedServiceId === null) {
       return;
@@ -226,10 +181,6 @@ useEffect(() => {
     );
   }, [isOverviewCollapsed]);
 
-  useEffect(() => {
-    localStorage.setItem(ANALYSES_PERIOD_STORAGE_KEY, String(historyPeriodMs));
-  }, [historyPeriodMs]);
-
   const selectedService =
     services.find((service) => service.serviceId === selectedServiceId) ?? null;
 
@@ -267,7 +218,7 @@ useEffect(() => {
     history,
     loading: historyLoading,
     error: historyError,
-  } = useServiceIndicatorHistory(selectedServiceId, historyPeriodMs);
+  } = useServiceIndicatorHistory(selectedServiceId, analysisPeriod);
 
   const [previousHistory, setPreviousHistory] = useState<typeof history>(null);
 
@@ -322,7 +273,7 @@ useEffect(() => {
                 className="analyses-period-options"
                 aria-label="Período analisado"
               >
-                {HISTORY_PERIODS.map((period) => {
+                {analysisPeriods.map((period) => {
                   const isActive = historyPeriodMs === period.value;
 
                   return (
@@ -335,7 +286,7 @@ useEffect(() => {
                           : "analyses-period-button"
                       }
                       aria-pressed={isActive}
-                      onClick={() => setHistoryPeriodMs(period.value)}
+                      onClick={() => selectPeriod(period.value)}
                     >
                       {period.label}
                     </button>
@@ -472,7 +423,7 @@ useEffect(() => {
                         serviceId={service.serviceId}
                         name={service.name}
                         regionCode={service.location.region_code}
-                        periodMs={historyPeriodMs}
+                        period={analysisPeriod}
                         isSelected={selectedServiceId === service.serviceId}
                         onSelect={() => setSelectedServiceId(service.serviceId)}
                       />
@@ -488,7 +439,7 @@ useEffect(() => {
 
                   <span>
                     {
-                      HISTORY_PERIODS.find(
+                      analysisPeriods.find(
                         (period) => period.value === historyPeriodMs,
                       )?.label
                     }

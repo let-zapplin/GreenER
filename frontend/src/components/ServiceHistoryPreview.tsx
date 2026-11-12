@@ -7,6 +7,7 @@ import {
 } from "recharts";
 
 import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
+import type { AnalysisPeriodWindow } from "../services/analysisPeriod";
 
 import "./ServiceHistoryPreview.css";
 
@@ -14,7 +15,7 @@ type ServiceHistoryPreviewProps = {
   serviceId: number;
   name: string;
   regionCode: string;
-  periodMs: number;
+  period: AnalysisPeriodWindow;
   isSelected: boolean;
   onSelect: () => void;
 };
@@ -30,7 +31,7 @@ export function ServiceHistoryPreview({
   serviceId,
   name,
   regionCode,
-  periodMs,
+  period,
   isSelected,
   onSelect,
 }: ServiceHistoryPreviewProps) {
@@ -38,22 +39,30 @@ export function ServiceHistoryPreview({
     history,
     loading,
     error,
-  } = useServiceIndicatorHistory(serviceId, periodMs);
+  } = useServiceIndicatorHistory(
+    serviceId,
+    period,
+  );
 
   const chartData =
     history?.samples.map((sample) => ({
-      timestamp: new Date(sample.attemptedAt).getTime(),
+      timestamp: new Date(
+        sample.attemptedAt,
+      ).getTime(),
       energyKwh: sample.energyKwh,
     })) ?? [];
 
   const validSamples =
     history?.samples.filter(
-      (sample) => sample.energyKwh !== null,
+      (sample) =>
+        sample.energyKwh !== null,
     ) ?? [];
 
   const latestEnergy =
     validSamples.length > 0
-      ? validSamples[validSamples.length - 1].energyKwh
+      ? validSamples[
+          validSamples.length - 1
+        ].energyKwh
       : null;
 
   return (
@@ -77,7 +86,11 @@ export function ServiceHistoryPreview({
         <div className="service-history-preview-value">
           {latestEnergy !== null ? (
             <>
-              <strong>{formatEnergy(latestEnergy)}</strong>
+              <strong>
+                {formatEnergy(
+                  latestEnergy,
+                )}
+              </strong>
               <span>kWh</span>
             </>
           ) : (
@@ -98,52 +111,72 @@ export function ServiceHistoryPreview({
         )}
 
         {history &&
-          history.samples.length === 0 && (
+          history.samples.length ===
+            0 && (
             <div className="service-history-preview-empty">
               Sem coletas no período
             </div>
           )}
 
         {history &&
-          history.samples.length > 0 &&
-          validSamples.length === 0 && (
+          history.samples.length >
+            0 &&
+          validSamples.length ===
+            0 && (
             <div className="service-history-preview-empty">
               Energia indisponível
             </div>
           )}
 
-        {history && validSamples.length > 0 && (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <XAxis
-                dataKey="timestamp"
-                type="number"
-                scale="time"
-                domain={["dataMin", "dataMax"]}
-                hide
-              />
+        {history &&
+          validSamples.length > 0 && (
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <LineChart
+                data={chartData}
+              >
+                <XAxis
+                  dataKey="timestamp"
+                  type="number"
+                  scale="time"
+                  domain={[
+                    "dataMin",
+                    "dataMax",
+                  ]}
+                  hide
+                />
 
-              <YAxis hide domain={["auto", "auto"]} />
+                <YAxis
+                  hide
+                  domain={[
+                    "auto",
+                    "auto",
+                  ]}
+                />
 
-              <Line
-                type="monotone"
-                dataKey="energyKwh"
-                stroke="currentColor"
-                strokeWidth={2}
-                dot={false}
-                activeDot={false}
-                connectNulls={false}
-                isAnimationActive
-                animationDuration={450}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
+                <Line
+                  type="monotone"
+                  dataKey="energyKwh"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={false}
+                  connectNulls={false}
+                  isAnimationActive
+                  animationDuration={450}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
       </div>
 
       <div className="service-history-preview-footer">
         <span>
-          {history?.samples.length ?? 0} coletas
+          {history?.samples.length ??
+            0}{" "}
+          coletas
         </span>
 
         <span className="service-history-preview-action">
