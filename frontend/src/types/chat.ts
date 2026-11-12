@@ -7,6 +7,8 @@ export type ChatIntent =
   | "RANKING_EMISSIONS"
   | "SERVICE_SUMMARY"
   | "ENVIRONMENT_SUMMARY"
+  | "PROJECT_INFO"
+  | "METHODOLOGY"
   | "OUT_OF_SCOPE";
 
 export type ChatChartPoint = {
@@ -21,13 +23,44 @@ export type ChatChart = {
   data: ChatChartPoint[];
 };
 
-export type ChatRequest = {
+export type ChatContext = {
+  page: string | null;
+  serviceName: string | null;
+};
+
+export type ChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type ChatClarificationOption = {
+  label: string;
+  message: string;
+  serviceName: string | null;
+};
+
+export type ChatClarification = {
+  question: string;
+  options: ChatClarificationOption[];
+};
+
+export type ChatSuggestion = {
+  label: string;
   message: string;
   period: ChatPeriod;
 };
 
+export type ChatRequest = {
+  message: string;
+  period: ChatPeriod;
+  conversationId?: string;
+  context?: ChatContext;
+  history?: ChatHistoryMessage[];
+};
+
 export type ChatResponse = {
   message: string;
+  conversationId: string;
   answer: string;
   intent: ChatIntent;
   period: {
@@ -36,6 +69,8 @@ export type ChatResponse = {
     label: ChatPeriod;
   };
   chart: ChatChart | null;
+  clarification: ChatClarification | null;
+  suggestions: ChatSuggestion[];
   partial: boolean;
   disclaimer: string;
   model: string;

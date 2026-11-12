@@ -7,6 +7,8 @@ export const CHAT_INTENTS = [
   "RANKING_EMISSIONS",
   "SERVICE_SUMMARY",
   "ENVIRONMENT_SUMMARY",
+  "PROJECT_INFO",
+  "METHODOLOGY",
   "OUT_OF_SCOPE",
 ] as const;
 
@@ -29,7 +31,41 @@ export type ChatChart = {
   data: ChatChartPoint[];
 };
 
+export type ChatContext = {
+  page: string | null;
+  serviceName: string | null;
+};
+
+export type ChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type ChatClarificationOption = {
+  label: string;
+  message: string;
+  serviceName: string | null;
+};
+
+export type ChatClarification = {
+  question: string;
+  options: ChatClarificationOption[];
+};
+
+export type ChatSuggestion = {
+  label: string;
+  message: string;
+  period: ChatPeriod;
+};
+
+export type ChatRequestOptions = {
+  conversationId?: unknown;
+  context?: unknown;
+  history?: unknown;
+};
+
 export type ChatReply = {
+  conversationId: string;
   answer: string;
   intent: ChatIntent;
   period: {
@@ -38,6 +74,8 @@ export type ChatReply = {
     label: ChatPeriod;
   };
   chart: ChatChart | null;
+  clarification: ChatClarification | null;
+  suggestions: ChatSuggestion[];
   partial: boolean;
   disclaimer: string;
   model: string;
@@ -50,6 +88,11 @@ export interface ChatLlm {
   classify(
     message: string,
     serviceNames: string[],
+    history?: ChatHistoryMessage[],
   ): Promise<ChatClassification | null>;
-  answer(question: string, context: unknown): Promise<string | null>;
+  answer(
+    question: string,
+    context: unknown,
+    history?: ChatHistoryMessage[],
+  ): Promise<string | null>;
 }

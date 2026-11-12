@@ -9,6 +9,7 @@ import {
 import {
   CHAT_INTENTS,
   type ChatClassification,
+  type ChatHistoryMessage,
   type ChatIntent,
   type ChatLlm,
 } from "./chat.types.js";
@@ -18,6 +19,7 @@ type OllamaClientOptions = {
   baseUrl: string;
   model: string;
   timeoutMs: number;
+  numCtx: number;
 };
 
 type OllamaResponse = {
@@ -60,17 +62,20 @@ export class OllamaClient implements ChatLlm {
 
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private readonly numCtx: number;
 
   constructor(options: Partial<OllamaClientOptions> = {}) {
     this.baseUrl = (options.baseUrl ?? env.ollamaUrl).replace(/\/$/, "");
     this.model = options.model ?? env.ollamaModel;
     this.timeoutMs = options.timeoutMs ?? env.ollamaTimeoutMs;
+    this.numCtx = options.numCtx ?? env.ollamaNumCtx ?? 4_096;
     this.enabled = options.enabled ?? env.ollamaEnabled;
   }
 
   async classify(
     message: string,
     serviceNames: string[],
+    history: ChatHistoryMessage[] = [],
   ): Promise<ChatClassification | null> {
     if (!this.enabled) {
       return null;
@@ -78,6 +83,7 @@ export class OllamaClient implements ChatLlm {
 
     const content = await this.chat({
       system: CLASSIFIER_SYSTEM_PROMPT,
+      history: history.slice(-6),
       user: buildClassifierUserPrompt(message, serviceNames),
       temperature: 0,
       numPredict: 140,
@@ -87,13 +93,18 @@ export class OllamaClient implements ChatLlm {
     return content === null ? null : parseClassification(content);
   }
 
-  async answer(question: string, context: unknown): Promise<string | null> {
+  async answer(
+    question: string,
+    context: unknown,
+    history: ChatHistoryMessage[] = [],
+  ): Promise<string | null> {
     if (!this.enabled) {
       return null;
     }
 
     return this.chat({
       system: ANSWER_SYSTEM_PROMPT,
+      history: history.slice(-4),
       user: buildAnswerUserPrompt(question, context),
       temperature: 0.2,
       numPredict: 220,
@@ -102,12 +113,14 @@ export class OllamaClient implements ChatLlm {
 
   private async chat({
     system,
+    history,
     user,
     temperature,
     numPredict,
     format,
   }: {
     system: string;
+    history: ChatHistoryMessage[];
     user: string;
     temperature: number;
     numPredict: number;
@@ -123,6 +136,10 @@ export class OllamaClient implements ChatLlm {
           model: this.model,
           messages: [
             { role: "system", content: system },
+            ...history.map((entry) => ({
+              role: entry.role,
+              content: entry.content,
+            })),
             { role: "user", content: user },
           ],
           stream: false,
@@ -131,6 +148,7 @@ export class OllamaClient implements ChatLlm {
           options: {
             temperature,
             num_predict: numPredict,
+            num_ctx: this.numCtx,
           },
         }),
         signal: AbortSignal.timeout(this.timeoutMs),

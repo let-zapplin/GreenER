@@ -26,11 +26,13 @@ export class ChatController {
         );
       }
 
-      const { message, period } = body as Record<string, unknown>;
+      const { message, period, conversationId, context, history } =
+        body as Record<string, unknown>;
 
       const result = await this.service.chat(
         typeof message === "string" ? message : "",
         period,
+        { conversationId, context, history },
       );
 
       res.status(200).json({

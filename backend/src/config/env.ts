@@ -99,5 +99,7 @@ export const env = {
   ollamaUrl: optional("OLLAMA_URL", "http://localhost:11434"),
   ollamaModel: optional("OLLAMA_MODEL", "qwen2.5:3b"),
   ollamaTimeoutMs: optionalPositiveInt("OLLAMA_TIMEOUT_MS", 60_000),
+  // Janela total de contexto do modelo. Limita prompt + histórico + resposta.
+  ollamaNumCtx: optionalPositiveInt("OLLAMA_NUM_CTX", 4_096),
   ollamaEnabled: optionalBoolean("OLLAMA_ENABLED", true),
 } as const;

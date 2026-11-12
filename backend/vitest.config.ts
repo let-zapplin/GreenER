@@ -7,5 +7,6 @@ export default defineConfig({
       "dist/**",
       "node_modules/**",
     ],
+    setupFiles: ["./vitest.setup.ts"],
   },
 });

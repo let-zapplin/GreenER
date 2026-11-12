@@ -21,6 +21,7 @@ sobre os dados monitorados pelo GreenER, por exemplo:
 - “Qual serviço emite mais CO₂?”
 - “Como está o serviço X no período?”
 - “Qual é o panorama ambiental das últimas 24 horas?”
+- “O que é o GreenER e como a energia é calculada?”
 
 A resposta combina:
 
@@ -31,6 +32,15 @@ A resposta combina:
 O Ollama foi escolhido por ser um LLM local, sem custo por requisição e sem envio de
 dados para APIs de terceiros. O modelo é usado apenas para **entender a intenção** e
 **redigir a resposta**. Os números e os gráficos vêm de código determinístico do backend.
+
+Desde a **fase 1**, o assistente mantém memória de curto prazo por conversa, usa o
+contexto da página, resolve referências como “ele” e “esse serviço”, pede clarificação
+quando o nome é ambíguo e sugere próximos passos ao final de cada resposta.
+
+A **base de conhecimento** acrescenta respostas didáticas sobre o próprio GreenER e
+sobre a metodologia de cálculo. Ela usa seções curadas do README e de
+`docs/calculos.md`, não o repositório inteiro, e não cita arquivos nem fontes na
+resposta.
 
 ---
 
@@ -85,7 +95,51 @@ nada.
 | `RANKING_EMISSIONS` | “Qual serviço emite mais CO₂?” | `IndicadoresService.getIndicators` | Barras, top 5 em gCO₂e |
 | `SERVICE_SUMMARY` | “Como está o serviço X?” | `IndicadoresService.getIndicators` + `getServiceHistory` | Linha do consumo em kWh |
 | `ENVIRONMENT_SUMMARY` | “Panorama ambiental do período” | `DashboardService.getSummary` | Barras de disponibilidade |
+| `PROJECT_INFO` | “O que é o GreenER?”, “Quem fez o projeto?” | Base curada em `chat.knowledge.ts` | Nenhum |
+| `METHODOLOGY` | “Como a energia é calculada?”, “Quais são as limitações?” | Base curada em `chat.knowledge.ts` | Nenhum |
 | `OUT_OF_SCOPE` | Qualquer outro assunto | Nenhuma | Nenhum |
+
+### Clarificação e continuidade
+
+- Se o trecho citado casa com mais de um serviço (por exemplo, “Solar” para “Solar
+  Norte” e “Solar Sul”), o backend devolve `clarification` com opções clicáveis em vez
+  de escolher por conta própria.
+- A escolha pode ser feita pelo nome, pelo número (“serviço 2”) ou pela posição
+  (“o segundo”), usando a clarificação pendente da conversa.
+- Perguntas de continuidade (“e as emissões dele?”, “e o histórico?”) reaproveitam o
+  último serviço ativo da mesma conversa.
+- O contexto da página pode indicar um serviço quando a pergunta não cita o nome.
+- Cada resposta inclui até 3 `suggestions` com pergunta, rótulo e período.
+
+### Conhecimento do projeto e cálculos
+
+Perguntas sobre o próprio GreenER e sobre a metodologia não consultam o banco: elas
+usam uma **base curada** em `chat.knowledge.ts`, derivada do README e de
+`docs/calculos.md`.
+
+- **Seções fixas:** potência, energia, intensidade de carbono, emissões, visão geral da
+  metodologia, premissas/limitações, visão geral do projeto, equipe, funcionalidades e
+  arquitetura. Cada seção tem `id`, `intent`, `title`, `reference`, `summary`,
+  `content` e `keywords`.
+- **Recuperação lexical, não vetorial:** a mensagem e as palavras-chave passam por
+  normalização (acentos, subscritos como `CO₂`, pontuação) e são pontuadas por frases e
+  tokens. A seção com maior pontuação vence se atingir o limiar 4.
+- **Dica de continuação:** a pergunta anterior da conversa entra com peso 0,3, apenas
+  quando a mensagem atual já tem alguma evidência (pontuação ≥ 2). Isso resolve “E a
+  energia?” sem deixar o histórico dominar o assunto.
+- **Fallback determinístico:** sem pontuação suficiente, o backend usa a primeira seção
+  da intenção classificada; a resposta nunca fica vazia.
+- **Números sempre atuais:** `IndicadoresService.getIndicators` fornece o modelo de
+  potência vigente, e o texto da seção recebe os coeficientes e a versão por
+  placeholders. Assim a explicação didática não duplica valores que possam divergir do
+  restante do GreenER.
+- **Perguntas de dados têm precedência:** se a mensagem cita serviço, ranking, ambiente
+  ou emissões, a intenção de dados vence, a menos que exista uma pista forte de
+  explicação (“como é calculado”, “metodologia”, “o que é o GreenER”). “Qual serviço
+  emite mais CO₂?” continua sendo ranking, não explicação.
+- **Sem citação de fonte:** o texto final não menciona arquivos, caminhos ou referências
+  da documentação. O Ollama pode reescrever a seção em até 4 frases, preservando
+  fórmulas e coeficientes; em modo regras, o resumo curado é devolvido literalmente.
 
 ### Fora do escopo (recusa determinística)
 
@@ -110,8 +164,8 @@ do modelo:
 │ Navegador — Home autenticada                                 │
 │ <AssistantChat />                                            │
 │  • seletor de período (1h, 6h, 24h, 7d)                      │
-│  • histórico local da conversa                               │
-│  • gráficos Recharts                                         │
+│  • conversationId, contexto da página e últimas 6 mensagens  │
+│  • gráficos Recharts, clarificação e sugestões clicáveis     │
 └───────────────────────────┬──────────────────────────────────┘
                             │ POST /api/chat
                             │ Authorization: Bearer <JWT>
@@ -128,9 +182,14 @@ do modelo:
 │                     │                     │                │ │
 │                     └──────────► PostgreSQL ◄──────────────┘ │
 │                                                              │
-│ ChatService ──► OllamaClient ──HTTP──► http://ollama:11434   │
+│ ChatService ──► InMemoryChatStateStore (TTL 30 min)          │
+│       │                                                      │
+│       ├───────► chat.knowledge.ts (base curada + retrieval)  │
+│       │                                                      │
+│       └───────► OllamaClient ──HTTP──► http://ollama:11434   │
 │                                                              │
-│ Resposta: answer + chart + period + partial + model + flags  │
+│ Resposta: answer + chart + clarification + suggestions +     │
+│           conversationId + period + partial + model + flags  │
 └──────────────────────────────────────────────────────────────┘
                             │
                             ▼
@@ -154,21 +213,27 @@ Todos os arquivos novos ficam em `backend/src/modules/chat/`.
 
 | Arquivo | Responsabilidade |
 | --- | --- |
-| `chat.types.ts` | Tipos compartilhados (`ChatIntent`, `ChatReply`, `ChatChart`) e a interface `ChatLlm`. |
+| `chat.types.ts` | Contrato completo: `ChatIntent`, `ChatReply`, `ChatContext`, `ChatHistoryMessage`, `ChatClarification`, `ChatSuggestion` e `ChatLlm`. |
+| `chat.state.ts` | Memória em processo por `conversationId`, com TTL de 30 min e limite de 500 conversas. |
 | `chat.period.ts` | Períodos permitidos, validação, cálculo de início/fim e frases em português. |
 | `chat.prompt.ts` | Prompts do classificador e do redator, além do extrator de JSON. |
-| `ollama.client.ts` | Cliente HTTP de `/api/chat` do Ollama, com timeout e fallback para `null`. |
-| `chat.service.ts` | Orquestra classificação, ferramentas, gráficos, fallback e resposta final. |
-| `chat.factory.ts` | Monta o `ChatService` com as dependências reais. |
-| `chat.controller.ts` | Valida o corpo da requisição e devolve a resposta HTTP. |
+| `chat.knowledge.ts` | Base curada do README e de `docs/calculos.md`, normalização, recuperação lexical, classificação por pistas e renderização com os valores atuais do modelo de potência. |
+| `ollama.client.ts` | Cliente HTTP de `/api/chat` do Ollama, com histórico, `num_ctx`, timeout e fallback para `null`. |
+| `chat.service.ts` | Orquestra validação, contexto, resolução de serviço, clarificação, classificação, ferramentas, conhecimento, gráficos, sugestões, estado e resposta final. |
+| `chat.factory.ts` | Monta o `ChatService` com as dependências reais e o estado compartilhado. |
+| `chat.controller.ts` | Lê `message`, `period`, `conversationId`, `context` e `history` do corpo. |
 | `chat.routes.ts` | Rota `POST /api/chat` protegida por JWT. |
+| `chat.knowledge.test.ts` | Recuperação das seções, dica de continuação, guarda de perguntas de dados, fallback e substituição de placeholders. |
 | `chat.service.test.ts` | Testes unitários das intenções, gráficos e fallback. |
+| `chat.conversation.test.ts` | Memória, contexto, clarificação, histórico, período, conhecimento e avaliação determinística. |
 | `chat.http.test.ts` | Testes HTTP de autenticação, validação e resposta. |
 
 Integrações alteradas:
 
-- `backend/src/config/env.ts`: novas variáveis `OLLAMA_*`;
-- `backend/src/app.ts`: monta `/api/chat` antes do middleware global de erro.
+- `backend/src/config/env.ts`: variáveis `OLLAMA_*`, incluindo `OLLAMA_NUM_CTX`;
+- `backend/src/app.ts`: monta `/api/chat` antes do middleware global de erro;
+- `backend/vitest.config.ts` e `backend/vitest.setup.ts`: variáveis fictícias para os
+  testes HTTP carregarem o app sem depender do `.env` real.
 
 ---
 
@@ -176,30 +241,49 @@ Integrações alteradas:
 
 Exemplo: **“Qual serviço gasta mais energia nas últimas 24 horas?”**
 
-1. O frontend envia `POST /api/chat` com `{ message, period: "24h" }` e o JWT.
+1. O frontend envia `POST /api/chat` com `{ message, period, conversationId,
+   context, history }` e o JWT.
 2. `authMiddleware` valida o token. Sem token válido, a resposta é `401`.
-3. `ChatController` confere o corpo e repassa a pergunta ao `ChatService`.
-4. O service valida a mensagem (não vazia, até 500 caracteres) e o período.
-5. O service calcula `start` e `end` a partir do relógio do servidor.
-6. `IndicadoresService.getIndicators` consulta o PostgreSQL uma vez e devolve os totais
+3. `ChatController` repassa os campos ao `ChatService`.
+4. O service valida mensagem (não vazia, até 500 caracteres), período,
+   `conversationId`, contexto e histórico (até 12 mensagens de até 500 caracteres).
+5. O service gera um `conversationId` (UUID) quando não recebe um e recupera o estado
+   daquela conversa no `InMemoryChatStateStore`.
+6. O período citado na própria pergunta (“últimas 6 horas”, “última semana”) tem
+   precedência sobre o seletor da interface.
+7. `IndicadoresService.getIndicators` consulta o PostgreSQL uma vez e devolve os totais
    por serviço no período.
-7. O service envia ao Ollama a pergunta e **somente os nomes dos serviços ativos** para
-   classificação. O modelo responde um JSON com `intent` e `serviceName`.
-8. Se o Ollama estiver desligado, der timeout ou devolver algo inválido, entra a
-   classificação por regras (palavras-chave).
-9. Para `RANKING_ENERGY`, o backend filtra serviços ativos, descarta valores zerados,
-   ordena decrescente, pega o top 5 e monta a especificação do gráfico de barras.
-10. O backend monta um contexto compacto com ranking, totais e sinalização de dados
-    parciais.
-11. O Ollama recebe esse contexto e reescreve a resposta em até 3 frases, preservando
-    os números. Se falhar, o texto determinístico é usado.
-12. O backend responde JSON com texto, gráfico, período, `partial`, `model` e
-    `degraded`.
-13. O frontend adiciona a mensagem ao histórico e renderiza o gráfico Recharts.
+8. O service resolve o serviço citado, considerando nesta ordem: clarificação pendente,
+   nome/ID na mensagem, `context.serviceName`, serviço ativo da conversa e, por fim,
+   o serviço único disponível. Empates viram clarificação.
+9. O service envia ao Ollama a pergunta, **somente os nomes dos serviços ativos** e, se
+   houver, o histórico recente. O modelo responde um JSON com `intent` e `serviceName`.
+10. Se o Ollama estiver desligado, der timeout ou devolver algo inválido, entra a
+    classificação por regras (palavras-chave).
+11. As regras corrigem excessos do modelo: nome ambíguo nunca é escolhido pelo LLM,
+    nome de serviço sozinho vira resumo e “ranking” explícito não vira resumo.
+12. Para `RANKING_ENERGY`/`RANKING_EMISSIONS`, o backend filtra serviços ativos,
+    descarta valores zerados, ordena decrescente, pega o top 5 e monta o gráfico.
+13. O backend monta um contexto compacto com fatos e sinalização de dados parciais,
+    e o Ollama reescreve a resposta em até 3 frases. Se falhar, usa o texto
+    determinístico.
+14. Clarificações e recusas de fora do escopo **não passam pelo modelo**.
+15. O service gera até 3 sugestões determinísticas, salva o estado da conversa e
+    responde com texto, gráfico, clarificação, sugestões, período, `partial`, `model`
+    e `degraded`.
+16. O frontend adiciona a mensagem ao histórico, envia as últimas 6 mensagens na
+    próxima pergunta e renderiza gráfico, opções de clarificação e sugestões.
 
 Observação: a consulta de indicadores acontece **uma vez por pergunta**. Para resumo de
 serviço, há uma segunda consulta ao histórico; para panorama ambiental, a consulta de
 disponibilidade do dashboard.
+
+**Caminho de conhecimento (`PROJECT_INFO` / `METHODOLOGY`):** os passos 7–13 são
+substituídos. O backend recupera a seção curada em `chat.knowledge.ts` (usando a
+mensagem e, como dica, a pergunta anterior), injeta os valores atuais do modelo de
+potência obtidos de `getIndicators` e envia apenas essa seção ao Ollama para reescrita,
+sem citar arquivos ou referências. Sem Ollama, o resumo curado é a resposta final. Não
+há gráfico, e o serviço ativo da conversa é preservado para a próxima pergunta.
 
 ---
 
@@ -215,19 +299,37 @@ Content-Type: application/json
 
 ```json
 {
-  "message": "Qual serviço gasta mais energia?",
-  "period": "24h"
+  "message": "E as emissões dele?",
+  "period": "24h",
+  "conversationId": "8f14e45f-ceea-4a67-9f0b-7d2c1a4e5b10",
+  "context": {
+    "page": "/home",
+    "serviceName": null
+  },
+  "history": [
+    { "role": "user", "content": "Como está o serviço API Gateway?" },
+    { "role": "assistant", "content": "Nas últimas 24 horas, o serviço API Gateway..." }
+  ]
 }
 ```
 
 - `message`: string obrigatória, não vazia, até **500 caracteres**.
-- `period`: opcional; um de `1h`, `6h`, `24h`, `7d`. Padrão: `24h`.
+- `period`: opcional; um de `1h`, `6h`, `24h`, `7d`. Padrão: `24h`. Períodos citados
+  na mensagem (`últimas 6 horas`, `última semana`) prevalecem sobre este campo.
+- `conversationId`: opcional; até 64 caracteres alfanuméricos, `_` ou `-`. Se ausente,
+  o backend gera um UUID e o devolve na resposta.
+- `context`: opcional; `page` (até 200 caracteres) e `serviceName` (até 120). Serve para
+  desambiguar perguntas que não citam o serviço.
+- `history`: opcional; lista de até **12** mensagens com `role` (`user`/`assistant`) e
+  `content` não vazio de até 500 caracteres. Serve apenas para continuidade; o modelo
+  não trata o histórico como fonte de fatos.
 
 ### Resposta de sucesso (`200`)
 
 ```json
 {
   "message": "Resposta do assistente",
+  "conversationId": "8f14e45f-ceea-4a67-9f0b-7d2c1a4e5b10",
   "answer": "Nas últimas 24 horas, o serviço que consumiu mais energia foi API Gateway, com 0,8421 kWh. Em seguida aparecem Workers (0,512 kWh).",
   "intent": "RANKING_ENERGY",
   "period": {
@@ -244,6 +346,19 @@ Content-Type: application/json
       { "label": "Workers", "value": 0.512 }
     ]
   },
+  "clarification": null,
+  "suggestions": [
+    {
+      "label": "Ver emissões",
+      "message": "Qual serviço emite mais CO₂ no mesmo período?",
+      "period": "24h"
+    },
+    {
+      "label": "Detalhar API Gateway",
+      "message": "Como está o serviço API Gateway?",
+      "period": "24h"
+    }
+  ],
   "partial": false,
   "disclaimer": "Valores estimados pelo modelo de potência v1 do GreenER; períodos com lacunas podem estar incompletos.",
   "model": "qwen2.5:3b",
@@ -251,20 +366,59 @@ Content-Type: application/json
 }
 ```
 
+Quando há ambiguidade, `clarification` vem preenchido e `answer` contém a pergunta:
+
+```json
+{
+  "clarification": {
+    "question": "Encontrei mais de um serviço com esse nome. Qual deles você quer consultar?",
+    "options": [
+      {
+        "label": "Solar Norte",
+        "message": "Como está o serviço Solar Norte?",
+        "serviceName": "Solar Norte"
+      },
+      {
+        "label": "Solar Sul",
+        "message": "Como está o serviço Solar Sul?",
+        "serviceName": "Solar Sul"
+      }
+    ]
+  }
+}
+```
+
 Valores acima são **ilustrativos**.
+
+Perguntas de conhecimento não trazem gráfico:
+
+```json
+{
+  "answer": "O consumo de energia é estimado a partir da potência de cada componente e do tempo de uso registrado nas coletas. […]",
+  "intent": "METHODOLOGY",
+  "chart": null,
+  "clarification": null,
+  "partial": false,
+  "model": "qwen2.5:3b",
+  "degraded": false
+}
+```
 
 ### Campos de resposta
 
 | Campo | Significado |
 | --- | --- |
+| `conversationId` | Identificador usado para retomar a memória da conversa. |
 | `answer` | Texto final exibido ao usuário. |
 | `intent` | Intenção classificada. |
 | `period` | Janela usada no cálculo. |
 | `chart` | Especificação declarativa do gráfico, ou `null`. |
+| `clarification` | Pergunta de desambiguação com até 5 opções, ou `null`. |
+| `suggestions` | Até 3 próximos passos determinísticos (`label`, `message`, `period`). |
 | `partial` | `true` quando faltam coletas, métricas ou intensidade de carbono. |
 | `disclaimer` | Aviso de que os valores são estimativas. |
 | `model` | Modelo que redigiu a resposta ou `"regras"`. |
-| `degraded` | `true` quando o texto final não veio do modelo (regras, falha ou recusa). |
+| `degraded` | `true` quando o texto final não veio do modelo (regras, falha, clarificação ou recusa). |
 
 ### Erros
 
@@ -274,6 +428,9 @@ Valores acima são **ilustrativos**.
 | `400` | `INVALID_CHAT_REQUEST` | Corpo que não é um objeto JSON. |
 | `400` | `INVALID_CHAT_MESSAGE` | Mensagem ausente, vazia, não textual ou acima de 500 caracteres. |
 | `400` | `INVALID_CHAT_PERIOD` | Período fora de `1h`, `6h`, `24h`, `7d`. |
+| `400` | `INVALID_CHAT_CONVERSATION` | `conversationId` não textual, vazio ou fora do formato permitido. |
+| `400` | `INVALID_CHAT_CONTEXT` | Contexto que não é objeto ou campo inválido/longo. |
+| `400` | `INVALID_CHAT_HISTORY` | Histórico que não é lista, com mais de 12 itens ou item inválido. |
 | `500` | `INTERNAL_ERROR` | Falha inesperada; detalhes não são expostos. |
 
 ### Exemplo com `curl`
@@ -337,10 +494,32 @@ com base em `chart.type`. O modelo **não gera código de gráfico**.
 | `OLLAMA_URL` | `http://localhost:11434` | `http://ollama:11434` | Endereço da API do Ollama. |
 | `OLLAMA_MODEL` | `qwen2.5:3b` | `${OLLAMA_MODEL:-qwen2.5:3b}` | Modelo usado para classificar e redigir. |
 | `OLLAMA_TIMEOUT_MS` | `60000` | `${OLLAMA_TIMEOUT_MS:-60000}` | Timeout de cada chamada ao Ollama. |
+| `OLLAMA_NUM_CTX` | `4096` | `${OLLAMA_NUM_CTX:-4096}` | Janela total de contexto: prompt + histórico + resposta. |
 | `OLLAMA_ENABLED` | `true` | `${OLLAMA_ENABLED:-true}` | `false` força o modo regras. |
 
-`OLLAMA_TIMEOUT_MS` é validado como inteiro positivo. `OLLAMA_ENABLED` aceita
-`true/false`, `1/0`, `yes/no`, `on/off`.
+`OLLAMA_TIMEOUT_MS` e `OLLAMA_NUM_CTX` são validados como inteiros positivos.
+`OLLAMA_ENABLED` aceita `true/false`, `1/0`, `yes/no`, `on/off`.
+
+### Consumo de tokens e limites
+
+O GreenER usa **Ollama local**, portanto **não há cobrança por token**. Não existe
+fatura, cota mensal nem limite de requisições do provedor: o custo real é CPU, RAM e
+tempo de resposta da máquina que executa o modelo.
+
+Os “tokens” continuam existindo tecnicamente e são limitados assim:
+
+| Controle | Onde fica | Efeito |
+| --- | --- | --- |
+| `num_predict` | `ollama.client.ts` | Limita a saída: 140 tokens na classificação e 220 na resposta final. |
+| `OLLAMA_NUM_CTX` | `env.ts` / cliente | Limita o total de tokens por chamada (prompt + histórico + saída). Padrão 4096. |
+| Histórico enviado | `chat.service.ts` | No máximo as últimas 6 mensagens para classificar e 4 para redigir. |
+| Histórico recebido | `chat.controller.ts` | Até 12 mensagens; itens inválidos são recusados com `400`. |
+| Fatos enviados | `chat.service.ts` | Apenas top 5, totais e flags; nunca o banco inteiro. |
+
+Se o histórico crescer além da janela, o backend trunca o que envia. Aumentar
+`OLLAMA_NUM_CTX` permite conversas mais longas, mas consome mais RAM e pode deixar a
+resposta mais lenta. Não há rate limiting nem fila por usuário no protótipo; com o
+modelo local, o limite prático é a capacidade da máquina.
 
 ### Serviços no Docker Compose
 
@@ -396,6 +575,8 @@ O `ollama-init` baixa o novo modelo e o backend passa a usá-lo na próxima requ
   modelo na memória entre perguntas.
 - `OLLAMA_NUM_PARALLEL=1` evita disputa de RAM/CPU em máquinas modestas.
 - O backend aplica timeout de 60 s por chamada; o frontend espera até 75 s.
+- `OLLAMA_NUM_CTX=4096` limita prompt + histórico + resposta. Valores maiores gastam
+  mais RAM e podem reduzir a velocidade.
 - Para GPU NVIDIA, é possível adicionar `deploy.resources.reservations.devices` ao
   serviço `ollama`. Isso **não** está configurado no protótipo.
 
@@ -560,13 +741,17 @@ análise.
 Recursos:
 
 - seletor de período com quatro opções;
-- sugestões de perguntas quando a conversa está vazia;
+- cinco sugestões iniciais, incluindo “O que é o GreenER?” e “Como o CO₂ é calculado?”;
+- `conversationId` gerado no primeiro envio e reutilizado até “Limpar conversa”;
+- contexto de página (`context.page`) e últimas 6 mensagens enviadas a cada pergunta;
 - histórico local (não persiste ao recarregar a página);
 - indicador de carregamento;
 - gráfico de barras ou linhas conforme a resposta;
+- opções clicáveis de clarificação quando há ambiguidade;
+- até 3 sugestões de próximos passos ao final de cada resposta;
 - badges de **dados parciais** e **modo regras**;
 - aviso de estimativa em cada resposta;
-- botão para limpar a conversa;
+- botão para limpar a conversa, que também descarta o `conversationId` local;
 - `aria-live` no histórico e rótulos acessíveis;
 - em `401`, o usuário é deslogado;
 - em timeout ou falha de rede, uma mensagem amigável é adicionada ao histórico.
@@ -582,10 +767,12 @@ recebidas.
 
 - **JWT obrigatório** em `POST /api/chat`.
 - **Sem acesso do modelo ao banco**: apenas o backend consulta o PostgreSQL.
-- **Ferramentas allowlisted**: só existem as cinco intenções implementadas.
+- **Ferramentas allowlisted**: só existem as sete intenções implementadas.
 - **Somente leitura**: nenhuma operação de escrita é exposta.
 - **Validação de entrada**: mensagem não vazia, até 500 caracteres; período em lista
-  fechada.
+  fechada; `conversationId`, contexto e histórico com formato e tamanho limitados.
+- **Memória isolada por conversa**: o estado só é recuperado pelo `conversationId`
+  enviado pelo próprio cliente e expira em 30 minutos.
 - **Sem geração de SQL ou código** pelo modelo.
 - **Gráfico declarativo**: o modelo não envia HTML, JavaScript ou código Recharts.
 - **Prompt injection**: o texto do usuário e o contexto são enviados como dados
@@ -598,18 +785,25 @@ recebidas.
 
 ### Limitações do protótipo
 
-- A conversa **não tem memória**: cada pergunta é independente.
+- A memória da conversa é **em processo**: vive 30 minutos, limita-se a 500 conversas e
+  é perdida em reinício do backend. Não há persistência no PostgreSQL.
+- O histórico completo da interface não é salvo no banco; o frontend mantém apenas a
+  conversa atual e envia as últimas 6 mensagens.
 - A classificação por regras é baseada em palavras-chave e pode errar sinônimos.
+- A base de conhecimento é **lexical e curada**, não vetorial: sinônimos distantes do
+  vocabulário das seções podem não ser recuperados, e alterações no README ou em
+  `docs/calculos.md` exigem atualizar as seções manualmente.
+- O resolvedor de serviços usa nome/ID/tokens; nomes muito parecidos podem exigir
+  clarificação mesmo quando o usuário sabe qual quer.
 - O modelo ainda pode parafrasear de forma imprecisa; os números e gráficos, porém,
   vêm do backend.
 - Não há streaming token a token (`stream: false`).
 - Não há cache de respostas do modelo.
 - Não há rate limiting nem fila por usuário.
 - Não há GPU configurada por padrão.
-- Não há avaliação automatizada de qualidade das respostas do LLM.
-- O histórico local do chat não é salvo no banco.
-- O teste automatizado cobre backend e contrato HTTP; **não** há teste end-to-end com
-  o Ollama real nem teste automatizado da interface.
+- A suíte de avaliação cobre **intenções e clarificações determinísticas**, não a
+  qualidade textual do LLM.
+- Não há teste end-to-end com o Ollama real nem teste automatizado da interface.
 
 ---
 
@@ -622,7 +816,9 @@ O assistente tenta o Ollama primeiro, mas sempre tem um caminho sem IA:
 | Ollama disponível e responde | Modelo | Modelo | `false` | Nome do modelo |
 | Ollama classifica, mas falha ao redigir | Modelo | Regras | `true` | `"regras"` |
 | Ollama indisponível/desligado | Regras | Regras | `true` | `"regras"` |
+| Conhecimento do projeto | Modelo ou regras | Modelo ou resumo curado | `false` com modelo; `true` sem modelo | Nome do modelo ou `"regras"` |
 | Fora do escopo | Modelo ou regras | Recusa fixa | `true` | `"regras"` |
+| Ambiguidade de serviço | Modelo ou regras | Pergunta fixa + opções | `true` | `"regras"` |
 
 Regras de classificação resumidas:
 
@@ -631,7 +827,21 @@ Regras de classificação resumidas:
 - nome de serviço citado → `SERVICE_SUMMARY`;
 - ambiente/panorama/disponibilidade → `ENVIRONMENT_SUMMARY`;
 - serviço/histórico/evolução sem nome → `SERVICE_SUMMARY`;
+- clarificação pendente + nome/ordinal → `SERVICE_SUMMARY` do serviço escolhido;
+- continuação (“e as emissões dele?”) + serviço ativo → `SERVICE_SUMMARY`;
+- pista forte de explicação (“o que é o GreenER”, “como é calculado”, “metodologia”,
+  “quem fez”, “funcionalidades”) → `PROJECT_INFO` ou `METHODOLOGY`, com a seção
+  escolhida pela pontuação lexical;
+- se a mensagem também cita dados, a intenção de dados vence, exceto com pista forte
+  de explicação;
 - resto → `OUT_OF_SCOPE`.
+
+Além da classificação, o backend aplica correções determinísticas:
+
+- nome de serviço sozinho (“Solar Norte”) nunca vira ranking ou panorama;
+- “ranking” explícito não vira resumo só porque a conversa tem serviço ativo;
+- um nome que casa com dois serviços nunca é escolhido pelo LLM;
+- pergunta de serviço sem nome, com vários serviços ativos, vira clarificação.
 
 ---
 
@@ -646,6 +856,14 @@ npm test
 
 ### Cobertura adicionada
 
+`chat.knowledge.test.ts` (23 testes):
+
+- recuperação das 12 perguntas de projeto/metodologia;
+- dica da pergunta anterior para continuações curtas;
+- 5 perguntas de dados que **não** devem casar com a base;
+- classificação apenas com pista forte e fallback por intenção;
+- renderização dos placeholders com os valores atuais do modelo de potência.
+
 `chat.service.test.ts` (8 testes):
 
 - ranking de energia ordenado, ignorando serviços removidos;
@@ -657,6 +875,25 @@ npm test
 - nome de serviço inexistente com lista de disponíveis;
 - mensagem vazia, mensagem longa e período inválido.
 
+`chat.conversation.test.ts` (46 testes):
+
+- geração e reutilização de `conversationId`;
+- clarificação por nome ambíguo e resolução pelo ordinal (“o segundo”);
+- continuidade com “E as emissões dele?”;
+- uso de `context.serviceName`;
+- clarificação para pergunta de serviço sem nome;
+- detecção de período na mensagem;
+- sugestões coerentes com o ranking;
+- resolução por ID (“serviço 2”);
+- validação de `conversationId`, contexto e histórico;
+- encaminhamento do histórico ao modelo, descartando a mensagem atual duplicada;
+- proteção contra o LLM escolher um serviço ambíguo;
+- resposta de conhecimento em modo regras, com `degraded` e sem citação de fonte;
+- conhecimento com o modelo, incluindo fatos e modelo de potência no contexto;
+- guarda que impede conhecimento de roubar uma pergunta de dados;
+- continuação de conhecimento (“E a energia?”) e preservação do serviço ativo;
+- **suíte de avaliação** com 29 perguntas e intenções esperadas, sem Ollama.
+
 `chat.http.test.ts` (6 testes):
 
 - `401` sem token;
@@ -666,8 +903,11 @@ npm test
 - `400` para período inválido;
 - `200` com resposta determinística quando não há dados.
 
-Na implementação, os 14 testes do módulo de chat passaram. PostgreSQL e Ollama são
-substituídos por mocks nesses testes.
+Na implementação, os **83 testes do módulo de chat** passaram (23 de conhecimento, 8 de
+serviço, 46 de conversa e 6 HTTP). A suíte completa do backend terminou com **239 testes
+passando e 7 ignorados** (integração com banco real). PostgreSQL e Ollama são
+substituídos por mocks; `vitest.setup.ts` fornece URLs fictícias das APIs externas para
+que o app carregue sem o `.env` real.
 
 ---
 
@@ -677,28 +917,33 @@ substituídos por mocks nesses testes.
 backend/
 ├── src/app.ts                                  (monta /api/chat)
 ├── src/config/env.ts                           (variáveis OLLAMA_*)
+├── vitest.config.ts                            (setupFiles do teste)
+├── vitest.setup.ts                             (env fictício para os testes)
 └── src/modules/chat/
     ├── chat.types.ts
+    ├── chat.state.ts
     ├── chat.period.ts
     ├── chat.prompt.ts
+    ├── chat.knowledge.ts
     ├── ollama.client.ts
     ├── chat.service.ts
     ├── chat.factory.ts
     ├── chat.controller.ts
     ├── chat.routes.ts
+    ├── chat.knowledge.test.ts
     ├── chat.service.test.ts
+    ├── chat.conversation.test.ts
     └── chat.http.test.ts
 
 frontend/
 ├── src/components/AssistantChat.tsx
 ├── src/components/AssistantChat.css
 ├── src/pages/Home.tsx                          (renderiza o painel)
-├── src/pages/Home.css                          (remove texto de debug)
 ├── src/services/chatApi.ts
 └── src/types/chat.ts
 
-compose.yaml                                    (ollama + ollama-init + volume)
-.env.example                                    (OLLAMA_URL, OLLAMA_MODEL, ...)
+compose.yaml                                    (ollama + ollama-init + volume + OLLAMA_NUM_CTX)
+.env.example                                    (OLLAMA_URL, OLLAMA_MODEL, OLLAMA_NUM_CTX, ...)
 docs/assistente-ia.md                           (este documento)
 ```
 
@@ -730,7 +975,28 @@ Para garantir disponibilidade, previsibilidade, testes rápidos e degradação g
 Sim. A redação pode variar, mas os fatos, números, período e gráfico vêm do backend e
 permanecem os mesmos para a mesma consulta.
 
+**Como o assistente responde sobre o projeto e os cálculos?**
+Com uma base curada em `chat.knowledge.ts`, derivada do README e de `docs/calculos.md`.
+A seção é escolhida por pontuação lexical e injetada com os valores atuais do modelo de
+potência; o texto final não cita arquivos nem fontes. O README inteiro não é enviado ao
+modelo.
+
+**Por que não colocar o README inteiro no prompt?**
+O README tem cerca de 25 KB (~7 mil tokens) e não caberia na janela de 4096 tokens,
+além de aumentar a latência. As seções curadas ocupam ~300–600 tokens, são estáveis,
+testáveis e mantêm a proveniência apenas na base curada.
+
+**Se as contas mudarem no código, a resposta didática acompanha?**
+Os coeficientes, a versão do modelo de potência e a intensidade de carbono vêm de
+`IndicadoresService` e são injetados por placeholders, então esses números acompanham.
+Mudanças de texto no README ou em `docs/calculos.md`, porém, exigem atualizar as seções
+manualmente.
+
+**O uso do Qwen gasta tokens pagos?**
+Não. O Ollama é local. Tokens existem tecnicamente, mas não há cobrança; os limites
+são `num_predict` (saída), `OLLAMA_NUM_CTX` (janela total) e a capacidade da máquina.
+
 **Qual o próximo passo natural?**
-Memória de conversa, streaming, cache de respostas, rate limiting por usuário, mais
-intenções (comparação entre períodos, regiões e serviços) e uma suíte de avaliação das
-respostas do modelo.
+Persistir a memória no banco, streaming, cache de respostas, rate limiting por usuário,
+mais intenções (comparação entre períodos, regiões e serviços) e avaliação da qualidade
+textual do modelo.

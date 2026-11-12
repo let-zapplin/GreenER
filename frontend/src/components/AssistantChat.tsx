@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -14,10 +15,16 @@ import { useAuth } from "../hooks/useAuth";
 import { ApiError } from "../services/api";
 import { askAssistant } from "../services/chatApi";
 import { CHAT_PERIODS } from "../types/chat";
-import type { ChatChart, ChatPeriod, ChatResponse } from "../types/chat";
+import type {
+  ChatChart,
+  ChatHistoryMessage,
+  ChatPeriod,
+  ChatResponse,
+} from "../types/chat";
 import "./AssistantChat.css";
 
 const REQUEST_TIMEOUT_MS = 75_000;
+const HISTORY_LIMIT = 6;
 
 const PERIOD_LABELS: Record<ChatPeriod, string> = {
   "1h": "1 hora",
@@ -30,12 +37,36 @@ const SUGGESTIONS = [
   "Qual serviço gasta mais energia?",
   "Qual serviço emite mais CO₂?",
   "Resumo ambiental do período",
+  "O que é o GreenER?",
+  "Como o CO₂ é calculado?",
 ];
 
 type ChatEntry =
   | { id: number; role: "user"; text: string }
   | { id: number; role: "assistant"; reply: ChatResponse }
   | { id: number; role: "assistant"; error: string };
+
+type AssistantMessageProps = {
+  reply: ChatResponse;
+  disabled: boolean;
+  onAsk: (message: string, period?: ChatPeriod) => void;
+};
+
+function buildHistory(entries: ChatEntry[]): ChatHistoryMessage[] {
+  return entries
+    .flatMap<ChatHistoryMessage>((entry) => {
+      if (entry.role === "user") {
+        return [{ role: "user", content: entry.text }];
+      }
+
+      if ("reply" in entry) {
+        return [{ role: "assistant", content: entry.reply.answer.slice(0, 500) }];
+      }
+
+      return [];
+    })
+    .slice(-HISTORY_LIMIT);
+}
 
 function formatChartValue(value: number): string {
   return value.toLocaleString("pt-BR", {
@@ -159,12 +190,54 @@ function ChatChartView({ chart }: { chart: ChatChart }) {
   );
 }
 
-function AssistantMessage({ reply }: { reply: ChatResponse }) {
+function AssistantMessage({
+  reply,
+  disabled,
+  onAsk,
+}: AssistantMessageProps) {
   return (
     <article className="assistant-chat-message assistant-chat-message-assistant">
       <p>{reply.answer}</p>
 
       {reply.chart !== null && <ChatChartView chart={reply.chart} />}
+
+      {reply.clarification !== null && (
+        <div
+          className="assistant-chat-clarification"
+          role="group"
+          aria-label="Opções de serviço"
+        >
+          {reply.clarification.options.map((option) => (
+            <button
+              key={option.label}
+              type="button"
+              onClick={() => onAsk(option.message)}
+              disabled={disabled}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {reply.suggestions.length > 0 && (
+        <div
+          className="assistant-chat-follow-ups"
+          role="group"
+          aria-label="Perguntas sugeridas"
+        >
+          {reply.suggestions.map((suggestion) => (
+            <button
+              key={suggestion.message}
+              type="button"
+              onClick={() => onAsk(suggestion.message, suggestion.period)}
+              disabled={disabled}
+            >
+              {suggestion.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="assistant-chat-meta">
         <span>{PERIOD_LABELS[reply.period.label]}</span>
@@ -183,6 +256,7 @@ function AssistantMessage({ reply }: { reply: ChatResponse }) {
 
 export function AssistantChat() {
   const { token, logout } = useAuth();
+  const { pathname } = useLocation();
 
   const [period, setPeriod] = useState<ChatPeriod>("24h");
   const [input, setInput] = useState("");
@@ -192,6 +266,7 @@ export function AssistantChat() {
   const nextId = useRef(1);
   const logRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const conversationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -206,11 +281,18 @@ export function AssistantChat() {
     }
   }, [entries, loading]);
 
-  async function submit(value: string) {
+  async function submit(value: string, nextPeriod?: ChatPeriod) {
     const question = value.trim();
 
     if (question === "" || loading || token === null) {
       return;
+    }
+
+    const history = buildHistory(entries);
+    const requestPeriod = nextPeriod ?? period;
+
+    if (nextPeriod !== undefined && nextPeriod !== period) {
+      setPeriod(nextPeriod);
     }
 
     setInput("");
@@ -231,10 +313,18 @@ export function AssistantChat() {
 
     try {
       const reply = await askAssistant(
-        { message: question, period },
+        {
+          message: question,
+          period: requestPeriod,
+          conversationId: conversationIdRef.current ?? undefined,
+          context: { page: pathname, serviceName: null },
+          history,
+        },
         controller.signal,
         token,
       );
+
+      conversationIdRef.current = reply.conversationId;
 
       setEntries((previous) => [
         ...previous,
@@ -280,9 +370,14 @@ export function AssistantChat() {
     void submit(input);
   }
 
+  function handleAsk(message: string, nextPeriod?: ChatPeriod) {
+    void submit(message, nextPeriod);
+  }
+
   function clearConversation() {
     abortRef.current?.abort();
     abortRef.current = null;
+    conversationIdRef.current = null;
     setEntries([]);
     setLoading(false);
   }
@@ -294,8 +389,8 @@ export function AssistantChat() {
           <span className="assistant-chat-eyebrow">ASSISTENTE GREENER</span>
           <h2 id="assistant-chat-title">Pergunte aos seus dados</h2>
           <p>
-            Respostas geradas a partir das métricas monitoradas. O modelo não
-            acessa o banco diretamente.
+            Respostas geradas a partir das métricas monitoradas e da
+            documentação do projeto. O modelo não acessa o banco diretamente.
           </p>
         </div>
 
@@ -360,7 +455,14 @@ export function AssistantChat() {
               );
             }
 
-            return <AssistantMessage key={entry.id} reply={entry.reply} />;
+            return (
+              <AssistantMessage
+                key={entry.id}
+                reply={entry.reply}
+                disabled={loading || token === null}
+                onAsk={handleAsk}
+              />
+            );
           })}
 
           {loading && (
@@ -394,7 +496,7 @@ export function AssistantChat() {
 
       <footer className="assistant-chat-footer">
         <span>
-          Escopo limitado: energia, emissões, serviços e disponibilidade.
+          Escopo: dados monitorados, projeto e metodologia de cálculo.
         </span>
         {entries.length > 0 && (
           <button type="button" onClick={clearConversation}>
