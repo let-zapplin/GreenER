@@ -50,7 +50,7 @@ services:
       start_period: 10s
 
 
-  # Baixa o modelo uma única vez no volume e encerra.
+  # Baixa o modelo uma única vez no volume e o deixa carregado.
   ollama-init:
     image: ollama/ollama:latest
 
@@ -62,7 +62,7 @@ services:
       OLLAMA_HOST: http://ollama:11434
 
     entrypoint: ["/bin/sh", "-c"]
-    command: ["ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"]
+    command: ["ollama pull ${OLLAMA_MODEL:-qwen2.5:3b} && ollama run --keepalive 30m ${OLLAMA_MODEL:-qwen2.5:3b} ok >/dev/null"]
 
     restart: "no"
 

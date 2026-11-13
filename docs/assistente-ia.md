@@ -30,8 +30,14 @@ A resposta combina:
 3. **metadados** de período, dados parciais e modo de operação.
 
 O Ollama foi escolhido por ser um LLM local, sem custo por requisição e sem envio de
-dados para APIs de terceiros. O modelo é usado apenas para **entender a intenção** e
-**redigir a resposta**. Os números e os gráficos vêm de código determinístico do backend.
+dados para APIs de terceiros. O modelo é usado apenas para **desambiguar a intenção** e
+**redigir respostas de conhecimento**. Os números e os gráficos vêm de código
+determinístico do backend.
+
+O assistente aplica **regras primeiro**: quando as palavras-chave já identificam a
+pergunta com segurança, o modelo nem é chamado. Consultas de dados (rankings, resumo de
+serviço e panorama) são respondidas por texto determinístico; o LLM só entra quando as
+regras não conseguem decidir a intenção.
 
 Desde a **fase 1**, o assistente mantém memória de curto prazo por conversa, usa o
 contexto da página, resolve referências como “ele” e “esse serviço”, pede clarificação
@@ -56,17 +62,18 @@ Fluxo resumido:
 Pergunta do usuário
         │
         ▼
-Backend classifica a intenção (Ollama ou regras)
+Cache de respostas / single-flight (perguntas autocontidas)
+        │
+        ▼
+Backend classifica por regras; só consulta o Ollama se as regras não decidirem
         │
         ▼
 Backend executa uma ferramenta permitida
 (indicadores, dashboard ou histórico)
         │
         ▼
-Backend monta um JSON compacto com os fatos
-        │
-        ▼
-Ollama apenas reescreve a resposta em linguagem natural
+Dados: texto determinístico + gráfico, sem reescrita pelo modelo
+Conhecimento: base curada; o Ollama apenas reescreve
         │
         ▼
 Frontend renderiza texto + especificação do gráfico
@@ -184,6 +191,10 @@ do modelo:
 │                                                              │
 │ ChatService ──► InMemoryChatStateStore (TTL 30 min)          │
 │       │                                                      │
+│       ├───► cache de respostas + single-flight (em memória)  │
+│       ├───► cache de indicadores por período (TTL 15 s)      │
+│       ├───► cache de classificação (TTL 30 min)              │
+│       │                                                      │
 │       ├───────► chat.knowledge.ts (base curada + retrieval)  │
 │       │                                                      │
 │       └───────► OllamaClient ──HTTP──► http://ollama:11434   │
@@ -198,12 +209,14 @@ do modelo:
 │ imagem: ollama/ollama                                        │
 │ volume: ollama_data → /root/.ollama                          │
 │ modelo: qwen2.5:3b (configurável)                            │
-│ função: classificar intenção + redigir resposta              │
+│ função: desambiguar intenção + redigir conhecimento          │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 O backend **não depende** do Ollama para iniciar. Se o container estiver fora do ar, a
-Home continua funcionando em **modo regras**, com textos determinísticos.
+Home continua funcionando em **modo regras**, com textos determinísticos. Ao subir, o
+backend dispara um `warmup()` em segundo plano para carregar o modelo antes da primeira
+pergunta.
 
 ---
 
@@ -215,22 +228,25 @@ Todos os arquivos novos ficam em `backend/src/modules/chat/`.
 | --- | --- |
 | `chat.types.ts` | Contrato completo: `ChatIntent`, `ChatReply`, `ChatContext`, `ChatHistoryMessage`, `ChatClarification`, `ChatSuggestion` e `ChatLlm`. |
 | `chat.state.ts` | Memória em processo por `conversationId`, com TTL de 30 min e limite de 500 conversas. |
+| `chat.cache.ts` | Cache TTL/LRU genérico e `SingleFlight` para juntar execuções simultâneas iguais. |
 | `chat.period.ts` | Períodos permitidos, validação, cálculo de início/fim e frases em português. |
 | `chat.prompt.ts` | Prompts do classificador e do redator, além do extrator de JSON. |
 | `chat.knowledge.ts` | Base curada do README e de `docs/calculos.md`, normalização, recuperação lexical, classificação por pistas e renderização com os valores atuais do modelo de potência. |
-| `ollama.client.ts` | Cliente HTTP de `/api/chat` do Ollama, com histórico, `num_ctx`, timeout e fallback para `null`. |
-| `chat.service.ts` | Orquestra validação, contexto, resolução de serviço, clarificação, classificação, ferramentas, conhecimento, gráficos, sugestões, estado e resposta final. |
+| `ollama.client.ts` | Cliente HTTP de `/api/chat` do Ollama, com histórico, `num_ctx`, timeout, fallback para `null` e `warmup()`. |
+| `chat.service.ts` | Orquestra validação, contexto, resolução de serviço, clarificação, classificação regras-primeiro, caches, ferramentas, conhecimento, gráficos, sugestões, estado e resposta final. |
 | `chat.factory.ts` | Monta o `ChatService` com as dependências reais e o estado compartilhado. |
 | `chat.controller.ts` | Lê `message`, `period`, `conversationId`, `context` e `history` do corpo. |
 | `chat.routes.ts` | Rota `POST /api/chat` protegida por JWT. |
 | `chat.knowledge.test.ts` | Recuperação das seções, dica de continuação, guarda de perguntas de dados, fallback e substituição de placeholders. |
-| `chat.service.test.ts` | Testes unitários das intenções, gráficos e fallback. |
+| `chat.cache.test.ts` | Expiração, descarte LRU e reutilização de execuções simultâneas. |
+| `chat.service.test.ts` | Testes unitários das intenções, gráficos, fallback, regras-primeiro e caches. |
 | `chat.conversation.test.ts` | Memória, contexto, clarificação, histórico, período, conhecimento e avaliação determinística. |
 | `chat.http.test.ts` | Testes HTTP de autenticação, validação e resposta. |
 
 Integrações alteradas:
 
 - `backend/src/config/env.ts`: variáveis `OLLAMA_*`, incluindo `OLLAMA_NUM_CTX`;
+- `backend/src/server.ts`: `warmup()` do modelo em segundo plano após o `listen`;
 - `backend/src/app.ts`: monta `/api/chat` antes do middleware global de erro;
 - `backend/vitest.config.ts` e `backend/vitest.setup.ts`: variáveis fictícias para os
   testes HTTP carregarem o app sem depender do `.env` real.
@@ -251,34 +267,44 @@ Exemplo: **“Qual serviço gasta mais energia nas últimas 24 horas?”**
    daquela conversa no `InMemoryChatStateStore`.
 6. O período citado na própria pergunta (“últimas 6 horas”, “última semana”) tem
    precedência sobre o seletor da interface.
-7. `IndicadoresService.getIndicators` consulta o PostgreSQL uma vez e devolve os totais
-   por serviço no período.
-8. O service resolve o serviço citado, considerando nesta ordem: clarificação pendente,
+7. O service monta a chave do cache de respostas (mensagem normalizada, período,
+   serviço de contexto e hash do histórico). Perguntas autocontidas podem ser
+   respondidas direto do cache; chamadas simultâneas iguais são unificadas pelo
+   `SingleFlight`.
+8. `IndicadoresService.getIndicators` é consultado via **cache de indicadores** (TTL de
+   15 s por período). A consulta ao PostgreSQL só acontece quando o cache expira, o que
+   reaproveita os mesmos totais entre perguntas diferentes do mesmo período.
+9. O service resolve o serviço citado, considerando nesta ordem: clarificação pendente,
    nome/ID na mensagem, `context.serviceName`, serviço ativo da conversa e, por fim,
    o serviço único disponível. Empates viram clarificação.
-9. O service envia ao Ollama a pergunta, **somente os nomes dos serviços ativos** e, se
-   houver, o histórico recente. O modelo responde um JSON com `intent` e `serviceName`.
-10. Se o Ollama estiver desligado, der timeout ou devolver algo inválido, entra a
-    classificação por regras (palavras-chave).
+10. A classificação por regras roda primeiro. Se ela identificar a intenção com
+    segurança, **o Ollama não é chamado**. Casos ambíguos (por exemplo, “Qual está
+    pior?” ou “serviço” sem nome) vão ao classificador, que recebe apenas os nomes dos
+    serviços ativos e o histórico recente; resultados válidos ficam em cache por 30 min.
 11. As regras corrigem excessos do modelo: nome ambíguo nunca é escolhido pelo LLM,
     nome de serviço sozinho vira resumo e “ranking” explícito não vira resumo.
 12. Para `RANKING_ENERGY`/`RANKING_EMISSIONS`, o backend filtra serviços ativos,
-    descarta valores zerados, ordena decrescente, pega o top 5 e monta o gráfico.
-13. O backend monta um contexto compacto com fatos e sinalização de dados parciais,
-    e o Ollama reescreve a resposta em até 3 frases. Se falhar, usa o texto
-    determinístico.
-14. Clarificações e recusas de fora do escopo **não passam pelo modelo**.
-15. O service gera até 3 sugestões determinísticas, salva o estado da conversa e
-    responde com texto, gráfico, clarificação, sugestões, período, `partial`, `model`
+    descarta valores zerados, ordena pelo sentido pedido (“mais”/“maior” → decrescente,
+    “menos”/“menor” → crescente), pega o top 5 e monta o gráfico.
+13. Intenções de dados recebem a **resposta determinística** montada pelo backend
+    (texto + gráfico), sem reescrita pelo modelo. O campo `model` fica `"regras"` e
+    `degraded` é `false` quando o LLM está ligado e a classificação foi concluída.
+14. Intenções de conhecimento montam o resumo curado; com o Ollama ligado, o modelo
+    reescreve apenas essa seção. Clarificações e recusas de fora do escopo **não passam
+    pelo modelo**.
+15. O service gera até 3 sugestões determinísticas, salva o estado da conversa, grava a
+    resposta no cache (60 s para dados, 30 min para conhecimento, 30 s quando degradada)
+    e responde com texto, gráfico, clarificação, sugestões, período, `partial`, `model`
     e `degraded`.
 16. O frontend adiciona a mensagem ao histórico, envia as últimas 6 mensagens na
     próxima pergunta e renderiza gráfico, opções de clarificação e sugestões.
 
-Observação: a consulta de indicadores acontece **uma vez por pergunta**. Para resumo de
-serviço, há uma segunda consulta ao histórico; para panorama ambiental, a consulta de
-disponibilidade do dashboard.
+Observação: a consulta de indicadores é reaproveitada pelo cache de 15 s. Para resumo
+de serviço, há uma segunda consulta ao histórico; para panorama ambiental, a consulta
+de disponibilidade do dashboard. Perguntas que dependem de contexto (continuações,
+clarificação pendente) não entram no cache de respostas.
 
-**Caminho de conhecimento (`PROJECT_INFO` / `METHODOLOGY`):** os passos 7–13 são
+**Caminho de conhecimento (`PROJECT_INFO` / `METHODOLOGY`):** os passos 7–14 são
 substituídos. O backend recupera a seção curada em `chat.knowledge.ts` (usando a
 mensagem e, como dica, a pergunta anterior), injeta os valores atuais do modelo de
 potência obtidos de `getIndicators` e envia apenas essa seção ao Ollama para reescrita,
@@ -361,10 +387,12 @@ Content-Type: application/json
   ],
   "partial": false,
   "disclaimer": "Valores estimados pelo modelo de potência v1 do GreenER; períodos com lacunas podem estar incompletos.",
-  "model": "qwen2.5:3b",
+  "model": "regras",
   "degraded": false
 }
 ```
+
+Valores acima são **ilustrativos**.
 
 Quando há ambiguidade, `clarification` vem preenchido e `answer` contém a pergunta:
 
@@ -387,8 +415,6 @@ Quando há ambiguidade, `clarification` vem preenchido e `answer` contém a perg
   }
 }
 ```
-
-Valores acima são **ilustrativos**.
 
 Perguntas de conhecimento não trazem gráfico:
 
@@ -417,8 +443,8 @@ Perguntas de conhecimento não trazem gráfico:
 | `suggestions` | Até 3 próximos passos determinísticos (`label`, `message`, `period`). |
 | `partial` | `true` quando faltam coletas, métricas ou intensidade de carbono. |
 | `disclaimer` | Aviso de que os valores são estimativas. |
-| `model` | Modelo que redigiu a resposta ou `"regras"`. |
-| `degraded` | `true` quando o texto final não veio do modelo (regras, falha, clarificação ou recusa). |
+| `model` | `"regras"` quando o texto é determinístico; nome do modelo quando ele redigiu a resposta de conhecimento. |
+| `degraded` | `true` quando o modelo deveria ter participado mas não participou (LLM desligado, falha de classificação/redação, clarificação ou recusa). Respostas de dados determinísticas com o LLM ligado são `false`. |
 
 ### Erros
 
@@ -465,6 +491,8 @@ curl -X POST http://localhost:3001/api/chat \
 - Apenas serviços com status `active` entram em rankings e no panorama.
 - Valores iguais a zero são omitidos do ranking.
 - O ranking mostra no máximo **5 serviços**.
+- “Mais”/“maior” usa ordem decrescente; “menos”/“menor” usa ordem crescente, tanto no
+  texto quanto no gráfico e no campo `facts.order` (`asc`/`desc`).
 - Os números são arredondados para até **6 casas decimais** na resposta estruturada e
   formatados com até **4 casas** no texto.
 - O histórico é reduzido para no máximo **60 pontos** no gráfico do chat; uma amostra
@@ -492,7 +520,7 @@ com base em `chart.type`. O modelo **não gera código de gráfico**.
 | Variável | Padrão do código | No Compose | Uso |
 | --- | --- | --- | --- |
 | `OLLAMA_URL` | `http://localhost:11434` | `http://ollama:11434` | Endereço da API do Ollama. |
-| `OLLAMA_MODEL` | `qwen2.5:3b` | `${OLLAMA_MODEL:-qwen2.5:3b}` | Modelo usado para classificar e redigir. |
+| `OLLAMA_MODEL` | `qwen2.5:3b` | `${OLLAMA_MODEL:-qwen2.5:3b}` | Modelo usado para desambiguar intenção e redigir respostas de conhecimento. |
 | `OLLAMA_TIMEOUT_MS` | `60000` | `${OLLAMA_TIMEOUT_MS:-60000}` | Timeout de cada chamada ao Ollama. |
 | `OLLAMA_NUM_CTX` | `4096` | `${OLLAMA_NUM_CTX:-4096}` | Janela total de contexto: prompt + histórico + resposta. |
 | `OLLAMA_ENABLED` | `true` | `${OLLAMA_ENABLED:-true}` | `false` força o modo regras. |
@@ -539,14 +567,15 @@ ollama-init:
   environment:
     OLLAMA_HOST: http://ollama:11434
   entrypoint: ["/bin/sh", "-c"]
-  command: ["ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"]
+  command: ["ollama pull ${OLLAMA_MODEL:-qwen2.5:3b} && ollama run --keepalive 30m ${OLLAMA_MODEL:-qwen2.5:3b} ok >/dev/null"]
   restart: "no"
 ```
 
 - `ollama`: servidor HTTP e volume persistente dos modelos.
-- `ollama-init`: executa `ollama pull` uma vez e encerra. Se o modelo já estiver no
-  volume, a operação termina rapidamente.
-- `backend`: recebe `OLLAMA_URL=http://ollama:11434`.
+- `ollama-init`: baixa o modelo uma única vez e já o carrega na memória com
+  `keep_alive` de 30 min, encerrando em seguida. Se o modelo já estiver no volume, a
+  operação termina rapidamente.
+- `backend`: recebe `OLLAMA_URL=http://ollama:11434` e chama `warmup()` ao iniciar.
 - O volume `ollama_data` evita baixar o modelo a cada `docker compose up`.
 
 O backend **não usa `depends_on: ollama`**. Assim ele sempre sobe, e o assistente cai
@@ -571,8 +600,11 @@ O `ollama-init` baixa o novo modelo e o backend passa a usá-lo na próxima requ
 ### Desempenho
 
 - A inferência roda em **CPU por padrão**.
-- A primeira resposta após carregar o modelo é mais lenta; `keep_alive: 30m` mantém o
-  modelo na memória entre perguntas.
+- O backend chama `OllamaClient.warmup()` ao iniciar e o `ollama-init` já deixa o
+  modelo carregado; `keep_alive: 30m` mantém o modelo na memória entre perguntas.
+- Consultas de dados não chamam o modelo quando as regras classificam com segurança, e
+  respostas repetidas podem sair do cache em memória (60 s para dados, 30 min para
+  conhecimento).
 - `OLLAMA_NUM_PARALLEL=1` evita disputa de RAM/CPU em máquinas modestas.
 - O backend aplica timeout de 60 s por chamada; o frontend espera até 75 s.
 - `OLLAMA_NUM_CTX=4096` limita prompt + histórico + resposta. Valores maiores gastam
@@ -670,6 +702,13 @@ Baixar o modelo (uma única vez) e conferir:
 ```bash
 wsl.exe -e bash -lc '~/.local/ollama/bin/ollama pull qwen2.5:3b'
 curl http://localhost:11434/api/version
+```
+
+O backend chama `warmup()` ao iniciar. Para deixar o modelo carregado antes mesmo do
+primeiro acesso, rode uma vez:
+
+```bash
+wsl.exe -e bash -lc '~/.local/ollama/bin/ollama run --keepalive 30m qwen2.5:3b ok'
 ```
 
 O log do servidor fica em `/home/<usuario>/.ollama/serve.log` dentro do WSL.
@@ -795,10 +834,15 @@ recebidas.
   `docs/calculos.md` exigem atualizar as seções manualmente.
 - O resolvedor de serviços usa nome/ID/tokens; nomes muito parecidos podem exigir
   clarificação mesmo quando o usuário sabe qual quer.
-- O modelo ainda pode parafrasear de forma imprecisa; os números e gráficos, porém,
-  vêm do backend.
+- O cache de respostas é **em memória e por processo**: não é compartilhado entre
+  instâncias, não aumenta o TTL quando o cache é limpo e pode devolver um texto
+  determinístico de até 60 s atrás para perguntas de dados. Continuações, clarificações
+  pendentes e perguntas dependentes de contexto não são cacheadas.
+- A classificação por regras é conservadora de propósito: casos ambíguos ainda pagam
+  uma chamada ao classificador (com cache de 30 min por mensagem + serviços).
+- Respostas de conhecimento podem variar entre execuções; as respostas de dados são
+  determinísticas para a mesma consulta.
 - Não há streaming token a token (`stream: false`).
-- Não há cache de respostas do modelo.
 - Não há rate limiting nem fila por usuário.
 - Não há GPU configurada por padrão.
 - A suíte de avaliação cobre **intenções e clarificações determinísticas**, não a
@@ -809,16 +853,18 @@ recebidas.
 
 ## 13. Fallback determinístico
 
-O assistente tenta o Ollama primeiro, mas sempre tem um caminho sem IA:
+O assistente aplica regras primeiro e só usa o Ollama quando necessário. Sempre há um
+caminho sem IA:
 
 | Situação | Classificação | Texto | `degraded` | `model` |
 | --- | --- | --- | --- | --- |
-| Ollama disponível e responde | Modelo | Modelo | `false` | Nome do modelo |
-| Ollama classifica, mas falha ao redigir | Modelo | Regras | `true` | `"regras"` |
-| Ollama indisponível/desligado | Regras | Regras | `true` | `"regras"` |
-| Conhecimento do projeto | Modelo ou regras | Modelo ou resumo curado | `false` com modelo; `true` sem modelo | Nome do modelo ou `"regras"` |
-| Fora do escopo | Modelo ou regras | Recusa fixa | `true` | `"regras"` |
-| Ambiguidade de serviço | Modelo ou regras | Pergunta fixa + opções | `true` | `"regras"` |
+| Pergunta de dados com regras confiantes | Regras | Determinístico | `false` | `"regras"` |
+| Pergunta de dados ambígua + Ollama classifica | Modelo | Determinístico | `false` | `"regras"` |
+| Pergunta de dados ambígua, Ollama falha | Regras | Determinístico | `true` | `"regras"` |
+| Conhecimento + Ollama disponível | Regras ou modelo | Modelo reescreve a seção curada | `false` | Nome do modelo |
+| Conhecimento + Ollama falha ou desligado | Regras | Resumo curado | `true` | `"regras"` |
+| Fora do escopo | Regras ou modelo | Recusa fixa | `true` | `"regras"` |
+| Ambiguidade de serviço | Regras ou modelo | Pergunta fixa + opções | `true` | `"regras"` |
 
 Regras de classificação resumidas:
 
@@ -835,6 +881,9 @@ Regras de classificação resumidas:
 - se a mensagem também cita dados, a intenção de dados vence, exceto com pista forte
   de explicação;
 - resto → `OUT_OF_SCOPE`.
+
+O classificador do Ollama só é consultado quando a regra não é confiável: `OUT_OF_SCOPE`
+sem pistas, ou `SERVICE_SUMMARY` sem serviço resolvido e sem menção a energia/emissões.
 
 Além da classificação, o backend aplica correções determinísticas:
 
@@ -864,16 +913,27 @@ npm test
 - classificação apenas com pista forte e fallback por intenção;
 - renderização dos placeholders com os valores atuais do modelo de potência.
 
-`chat.service.test.ts` (8 testes):
+`chat.service.test.ts` (14 testes):
 
 - ranking de energia ordenado, ignorando serviços removidos;
-- uso de classificação e resposta do Ollama;
 - resumo de serviço com histórico e gráfico de linha, preservando lacunas;
 - panorama ambiental via dashboard;
 - recusa de fora do escopo sem chamar ferramentas de dados;
 - ranking sem dados;
 - nome de serviço inexistente com lista de disponíveis;
+- resposta determinística sem chamar o modelo quando as regras decidem;
+- classificador consultado apenas quando as regras não decidem;
+- cache de respostas, expiração do TTL de dados e reaproveitamento de indicadores;
+- single-flight entre chamadas simultâneas e cache de classificação;
 - mensagem vazia, mensagem longa e período inválido.
+
+`chat.cache.test.ts` (5 testes):
+
+- valor válido enquanto o TTL não expira;
+- descarte da entrada expirada;
+- descarte LRU acima do limite;
+- reutilização de execução em andamento no `SingleFlight`;
+- nova execução depois que a anterior termina.
 
 `chat.conversation.test.ts` (46 testes):
 
@@ -886,7 +946,7 @@ npm test
 - sugestões coerentes com o ranking;
 - resolução por ID (“serviço 2”);
 - validação de `conversationId`, contexto e histórico;
-- encaminhamento do histórico ao modelo, descartando a mensagem atual duplicada;
+- histórico enviado só ao classificador, com resposta de dados determinística;
 - proteção contra o LLM escolher um serviço ambíguo;
 - resposta de conhecimento em modo regras, com `degraded` e sem citação de fonte;
 - conhecimento com o modelo, incluindo fatos e modelo de potência no contexto;
@@ -903,11 +963,11 @@ npm test
 - `400` para período inválido;
 - `200` com resposta determinística quando não há dados.
 
-Na implementação, os **83 testes do módulo de chat** passaram (23 de conhecimento, 8 de
-serviço, 46 de conversa e 6 HTTP). A suíte completa do backend terminou com **239 testes
-passando e 7 ignorados** (integração com banco real). PostgreSQL e Ollama são
-substituídos por mocks; `vitest.setup.ts` fornece URLs fictícias das APIs externas para
-que o app carregue sem o `.env` real.
+Na implementação, os **94 testes do módulo de chat** passaram (23 de conhecimento, 14 de
+serviço, 46 de conversa, 5 de cache e 6 HTTP). A suíte completa do backend terminou com
+**250 testes passando e 7 ignorados** (integração com banco real). PostgreSQL e Ollama
+são substituídos por mocks; `vitest.setup.ts` fornece URLs fictícias das APIs externas
+para que o app carregue sem o `.env` real.
 
 ---
 
@@ -917,11 +977,13 @@ que o app carregue sem o `.env` real.
 backend/
 ├── src/app.ts                                  (monta /api/chat)
 ├── src/config/env.ts                           (variáveis OLLAMA_*)
+├── src/server.ts                               (warmup do modelo ao iniciar)
 ├── vitest.config.ts                            (setupFiles do teste)
 ├── vitest.setup.ts                             (env fictício para os testes)
 └── src/modules/chat/
     ├── chat.types.ts
     ├── chat.state.ts
+    ├── chat.cache.ts
     ├── chat.period.ts
     ├── chat.prompt.ts
     ├── chat.knowledge.ts
@@ -931,6 +993,7 @@ backend/
     ├── chat.controller.ts
     ├── chat.routes.ts
     ├── chat.knowledge.test.ts
+    ├── chat.cache.test.ts
     ├── chat.service.test.ts
     ├── chat.conversation.test.ts
     └── chat.http.test.ts
@@ -969,11 +1032,14 @@ Porque aumenta o risco de consultas indevidas, resultados imprevisíveis e respo
 alucinadas. As ferramentas allowlisted cobrem o escopo do protótipo com segurança.
 
 **Por que manter regras se existe LLM?**
-Para garantir disponibilidade, previsibilidade, testes rápidos e degradação graciosa.
+Porque elas resolvem a maior parte das perguntas sozinhas: garantem disponibilidade,
+previsibilidade, testes rápidos e respostas de dados determinísticas. O modelo só é
+consultado quando as regras não decidem a intenção.
 
 **O texto pode variar entre execuções?**
-Sim. A redação pode variar, mas os fatos, números, período e gráfico vêm do backend e
-permanecem os mesmos para a mesma consulta.
+Respostas de dados não: o texto e o gráfico são montados pelo backend e reaproveitados
+pelo cache. Respostas de conhecimento podem variar na redação, mas a seção curada, os
+números e o período permanecem os mesmos para a mesma consulta.
 
 **Como o assistente responde sobre o projeto e os cálculos?**
 Com uma base curada em `chat.knowledge.ts`, derivada do README e de `docs/calculos.md`.
@@ -996,7 +1062,13 @@ manualmente.
 Não. O Ollama é local. Tokens existem tecnicamente, mas não há cobrança; os limites
 são `num_predict` (saída), `OLLAMA_NUM_CTX` (janela total) e a capacidade da máquina.
 
+**O assistente faz cache das respostas?**
+Sim, em memória: respostas de dados por 60 s, de conhecimento por 30 min e respostas
+degradadas por 30 s. Indicadores ficam 15 s por período e classificações 30 min. O
+cache só vale para perguntas autocontidas; continuações e clarificações pendentes
+sempre passam pelo fluxo completo. Chamadas simultâneas idênticas são unificadas.
+
 **Qual o próximo passo natural?**
-Persistir a memória no banco, streaming, cache de respostas, rate limiting por usuário,
-mais intenções (comparação entre períodos, regiões e serviços) e avaliação da qualidade
-textual do modelo.
+Persistir a memória no banco, streaming, rate limiting por usuário, mais intenções
+(comparação entre períodos, regiões e serviços) e avaliação da qualidade textual do
+modelo.

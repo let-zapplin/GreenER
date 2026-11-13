@@ -1,5 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { AppError } from "../../shared/errors/AppError.js";
+import { SingleFlight, TtlCache } from "./chat.cache.js";
 import { DashboardService } from "../dashboard/dashboard.service.js";
 import { IndicadoresService } from "../indicadores/indicadores.service.js";
 import {
@@ -45,6 +46,15 @@ const MAX_HISTORY_MESSAGES = 12;
 const MAX_CONVERSATION_ID_LENGTH = 64;
 const MAX_CONTEXT_PAGE_LENGTH = 200;
 const MAX_CONTEXT_SERVICE_NAME_LENGTH = 120;
+
+const REPLY_CACHE_MAX_ENTRIES = 200;
+const CLASSIFICATION_CACHE_MAX_ENTRIES = 500;
+const INDICATORS_CACHE_MAX_ENTRIES = 16;
+const INDICATORS_CACHE_TTL_MS = 15_000;
+const REPLY_DATA_CACHE_TTL_MS = 60_000;
+const REPLY_KNOWLEDGE_CACHE_TTL_MS = 30 * 60_000;
+const REPLY_DEGRADED_CACHE_TTL_MS = 30_000;
+const CLASSIFICATION_CACHE_TTL_MS = 30 * 60_000;
 
 const DISCLAIMER =
   "Valores estimados pelo modelo de potência v1 do GreenER; períodos com lacunas podem estar incompletos.";
@@ -172,6 +182,37 @@ type ChatDraft = {
   clarificationCandidates: Array<{ serviceId: number; name: string }>;
 };
 
+type ChatDraftState = Pick<
+  ChatDraft,
+  "intent" | "activeService" | "clarification" | "clarificationCandidates"
+>;
+
+type CachedReply = {
+  reply: Omit<ChatReply, "conversationId">;
+  draft: ChatDraftState;
+};
+
+const DATA_INTENTS = new Set<ChatIntent>([
+  "RANKING_ENERGY",
+  "RANKING_EMISSIONS",
+  "SERVICE_SUMMARY",
+  "ENVIRONMENT_SUMMARY",
+]);
+
+function isDataIntent(intent: ChatIntent): boolean {
+  return DATA_INTENTS.has(intent);
+}
+
+function hashHistory(history: ChatHistoryMessage[]): string {
+  if (history.length === 0) {
+    return "-";
+  }
+
+  return createHash("sha1")
+    .update(JSON.stringify(history))
+    .digest("hex");
+}
+
 function normalizeText(value: string): string {
   return value
     .normalize("NFD")
@@ -231,7 +272,12 @@ function mentionsService(text: string): boolean {
 }
 
 function mentionsRanking(text: string): boolean {
-  return /(mais|maior|menor|rank|ranking|top)/.test(text);
+  return /(mais|maior|menor|menos|rank|ranking|top)/.test(text);
+}
+
+// "Quem gastou menos energia?" pede o ranking crescente; o padrão é decrescente.
+function mentionsLowest(text: string): boolean {
+  return /\b(menor|menores|menos)\b/.test(text);
 }
 
 function isFollowUp(message: string): boolean {
@@ -607,6 +653,36 @@ function classifyByRules(
   return { intent: "OUT_OF_SCOPE", serviceName: null };
 }
 
+// As regras só dispensam o classificador quando a intenção é sustentada por
+// sinais explícitos. Casos duvidosos (OUT_OF_SCOPE, "serviço" genérico) ainda
+// passam pelo modelo.
+function isRulesClassificationConfident(
+  message: string,
+  resolution: ServiceResolution,
+  classification: ChatClassification,
+): boolean {
+  const text = normalizeText(message);
+
+  switch (classification.intent) {
+    case "RANKING_ENERGY":
+    case "RANKING_EMISSIONS":
+    case "ENVIRONMENT_SUMMARY":
+    case "PROJECT_INFO":
+    case "METHODOLOGY":
+      return true;
+
+    case "SERVICE_SUMMARY":
+      return (
+        resolution.kind !== "none" ||
+        mentionsEnergy(text) ||
+        mentionsEmissions(text)
+      );
+
+    default:
+      return false;
+  }
+}
+
 function formatSampleLabel(value: Date, period: ChatPeriod): string {
   const date = new Date(value);
 
@@ -798,6 +874,11 @@ function dropRepeatedCurrentMessage(
 }
 
 export class ChatService {
+  private readonly replies: TtlCache<string, CachedReply>;
+  private readonly classifications: TtlCache<string, ChatClassification>;
+  private readonly indicatorsCache: TtlCache<ChatPeriod, IndicatorsResult>;
+  private readonly inFlight: SingleFlight<string, CachedReply>;
+
   constructor(
     private readonly indicators: Pick<
       IndicadoresService,
@@ -810,7 +891,23 @@ export class ChatService {
     private readonly llm: ChatLlm = new OllamaClient(),
     private readonly now: () => Date = () => new Date(),
     private readonly states: ChatStateStore = new InMemoryChatStateStore(),
-  ) {}
+  ) {
+    const nowMs = () => this.now().getTime();
+
+    this.replies = new TtlCache<string, CachedReply>(
+      REPLY_CACHE_MAX_ENTRIES,
+      nowMs,
+    );
+    this.classifications = new TtlCache<string, ChatClassification>(
+      CLASSIFICATION_CACHE_MAX_ENTRIES,
+      nowMs,
+    );
+    this.indicatorsCache = new TtlCache<ChatPeriod, IndicatorsResult>(
+      INDICATORS_CACHE_MAX_ENTRIES,
+      nowMs,
+    );
+    this.inFlight = new SingleFlight<string, CachedReply>();
+  }
 
   async chat(
     messageValue: string,
@@ -828,13 +925,70 @@ export class ChatService {
 
     const conversation = this.states.get(conversationId);
     const period = detectPeriodInMessage(message) ?? requestedPeriod;
+    const cacheKey = this.replyCacheKey(
+      message,
+      period,
+      context,
+      history,
+      conversation,
+    );
 
+    if (cacheKey !== null) {
+      const cached = this.replies.get(cacheKey);
+
+      if (cached !== null) {
+        this.saveState(
+          conversationId,
+          conversation,
+          message,
+          cached.reply.period.label,
+          cached.draft,
+        );
+
+        return { conversationId, ...cached.reply };
+      }
+    }
+
+    const compute = () =>
+      this.computeReply(message, period, context, history, conversation);
+
+    const computed =
+      cacheKey === null
+        ? await compute()
+        : await this.inFlight.run(cacheKey, async () => {
+            const result = await compute();
+            this.replies.set(cacheKey, result, this.replyTtl(result.reply));
+            return result;
+          });
+
+    this.saveState(
+      conversationId,
+      conversation,
+      message,
+      computed.reply.period.label,
+      computed.draft,
+    );
+
+    return { conversationId, ...computed.reply };
+  }
+
+  private async computeReply(
+    message: string,
+    period: ChatPeriod,
+    context: ChatContext,
+    history: ChatHistoryMessage[],
+    conversation: ChatConversationState | null,
+  ): Promise<CachedReply> {
     const { start, end } = periodBounds(period, this.now());
     const startISO = start.toISOString();
     const endISO = end.toISOString();
 
     // O modelo não consulta o banco: os dados chegam prontos das ferramentas do backend.
-    const indicators = await this.indicators.getIndicators(startISO, endISO);
+    const indicators = await this.getIndicatorsCached(
+      period,
+      startISO,
+      endISO,
+    );
     const activeServices = indicators.services.filter(
       (service) => service.status === "active",
     );
@@ -847,16 +1001,30 @@ export class ChatService {
       context,
     );
 
-    let degraded = false;
+    // Regras primeiro: o classificador só é chamado quando elas não decidem.
+    const rulesClassification = classifyByRules(message, resolution);
+    let classification = rulesClassification;
+    let classificationFailed = !this.llm.enabled;
 
-    let classification =
-      history.length > 0
-        ? await this.llm.classify(message, serviceNames, history)
-        : await this.llm.classify(message, serviceNames);
+    if (
+      !isRulesClassificationConfident(
+        message,
+        resolution,
+        rulesClassification,
+      )
+    ) {
+      const llmClassification = await this.classifyCached(
+        message,
+        serviceNames,
+        history,
+      );
 
-    if (classification === null) {
-      classification = classifyByRules(message, resolution);
-      degraded = true;
+      if (llmClassification !== null) {
+        classification = llmClassification;
+        classificationFailed = false;
+      } else {
+        classificationFailed = true;
+      }
     }
 
     const merged = this.mergeClassification(
@@ -880,10 +1048,15 @@ export class ChatService {
 
     let answer = draft.answer;
     let usedLlmAnswer = false;
+    let degraded = false;
 
     if (draft.clarification !== null || draft.intent === "OUT_OF_SCOPE") {
       // Recusas e perguntas de clarificação não passam pelo modelo.
       degraded = true;
+    } else if (isDataIntent(draft.intent)) {
+      // Respostas de dados são determinísticas por decisão de projeto: o modelo
+      // só entra aqui quando as regras precisaram de ajuda para classificar.
+      degraded = !this.llm.enabled || classificationFailed;
     } else if (this.llm.enabled) {
       const answerContext = {
         intent: draft.intent,
@@ -921,25 +1094,133 @@ export class ChatService {
       draft.clarification !== null,
     );
 
-    this.saveState(conversationId, conversation, message, period, draft);
-
     return {
-      conversationId,
-      answer,
-      intent: draft.intent,
-      period: {
-        start: startISO,
-        end: endISO,
-        label: period,
+      reply: {
+        answer,
+        intent: draft.intent,
+        period: {
+          start: startISO,
+          end: endISO,
+          label: period,
+        },
+        chart: draft.chart,
+        clarification: draft.clarification,
+        suggestions,
+        partial: draft.partial,
+        disclaimer: DISCLAIMER,
+        model: usedLlmAnswer ? this.llm.model : "regras",
+        degraded,
       },
-      chart: draft.chart,
-      clarification: draft.clarification,
-      suggestions,
-      partial: draft.partial,
-      disclaimer: DISCLAIMER,
-      model: usedLlmAnswer ? this.llm.model : "regras",
-      degraded,
+      draft: {
+        intent: draft.intent,
+        activeService: draft.activeService,
+        clarification: draft.clarification,
+        clarificationCandidates: draft.clarificationCandidates,
+      },
     };
+  }
+
+  private replyCacheKey(
+    message: string,
+    period: ChatPeriod,
+    context: ChatContext,
+    history: ChatHistoryMessage[],
+    conversation: ChatConversationState | null,
+  ): string | null {
+    const text = normalizeText(message);
+    const pending = conversation?.pendingClarification;
+
+    // Continuações dependem do estado da conversa e não entram no cache.
+    if (pending !== null && pending !== undefined) {
+      return null;
+    }
+
+    if (isFollowUp(text) || isContextDependent(text)) {
+      return null;
+    }
+
+    // Perguntas de conhecimento usam a pergunta anterior como dica de
+    // recuperação; ela entra na chave para não misturar contextos.
+    const knowledgeHint =
+      retrieveKnowledge(message) === null
+        ? "-"
+        : normalizeText(conversation?.lastQuestion ?? "-");
+
+    return [
+      text,
+      period,
+      context.serviceName === null ? "-" : normalizeText(context.serviceName),
+      hashHistory(history),
+      knowledgeHint,
+    ].join("|");
+  }
+
+  private replyTtl(reply: Omit<ChatReply, "conversationId">): number {
+    if (reply.degraded) {
+      return REPLY_DEGRADED_CACHE_TTL_MS;
+    }
+
+    if (reply.intent === "PROJECT_INFO" || reply.intent === "METHODOLOGY") {
+      return REPLY_KNOWLEDGE_CACHE_TTL_MS;
+    }
+
+    return REPLY_DATA_CACHE_TTL_MS;
+  }
+
+  private async classifyCached(
+    message: string,
+    serviceNames: string[],
+    history: ChatHistoryMessage[],
+  ): Promise<ChatClassification | null> {
+    if (!this.llm.enabled) {
+      return null;
+    }
+
+    const key = [
+      normalizeText(message),
+      serviceNames.map(normalizeText).sort().join(","),
+      hashHistory(history),
+    ].join("|");
+    const cached = this.classifications.get(key);
+
+    if (cached !== null) {
+      return cached;
+    }
+
+    const classification =
+      history.length > 0
+        ? await this.llm.classify(message, serviceNames, history)
+        : await this.llm.classify(message, serviceNames);
+
+    if (classification !== null) {
+      this.classifications.set(
+        key,
+        classification,
+        CLASSIFICATION_CACHE_TTL_MS,
+      );
+    }
+
+    return classification;
+  }
+
+  private async getIndicatorsCached(
+    period: ChatPeriod,
+    startISO: string,
+    endISO: string,
+  ): Promise<IndicatorsResult> {
+    const cached = this.indicatorsCache.get(period);
+
+    if (cached !== null) {
+      return cached;
+    }
+
+    const indicators = await this.indicators.getIndicators(
+      startISO,
+      endISO,
+    );
+    this.indicatorsCache.set(period, indicators, INDICATORS_CACHE_TTL_MS);
+
+    return indicators;
   }
 
   private validateMessage(value: string): string {
@@ -1146,7 +1427,12 @@ export class ChatService {
     switch (merged.intent) {
       case "RANKING_ENERGY":
       case "RANKING_EMISSIONS":
-        return this.buildRanking(merged.intent, period, indicators);
+        return this.buildRanking(
+          merged.intent,
+          period,
+          indicators,
+          mentionsLowest(normalizeText(message)),
+        );
 
       case "ENVIRONMENT_SUMMARY":
         return this.buildEnvironment(period, startISO, endISO);
@@ -1278,6 +1564,7 @@ export class ChatService {
     intent: "RANKING_ENERGY" | "RANKING_EMISSIONS",
     period: ChatPeriod,
     indicators: IndicatorsResult,
+    lowest: boolean,
   ): ChatDraft {
     const isEnergy = intent === "RANKING_ENERGY";
     const unit = isEnergy ? "kWh" : "gCO₂e";
@@ -1293,7 +1580,9 @@ export class ChatService {
         ),
       }))
       .filter((item) => item.value > 0)
-      .sort((left, right) => right.value - left.value)
+      .sort((left, right) =>
+        lowest ? left.value - right.value : right.value - left.value,
+      )
       .slice(0, MAX_RANKING_ITEMS);
 
     if (ranking.length === 0) {
@@ -1305,6 +1594,7 @@ export class ChatService {
         facts: {
           ranking: [],
           unit,
+          order: lowest ? "asc" : "desc",
           activeServiceCount: indicators.summary.activeServiceCount,
           totals: {
             energyKwh: round(indicators.summary.energyKwh),
@@ -1319,8 +1609,12 @@ export class ChatService {
 
     const [top, ...rest] = ranking;
     const action = isEnergy
-      ? "consumiu mais energia"
-      : "emitiu mais CO₂ equivalente";
+      ? lowest
+        ? "consumiu menos energia"
+        : "consumiu mais energia"
+      : lowest
+        ? "emitiu menos CO₂ equivalente"
+        : "emitiu mais CO₂ equivalente";
 
     const restText =
       rest.length > 0
@@ -1335,8 +1629,12 @@ export class ChatService {
     const chart: ChatChart = {
       type: "bar",
       title: isEnergy
-        ? "Consumo de energia por serviço"
-        : "Emissões por serviço",
+        ? lowest
+          ? "Menor consumo de energia por serviço"
+          : "Consumo de energia por serviço"
+        : lowest
+          ? "Menores emissões por serviço"
+          : "Emissões por serviço",
       unit,
       data: ranking.map((item) => ({
         label: item.service.name,
@@ -1355,6 +1653,7 @@ export class ChatService {
           value: item.value,
           unit,
         })),
+        order: lowest ? "asc" : "desc",
         activeServiceCount: indicators.summary.activeServiceCount,
         totals: {
           energyKwh: round(indicators.summary.energyKwh),
@@ -1628,7 +1927,7 @@ export class ChatService {
     previous: ChatConversationState | null,
     message: string,
     period: ChatPeriod,
-    draft: ChatDraft,
+    draft: ChatDraftState,
   ): void {
     let activeService: ChatServiceReference | null = null;
 

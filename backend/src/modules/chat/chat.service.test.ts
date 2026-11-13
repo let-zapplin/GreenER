@@ -177,7 +177,73 @@ describe("ChatService", () => {
     expect(answer).not.toHaveBeenCalled();
   });
 
-  it("aceita classificação e resposta do Ollama quando ele está disponível", async () => {
+  it("monta ranking crescente quando a pergunta pede o menor consumo", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({ name: "Alpha", energyKwh: 0.2 }),
+        createIndicatorService({ serviceId: 2, name: "Beta", energyKwh: 0.8 }),
+      ]),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => NOW,
+    );
+
+    const result = await service.chat("Qual serviço gasta menos energia?");
+
+    expect(result.intent).toBe("RANKING_ENERGY");
+    expect(result.answer).toContain("consumiu menos energia");
+    expect(result.answer.indexOf("Alpha")).toBeLessThan(
+      result.answer.indexOf("Beta"),
+    );
+    expect(result.chart).toEqual({
+      type: "bar",
+      title: "Menor consumo de energia por serviço",
+      unit: "kWh",
+      data: [
+        { label: "Alpha", value: 0.2 },
+        { label: "Beta", value: 0.8 },
+      ],
+    });
+    expect(result.model).toBe("regras");
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it("não chama o modelo quando as regras decidem uma resposta de dados", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({ name: "Alpha", energyKwh: 0.2 }),
+        createIndicatorService({
+          serviceId: 2,
+          name: "Beta",
+          energyKwh: 0.8,
+        }),
+      ]),
+    );
+
+    const llm = createLlm(true);
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      llm,
+      () => NOW,
+    );
+
+    const result = await service.chat("Qual serviço gasta mais energia?");
+
+    expect(classify).not.toHaveBeenCalled();
+    expect(answer).not.toHaveBeenCalled();
+    expect(result.intent).toBe("RANKING_ENERGY");
+    expect(result.answer).toContain("Beta");
+    expect(result.model).toBe("regras");
+    expect(result.degraded).toBe(false);
+  });
+
+  it("consulta o classificador quando as regras não decidem", async () => {
     getIndicators.mockResolvedValue(
       createIndicatorsResult([
         createIndicatorService({ name: "Alpha", emissionsGco2e: 50 }),
@@ -195,9 +261,6 @@ describe("ChatService", () => {
       intent: "RANKING_EMISSIONS",
       serviceName: null,
     });
-    answer.mockResolvedValue(
-      "O serviço Beta emitiu mais CO₂ equivalente no período.",
-    );
 
     const service = new ChatService(
       { getIndicators, getServiceHistory },
@@ -206,14 +269,15 @@ describe("ChatService", () => {
       () => NOW,
     );
 
-    const result = await service.chat("Top consumer?");
+    const result = await service.chat("Qual está pior?");
 
-    expect(classify).toHaveBeenCalledWith("Top consumer?", ["Alpha", "Beta"]);
-    expect(answer).toHaveBeenCalledTimes(1);
+    expect(classify).toHaveBeenCalledWith("Qual está pior?", [
+      "Alpha",
+      "Beta",
+    ]);
+    expect(answer).not.toHaveBeenCalled();
     expect(result.intent).toBe("RANKING_EMISSIONS");
-    expect(result.answer).toBe(
-      "O serviço Beta emitiu mais CO₂ equivalente no período.",
-    );
+    expect(result.answer).toContain("Beta");
     expect(result.chart).toMatchObject({
       type: "bar",
       unit: "gCO₂e",
@@ -222,7 +286,7 @@ describe("ChatService", () => {
         { label: "Alpha", value: 50 },
       ],
     });
-    expect(result.model).toBe("modelo-teste");
+    expect(result.model).toBe("regras");
     expect(result.degraded).toBe(false);
   });
 
@@ -433,6 +497,148 @@ describe("ChatService", () => {
     expect(result.chart).toBeNull();
     expect(result.answer).toContain("Alpha, Beta");
     expect(getServiceHistory).not.toHaveBeenCalled();
+  });
+
+  it("reutiliza a resposta em cache para a mesma pergunta", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({ name: "Alpha", energyKwh: 2 }),
+      ]),
+    );
+
+    const llm = createLlm(true);
+    answer.mockResolvedValue("Resposta cacheada.");
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      llm,
+      () => NOW,
+    );
+
+    const first = await service.chat("O que é o GreenER?");
+    const second = await service.chat("O que é o GreenER?");
+
+    expect(answer).toHaveBeenCalledTimes(1);
+    expect(getIndicators).toHaveBeenCalledTimes(1);
+    expect(first.answer).toBe("Resposta cacheada.");
+    expect(second.answer).toBe("Resposta cacheada.");
+    expect(second.conversationId).not.toBe(first.conversationId);
+  });
+
+  it("compartilha uma única execução entre chamadas simultâneas", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({ name: "Alpha", energyKwh: 2 }),
+      ]),
+    );
+
+    const llm = createLlm(true);
+    let resolveAnswer: (value: string) => void = () => {};
+    answer.mockReturnValue(
+      new Promise<string>((resolve) => {
+        resolveAnswer = resolve;
+      }),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      llm,
+      () => NOW,
+    );
+
+    const first = service.chat("O que é o GreenER?");
+    const second = service.chat("O que é o GreenER?");
+
+    resolveAnswer("Resposta única.");
+
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(answer).toHaveBeenCalledTimes(1);
+    expect(firstResult.answer).toBe("Resposta única.");
+    expect(secondResult.answer).toBe("Resposta única.");
+  });
+
+  it("expira o cache de respostas de dados após o intervalo de coleta", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({ name: "Alpha", energyKwh: 2 }),
+      ]),
+    );
+
+    let current = NOW;
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => current,
+    );
+
+    await service.chat("Qual serviço gasta mais energia?");
+    current = new Date(NOW.getTime() + 61_000);
+    await service.chat("Qual serviço gasta mais energia?");
+
+    expect(getIndicators).toHaveBeenCalledTimes(2);
+  });
+
+  it("reaproveita os indicadores entre perguntas diferentes do mesmo período", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({
+          name: "Alpha",
+          energyKwh: 2,
+          emissionsGco2e: 300,
+        }),
+      ]),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => NOW,
+    );
+
+    await service.chat("Qual serviço gasta mais energia?");
+    await service.chat("Qual serviço emite mais CO₂?");
+
+    expect(getIndicators).toHaveBeenCalledTimes(1);
+  });
+
+  it("reaproveita a classificação de continuações repetidas", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({
+          serviceId: 1,
+          name: "Alpha",
+          energyKwh: 2,
+          emissionsGco2e: 400,
+        }),
+      ]),
+    );
+    getServiceHistory.mockResolvedValue({ samples: [] });
+
+    const llm = createLlm(true);
+    classify.mockResolvedValue({
+      intent: "SERVICE_SUMMARY",
+      serviceName: "Alpha",
+    });
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      llm,
+      () => NOW,
+    );
+
+    const first = await service.chat("E as emissões?");
+    const second = await service.chat("E as emissões?");
+
+    expect(classify).toHaveBeenCalledTimes(1);
+    expect(answer).not.toHaveBeenCalled();
+    expect(first.intent).toBe("SERVICE_SUMMARY");
+    expect(second.answer).toContain("Alpha");
   });
 
   it("rejeita mensagem vazia, mensagem longa e período inválido antes de consultar dados", async () => {

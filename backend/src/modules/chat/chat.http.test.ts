@@ -115,7 +115,7 @@ describe("HTTP do assistente", () => {
       chart: null,
       partial: true,
       model: "regras",
-      degraded: true,
+      degraded: false,
       period: {
         label: "24h",
       },

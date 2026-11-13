@@ -392,10 +392,15 @@ describe("ChatService — memória e contexto", () => {
     expect(getIndicators).not.toHaveBeenCalled();
   });
 
-  it("encaminha o histórico ao modelo e remove a mensagem atual duplicada", async () => {
+  it("usa o histórico para classificar e responde com os dados calculados", async () => {
     getIndicators.mockResolvedValue(
       createIndicatorsResult([
-        createIndicatorService({ serviceId: 1, name: "Alpha" }),
+        createIndicatorService({
+          serviceId: 1,
+          name: "Alpha",
+          energyKwh: 2,
+          emissionsGco2e: 400,
+        }),
         createIndicatorService({ serviceId: 2, name: "Beta" }),
       ]),
     );
@@ -405,7 +410,6 @@ describe("ChatService — memória e contexto", () => {
       intent: "SERVICE_SUMMARY",
       serviceName: "Alpha",
     });
-    answer.mockResolvedValue("O serviço Alpha emitiu 400 gCO₂e.");
 
     const service = new ChatService(
       { getIndicators, getServiceHistory },
@@ -426,16 +430,12 @@ describe("ChatService — memória e contexto", () => {
       { role: "user", content: "Como está o serviço Alpha?" },
       { role: "assistant", content: "Alpha consumiu 2 kWh." },
     ]);
-    expect(answer).toHaveBeenCalledWith(
-      "E as emissões?",
-      expect.anything(),
-      [
-        { role: "user", content: "Como está o serviço Alpha?" },
-        { role: "assistant", content: "Alpha consumiu 2 kWh." },
-      ],
-    );
-    expect(result.answer).toBe("O serviço Alpha emitiu 400 gCO₂e.");
-    expect(result.model).toBe("modelo-teste");
+    expect(answer).not.toHaveBeenCalled();
+    expect(result.intent).toBe("SERVICE_SUMMARY");
+    expect(result.answer).toContain("Alpha");
+    expect(result.answer).toContain("400");
+    expect(result.model).toBe("regras");
+    expect(result.degraded).toBe(false);
     expect(llm.enabled).toBe(true);
   });
 
@@ -604,13 +604,6 @@ describe("ChatService — conhecimento do projeto", () => {
 
   it("preserva o serviço ativo ao responder sobre o projeto", async () => {
     const llm = createLlm(true);
-    classify
-      .mockResolvedValueOnce({
-        intent: "SERVICE_SUMMARY",
-        serviceName: "Alpha",
-      })
-      .mockResolvedValueOnce({ intent: "PROJECT_INFO", serviceName: null })
-      .mockResolvedValue({ intent: "OUT_OF_SCOPE", serviceName: null });
     answer.mockResolvedValue("Resposta do assistente.");
     const service = new ChatService(
       { getIndicators, getServiceHistory },
@@ -621,20 +614,27 @@ describe("ChatService — conhecimento do projeto", () => {
     );
 
     const first = await service.chat("Como está o serviço Alpha?");
-    await service.chat("O que é o GreenER?", "24h", {
+    const second = await service.chat("O que é o GreenER?", "24h", {
       conversationId: first.conversationId,
     });
     const third = await service.chat("E as emissões dele?", "24h", {
       conversationId: first.conversationId,
     });
 
+    expect(first.intent).toBe("SERVICE_SUMMARY");
+    expect(first.model).toBe("regras");
+    expect(first.answer).toContain("Alpha");
+
+    expect(second.intent).toBe("PROJECT_INFO");
+    expect(second.model).toBe("modelo-teste");
+    expect(second.answer).toBe("Resposta do assistente.");
+    expect(answer).toHaveBeenCalledTimes(1);
+
     expect(third.intent).toBe("SERVICE_SUMMARY");
-
-    const context = answer.mock.calls[2]?.[1] as {
-      facts: { service: { name: string } };
-    };
-
-    expect(context.facts.service.name).toBe("Alpha");
+    expect(third.model).toBe("regras");
+    expect(third.degraded).toBe(false);
+    expect(third.answer).toContain("Alpha");
+    expect(third.answer).toContain("300");
   });
 });
 

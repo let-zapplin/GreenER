@@ -111,6 +111,24 @@ export class OllamaClient implements ChatLlm {
     });
   }
 
+  // Carrega o modelo antes da primeira pergunta para não pagar o tempo de
+  // load na primeira requisição do usuário.
+  async warmup(): Promise<boolean> {
+    if (!this.enabled) {
+      return false;
+    }
+
+    const content = await this.chat({
+      system: "Responda apenas com ok.",
+      history: [],
+      user: "ok",
+      temperature: 0,
+      numPredict: 1,
+    });
+
+    return content !== null;
+  }
+
   private async chat({
     system,
     history,
