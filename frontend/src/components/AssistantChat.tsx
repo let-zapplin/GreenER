@@ -116,7 +116,7 @@ function ChatChartView({ chart }: { chart: ChatChart }) {
                 <Tooltip
                   cursor={{ fill: "rgba(135, 228, 108, 0.08)" }}
                   contentStyle={{
-                    background: "#10201a",
+                    background: "#0f3033",
                     border: "1px solid rgba(255, 255, 255, 0.14)",
                     borderRadius: 10,
                     color: "#f4f8f5",
@@ -158,7 +158,7 @@ function ChatChartView({ chart }: { chart: ChatChart }) {
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "#10201a",
+                    background: "#0f3033",
                     border: "1px solid rgba(255, 255, 255, 0.14)",
                     borderRadius: 10,
                     color: "#f4f8f5",

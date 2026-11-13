@@ -1,7 +1,7 @@
 .landing-screen {
-  --landing-accent: #87e46c;
-  --landing-muted: #c1d5cf;
-  --landing-border: #426c60;
+  --landing-accent: var(--ui-accent);
+  --landing-muted: var(--ui-text-muted);
+  --landing-border: var(--ui-border-strong);
   color: #f4f8f5;
   background: var(--background-page);
   overflow: clip;
@@ -80,15 +80,15 @@
   height: 14px;
   border: 2px solid #e3f6d3;
   border-radius: 50%;
-  background: #69d337;
+  background: var(--ui-accent);
   box-shadow:
-    0 0 0 6px #69d33730,
+    0 0 0 6px var(--ui-accent)30,
     0 2px 8px #0006;
   transition: box-shadow 180ms ease;
 }
 .landing-globe-marker:hover > span,
 .landing-globe-marker:focus-visible > span {
-  box-shadow: 0 0 0 9px #69d33744;
+  box-shadow: 0 0 0 9px var(--ui-accent)44;
 }
 .landing-globe-regions {
   display: flex;
@@ -111,7 +111,7 @@
 .landing-globe-regions button[aria-pressed="true"] {
   color: #e3f6d3;
   background: #24534b;
-  border-color: #87e46c;
+  border-color: var(--ui-accent);
 }
 .landing-demo-popup {
   z-index: 5;
@@ -120,15 +120,15 @@
   padding: 20px 16px 16px;
   color: #f4f8f5;
   background: #12383b;
-  border: 1px solid #87e46c;
+  border: 1px solid var(--ui-accent);
   border-radius: 12px;
   box-shadow: 0 8px 24px #0005;
 }
 .landing-demo-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
-  border-top-color: #87e46c;
+  border-top-color: var(--ui-accent);
 }
 .landing-demo-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip {
-  border-bottom-color: #87e46c;
+  border-bottom-color: var(--ui-accent);
 }
 .landing-demo-popup .maplibregl-popup-close-button {
   width: 28px;
@@ -214,13 +214,13 @@
   color: #d6e3dd;
 }
 .landing-header nav a:hover {
-  color: #87e46c;
+  color: var(--ui-accent);
 }
 .landing-header .landing-nav-login {
   padding: 0 18px;
   border: 1px solid #426c60;
   border-radius: 10px;
-  color: #87e46c;
+  color: var(--ui-accent);
 }
 .landing-menu-button {
   display: none;
@@ -245,7 +245,7 @@
 .landing-eyebrow > span {
   width: 6px;
   height: 6px;
-  background: #87e46c;
+  background: var(--ui-accent);
   border-radius: 50%;
 }
 .landing-hero-logo {
@@ -368,7 +368,7 @@
   opacity: 1;
 }
 .landing-field input:focus-visible {
-  outline: 2px solid #87e46c;
+  outline: 2px solid var(--ui-accent);
   outline-offset: 2px;
 }
 .landing-password {
@@ -392,7 +392,7 @@
   cursor: pointer;
 }
 .landing-password button:hover {
-  color: #87e46c;
+  color: var(--ui-accent);
 }
 .landing-remember {
   min-height: 32px;
@@ -407,7 +407,7 @@
 .landing-remember input {
   width: 17px;
   height: 17px;
-  accent-color: #69d337;
+  accent-color: var(--ui-accent);
 }
 .landing-primary,
 .landing-secondary {
@@ -431,7 +431,7 @@
     box-shadow 180ms;
 }
 .landing-primary {
-  background: #69d337;
+  background: var(--ui-accent);
   color: #0c282b;
 }
 .landing-secondary {
@@ -439,7 +439,7 @@
   color: #f4f8f5;
 }
 .landing-primary:hover {
-  background: #87e46c;
+  background: var(--ui-accent);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px #0002;
 }
@@ -538,7 +538,7 @@
   white-space: nowrap;
 }
 .landing-marquee-dot {
-  color: #87e46c;
+  color: var(--ui-accent);
   display: flex;
 }
 .landing-marquee:hover .landing-marquee-track {
@@ -586,7 +586,7 @@
 }
 .landing-planet li svg {
   flex-shrink: 0;
-  color: #87e46c;
+  color: var(--ui-accent);
 }
 .landing-globe {
   position: relative;
@@ -649,7 +649,7 @@
 }
 .landing-globe-toggle:hover {
   color: #f4f8f5;
-  border-color: #87e46c;
+  border-color: var(--ui-accent);
 }
 .landing-globe-caption {
   text-align: center;
@@ -789,7 +789,7 @@
   font-weight: 700;
   border-radius: 50%;
   color: #0c282b;
-  background: #69d337;
+  background: var(--ui-accent);
 }
 .landing-steps h3,
 .landing-feature-grid h3 {
@@ -821,7 +821,7 @@
   margin-bottom: 16px;
   background: #0c282b;
   border-radius: 10px;
-  color: #87e46c;
+  color: var(--ui-accent);
 }
 .landing-feature-grid article {
   transition:
@@ -978,7 +978,7 @@
     width: 44px;
     height: 44px;
     padding: 8px;
-    color: #87e46c;
+    color: var(--ui-accent);
     border: 1px solid #426c60;
     border-radius: 9px;
     background: #12383b;

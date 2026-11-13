@@ -1,20 +1,17 @@
 .monitoring-page {
-  --monitoring-accent: #87e46c;
-  --monitoring-muted: var(--text-muted);
-  --monitoring-border: #315657;
-  --status-active: #87e46c;
-  --status-new: #e5e65d;
-  --status-no-metrics: #facc15;
-  --status-returned: #7dd3fc;
-  --status-unavailable: #ee1e41;
-  --status-removed: #323261;
+  --monitoring-accent: var(--ui-accent);
+  --monitoring-muted: var(--ui-text-muted);
+  --monitoring-border: var(--ui-border-strong);
+  --status-active: var(--ui-accent);
+  --status-new: #d4e86a;
+  --status-no-metrics: var(--ui-warning);
+  --status-returned: var(--ui-info);
+  --status-unavailable: var(--ui-danger);
+  --status-removed: #5f7f82;
 
-  width: 100%;
-  max-width: 1328px;
   min-height: 0;
-  margin: 0 auto;
-  padding: 64px 64px 48px;
-  color: #f4f8f5;
+  padding-top: clamp(36px, 5vw, 64px);
+  padding-bottom: 48px;
   background: var(--background-page);
 }
 
@@ -32,16 +29,9 @@
 .monitoring-intro {
   max-width: 700px;
 }
-.monitoring-page .monitoring-eyebrow,
-.monitoring-section-label {
-  color: var(--monitoring-accent);
-  font-size: var(--font-size-small);
-  line-height: 1.5;
-  font-weight: 600;
-  letter-spacing: 0.13em;
-}
 .monitoring-header h1 {
-  margin: 16px 0 20px;
+  margin: 8px 0 20px;
+  text-wrap: balance;
   font-size: clamp(32px, 4.4vw, 52px);
   line-height: 1.16;
   font-weight: 600;
@@ -53,14 +43,15 @@
 .monitoring-description {
   max-width: 580px;
   color: var(--monitoring-muted);
-  font-size: 16px;
+  max-width: 56ch;
+  font-size: 1.0625rem;
 }
 .monitoring-sync {
   flex-shrink: 0;
   padding: 14px 18px;
   border: 1px solid var(--monitoring-border);
-  border-radius: 14px;
-  background: #103335;
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-surface);
 }
 .monitoring-sync-label {
   display: flex;
@@ -149,8 +140,8 @@
   place-items: center;
   height: clamp(320px, 38vw, 500px);
   border: 1px dashed var(--monitoring-border);
-  border-radius: 18px;
-  background: #103335;
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-surface);
 }
 .service-indicator {
   display: block;
@@ -169,7 +160,7 @@
 }
 .service-indicator.new {
   background: var(--status-new);
-  box-shadow: 0 0 14px #e5e65d22;
+  box-shadow: 0 0 14px rgba(245, 196, 81, 0.18);
 }
 .service-indicator.returned {
   background: var(--status-returned);
@@ -182,7 +173,7 @@
 
 .service-indicator.unavailable {
   background: var(--status-unavailable);
-  box-shadow: 0 0 14px #fb923c22;
+  box-shadow: 0 0 14px rgba(255, 107, 122, 0.2);
 }
 .service-indicator.removed {
   background: var(--status-removed);
@@ -214,10 +205,10 @@
 .monitoring-stale {
   margin-bottom: 28px;
   padding: 18px 20px;
-  border: 1px solid #e5e65d66;
-  border-radius: 14px;
-  background: #343b23;
-  color: #f5f3bc;
+  border: 1px solid rgba(245, 196, 81, 0.4);
+  border-radius: var(--ui-radius-md);
+  background: #3a3720;
+  color: #fbeeb8;
 }
 .monitoring-stale strong {
   font-size: var(--font-size-small);
@@ -234,8 +225,8 @@
   padding: 64px 24px;
   text-align: center;
   border: 1px dashed var(--monitoring-border);
-  border-radius: 18px;
-  background: #103335;
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-surface);
 }
 .monitoring-empty h2 {
   margin: 16px 0 12px;
@@ -312,7 +303,7 @@
 .services-map-count {
   color: var(--monitoring-muted);
 
-  font-size: 12px;
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
@@ -374,8 +365,8 @@
 .monitoring-map-shell {
   overflow: hidden;
 
-  border: 1px solid rgba(88, 154, 144, 0.32);
-  border-radius: 18px;
+  border: 1px solid var(--ui-border-strong);
+  border-radius: var(--ui-radius-lg);
 
   background:
     linear-gradient(
@@ -493,12 +484,6 @@
   
 }
 @media (prefers-reduced-motion: reduce) {
-  .monitoring-page *,
-  .monitoring-page *::before,
-  .monitoring-page *::after {
-    animation: none !important;
-    transition: none !important;
-  }
   .monitoring-page button.service-indicator:hover,
   .monitoring-page .service-card:hover {
     transform: none;

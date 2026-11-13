@@ -2,11 +2,11 @@
   width: 100%;
   max-width: 1200px;
   margin: 0 auto 48px;
-  padding: 28px;
+  padding: 24px;
 
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 
   position: relative;
   z-index: 1;
@@ -15,16 +15,16 @@
 
   background:
     radial-gradient(
-      circle at 88% 0%,
-      rgba(135, 228, 108, 0.08),
-      transparent 38%
+      circle at 92% 0%,
+      color-mix(in srgb, var(--adaptive-color, #87e46c) 8%, transparent),
+      transparent 40%
     ),
-    linear-gradient(135deg, rgba(19, 34, 28, 0.96), rgba(11, 22, 18, 0.96));
+    linear-gradient(160deg, #124043, #0f3336);
 
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(130, 190, 150, 0.22);
   border-radius: 24px;
 
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.26);
+  box-shadow: 0 20px 48px rgba(3, 18, 20, 0.35);
 }
 
 .assistant-chat-header {
@@ -42,7 +42,7 @@
   display: block;
   margin-bottom: 8px;
 
-  color: #87e46c;
+  color: var(--adaptive-color, #87e46c);
   font-size: var(--font-size-small);
   font-weight: 600;
   letter-spacing: 0.16em;
@@ -101,7 +101,7 @@
 
 .assistant-chat-period button.active {
   color: #0b1713;
-  background: #87e46c;
+  background: var(--adaptive-color, #87e46c);
 }
 
 .assistant-chat-period button:disabled {
@@ -147,8 +147,8 @@
   font-weight: 500;
   text-align: left;
 
-  background: rgba(135, 228, 108, 0.08);
-  border: 1px solid rgba(135, 228, 108, 0.24);
+  background: color-mix(in srgb, var(--adaptive-color, #87e46c) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--adaptive-color, #87e46c) 24%, transparent);
   border-radius: 999px;
 
   cursor: pointer;
@@ -160,8 +160,8 @@
 }
 
 .assistant-chat-clarification button {
-  background: rgba(135, 228, 108, 0.14);
-  border-color: rgba(135, 228, 108, 0.42);
+  background: color-mix(in srgb, var(--adaptive-color, #87e46c) 14%, transparent);
+  border-color: color-mix(in srgb, var(--adaptive-color, #87e46c) 42%, transparent);
 }
 
 .assistant-chat-clarification button:hover:not(:disabled),
@@ -169,14 +169,14 @@
 .assistant-chat-suggestions button:hover:not(:disabled) {
   transform: translateY(-2px);
 
-  background: rgba(135, 228, 108, 0.14);
-  border-color: rgba(135, 228, 108, 0.45);
+  background: color-mix(in srgb, var(--adaptive-color, #87e46c) 14%, transparent);
+  border-color: color-mix(in srgb, var(--adaptive-color, #87e46c) 45%, transparent);
 }
 
 .assistant-chat-clarification button:hover:not(:disabled),
 .assistant-chat-follow-ups button:hover:not(:disabled) {
-  background: rgba(135, 228, 108, 0.2);
-  border-color: rgba(135, 228, 108, 0.6);
+  background: color-mix(in srgb, var(--adaptive-color, #87e46c) 20%, transparent);
+  border-color: color-mix(in srgb, var(--adaptive-color, #87e46c) 60%, transparent);
 }
 
 .assistant-chat-clarification button:disabled,
@@ -226,8 +226,8 @@
 .assistant-chat-message-user {
   align-self: flex-end;
 
-  background: rgba(135, 228, 108, 0.14);
-  border-color: rgba(135, 228, 108, 0.28);
+  background: color-mix(in srgb, var(--adaptive-color, #87e46c) 14%, transparent);
+  border-color: color-mix(in srgb, var(--adaptive-color, #87e46c) 28%, transparent);
 
   border-bottom-right-radius: 6px;
 }
@@ -254,7 +254,7 @@
   margin: 14px 0 0;
   padding: 12px;
 
-  background: rgba(4, 12, 9, 0.36);
+  background: rgba(6, 30, 33, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
 }
@@ -274,7 +274,7 @@
 }
 
 .assistant-chat-chart figcaption span {
-  color: #87e46c;
+  color: var(--adaptive-color, #87e46c);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -376,7 +376,7 @@
 }
 
 .assistant-chat-form input:focus {
-  border-color: rgba(135, 228, 108, 0.55);
+  border-color: color-mix(in srgb, var(--adaptive-color, #87e46c) 55%, transparent);
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -391,7 +391,7 @@
   font-size: 0.88rem;
   font-weight: 700;
 
-  background: #87e46c;
+  background: var(--adaptive-color, #87e46c);
   border: 0;
   border-radius: 12px;
 
@@ -460,7 +460,7 @@
 .assistant-chat-form input:focus-visible,
 .assistant-chat-form button:focus-visible,
 .assistant-chat-footer button:focus-visible {
-  outline: 2px solid #87e46c;
+  outline: 2px solid var(--adaptive-color, #87e46c);
   outline-offset: 2px;
 }
 

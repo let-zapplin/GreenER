@@ -1,3 +1,4 @@
+import "./ui.css";
 import { Link } from "react-router-dom";
 import logo from "../../assets/logo.png";
 import gustavoPhoto from "../../assets/pfps/gustavo.jpg";

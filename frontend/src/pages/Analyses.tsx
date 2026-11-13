@@ -1,3 +1,4 @@
+import "./ui.css";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { HistoryChart } from "../components/HistoryChart";

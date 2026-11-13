@@ -1,153 +1,123 @@
 import "./Home.css";
-import { useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import camaleaoVerde from "../../assets/camaleao-verde.png";
 import iconFolha from "../../assets/icones/icon-folha.png";
-import energiaIcon from "../../assets/icones/icon-dado.png";
-import evolucaoIcon from "../../assets/icones/icon-barras.png";
+import iconDado from "../../assets/icones/icon-dado.png";
+import iconBarras from "../../assets/icones/icon-barras.png";
 import { AssistantChat } from "../components/AssistantChat";
 
+type View = "impacto" | "servicos" | "evolucao";
+
+const VIEWS: { id: View; title: string; description: string; icon: string }[] =
+  [
+    {
+      id: "impacto",
+      title: "Impacto ambiental",
+      description: "Emissões, consumo energético e impacto geral.",
+      icon: iconFolha,
+    },
+    {
+      id: "servicos",
+      title: "Serviços",
+      description: "Quais serviços possuem maior impacto.",
+      icon: iconDado,
+    },
+    {
+      id: "evolucao",
+      title: "Evolução",
+      description: "Como seu impacto muda ao longo do tempo.",
+      icon: iconBarras,
+    },
+  ];
+
 export function Home() {
-  /* esses consts iniciais são os estados da transição*/
-  const [view, setView] = useState<string | null>(null);
-
+  const [view, setView] = useState<View | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [wavePosition, setWavePosition] = useState({ x: 50, y: 50 });
+  const waveTimer = useRef<number | undefined>(undefined);
 
-  const [wavePosition, setWavePosition] = useState({
-    x: 50,
-    y: 50,
-  });
+  // Evita setState depois de sair da página
+  useEffect(() => () => window.clearTimeout(waveTimer.current), []);
 
   function handleViewChange(
-    selectedView: string,
+    selected: View,
     event: MouseEvent<HTMLButtonElement>,
   ) {
-    const newView = view === selectedView ? null : selectedView;
+    const next = view === selected ? null : selected;
+    setView(next);
 
-    setView(newView);
+    if (!next) return;
 
-    if (newView) {
-      const button = event.currentTarget;
-      const rect = button.getBoundingClientRect();
-      /* Esse trecho é o que faz a transição ocorrer atráves dos botões visualmente, ele localiza o centro dos botões*/
-      const home = button.closest(".home");
+    const home = event.currentTarget.closest(".home");
+    if (!home) return;
 
-      // Segurança: se não encontrar a Home, interrompe
-      if (!home) return;
+    // A onda nasce no centro do botão clicado, em % da Home
+    const rect = event.currentTarget.getBoundingClientRect();
+    const homeRect = home.getBoundingClientRect();
 
-      // . Descobre posição e tamanho da Home
-      const homeRect = home.getBoundingClientRect();
+    setWavePosition({
+      x: ((rect.left + rect.width / 2 - homeRect.left) / homeRect.width) * 100,
+      y: ((rect.top + rect.height / 2 - homeRect.top) / homeRect.height) * 100,
+    });
 
-      // . Calcula o centro do botão dentro da Home
-      const x =
-        ((rect.left + rect.width / 2 - homeRect.left) / homeRect.width) * 100;
-
-      const y =
-        ((rect.top + rect.height / 2 - homeRect.top) / homeRect.height) * 100;
-
-      // 6. Guarda essa posição
-      setWavePosition({ x, y });
-
-      // 7. Inicia a animação
-      setIsTransitioning(true);
-
-      // 8. Encerra depois de 700ms
-      setTimeout(() => {
-        setIsTransitioning(false);
-      }, 700);
-    }
+    setIsTransitioning(true);
+    window.clearTimeout(waveTimer.current);
+    waveTimer.current = window.setTimeout(() => {
+      setIsTransitioning(false);
+    }, 700);
   }
 
   return (
-    /*esse trecho da primeira linha é o que muda automaticamente o estado conforme o click */
     <main className="home" data-view={view ?? "default"}>
       <div
         className={`adaptation-wave ${isTransitioning ? "active" : ""}`}
-        style={{
-          left: `${wavePosition.x}%`,
-          top: `${wavePosition.y}%`,
-        }}
+        style={{ left: `${wavePosition.x}%`, top: `${wavePosition.y}%` }}
         aria-hidden="true"
       />
 
-      <section className="home-hero">
-        <div className="home-content">
-          <span className="home-eyebrow">VISÃO ADAPTATIVA</span>
-
-          <h1>
-            O que você gostaria de
-            <span> analisar hoje?</span>
-          </h1>
-
-          <p className="home-description">
-            Escolha uma perspectiva para explorar os dados dos seus serviços e
-            entender melhor o impacto ambiental.
-          </p>
-        </div>
-
-        <div className="home-visual">
-          <div className="tech-pattern" aria-hidden="true">
-            <span className="tech-line tech-line-1" />
-            <span className="tech-line tech-line-2" />
-            <span className="tech-line tech-line-3" />
+      <div className="home-grid">
+        <header className="home-hero">
+          <div className="home-content">
+            <h1>O que você gostaria de analisar hoje?</h1>
+            <p className="home-description">
+              Escolha uma perspectiva para explorar os dados dos seus serviços e
+              entender melhor o impacto ambiental.
+            </p>
           </div>
 
-          <div className="chameleon-wrapper">
+          <div className="home-visual">
             <img
               src={camaleaoVerde}
               alt="Camaleão GreenER"
               className="home-chameleon"
             />
           </div>
+        </header>
+
+        <div className="home-chat">
+          <AssistantChat />
         </div>
-      </section>
 
-      <AssistantChat />
-
-      <section className="analysis-selector">
-        <button
-          className="analysis-option"
-          data-view="impacto"
-          onClick={(event) => handleViewChange("impacto", event)}
-        >
-          <div className="analysis-icon">
-            <img src={iconFolha} alt="" />
-          </div>
-          <div>
-            <strong>Impacto ambiental</strong>
-            <p>Analise emissões, consumo energético e impacto geral.</p>
-          </div>
-        </button>
-
-        <button
-          className="analysis-option"
-          data-view="servicos"
-          onClick={(event) => handleViewChange("servicos", event)}
-        >
-          <div className="analysis-icon">
-            <img src={energiaIcon} alt="" />
-          </div>
-
-          <div>
-            <strong>Serviços</strong>
-            <p>Descubra quais serviços possuem maior impacto.</p>
-          </div>
-        </button>
-
-        <button
-          className="analysis-option"
-          data-view="evolucao"
-          onClick={(event) => handleViewChange("evolucao", event)}
-        >
-          <div className="analysis-icon">
-            <img src={evolucaoIcon} alt="" />
-          </div>
-
-          <div>
-            <strong>Evolução</strong>
-            <p>Acompanhe como seu impacto muda ao longo do tempo.</p>
-          </div>
-        </button>
-      </section>
+        <section className="analysis-selector" aria-label="Perspectiva de análise">
+          {VIEWS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="analysis-option"
+              aria-pressed={view === item.id}
+              onClick={(event) => handleViewChange(item.id, event)}
+            >
+              <span className="analysis-icon">
+                <img src={item.icon} alt="" />
+              </span>
+              <span className="analysis-text">
+                <strong>{item.title}</strong>
+                <span>{item.description}</span>
+              </span>
+            </button>
+          ))}
+        </section>
+      </div>
     </main>
   );
 }
