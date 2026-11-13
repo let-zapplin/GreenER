@@ -116,26 +116,46 @@
   background: transparent;
   cursor: pointer;
 }
+.how-steps button:focus-visible {
+  outline: 2px solid #f4f8f5;
+  outline-offset: 6px;
+  border-radius: 8px;
+}
 .how-step-number {
+  position: relative;
+  isolation: isolate;
   display: grid;
   place-items: center;
   width: 62px;
-  height: 62px;
+  height: 56px;
   margin-bottom: 12px;
-  border: 2px solid #427577;
-  border-radius: 50%;
-  background: #123f42;
+  background: #427577;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   font-family: "IBM Plex Mono", monospace;
   font-size: 26px;
   font-weight: 700;
+  color: #f4f8f5;
+}
+.how-step-number::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 2px;
+  background: #123f42;
+  clip-path: inherit;
+}
+.how-steps button[aria-pressed="true"] .how-step-number::before {
+  background: #69d337;
 }
 .how-steps button[aria-pressed="true"] .how-step-number {
   background: #69d337;
-  border-color: #69d337;
   color: #062f32;
 }
-.how-steps button:hover .how-step-number {
-  border-color: #69d337;
+.how-steps button:not([aria-pressed="true"]):hover .how-step-number {
+  background: #69d337;
+}
+.how-steps button:not([aria-pressed="true"]):hover .how-step-number::before {
+  background: #123f42;
 }
 .how-steps strong {
   font-size: var(--font-size-small);
@@ -376,7 +396,6 @@
 .how-step-number {
   transition:
     background-color 200ms ease,
-    border-color 200ms ease,
     color 200ms ease,
     transform 200ms ease;
 }
@@ -438,14 +457,6 @@
     transform: none !important;
   }
 }
-.how-footer {
-  text-align: center;
-  padding: 48px 20px 30px;
-  font-size: var(--font-size-small);
-  line-height: 1.5;
-  font-weight: 500;
-  color: var(--text-muted);
-}
 @media (max-width: 1000px) {
   .how-page {
     padding: 48px 32px 0;
@@ -476,7 +487,7 @@
   }
   .how-step-number {
     width: 44px;
-    height: 44px;
+    height: 40px;
     font-size: 20px;
   }
   .how-steps strong {
