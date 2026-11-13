@@ -1,63 +1,55 @@
 import "./Home.css";
-import { useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import camaleaoVerde from "../../assets/camaleao-verde.png";
 import iconFolha from "../../assets/icones/icon-folha.png";
 import energiaIcon from "../../assets/icones/icon-dado.png";
 import evolucaoIcon from "../../assets/icones/icon-barras.png";
 
 export function Home() {
-  /* esses consts iniciais são os estados da transição*/
-  const [view, setView] = useState<string | null>(null);
-
+  const [hoveredView, setHoveredView] = useState<string | null>(null);
+  const [focusedView, setFocusedView] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-
   const [wavePosition, setWavePosition] = useState({
     x: 50,
     y: 50,
   });
+  const waveTimeoutRef = useRef<number | null>(null);
+  const view = focusedView ?? hoveredView;
 
-  function handleViewChange(
-    selectedView: string,
-    event: MouseEvent<HTMLButtonElement>,
-  ) {
-    const newView = view === selectedView ? null : selectedView;
+  useEffect(() => {
+    return () => {
+      if (waveTimeoutRef.current !== null) {
+        window.clearTimeout(waveTimeoutRef.current);
+      }
+    };
+  }, []);
 
-    setView(newView);
+  function handlePreview(element: HTMLAnchorElement) {
+    const rect = element.getBoundingClientRect();
+    const home = element.closest(".home");
 
-    if (newView) {
-      const button = event.currentTarget;
-      const rect = button.getBoundingClientRect();
-      /* Esse trecho é o que faz a transição ocorrer atráves dos botões visualmente, ele localiza o centro dos botões*/
-      const home = button.closest(".home");
+    if (!home) return;
 
-      // Segurança: se não encontrar a Home, interrompe
-      if (!home) return;
+    const homeRect = home.getBoundingClientRect();
+    const x =
+      ((rect.left + rect.width / 2 - homeRect.left) / homeRect.width) * 100;
+    const y =
+      ((rect.top + rect.height / 2 - homeRect.top) / homeRect.height) * 100;
 
-      // . Descobre posição e tamanho da Home
-      const homeRect = home.getBoundingClientRect();
+    setWavePosition({ x, y });
+    setIsTransitioning(true);
 
-      // . Calcula o centro do botão dentro da Home
-      const x =
-        ((rect.left + rect.width / 2 - homeRect.left) / homeRect.width) * 100;
-
-      const y =
-        ((rect.top + rect.height / 2 - homeRect.top) / homeRect.height) * 100;
-
-      // 6. Guarda essa posição
-      setWavePosition({ x, y });
-
-      // 7. Inicia a animação
-      setIsTransitioning(true);
-
-      // 8. Encerra depois de 700ms
-      setTimeout(() => {
-        setIsTransitioning(false);
-      }, 700);
+    if (waveTimeoutRef.current !== null) {
+      window.clearTimeout(waveTimeoutRef.current);
     }
+    waveTimeoutRef.current = window.setTimeout(() => {
+      setIsTransitioning(false);
+      waveTimeoutRef.current = null;
+    }, 700);
   }
 
   return (
-    /*esse trecho da primeira linha é o que muda automaticamente o estado conforme o click */
     <main className="home" data-view={view ?? "default"}>
       <div
         className={`adaptation-wave ${isTransitioning ? "active" : ""}`}
@@ -101,10 +93,20 @@ export function Home() {
       </section>
 
       <section className="analysis-selector">
-        <button
+        <Link
+          to="/analises"
           className="analysis-option"
           data-view="impacto"
-          onClick={(event) => handleViewChange("impacto", event)}
+          onPointerEnter={(event) => {
+            setHoveredView("impacto");
+            handlePreview(event.currentTarget);
+          }}
+          onPointerLeave={() => setHoveredView(null)}
+          onFocus={(event) => {
+            setFocusedView("impacto");
+            handlePreview(event.currentTarget);
+          }}
+          onBlur={() => setFocusedView(null)}
         >
           <div className="analysis-icon">
             <img src={iconFolha} alt="" />
@@ -113,12 +115,22 @@ export function Home() {
             <strong>Impacto ambiental</strong>
             <p>Analise emissões, consumo energético e impacto geral.</p>
           </div>
-        </button>
+        </Link>
 
-        <button
+        <Link
+          to="/monitoramento"
           className="analysis-option"
           data-view="servicos"
-          onClick={(event) => handleViewChange("servicos", event)}
+          onPointerEnter={(event) => {
+            setHoveredView("servicos");
+            handlePreview(event.currentTarget);
+          }}
+          onPointerLeave={() => setHoveredView(null)}
+          onFocus={(event) => {
+            setFocusedView("servicos");
+            handlePreview(event.currentTarget);
+          }}
+          onBlur={() => setFocusedView(null)}
         >
           <div className="analysis-icon">
             <img src={energiaIcon} alt="" />
@@ -128,25 +140,33 @@ export function Home() {
             <strong>Serviços</strong>
             <p>Descubra quais serviços possuem maior impacto.</p>
           </div>
-        </button>
+        </Link>
 
-        <button
+        <Link
+          to="/analises"
           className="analysis-option"
           data-view="evolucao"
-          onClick={(event) => handleViewChange("evolucao", event)}
+          onPointerEnter={(event) => {
+            setHoveredView("evolucao");
+            handlePreview(event.currentTarget);
+          }}
+          onPointerLeave={() => setHoveredView(null)}
+          onFocus={(event) => {
+            setFocusedView("evolucao");
+            handlePreview(event.currentTarget);
+          }}
+          onBlur={() => setFocusedView(null)}
         >
           <div className="analysis-icon">
             <img src={evolucaoIcon} alt="" />
           </div>
 
           <div>
-            <strong>Evolução</strong>
+            <strong>Evolução do impacto</strong>
             <p>Acompanhe como seu impacto muda ao longo do tempo.</p>
           </div>
-        </button>
+        </Link>
       </section>
-
-      <p className="view-debug">Perspectiva selecionada: {view ?? "nenhuma"}</p>
     </main>
   );
 }
