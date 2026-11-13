@@ -406,7 +406,7 @@
 
   .services-map-stage .services-map-shell {
    height: 360px;
-  min-height: 360px;
+  min-height: 300px;
   }
 
   .services-map-overlay {
