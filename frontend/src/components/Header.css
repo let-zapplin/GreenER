@@ -147,7 +147,6 @@ button.user-avatar[aria-expanded="true"] {
   color: #a7c993;
 }
 
-.notification,
 .user-avatar {
   width: 42px;
   height: 42px;
@@ -164,7 +163,6 @@ button.user-avatar[aria-expanded="true"] {
   color: #87e46c;
 }
 
-.notification svg,
 .user-avatar svg {
   display: block;
   width: 22px;
