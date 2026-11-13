@@ -254,9 +254,6 @@ export function About() {
           </section>
         </div>
       </main>
-      <footer className="about-footer">
-        GreenER. Mais tecnologia, menos impacto.
-      </footer>
     </div>
   );
 }

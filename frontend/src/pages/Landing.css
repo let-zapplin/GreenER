@@ -904,27 +904,6 @@
   font-weight: 500;
   margin-top: 18px;
 }
-.landing-footer {
-  padding-block: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  color: var(--text-muted);
-  font-size: var(--font-size-small);
-  line-height: 1.5;
-  font-weight: 500;
-}
-.landing-footer img {
-  display: block;
-  width: 76px;
-  height: auto;
-}
-.landing-footer span {
-  font-size: var(--font-size-small);
-  line-height: 1.5;
-  font-weight: 500;
-}
 .landing-screen section[id] {
   scroll-margin-top: 28px;
 }
@@ -1085,15 +1064,6 @@
   .landing-cta-note svg {
     flex-shrink: 0;
     margin-top: 2px;
-  }
-  .landing-footer {
-    flex-wrap: wrap;
-    justify-content: center;
-    text-align: center;
-    gap: 16px;
-  }
-  .landing-footer span {
-    width: 100%;
   }
   .landing-eyebrow {
     font-size: var(--font-size-small);
