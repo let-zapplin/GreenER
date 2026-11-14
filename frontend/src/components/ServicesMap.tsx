@@ -616,7 +616,7 @@ export function ServicesMap({
         pitch: 0,
         minZoom: 0.5,
         maxZoom: 19,
-
+        scrollZoom: false,
         maxPitch: 70,
         dragRotate: false,
         pitchWithRotate: false,

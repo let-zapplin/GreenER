@@ -253,20 +253,6 @@ export function Monitoring() {
 
               <h2 id="services-map-title">Onde seus serviços estão</h2>
             </div>
-
-            <div className="services-map-hud">
-              <span className="services-map-count">
-                {servicesWithLocation} de {services.length} localizados
-              </span>
-
-              <ServiceHud
-                services={services}
-                selectedServiceId={selection?.id}
-                onSelect={(serviceId) =>
-                  focusServiceOnMap(serviceId, { scroll: false })
-                }
-              />
-            </div>
           </div>
           <div className="monitoring-map-shell">
             <EnvironmentOverviewDock
@@ -310,6 +296,13 @@ export function Monitoring() {
                     <img src={logoMin} alt="" className="map-loading-logo" />
                   </div>
                 )}
+                <ServiceHud
+                  services={services}
+                  selectedServiceId={selection?.id}
+                  onSelect={(serviceId) =>
+                    focusServiceOnMap(serviceId, { scroll: false })
+                  }
+                />
 
                 {selectedService && (
                   <div className="services-map-overlay">
@@ -328,6 +321,19 @@ export function Monitoring() {
         </section>
       )}
 
+      <div className="services-map-hud">
+        <span className="services-map-count">
+          {servicesWithLocation} de {services.length} localizados
+        </span>
+
+        <ServiceHud
+          services={services}
+          selectedServiceId={selection?.id}
+          onSelect={(serviceId) =>
+            focusServiceOnMap(serviceId, { scroll: false })
+          }
+        />
+      </div>
       {services.length > 0 && (
         <>
           <div className="monitoring-list-heading">
