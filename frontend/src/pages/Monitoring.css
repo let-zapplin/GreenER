@@ -144,6 +144,40 @@
   font-weight: 500;
   color: var(--monitoring-muted);
 }
+.monitoring-visualization-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border: 1px solid rgba(88, 154, 144, 0.32);
+  border-radius: 999px;
+  background: #0c282b;
+}
+
+.monitoring-visualization-toggle button {
+  padding: 8px 13px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--monitoring-muted);
+  font: inherit;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.monitoring-visualization-toggle button[aria-pressed="true"] {
+  background: #1d6658;
+  color: #f4fff4;
+}
+
+.monitoring-visualization-toggle button:focus-visible {
+  outline: 2px solid var(--monitoring-accent);
+  outline-offset: 2px;
+}
 .services-map-loading {
   display: grid;
   place-items: center;
@@ -184,6 +218,12 @@
   background: var(--status-unavailable);
   box-shadow: 0 0 14px #fb923c22;
 }
+
+.service-indicator.error {
+  background: #e879f9;
+  box-shadow: 0 0 14px #e879f922;
+}
+
 .service-indicator.removed {
   background: var(--status-removed);
 }

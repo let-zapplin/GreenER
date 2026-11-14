@@ -44,114 +44,36 @@
   outline-offset: 2px;
 }
 
-.services-map-marker,
-.services-map-group-service,
 .services-map-legend-dot {
   --service-map-status: #74e866;
 }
 
-/* Ativo */
-
-.services-map-marker.active,
-.services-map-group-service.active,
 .services-map-legend-dot.active {
   --service-map-status: #74e866;
 }
 
-/* Novo */
-
-.services-map-marker.new,
-.services-map-group-service.new,
 .services-map-legend-dot.new {
   --service-map-status: #ffd84a;
 }
 
-/* Sem métricas */
-
-.services-map-marker.no_metrics,
-.services-map-group-service.no_metrics,
 .services-map-legend-dot.no_metrics {
   --service-map-status: #ffb84d;
 }
 
-/* Retornou */
-
-.services-map-marker.returned,
-.services-map-group-service.returned,
 .services-map-legend-dot.returned {
   --service-map-status: #59dbe8;
 }
 
-/* Indisponível */
-
-.services-map-marker.unavailable,
-.services-map-group-service.unavailable,
 .services-map-legend-dot.unavailable {
   --service-map-status: #ff5e57;
 }
 
-/* Removido */
+.services-map-legend-dot.error {
+  --service-map-status: #e879f9;
+}
 
-.services-map-marker.removed,
-.services-map-group-service.removed,
 .services-map-legend-dot.removed {
   --service-map-status: #b58cff;
-}
-
-.services-map-marker {
-  border-color:
-    color-mix(
-      in srgb,
-      var(--service-map-status) 60%,
-      transparent
-    );
-
-  background:
-    color-mix(
-      in srgb,
-      var(--service-map-status) 18%,
-      #082f31
-    );
-
-  box-shadow:
-    0 0 8px
-      color-mix(
-        in srgb,
-        var(--service-map-status) 55%,
-        transparent
-      ),
-    0 0 18px
-      color-mix(
-        in srgb,
-        var(--service-map-status) 28%,
-        transparent
-      );
-}
-
-.services-map-marker-dot {
-  background:
-    var(--service-map-status);
-
-  box-shadow:
-    0 0 6px
-      var(--service-map-status),
-    0 0 14px
-      var(--service-map-status);
-}
-
-.services-map-marker-count {
-  background:
-    var(--service-map-status);
-
-  color: #062f32;
-
-  box-shadow:
-    0 0 10px
-      color-mix(
-        in srgb,
-        var(--service-map-status) 55%,
-        transparent
-      );
 }
 
 .services-map-legend-dot {
@@ -165,113 +87,6 @@
         var(--service-map-status) 60%,
         transparent
       );
-}
-
-.services-map-group-popup {
-  display: grid;
-  gap: 10px;
-
-  min-width: 250px;
-}
-
-.services-map-group-popup > strong {
-  color: #f4ffff;
-
-  font-size: 13px;
-}
-
-.services-map-group-popup-place {
-  color: #9bb6af;
-
-  font-size: 11px;
-}
-
-.services-map-group-popup-list {
-  display: grid;
-  gap: 6px;
-
-  margin-top: 4px;
-}
-
-.services-map-group-service {
-  --service-map-status: #74e866;
-
-  display: grid;
-  grid-template-columns:
-    auto minmax(0, 1fr) auto;
-
-  align-items: center;
-  gap: 8px;
-
-  width: 100%;
-
-  padding: 9px 10px;
-
-  border: 1px solid
-    color-mix(
-      in srgb,
-      var(--service-map-status) 28%,
-      #315657
-    );
-
-  border-radius: 8px;
-
-  background:
-    color-mix(
-      in srgb,
-      var(--service-map-status) 7%,
-      #0d3032
-    );
-
-  color: #fff;
-
-  cursor: pointer;
-}
-
-.services-map-group-service:hover {
-  border-color:
-    var(--service-map-status);
-
-  background:
-    color-mix(
-      in srgb,
-      var(--service-map-status) 14%,
-      #0d3032
-    );
-}
-
-.services-map-group-service-dot {
-  width: 7px;
-  height: 7px;
-
-  border-radius: 50%;
-
-  background:
-    var(--service-map-status);
-
-  box-shadow:
-    0 0 8px
-      var(--service-map-status);
-}
-
-.services-map-group-service-name {
-  overflow: hidden;
-
-  font-size: 11px;
-  font-weight: 600;
-
-  text-align: left;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.services-map-group-service-status {
-  color:
-    var(--service-map-status);
-
-  font-size: 9px;
-  font-weight: 700;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -294,94 +109,6 @@
 
 .services-map-canvas .maplibregl-ctrl-attrib a {
   color: #a7c993;
-}
-
-.services-map-marker {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  filter: drop-shadow(0 2px 5px #0009);
-  touch-action: manipulation;
-}
-
-.services-map-marker:focus-visible {
-  outline: 2px solid #f4f8f5;
-  outline-offset: 2px;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .services-map-marker:hover .services-map-marker-dot,
-  .services-map-marker:focus-visible .services-map-marker-dot {
-    transform: scale(1.2);
-  }
-}
-
-.services-map-marker-dot {
-  width: 14px;
-  height: 14px;
-  border: 2px solid #0c282b;
-  border-radius: 50%;
-  background: var(--status-active, #87e46c);
-  transition: transform 160ms ease;
-}
-
-.services-map-marker.active .services-map-marker-dot {
-  background: var(--status-active, #87e46c);
-  box-shadow: 0 0 0 4px #87e46c26;
-}
-
-.services-map-marker.new .services-map-marker-dot {
-  background: var(--status-new, #e5e65d);
-  box-shadow: 0 0 0 4px #e5e65d26;
-}
-
-.services-map-marker.returned .services-map-marker-dot {
-  background: var(--status-returned, #7dd3fc);
-  box-shadow: 0 0 0 4px #7dd3fc26;
-}
-
-.services-map-marker.no_metrics .services-map-marker-dot {
-  background: var(--status-no-metrics, #facc15);
-  box-shadow: 0 0 0 4px #facc1526;
-}
-
-.services-map-marker.unavailable .services-map-marker-dot {
-  background: var(--status-unavailable, #ee1e41);
-  box-shadow: 0 0 0 4px #ee1e4126;
-}
-
-.services-map-marker.removed .services-map-marker-dot {
-  background: var(--status-removed, #323261);
-  box-shadow: 0 0 0 4px #32326140;
-}
-
-.services-map-marker-count {
-  position: absolute;
-  top: -6px;
-  right: -8px;
-  display: grid;
-  place-items: center;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  border: 1px solid #0c282b;
-  border-radius: 999px;
-  background: #f4f8f5;
-  color: #0c282b;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
 }
 
 .services-map-empty {
@@ -451,6 +178,10 @@
 
 .services-map-legend-dot.unavailable {
   background: var(--status-unavailable, #ee1e41);
+}
+
+.services-map-legend-dot.error {
+  background: #e879f9;
 }
 
 .services-map-legend-dot.removed {

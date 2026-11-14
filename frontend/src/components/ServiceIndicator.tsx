@@ -8,8 +8,9 @@ const statusLabels: Record<ServiceStatus, string> = {
   returned: "Serviço retornou",
   no_metrics: "Serviço ativo sem métricas",
   unavailable: "Serviço indisponível",
+  error: "Erro na coleta",
   removed: "Serviço removido do catálogo",
-  };
+};
 
 type ServiceIndicatorProps = {
   service: MonitoredService;

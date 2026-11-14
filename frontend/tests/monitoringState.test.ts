@@ -42,6 +42,18 @@ test("serviço sem métricas permanece sinalizado como no_metrics", () => {
   assert.equal(result[0].status, "no_metrics");
 });
 
+test("erro de coleta permanece sinalizado até uma atualização bem-sucedida", () => {
+  const errored = { ...service, status: "error" as const };
+  const firstLoad = reconcileServices([], [errored], false, 10_000);
+  assert.equal(firstLoad[0].status, "error");
+
+  const refreshed = reconcileServices(firstLoad, [errored], true, 11_000);
+  assert.equal(refreshed[0].status, "error");
+
+  const recovered = reconcileServices(refreshed, [service], true, 12_000);
+  assert.equal(recovered[0].status, "active");
+});
+
 test("serviço no_metrics volta para active sem passar por returned", () => {
   const previous: MonitoredService = {
     ...service,
