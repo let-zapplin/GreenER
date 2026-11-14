@@ -1,0 +1,63 @@
+.region-energy-chart {
+  min-height: 480px;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse at 70% 0%, rgba(35, 101, 83, 0.22), transparent 55%),
+    #0d3032;
+}
+
+.region-energy-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.region-energy-chart-header h3 {
+  margin: 0;
+  color: #f4ffff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.region-energy-chart-header p {
+  margin: 6px 0 0;
+  color: var(--monitoring-muted, #a7c993);
+  font-size: var(--font-size-small, 13px);
+}
+
+.region-energy-chart-header > span {
+  color: #87e46c;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+}
+
+.region-energy-chart-plot {
+  width: 100%;
+  height: 380px;
+}
+
+.region-energy-chart-state,
+.region-energy-chart-warning {
+  margin: 0;
+  color: var(--monitoring-muted, #a7c993);
+  font-size: var(--font-size-small, 13px);
+  line-height: 1.6;
+}
+
+.region-energy-chart-warning {
+  margin: -8px 0 12px;
+  color: #f5dc78;
+}
+
+@media (max-width: 700px) {
+  .region-energy-chart {
+    min-height: 400px;
+    padding: 18px 12px;
+  }
+
+  .region-energy-chart-plot {
+    height: 320px;
+  }
+}

@@ -11,6 +11,7 @@ import { useDashboardSummary } from "../hooks/useDashboardSummary";
 import { useServiceIndicators } from "../hooks/useServiceIndicators";
 import { MapServiceDetailsPanel } from "../components/MapServiceDetailsPanel";
 import { EnvironmentOverviewDock } from "../components/EnvironmentOverviewDock";
+import { RegionEnergyChart } from "../components/RegionEnergyChart";
 
 const ServicesMap = lazy(() =>
   import("../components/ServicesMap").then((module) => ({
@@ -34,12 +35,12 @@ export function Monitoring() {
     error: indicatorsError,
   } = useServiceIndicators();
 
-  const [selection, setSelection] = useState<{
-    id: string;
-    key: number;
-    scroll: boolean;
-  } | null>(null);
-
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
+    null,
+  );
+  const [selectionKey, setSelectionKey] = useState(0);
+  const [scrollOnSelection, setScrollOnSelection] = useState(true);
+  const [visualization, setVisualization] = useState<"map" | "region">("map");
   const [mapFocus, setMapFocus] = useState<MapFocusRequest | null>(null);
 
   const [mapLoading, setMapLoading] = useState(true);
@@ -48,9 +49,17 @@ export function Monitoring() {
 
   const { services, lastUpdated } = snapshot;
 
-  const selectedService = selection
-    ? (services.find((service) => service.id === selection.id) ?? null)
-    : null;
+  const selectedService =
+    services.find((service) => service.id === selectedServiceId) ?? null;
+
+  const selection =
+    selectedServiceId === null
+      ? null
+      : {
+          id: selectedServiceId,
+          key: selectionKey,
+          scroll: scrollOnSelection,
+        };
 
   const selectedIndicator = selectedService
     ? serviceIndicators?.services.find(
@@ -77,10 +86,20 @@ export function Monitoring() {
     focusKeyRef.current += 1;
 
     const key = focusKeyRef.current;
-    setSelection({ id, key, scroll: options?.scroll ?? true });
+    setSelectedServiceId(id);
+    setSelectionKey(key);
+    setScrollOnSelection(options?.scroll ?? true);
 
     const { latitude, longitude, city, region, country } = service.location;
-    if (latitude === null || longitude === null) return;
+    if (
+      latitude === null ||
+      longitude === null ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude)
+    ) {
+      setMapFocus(null);
+      return;
+    }
 
     setMapFocus({
       key,
@@ -94,12 +113,12 @@ export function Monitoring() {
   }
 
   function closeServiceFocus() {
-    setSelection(null);
+    setSelectedServiceId(null);
     setMapFocus(null);
   }
 
   useEffect(() => {
-    if (!selection) return;
+    if (selectedServiceId === null) return;
 
     function deselectOutside(event: PointerEvent) {
       const target = event.target;
@@ -110,18 +129,18 @@ export function Monitoring() {
 
       if (
         target.closest(
-          ".service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell, .map-loading-overlay",
+          ".service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell, .map-loading-overlay, .monitoring-visualization-toggle, .region-energy-chart",
         )
       ) {
         return;
       }
 
-      setSelection(null);
+      setSelectedServiceId(null);
     }
 
     function deselectOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setSelection(null);
+        setSelectedServiceId(null);
       }
     }
 
@@ -134,7 +153,7 @@ export function Monitoring() {
 
       document.removeEventListener("keydown", deselectOnEscape);
     };
-  }, [selection]);
+  }, [selectedServiceId]);
 
   return (
     <main className="monitoring-page">
@@ -251,7 +270,11 @@ export function Monitoring() {
                 LOCALIZAÇÃO DOS SERVIÇOS
               </p>
 
-              <h2 id="services-map-title">Onde seus serviços estão</h2>
+              <h2 id="services-map-title">
+                {visualization === "map"
+                  ? "Onde seus serviços estão"
+                  : "Consumo energético por região"}
+              </h2>
             </div>
 
             <div className="services-map-hud">
@@ -261,13 +284,35 @@ export function Monitoring() {
 
               <ServiceHud
                 services={services}
-                selectedServiceId={selection?.id}
+                selectedServiceId={selectedServiceId ?? undefined}
                 onSelect={(serviceId) =>
                   focusServiceOnMap(serviceId, { scroll: false })
                 }
               />
             </div>
           </div>
+
+          <div
+            className="monitoring-visualization-toggle"
+            role="group"
+            aria-label="Visualização do ambiente"
+          >
+            <button
+              type="button"
+              aria-pressed={visualization === "map"}
+              onClick={() => setVisualization("map")}
+            >
+              Mapa
+            </button>
+            <button
+              type="button"
+              aria-pressed={visualization === "region"}
+              onClick={() => setVisualization("region")}
+            >
+              Consumo por região
+            </button>
+          </div>
+
           <div className="monitoring-map-shell">
             <EnvironmentOverviewDock
               energyKwh={dashboard?.summary.energyKwh ?? null}
@@ -283,47 +328,57 @@ export function Monitoring() {
               loading={dashboardLoading}
               error={dashboardError}
             />
-            <div
-              className={`services-map-workspace ${
-                selectedService ? "is-focused" : ""
-              }`}
-            >
-              <div className="services-map-stage">
-                <Suspense fallback={null}>
-                  <ServicesMap
-                    services={services}
-                    onLoadingChange={setMapLoading}
-                    focus={mapFocus}
-                    onSelectService={(serviceId) =>
-                      focusServiceOnMap(serviceId, { scroll: false })
-                    }
-                    onClearSelection={closeServiceFocus}
-                  />
-                </Suspense>
-
-                {mapLoading && (
-                  <div
-                    className="map-loading-overlay"
-                    role="status"
-                    aria-label="Carregando mapa"
-                  >
-                    <img src={logoMin} alt="" className="map-loading-logo" />
-                  </div>
-                )}
-
-                {selectedService && (
-                  <div className="services-map-overlay">
-                    <MapServiceDetailsPanel
-                      service={selectedService}
-                      indicator={selectedIndicator}
-                      loading={indicatorsLoading}
-                      error={indicatorsError}
-                      onClose={closeServiceFocus}
+            {visualization === "map" ? (
+              <div
+                className={`services-map-workspace ${
+                  selectedService ? "is-focused" : ""
+                }`}
+              >
+                <div className="services-map-stage">
+                  <Suspense fallback={null}>
+                    <ServicesMap
+                      services={services}
+                      selectedServiceId={selectedServiceId}
+                      onLoadingChange={setMapLoading}
+                      focus={mapFocus}
+                      onSelectService={(serviceId) =>
+                        focusServiceOnMap(serviceId, { scroll: false })
+                      }
+                      onClearSelection={closeServiceFocus}
                     />
-                  </div>
-                )}
+                  </Suspense>
+
+                  {mapLoading && (
+                    <div
+                      className="map-loading-overlay"
+                      role="status"
+                      aria-label="Carregando mapa"
+                    >
+                      <img src={logoMin} alt="" className="map-loading-logo" />
+                    </div>
+                  )}
+
+                  {selectedService && (
+                    <div className="services-map-overlay">
+                      <MapServiceDetailsPanel
+                        service={selectedService}
+                        indicator={selectedIndicator}
+                        loading={indicatorsLoading}
+                        error={indicatorsError}
+                        onClose={closeServiceFocus}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <RegionEnergyChart
+                indicators={serviceIndicators?.services ?? []}
+                services={services}
+                loading={indicatorsLoading}
+                error={indicatorsError}
+              />
+            )}
           </div>
         </section>
       )}
