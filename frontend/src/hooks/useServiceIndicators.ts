@@ -31,6 +31,9 @@ export function useServiceIndicators(period?: AnalysisPeriodWindow) {
     let requestInFlight = false;
     let controller: AbortController | null = null;
 
+    setLoading(true);
+    setError(null);
+
     async function loadIndicators(authToken: string) {
       if (disposed || requestInFlight) return;
 
