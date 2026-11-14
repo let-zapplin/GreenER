@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
-import type { Map as MapLibreMap, Marker, Popup } from "maplibre-gl";
+import type {
+  GeoJSONSource,
+  Map as MapLibreMap,
+  MapLayerMouseEvent,
+  Popup,
+} from "maplibre-gl";
 import "maplibre-gl-original/dist/maplibre-gl.css";
 import type { MonitoredService, ServiceStatus } from "../types/service";
 import "./ServicesMap.css";
 import { isSameMapTarget, type MapCameraTarget } from "../lib/mapFocus";
+import {
+  buildServiceFeatureCollection,
+  type ServicePointFeatureCollection,
+} from "../lib/serviceGeoJson";
 
 const WORLD_BOUNDS: [[number, number], [number, number]] = [
   [-180, -85],
@@ -20,6 +29,115 @@ const ORBIT_DEGREES_PER_MS = 0.006;
 
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
 const BUILDINGS_LAYER_ID = "services-3d-buildings";
+const SERVICES_SOURCE_ID = "greener-services";
+const CLUSTERS_LAYER_ID = "greener-service-clusters";
+const CLUSTER_COUNTS_LAYER_ID = "greener-service-cluster-counts";
+const SERVICE_POINTS_LAYER_ID = "greener-service-points";
+
+function addServiceLayers(
+  map: MapLibreMap,
+  data: ServicePointFeatureCollection,
+) {
+  if (!map.getSource(SERVICES_SOURCE_ID)) {
+    map.addSource(SERVICES_SOURCE_ID, {
+      type: "geojson",
+      data,
+      cluster: true,
+      clusterRadius: 48,
+      clusterMaxZoom: 20,
+    });
+  }
+
+  if (!map.getLayer(CLUSTERS_LAYER_ID)) {
+    map.addLayer({
+      id: CLUSTERS_LAYER_ID,
+      type: "circle",
+      source: SERVICES_SOURCE_ID,
+      filter: ["has", "point_count"],
+      paint: {
+        "circle-color": "#1d6658",
+        "circle-radius": [
+          "step",
+          ["get", "point_count"],
+          18,
+          10,
+          22,
+          50,
+          28,
+          100,
+          34,
+        ],
+        "circle-stroke-color": "#a8ef9c",
+        "circle-stroke-width": 2,
+      },
+    });
+  }
+
+  if (!map.getLayer(CLUSTER_COUNTS_LAYER_ID)) {
+    map.addLayer({
+      id: CLUSTER_COUNTS_LAYER_ID,
+      type: "symbol",
+      source: SERVICES_SOURCE_ID,
+      filter: ["has", "point_count"],
+      layout: {
+        "text-field": ["get", "point_count_abbreviated"],
+        "text-font": ["Open Sans Semibold"],
+        "text-size": 12,
+      },
+      paint: {
+        "text-color": "#f4fff4",
+      },
+    });
+  }
+
+  if (!map.getLayer(SERVICE_POINTS_LAYER_ID)) {
+    map.addLayer({
+      id: SERVICE_POINTS_LAYER_ID,
+      type: "circle",
+      source: SERVICES_SOURCE_ID,
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-color": [
+          "match",
+          ["get", "status"],
+          "active",
+          "#74e866",
+          "new",
+          "#ffd84a",
+          "returned",
+          "#59dbe8",
+          "no_metrics",
+          "#ffb84d",
+          "unavailable",
+          "#ff5e57",
+          "error",
+          "#e879f9",
+          "removed",
+          "#b58cff",
+          "#74e866",
+        ],
+        "circle-radius": [
+          "case",
+          ["==", ["get", "selected"], true],
+          9,
+          7,
+        ],
+        "circle-stroke-color": [
+          "case",
+          ["==", ["get", "selected"], true],
+          "#ffffff",
+          "#0c282b",
+        ],
+        "circle-stroke-width": [
+          "case",
+          ["==", ["get", "selected"], true],
+          3,
+          2,
+        ],
+      },
+    });
+  }
+}
 
 function addBuildingsLayer(map: MapLibreMap) {
   if (map.getLayer(BUILDINGS_LAYER_ID) || !map.getSource("openmaptiles")) {
@@ -116,6 +234,7 @@ function buildPopupContent(title: string, subtitle: string) {
 
 const statusPriority: ServiceStatus[] = [
   "unavailable",
+  "error",
   "removed",
   "no_metrics",
   "new",
@@ -129,121 +248,9 @@ const statusLabels: Record<ServiceStatus, string> = {
   returned: "Retornou",
   no_metrics: "Sem métricas",
   unavailable: "Indisponível",
+  error: "Erro na coleta",
   removed: "Removido",
 };
-
-type ServiceGroup = {
-  key: string;
-  longitude: number;
-  latitude: number;
-  status: ServiceStatus;
-  services: MonitoredService[];
-};
-
-function buildGroupPopupContent(
-  group: ServiceGroup,
-  onSelect: (service: MonitoredService) => void,
-) {
-  const content = document.createElement("div");
-
-  content.className = "services-map-group-popup";
-
-  const heading = document.createElement("strong");
-
-  heading.textContent = `${group.services.length} serviços neste local`;
-
-  const place = document.createElement("span");
-
-  place.className = "services-map-group-popup-place";
-
-  place.textContent = formatPlace(group.services[0].location);
-
-  const list = document.createElement("div");
-
-  list.className = "services-map-group-popup-list";
-
-  for (const service of group.services) {
-    const button = document.createElement("button");
-
-    button.type = "button";
-
-    button.className = `services-map-group-service ${service.status}`;
-
-    button.setAttribute(
-      "aria-label",
-      `Selecionar ${service.name}. ${statusLabels[service.status]}.`,
-    );
-
-    const dot = document.createElement("span");
-
-    dot.className = "services-map-group-service-dot";
-
-    dot.setAttribute("aria-hidden", "true");
-
-    const name = document.createElement("span");
-
-    name.className = "services-map-group-service-name";
-
-    name.textContent = service.name;
-
-    const status = document.createElement("span");
-
-    status.className = "services-map-group-service-status";
-
-    status.textContent = statusLabels[service.status];
-
-    button.append(dot, name, status);
-
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-
-      onSelect(service);
-    });
-
-    list.append(button);
-  }
-
-  content.append(heading, place, list);
-
-  return content;
-}
-
-function groupServices(services: MonitoredService[]) {
-  const grouped = new Map<string, ServiceGroup>();
-  let withoutLocation = 0;
-
-  for (const service of services) {
-    const { latitude, longitude } = service.location;
-    if (latitude === null || longitude === null) {
-      withoutLocation += 1;
-      continue;
-    }
-
-    const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
-    const existing = grouped.get(key);
-    if (existing) {
-      existing.services.push(service);
-    } else {
-      grouped.set(key, {
-        key,
-        latitude,
-        longitude,
-        status: service.status,
-        services: [service],
-      });
-    }
-  }
-
-  const groups = [...grouped.values()].map((group) => ({
-    ...group,
-    status:
-      statusPriority.find((status) =>
-        group.services.some((service) => service.status === status),
-      ) ?? group.services[0].status,
-  }));
-
-  return { groups, withoutLocation };
-}
 
 export type MapFocusRequest = {
   key: number;
@@ -257,6 +264,7 @@ export type MapFocusRequest = {
 
 type ServicesMapProps = {
   services: MonitoredService[];
+  selectedServiceId?: string | null;
   focus?: MapFocusRequest | null;
   onSelectService?: (serviceId: string) => void;
   onClearSelection?: () => void;
@@ -265,6 +273,7 @@ type ServicesMapProps = {
 
 export function ServicesMap({
   services,
+  selectedServiceId = null,
   focus,
   onSelectService,
   onClearSelection,
@@ -316,24 +325,11 @@ export function ServicesMap({
     onSelectServiceRef.current = onSelectService;
   }, [onSelectService]);
 
-  const { groups, withoutLocation } = useMemo(
-    () => groupServices(services),
-    [services],
+  const featureCollection = useMemo(
+    () => buildServiceFeatureCollection(services, selectedServiceId),
+    [services, selectedServiceId],
   );
-
-  const markerKey = useMemo(
-    () =>
-      groups
-        .map(
-          (group) =>
-            `${group.key}:${group.status}:${group.services
-              .map((service) => `${service.id}:${service.status}`)
-              .sort()
-              .join(",")}`,
-        )
-        .join("|"),
-    [groups],
-  );
+  const withoutLocation = services.length - featureCollection.features.length;
 
   const legendStatuses = statusPriority.filter((status) =>
     services.some((service) => service.status === status),
@@ -522,61 +518,9 @@ export function ServicesMap({
     openPopup(map, longitude, latitude, title, subtitle);
   };
 
-  const selectServiceFromMap = (
-    map: MapLibreMap,
-    service: MonitoredService,
-  ) => {
+  const selectServiceFromMap = (serviceId: string) => {
     popupRef.current?.remove();
-
-    const callback = onSelectServiceRef.current;
-
-    if (callback) {
-      callback(service.id);
-      return;
-    }
-
-    const { latitude, longitude, city } = service.location;
-
-    if (latitude === null || longitude === null) {
-      return;
-    }
-
-    focusPoint(
-      map,
-      longitude,
-      latitude,
-      city,
-      service.name,
-      formatPlace(service.location),
-    );
-  };
-
-  const openServiceGroupPopup = (map: MapLibreMap, group: ServiceGroup) => {
-    const popup =
-      popupRef.current ??
-      new maplibregl.Popup({
-        closeButton: true,
-        closeOnClick: true,
-        focusAfterOpen: false,
-        offset: 18,
-        maxWidth: "320px",
-        className: "services-map-popup",
-      });
-
-    popupRef.current = popup;
-
-    popup.setMaxWidth("320px");
-
-    popup
-      .setLngLat([group.longitude, group.latitude])
-      .setDOMContent(
-        buildGroupPopupContent(group, (service) => {
-          popup.remove();
-
-          selectServiceFromMap(map, service);
-        }),
-      )
-      .addTo(map);
+    onSelectServiceRef.current?.(serviceId);
   };
 
   const showOverview = () => {
@@ -632,20 +576,80 @@ export function ServicesMap({
 
     mapRef.current = map;
     map.fitBounds(WORLD_BOUNDS, { animate: false, padding: 0 });
-    setReady(true);
 
     const applyMapLayers = () => {
       addBuildingsLayer(map);
       hideBoundaries(map);
       hideRoadNames(map);
+      addServiceLayers(map, featureCollection);
     };
 
     const onStyleLoad = () => applyMapLayers();
+
+    const onClusterClick = (event: MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      const geometry = feature?.geometry;
+      const clusterId = Number(feature?.properties?.cluster_id);
+      const source = map.getSource(SERVICES_SOURCE_ID) as
+        | GeoJSONSource
+        | undefined;
+
+      if (
+        !source ||
+        !Number.isInteger(clusterId) ||
+        !geometry ||
+        geometry.type !== "Point"
+      ) {
+        return;
+      }
+
+      const [longitude, latitude] = geometry.coordinates;
+
+      void source
+        .getClusterExpansionZoom(clusterId)
+        .then((zoom) => {
+          if (!Number.isFinite(zoom)) return;
+
+          map.easeTo({
+            center: [longitude, latitude],
+            zoom,
+          });
+        })
+        .catch((error: unknown) => {
+          console.error(
+            "Não foi possível expandir o agrupamento do mapa:",
+            error,
+          );
+        });
+    };
+
+    const onServiceClick = (event: MapLayerMouseEvent) => {
+      const serviceId = event.features?.[0]?.properties?.serviceId;
+      if (typeof serviceId === "string") {
+        selectServiceFromMap(serviceId);
+      }
+    };
+
+    const onLayerMouseEnter = () => {
+      map.getCanvas().style.cursor = "pointer";
+    };
+
+    const onLayerMouseLeave = () => {
+      map.getCanvas().style.cursor = "";
+    };
 
     const onLoad = () => {
       loadedRef.current = true;
       onLoadingChange?.(false);
       applyMapLayers();
+      setReady(true);
+
+      map.on("click", CLUSTERS_LAYER_ID, onClusterClick);
+      map.on("click", SERVICE_POINTS_LAYER_ID, onServiceClick);
+      map.on("mouseenter", CLUSTERS_LAYER_ID, onLayerMouseEnter);
+      map.on("mouseleave", CLUSTERS_LAYER_ID, onLayerMouseLeave);
+      map.on("mouseenter", SERVICE_POINTS_LAYER_ID, onLayerMouseEnter);
+      map.on("mouseleave", SERVICE_POINTS_LAYER_ID, onLayerMouseLeave);
 
       const pending = pendingFocusRef.current;
       if (pending) {
@@ -673,12 +677,27 @@ export function ServicesMap({
       popupRef.current = null;
       map.off("style.load", onStyleLoad);
       map.off("load", onLoad);
+      map.off("click", CLUSTERS_LAYER_ID, onClusterClick);
+      map.off("click", SERVICE_POINTS_LAYER_ID, onServiceClick);
+      map.off("mouseenter", CLUSTERS_LAYER_ID, onLayerMouseEnter);
+      map.off("mouseleave", CLUSTERS_LAYER_ID, onLayerMouseLeave);
+      map.off("mouseenter", SERVICE_POINTS_LAYER_ID, onLayerMouseEnter);
+      map.off("mouseleave", SERVICE_POINTS_LAYER_ID, onLayerMouseLeave);
       map.remove();
       mapRef.current = null;
       loadedRef.current = false;
       setReady(false);
     };
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+
+    const source = mapRef.current?.getSource(SERVICES_SOURCE_ID) as
+      | GeoJSONSource
+      | undefined;
+    source?.setData(featureCollection);
+  }, [featureCollection, ready]);
 
   useEffect(() => {
     if (!focus) return;
@@ -728,57 +747,6 @@ export function ServicesMap({
     };
   }, []);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
-
-    const markers: Marker[] = groups.map((group) => {
-      const names = group.services.map((service) => service.name).join(", ");
-      const { city, country } = group.services[0].location;
-      const place = [city, country].filter(Boolean).join(", ");
-
-      const element = document.createElement("button");
-      element.type = "button";
-      element.className = `services-map-marker ${group.status}`;
-      element.setAttribute(
-        "aria-label",
-        `${names} — ${place}. Aproximar no mapa.`,
-      );
-      element.title = names;
-
-      const dot = document.createElement("span");
-      dot.className = "services-map-marker-dot";
-      element.append(dot);
-
-      if (group.services.length > 1) {
-        const count = document.createElement("span");
-        count.className = "services-map-marker-count";
-        count.textContent = String(group.services.length);
-        element.append(count);
-      }
-
-      element.addEventListener("click", (event) => {
-        event.stopPropagation();
-
-        if (group.services.length === 1) {
-          selectServiceFromMap(map, group.services[0]);
-
-          return;
-        }
-
-        openServiceGroupPopup(map, group);
-      });
-
-      return new maplibregl.Marker({ element, anchor: "center" })
-        .setLngLat([group.longitude, group.latitude])
-        .addTo(map);
-    });
-
-    return () => {
-      markers.forEach((marker) => marker.remove());
-    };
-  }, [markerKey, ready]);
-
   if (failed) {
     return (
       <div className="services-map-notice" role="status">
@@ -819,7 +787,7 @@ export function ServicesMap({
           </svg>
           Visão geral
         </button>
-        {ready && groups.length === 0 && (
+        {ready && featureCollection.features.length === 0 && (
           <p className="services-map-empty">
             Nenhum serviço com coordenadas cadastradas.
           </p>
