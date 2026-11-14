@@ -94,14 +94,69 @@ describe("IndicadoresService.getIndicators", () => {
     );
   });
 
+  it("consolida recursos e decompõe energia usando a duração de cada amostra", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([
+        createCollection({
+          cpu_percent: 20,
+          memory_gb: 1,
+          disk_gb: 10,
+          network_gb: 1.2,
+          collection_interval_seconds: 10,
+          renewable_share_percent: 60,
+        }),
+        createCollection({
+          id_collection: "102",
+          cpu_percent: 80,
+          memory_gb: 3,
+          disk_gb: 30,
+          network_gb: 2.8,
+          collection_interval_seconds: 30,
+          renewable_share_percent: 65,
+        }),
+      ]),
+    ]);
+
+    const result = await service.getIndicators(start, end);
+    const indicator = result.services[0];
+
+    expect(indicator.resourceSummary).toEqual({
+      cpu: { averagePercent: 65, peakPercent: 80 },
+      memory: { averageGb: 2, peakGb: 3 },
+      disk: { averageGb: 20, peakGb: 30 },
+      network: { totalGb: 4 },
+    });
+    expect(indicator.energyBreakdown.cpuKwh).toBeCloseTo(
+      2600 / 3_600_000,
+    );
+    expect(indicator.energyBreakdown.memoryKwh).toBeCloseTo(
+      37.5 / 3_600_000,
+    );
+    expect(indicator.energyBreakdown.diskKwh).toBeCloseTo(
+      10 / 3_600_000,
+    );
+    expect(indicator.energyBreakdown.networkKwh).toBeCloseTo(
+      1.92 / 3_600_000,
+    );
+    expect(
+      Object.values(indicator.energyBreakdown).reduce(
+        (total, component) => total + component,
+        0,
+      ),
+    ).toBeCloseTo(indicator.periodTotals.energyKwh);
+    expect(indicator.regionalContext).toEqual({
+      regionCode: "BR-SP",
+      carbonIntensityGco2ePerKwh: 200,
+      renewableSharePercent: 65,
+    });
+  });
+
   // Métricas existem, mas duração nula impede calcular energia e emissão; não há fallback para o job.
   it("registra amostras sem intervalo válido como lacunas", async () => {
     findCollectionsForPeriod.mockResolvedValue([
       createServiceData([
         createCollection({
           collection_interval_seconds: null,
-          carbon_intensity_id: null,
-          carbon_intensity_gco2e_per_kwh: null,
         }),
       ]),
     ]);
@@ -122,7 +177,26 @@ describe("IndicadoresService.getIndicators", () => {
     expect(sample?.energyKwh).toBeNull();
     expect(sample?.emissionsGco2e).toBeNull();
     expect(sample?.gapReason).toBe("collection_interval_unavailable");
+    expect(result.services[0].resourceSummary).toEqual({
+      cpu: { averagePercent: null, peakPercent: 50 },
+      memory: { averageGb: 2, peakGb: 2 },
+      disk: { averageGb: 10, peakGb: 10 },
+      network: { totalGb: 5 },
+    });
+    expect(result.services[0].energyBreakdown).toEqual({
+      cpuKwh: null,
+      memoryKwh: null,
+      diskKwh: null,
+      networkKwh: null,
+    });
+    expect(result.services[0].regionalContext).toEqual({
+      regionCode: "BR-SP",
+      carbonIntensityGco2ePerKwh: 200,
+      renewableSharePercent: null,
+    });
     expect(totals.validMetricCount).toBe(0);
+    expect(totals.energyKwh).toBe(0);
+    expect(totals.isPartial).toBe(true);
     expect(totals.gaps).toEqual([
       expect.objectContaining({
         collectionId: "101",
