@@ -105,10 +105,10 @@ export function Header() {
           </NavLink>
 
           <NavLink to="/analises">ANÁLISES</NavLink>
+          
+          <NavLink to="/funcionamento">FUNCIONAMENTO</NavLink>
 
           <NavLink to="/sobre">SOBRE</NavLink>
-
-          <NavLink to="/funcionamento">FUNCIONAMENTO</NavLink>
         </nav>
 
         {isAuthenticated ? (
