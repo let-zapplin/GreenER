@@ -171,6 +171,10 @@
   --service-status-color: #ff5e57;
 }
 
+.service-hud-item[data-status="error"] {
+  --service-status-color: #e879f9;
+}
+
 .service-hud-item[data-status="removed"] {
   --service-status-color: #b58cff;
 }

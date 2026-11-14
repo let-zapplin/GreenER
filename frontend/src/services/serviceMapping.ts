@@ -11,6 +11,10 @@ export function getMonitoringStatus(
     return "unavailable";
   }
 
+  if (storedService.last_collection_status === "error") {
+    return "error";
+  }
+
   if (storedService.last_collection_status === "no_metrics") {
     return "no_metrics";
   }

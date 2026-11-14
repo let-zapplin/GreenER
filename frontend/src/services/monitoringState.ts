@@ -51,6 +51,16 @@ export function reconcileServices(
       };
     }
 
+    if (service.status === "error") {
+      return {
+        ...service,
+        status: "error",
+        statusExpiresAt: undefined,
+        lastConfirmedAt:
+          previousService?.lastConfirmedAt ?? service.lastConfirmedAt,
+      };
+    }
+
     // O serviço respondeu, mas não forneceu métricas.
     if (service.status === "no_metrics") {
       return {

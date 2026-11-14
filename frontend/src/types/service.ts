@@ -24,6 +24,7 @@ export type ServiceStatus =
   | "new"
   | "removed"
   | "returned"
+  | "error"
   | "unavailable"
   | "no_metrics";
 
