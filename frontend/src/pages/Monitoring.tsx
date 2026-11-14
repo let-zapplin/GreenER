@@ -254,8 +254,9 @@ export function Monitoring() {
               <h2 id="services-map-title">Onde seus serviços estão</h2>
             </div>
           </div>
-          <div className="monitoring-map-shell">
-            <EnvironmentOverviewDock
+          <div>
+            <div className="monitoring-map-shell">
+              {/* <EnvironmentOverviewDock
               energyKwh={dashboard?.summary.energyKwh ?? null}
               emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
               activeServiceCount={dashboard?.summary.activeServiceCount ?? 0}
@@ -268,55 +269,57 @@ export function Monitoring() {
               isPartial={dashboard?.summary.isPartial ?? false}
               loading={dashboardLoading}
               error={dashboardError}
-            />
-            <div
-              className={`services-map-workspace ${
-                selectedService ? "is-focused" : ""
-              }`}
-            >
-              <div className="services-map-stage">
-                <Suspense fallback={null}>
-                  <ServicesMap
+            />*/}
+              <div
+                className={`services-map-workspace ${
+                  selectedService ? "is-focused" : ""
+                }`}
+              >
+                <div className="services-map-stage">
+                  <Suspense fallback={null}>
+                    <ServicesMap
+                      services={services}
+                      onLoadingChange={setMapLoading}
+                      focus={mapFocus}
+                      onSelectService={(serviceId) =>
+                        focusServiceOnMap(serviceId, { scroll: false })
+                      }
+                      onClearSelection={closeServiceFocus}
+                    />
+                  </Suspense>
+
+                  {mapLoading && (
+                    <div
+                      className="map-loading-overlay"
+                      role="status"
+                      aria-label="Carregando mapa"
+                    >
+                      <img src={logoMin} alt="" className="map-loading-logo" />
+                    </div>
+                  )}
+                  <ServiceHud
                     services={services}
-                    onLoadingChange={setMapLoading}
-                    focus={mapFocus}
-                    onSelectService={(serviceId) =>
+                    selectedServiceId={selection?.id}
+                    onSelect={(serviceId) =>
                       focusServiceOnMap(serviceId, { scroll: false })
                     }
-                    onClearSelection={closeServiceFocus}
                   />
-                </Suspense>
 
-                {mapLoading && (
-                  <div
-                    className="map-loading-overlay"
-                    role="status"
-                    aria-label="Carregando mapa"
-                  >
-                    <img src={logoMin} alt="" className="map-loading-logo" />
-                  </div>
-                )}
-                <ServiceHud
-                  services={services}
-                  selectedServiceId={selection?.id}
-                  onSelect={(serviceId) =>
-                    focusServiceOnMap(serviceId, { scroll: false })
-                  }
-                />
-
-                {selectedService && (
-                  <div className="services-map-overlay">
-                    <MapServiceDetailsPanel
-                      service={selectedService}
-                      indicator={selectedIndicator}
-                      loading={indicatorsLoading}
-                      error={indicatorsError}
-                      onClose={closeServiceFocus}
-                    />
-                  </div>
-                )}
+                  {selectedService && (
+                    <div className="services-map-overlay">
+                      <MapServiceDetailsPanel
+                        service={selectedService}
+                        indicator={selectedIndicator}
+                        loading={indicatorsLoading}
+                        error={indicatorsError}
+                        onClose={closeServiceFocus}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+            <div>qualquer coisa</div>
           </div>
         </section>
       )}
