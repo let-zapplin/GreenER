@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import type { MapFocusRequest } from "../components/ServicesMap";
-import { ServiceList } from "../components/ServiceList";
 import { ServiceHud } from "../components/ServiceHud";
 import "./Monitoring.css";
 import logoMin from "../../assets/logo_min.png";
@@ -43,6 +42,35 @@ export function Monitoring() {
   const [mapFocus, setMapFocus] = useState<MapFocusRequest | null>(null);
 
   const [mapLoading, setMapLoading] = useState(true);
+  const mapShellRef = useRef<HTMLDivElement>(null);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const syncFullscreen = () => {
+      setIsMapFullscreen(document.fullscreenElement === mapShellRef.current);
+    };
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () =>
+      document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  async function toggleMapFullscreen() {
+    const shell = mapShellRef.current;
+    if (!shell) return;
+    setFullscreenError(null);
+    try {
+      if (document.fullscreenElement === shell) {
+        await document.exitFullscreen();
+      } else {
+        await shell.requestFullscreen();
+      }
+    } catch {
+      setFullscreenError(
+        "Não foi possível alterar a tela cheia neste navegador.",
+      );
+    }
+  }
 
   const focusKeyRef = useRef(0);
 
@@ -151,59 +179,6 @@ export function Monitoring() {
             seu ambiente.
           </p>
         </div>
-
-        <details
-          className={`monitoring-sync ${hasSyncError ? "has-error" : ""}`}
-        >
-          <summary className="monitoring-sync-label">
-            <span aria-hidden="true" className="monitoring-sync-dot" />
-
-            {hasSyncError
-              ? "Atualização com falha"
-              : isSyncing
-                ? "Atualizando dados"
-                : "Última atualização"}
-
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="m4 6 4 4 4-4" />
-            </svg>
-          </summary>
-
-          <span className="refresh-note">
-            {dashboardLastUpdated ? (
-              <>
-                Indicadores
-                <br />
-                <time dateTime={dashboardLastUpdated}>
-                  {new Date(dashboardLastUpdated).toLocaleString("pt-BR")}
-                </time>
-              </>
-            ) : (
-              <>Indicadores: aguardando primeira consulta</>
-            )}
-
-            <br />
-            <br />
-
-            {lastUpdated ? (
-              <>
-                Serviços
-                <br />
-                <time dateTime={lastUpdated}>
-                  {new Date(lastUpdated).toLocaleString("pt-BR")}
-                </time>
-              </>
-            ) : (
-              <>Serviços: aguardando primeira consulta</>
-            )}
-          </span>
-        </details>
       </section>
 
       {error && (
@@ -253,9 +228,63 @@ export function Monitoring() {
 
               <h2 id="services-map-title">Onde seus serviços estão</h2>
             </div>
+            <div>
+              <details
+                className={`monitoring-sync ${hasSyncError ? "has-error" : ""}`}
+              >
+                <summary className="monitoring-sync-label">
+                  <span aria-hidden="true" className="monitoring-sync-dot" />
+
+                  {hasSyncError
+                    ? "Atualização com falha"
+                    : isSyncing
+                      ? "Atualizando dados"
+                      : "Última atualização"}
+
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="m4 6 4 4 4-4" />
+                  </svg>
+                </summary>
+
+                <span className="refresh-note">
+                  {dashboardLastUpdated ? (
+                    <>
+                      Indicadores
+                      <br />
+                      <time dateTime={dashboardLastUpdated}>
+                        {new Date(dashboardLastUpdated).toLocaleString("pt-BR")}
+                      </time>
+                    </>
+                  ) : (
+                    <>Indicadores: aguardando primeira consulta</>
+                  )}
+
+                  <br />
+                  <br />
+
+                  {lastUpdated ? (
+                    <>
+                      Serviços
+                      <br />
+                      <time dateTime={lastUpdated}>
+                        {new Date(lastUpdated).toLocaleString("pt-BR")}
+                      </time>
+                    </>
+                  ) : (
+                    <>Serviços: aguardando primeira consulta</>
+                  )}
+                </span>
+              </details>
+            </div>
           </div>
-          <div>
-            <div className="monitoring-map-shell">
+          <div className="monitoring-charts-layout">
+            <div className="monitoring-map-shell" ref={mapShellRef}>
               {/* <EnvironmentOverviewDock
               energyKwh={dashboard?.summary.energyKwh ?? null}
               emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
@@ -276,6 +305,24 @@ export function Monitoring() {
                 }`}
               >
                 <div className="services-map-stage">
+                  <button
+                    type="button"
+                    className="monitoring-map-fullscreen-button"
+                    onClick={toggleMapFullscreen}
+                    aria-pressed={isMapFullscreen}
+                    title={
+                      isMapFullscreen
+                        ? "Sair da tela cheia (Esc)"
+                        : "Maximizar mapa"
+                    }
+                  >
+                    {isMapFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+                  </button>
+                  {fullscreenError && (
+                    <p className="monitoring-map-fullscreen-error" role="alert">
+                      {fullscreenError}
+                    </p>
+                  )}
                   <Suspense fallback={null}>
                     <ServicesMap
                       services={services}
@@ -319,7 +366,7 @@ export function Monitoring() {
                 </div>
               </div>
             </div>
-            <div>qualquer coisa</div>
+            <div className="monitoring-chart-shell" />
           </div>
         </section>
       )}
@@ -337,30 +384,6 @@ export function Monitoring() {
           }
         />
       </div>
-      {services.length > 0 && (
-        <>
-          <div className="monitoring-list-heading">
-            <div>
-              <p className="monitoring-section-label">SERVIÇOS</p>
-
-              <h2 id="service-list-title">Detalhes do ambiente</h2>
-            </div>
-
-            <span>
-              {services.length} {services.length === 1 ? "serviço" : "serviços"}
-            </span>
-          </div>
-
-          <ServiceList
-            services={services}
-            selection={selection}
-            onSelect={focusServiceOnMap}
-            indicators={serviceIndicators?.services ?? []}
-            indicatorsLoading={indicatorsLoading}
-            indicatorsError={indicatorsError}
-          />
-        </>
-      )}
     </main>
   );
 }

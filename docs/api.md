@@ -614,9 +614,8 @@ curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2
 
     "activeServiceCount": 1,
 
-    "energyKwh": 0.001,
-
-    "emissionsGco2e": 0.4,
+    "energyKwh": 0.000636875,
+    "emissionsGco2e": 0.25475,
 
     "collectionCount": 1,
 
@@ -654,21 +653,43 @@ curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2
 
         "collectionIntervalSeconds": 45,
 
-        "energyKwh": 0.001,
-
-        "emissionsGco2e": 0.4,
+        "energyKwh": 0.000636875,
+        "emissionsGco2e": 0.25475,
 
         "carbonIntensityGco2ePerKwh": 400,
-
         "gapReason": null
-
       },
-
+      "resourceSummary": {
+        "cpu": {
+          "averagePercent": 50,
+          "peakPercent": 50
+        },
+        "memory": {
+          "averageGb": 2,
+          "peakGb": 2
+        },
+        "disk": {
+          "averageGb": 10,
+          "peakGb": 10
+        },
+        "network": {
+          "totalGb": 5
+        }
+      },
+      "energyBreakdown": {
+        "cpuKwh": 0.000625,
+        "memoryKwh": 0.000009375,
+        "diskKwh": 0.00000125,
+        "networkKwh": 0.00000125
+      },
+      "regionalContext": {
+        "regionCode": "regiao-exemplo",
+        "carbonIntensityGco2ePerKwh": 400,
+        "renewableSharePercent": 60
+      },
       "periodTotals": {
-
-        "energyKwh": 0.001,
-
-        "emissionsGco2e": 0.4,
+        "energyKwh": 0.000636875,
+        "emissionsGco2e": 0.25475,
 
         "collectionCount": 1,
 
@@ -694,7 +715,11 @@ curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2
 
 ```
 
-Os números do exemplo são ilustrativos. A energia é estimada com o modelo de potência retornado em `powerModel` e `latestSampleInPeriod.collectionIntervalSeconds`, que contém a duração da amostra em segundos usada no cálculo. `period.collectionIntervalMs` permanece por compatibilidade e informa somente o intervalo configurado entre ciclos do job (`COLLECTION_INTERVAL_MS`); não é usado para calcular a energia.
+Os números do exemplo correspondem a uma amostra ilustrativa de 45 segundos, com CPU em 50%, memória em 2 GB, disco em 10 GB, rede em 5 GB e intensidade de 400 gCO₂e/kWh. A energia é estimada com o modelo de potência retornado em `powerModel` e `latestSampleInPeriod.collectionIntervalSeconds`, que contém a duração da amostra em segundos usada no cálculo. `period.collectionIntervalMs` permanece por compatibilidade e informa somente o intervalo configurado entre ciclos do job (`COLLECTION_INTERVAL_MS`); não é usado para calcular a energia.
+
+`resourceSummary.cpu.averagePercent` é ponderada pela duração das amostras válidas; memória e disco são médias simples das leituras válidas, pois representam o estado observado no instante da coleta. Os campos `peak*` são os maiores valores válidos do período. `resourceSummary.network.totalGb` soma o volume trafegado em cada janela de coleta (`network_gb`); esse valor não é uma taxa e não deve ser dividido pelo intervalo para calcular energia. As métricas sem dados válidos são representadas por `null`.
+
+`energyBreakdown` soma, por recurso, as contribuições estimadas pelo mesmo `powerModel` e pelos intervalos reais das amostras com energia calculável. Quando houver ao menos uma amostra calculável, a soma de seus componentes corresponde a `periodTotals.energyKwh`, salvo pequenas diferenças de ponto flutuante; lacunas continuam indicadas por `isPartial`. Se nenhuma amostra tiver energia calculável, os componentes são `null` em vez de sugerirem consumo zero. Trata-se de uma decomposição do modelo estimado do GreenER, não de uma medição física dos componentes do hardware. `regionalContext` apresenta o código da região e o snapshot regional mais recente elegível associado às coletas do período, mesmo quando a energia de uma coleta não pôde ser calculada. Intensidade e participação renovável são contexto, não agregações ambientais do período. A intensidade usada para calcular `periodTotals.emissionsGco2e` continua sendo associada individualmente a cada coleta.
 
 `latestSampleInPeriod` é a tentativa mais recente do serviço dentro do período, ou `null` se não houver tentativas. `periodTotals` agrega as tentativas registradas. `isPartial`, as coberturas e `gaps` indicam tentativas sem métricas válidas, duração de amostra ou intensidade de carbono utilizável; os motivos podem incluir `no_metrics`, `unavailable`, `error`, `invalid_metrics`, `collection_interval_unavailable` e `carbon_intensity_unavailable`. Amostras históricas sem intervalo retornam `collectionIntervalSeconds: null` e geram uma lacuna, sem usar `COLLECTION_INTERVAL_MS` como fallback. Uma tentativa sem intensidade ainda pode contribuir para energia, mas não para emissões. A cobertura considera as tentativas registradas no banco e não detecta intervalos em que nenhuma tentativa foi registrada.
 

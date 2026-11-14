@@ -10,6 +10,7 @@ const WORLD_BOUNDS: [[number, number], [number, number]] = [
   [-180, -85],
   [180, 85],
 ];
+const OVERVIEW_PADDING = 20;
 
 const FOCUS_ZOOM = 16;
 const FOCUS_ZOOM_BY_CITY: Record<string, number> = { Toronto: 14 };
@@ -597,7 +598,7 @@ export function ServicesMap({
       duration: reducedMotion ? 0 : OVERVIEW_DURATION,
       bearing: 0,
       pitch: 0,
-      padding: 0,
+      padding: OVERVIEW_PADDING,
     });
   };
 
@@ -614,7 +615,7 @@ export function ServicesMap({
         zoom: 1.2,
         bearing: 0,
         pitch: 0,
-        minZoom: 0.5,
+        minZoom: -2,
         maxZoom: 19,
         scrollZoom: false,
         maxPitch: 70,
@@ -631,7 +632,10 @@ export function ServicesMap({
     }
 
     mapRef.current = map;
-    map.fitBounds(WORLD_BOUNDS, { animate: false, padding: 0 });
+    map.fitBounds(WORLD_BOUNDS, {
+      animate: false,
+      padding: OVERVIEW_PADDING,
+    });
     setReady(true);
 
     const applyMapLayers = () => {

@@ -36,6 +36,37 @@ export type IndicatorGap = {
   reason: IndicatorGapReason;
 };
 
+export type ResourceSummary = {
+  cpu: {
+    averagePercent: number | null;
+    peakPercent: number | null;
+  };
+  memory: {
+    averageGb: number | null;
+    peakGb: number | null;
+  };
+  disk: {
+    averageGb: number | null;
+    peakGb: number | null;
+  };
+  network: {
+    totalGb: number | null;
+  };
+};
+
+export type EnergyBreakdown = {
+  cpuKwh: number | null;
+  memoryKwh: number | null;
+  diskKwh: number | null;
+  networkKwh: number | null;
+};
+
+export type RegionalContext = {
+  regionCode: string | null;
+  carbonIntensityGco2ePerKwh: number | null;
+  renewableSharePercent: number | null;
+};
+
 export type ServiceIndicators = {
   serviceId: number;
   name: string;
@@ -43,6 +74,12 @@ export type ServiceIndicators = {
   regionCode: string;
 
   latestSampleInPeriod: IndicatorSample | null;
+
+  resourceSummary: ResourceSummary;
+
+  energyBreakdown: EnergyBreakdown;
+
+  regionalContext: RegionalContext;
 
   periodTotals: {
     energyKwh: number;
