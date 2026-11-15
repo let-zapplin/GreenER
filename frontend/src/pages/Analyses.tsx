@@ -5,10 +5,12 @@ import { useMonitoring } from "../hooks/useMonitoring";
 import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
 import { ServiceHistoryPreview } from "../components/ServiceHistoryPreview";
 import { useAnalysisPeriod } from "../hooks/useAnalysisPeriod";
-
+import { useServiceIndicators } from "../hooks/useServiceIndicators";
+import { ImpactRanking, type RankingMetric } from "../components/ImpactRanking";
 import "./Analyses.css";
 
 type AnalysisLayout = "focus" | "overview" | "side";
+type OverviewView = "charts" | "ranking";
 
 const ANALYSES_LAYOUT_STORAGE_KEY = "greener:analyses:layout";
 
@@ -51,6 +53,31 @@ export function Analyses() {
     period: analysisPeriod,
     selectPeriod,
   } = useAnalysisPeriod();
+
+  const {
+    indicators: serviceIndicators,
+    loading: indicatorsLoading,
+    error: indicatorsError,
+  } = useServiceIndicators(analysisPeriod);
+
+  const analysisPeriodLabel =
+    analysisPeriods.find((period) => period.value === historyPeriodMs)?.label ??
+    "Período atual";
+
+  const indicatorsPeriodDurationMs = serviceIndicators
+    ? new Date(serviceIndicators.period.end).getTime() -
+      new Date(serviceIndicators.period.start).getTime()
+    : null;
+
+  const visibleServiceIndicators =
+    indicatorsPeriodDurationMs !== null &&
+    Math.abs(indicatorsPeriodDurationMs - historyPeriodMs) < 1000
+      ? serviceIndicators
+      : null;
+
+  const [overviewView, setOverviewView] = useState<OverviewView>("charts");
+
+  const [rankingMetric, setRankingMetric] = useState<RankingMetric>("energy");
 
   const [analysisLayout, setAnalysisLayout] = useState<AnalysisLayout>(() => {
     const savedLayout = localStorage.getItem(ANALYSES_LAYOUT_STORAGE_KEY);
@@ -376,18 +403,20 @@ export function Analyses() {
                 <div>
                   <p className="analyses-section-label">VISÃO GERAL</p>
 
-                  <h2 id="analyses-overview-title">Histórico dos serviços</h2>
+                  <h2 id="analyses-overview-title">Visão geral dos serviços</h2>
 
                   {!isOverviewCollapsed && (
                     <p>
-                      Compare rapidamente a evolução energética dos serviços no
-                      período selecionado.
+                      Explore a evolução e o impacto ambiental dos serviços no
+                      período selecionado
                     </p>
                   )}
                 </div>
 
                 <div className="analyses-overview-actions">
-                  <span className="analyses-overview-unit">kWh</span>
+                  {overviewView === "charts" && (
+                    <span className="analyses-overview-unit">kWh</span>
+                  )}
 
                   <button
                     type="button"
@@ -411,6 +440,41 @@ export function Analyses() {
               </div>
 
               {!isOverviewCollapsed && (
+                <div className="analyses-overview-toolbar">
+                  <div
+                    className="analyses-overview-view-options"
+                    aria-label="Visualização da visão geral"
+                  >
+                    <button
+                      type="button"
+                      className={
+                        overviewView === "charts"
+                          ? "analyses-overview-view-button is-active"
+                          : "analyses-overview-view-button"
+                      }
+                      aria-pressed={overviewView === "charts"}
+                      onClick={() => setOverviewView("charts")}
+                    >
+                      Gráficos
+                    </button>
+
+                    <button
+                      type="button"
+                      className={
+                        overviewView === "ranking"
+                          ? "analyses-overview-view-button is-active"
+                          : "analyses-overview-view-button"
+                      }
+                      aria-pressed={overviewView === "ranking"}
+                      onClick={() => setOverviewView("ranking")}
+                    >
+                      Ranking
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!isOverviewCollapsed && overviewView === "charts" && (
                 <div
                   ref={overviewScrollRef}
                   id="analyses-overview-content"
@@ -431,6 +495,63 @@ export function Analyses() {
                   </div>
                 </div>
               )}
+              {!isOverviewCollapsed && overviewView === "ranking" && (
+                <div
+                  id="analyses-overview-content"
+                  className="analyses-overview-ranking"
+                >
+                  {indicatorsLoading && !visibleServiceIndicators && (
+                    <div className="analyses-history-state" role="status">
+                      <h3>Carregando ranking</h3>
+
+                      <p>
+                        Consultando os indicadores dos serviços para o período
+                        de {analysisPeriodLabel}.
+                      </p>
+                    </div>
+                  )}
+
+                  {indicatorsError && !visibleServiceIndicators && (
+                    <div
+                      className="analyses-history-state analyses-state-error"
+                      role="alert"
+                    >
+                      <h3>Não foi possível carregar o ranking</h3>
+
+                      <p>{indicatorsError}</p>
+                    </div>
+                  )}
+
+                  {indicatorsError && visibleServiceIndicators && (
+                    <div className="analyses-warning" role="status">
+                      Não foi possível atualizar o ranking. Os últimos dados
+                      válidos permanecem visíveis.
+                    </div>
+                  )}
+
+                  {visibleServiceIndicators &&
+                    visibleServiceIndicators.services.length === 0 && (
+                      <div className="analyses-history-state" role="status">
+                        <h3>Nenhum serviço disponível para o ranking</h3>
+
+                        <p>
+                          Não existem indicadores de serviços no período
+                          selecionado.
+                        </p>
+                      </div>
+                    )}
+
+                  {visibleServiceIndicators &&
+                    visibleServiceIndicators.services.length > 0 && (
+                      <ImpactRanking
+                        services={visibleServiceIndicators.services}
+                        periodLabel={analysisPeriodLabel}
+                        metric={rankingMetric}
+                        onMetricChange={setRankingMetric}
+                      />
+                    )}
+                </div>
+              )}
               {isOverviewCollapsed && (
                 <div className="analyses-overview-collapsed">
                   <span>{services.length} serviços</span>
@@ -447,7 +568,9 @@ export function Analyses() {
 
                   <span aria-hidden="true">·</span>
 
-                  <span>Energia estimada</span>
+                  <span>
+                    {overviewView === "charts" ? "Gráficos" : "Ranking"}
+                  </span>
                 </div>
               )}
             </section>
