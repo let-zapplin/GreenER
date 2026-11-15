@@ -1,0 +1,228 @@
+.impact-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  min-width: 0;
+}
+
+.impact-ranking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.impact-ranking-header h2 {
+  margin: 4px 0 0;
+  color: #e0e3de;
+  font-size: 1.3rem;
+}
+
+.impact-ranking-eyebrow {
+  margin: 0;
+
+  color: #a7c993;
+
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.impact-ranking-metric-selector {
+  display: flex;
+  gap: 6px;
+
+  padding: 4px;
+
+  background: #0b282c;
+  border: 1px solid #315657;
+  border-radius: 12px;
+}
+
+.impact-ranking-metric-button {
+  padding: 8px 14px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: transparent;
+  color: #a7c993;
+
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.impact-ranking-metric-button:hover {
+  color: #e0e3de;
+}
+
+.impact-ranking-metric-button.is-active {
+  background: #386d69;
+  color: #ffffff;
+}
+
+.impact-ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+   min-width: 0;
+  min-height: 0;
+}
+
+.impact-ranking-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.impact-ranking-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.impact-ranking-service {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-width: 0;
+}
+
+.impact-ranking-position {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  flex: 0 0 auto;
+
+  border: 1px solid #386d69;
+  border-radius: 50%;
+
+  color: #a7c993;
+
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.impact-ranking-service strong {
+  display: block;
+
+  overflow: hidden;
+
+  color: #e0e3de;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.impact-ranking-region {
+  display: block;
+
+  margin-top: 2px;
+
+  color: #a7c993;
+
+  font-size: 0.75rem;
+}
+
+.impact-ranking-value {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 4px;
+
+  flex: 0 0 auto;
+}
+
+.impact-ranking-value strong {
+  color: #e0e3de;
+
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.impact-ranking-partial {
+  padding: 2px 7px;
+
+  border-radius: 999px;
+
+  background: rgba(225, 214, 73, 0.12);
+  color: #e1d649;
+
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.impact-ranking-bar {
+  width: 100%;
+  height: 4px;
+
+  overflow: hidden;
+
+  background: #0b282c;
+  border-radius: 999px;
+}
+
+.impact-ranking-bar-fill {
+  height: 100%;
+
+  background: #6cce38;
+  border-radius: inherit;
+
+  transition: width 300ms ease;
+}
+
+.impact-ranking-period {
+  margin: 4px 0 0;
+  color: #a7c993;
+  font-size: 0.78rem;
+}
+
+.impact-ranking-status {
+  display: inline-block;
+  margin-top: 3px;
+
+  color: #a7c993;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+
+
+@media (max-width: 720px) {
+  .impact-ranking {
+    padding: 18px;
+  }
+
+  .impact-ranking-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .impact-ranking-metric-selector {
+    width: fit-content;
+  }
+
+  .impact-ranking-item-header {
+    align-items: flex-start;
+  }
+
+  .impact-ranking-value {
+    align-items: flex-end;
+  }
+}
