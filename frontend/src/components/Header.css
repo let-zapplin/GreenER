@@ -232,6 +232,10 @@ button.user-avatar[aria-expanded="true"] {
     grid-column: 2;
     grid-row: 1;
   }
+  .header-sign-in {
+    grid-column: 2;
+    grid-row: 1;
+  }
   .header-menu-toggle {
     display: block;
     grid-column: 3;

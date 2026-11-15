@@ -85,6 +85,10 @@ backdrop-filter: blur(14px);
   justify-content: space-between;
   gap: 16px;
 }
+.map-service-panel-header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 .map-service-panel-eyebrow {
   color: var(--monitoring-muted);
@@ -216,7 +220,7 @@ backdrop-filter: blur(14px);
 
 .map-service-panel-impact {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
 
   margin-top: 18px;
@@ -269,6 +273,7 @@ backdrop-filter: blur(14px);
 }
 
 .map-service-panel-updated {
+  flex-wrap: wrap;
   display: flex;
   justify-content: space-between;
   gap: 10px;

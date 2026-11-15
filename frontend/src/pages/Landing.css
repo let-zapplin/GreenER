@@ -782,12 +782,13 @@
 .landing-number {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 62px;
+  height: 56px;
   margin-bottom: 16px;
   font-family: "IBM Plex Mono", monospace;
   font-weight: 700;
-  border-radius: 50%;
+  font-size: 20px;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   color: #0c282b;
   background: #69d337;
 }

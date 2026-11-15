@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import type { MapFocusRequest } from "../components/ServicesMap";
 import { ServiceHud } from "../components/ServiceHud";
+import { ServicesMapLegend } from "../components/ServicesMapLegend";
 import "./Monitoring.css";
 import logoMin from "../../assets/logo_min.png";
 
@@ -284,21 +285,8 @@ export function Monitoring() {
             </div>
           </div>
           <div className="monitoring-charts-layout">
+            <div className="monitoring-map-column">
             <div className="monitoring-map-shell" ref={mapShellRef}>
-              {/* <EnvironmentOverviewDock
-              energyKwh={dashboard?.summary.energyKwh ?? null}
-              emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
-              activeServiceCount={dashboard?.summary.activeServiceCount ?? 0}
-              noMetricsServiceCount={
-                dashboard?.summary.noMetricsServiceCount ?? 0
-              }
-              unavailableServiceCount={
-                dashboard?.summary.unavailableServiceCount ?? 0
-              }
-              isPartial={dashboard?.summary.isPartial ?? false}
-              loading={dashboardLoading}
-              error={dashboardError}
-            />*/}
               <div
                 className={`services-map-workspace ${
                   selectedService ? "is-focused" : ""
@@ -344,13 +332,15 @@ export function Monitoring() {
                       <img src={logoMin} alt="" className="map-loading-logo" />
                     </div>
                   )}
-                  <ServiceHud
-                    services={services}
-                    selectedServiceId={selection?.id}
-                    onSelect={(serviceId) =>
-                      focusServiceOnMap(serviceId, { scroll: false })
-                    }
-                  />
+                  {isMapFullscreen && (
+                    <ServiceHud
+                      services={services}
+                      selectedServiceId={selection?.id}
+                      onSelect={(serviceId) =>
+                        focusServiceOnMap(serviceId, { scroll: false })
+                      }
+                    />
+                  )}
 
                   {selectedService && (
                     <div className="services-map-overlay">
@@ -365,6 +355,9 @@ export function Monitoring() {
                   )}
                 </div>
               </div>
+              {isMapFullscreen && <ServicesMapLegend services={services} />}
+            </div>
+            {!isMapFullscreen && <ServicesMapLegend services={services} />}
             </div>
             <div className="monitoring-chart-shell" />
           </div>

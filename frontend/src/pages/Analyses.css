@@ -463,6 +463,7 @@
 
 
 .analyses-history-header {
+  flex-wrap: wrap;
 
   display: flex;
 
@@ -727,7 +728,7 @@
 
   grid-template-columns:
 
-    repeat(2, minmax(120px, 180px))
+    repeat(2, minmax(0, 180px))
 
     minmax(220px, 1fr);
 
@@ -776,6 +777,7 @@
 
 
 .analyses-history-actions {
+  flex-wrap: wrap;
 
   display: flex;
 
@@ -790,6 +792,7 @@
 
 
 .analyses-history-service-select {
+  min-width: 0;
 
   display: grid;
 
@@ -1573,6 +1576,7 @@
 
 
 .analyses-overview-header {
+  flex-wrap: wrap;
 
   display: flex;
 
@@ -2537,7 +2541,7 @@
 
   .analyses-history-header {
 
-    padding: 0 40px;
+    padding: 44px 0 0;
 
   }
 

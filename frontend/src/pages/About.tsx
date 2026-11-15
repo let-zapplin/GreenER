@@ -54,11 +54,11 @@ const journey = [
   ],
 ];
 const team = [
-  "Gustavo Koiti",
-  "Igor Souza",
-  "Marcello Campbell",
-  "Patricia Maidana",
-  "Vitor Hirch",
+  { name: "Gustavo Koiti", github: "https://github.com/gustavokoitiyoshimura" },
+  { name: "Igor Souza", github: "https://github.com/igorcsouzaa" },
+  { name: "Marcello Campbell", github: "https://github.com/mparise28-dev" },
+  { name: "Patricia Maidana", github: "https://github.com/PatyMaidana" },
+  { name: "Vitor Hirch", github: "https://github.com/vitorhirch" },
 ];
 
 function AboutIcon({ kind }: { kind: string }) {
@@ -215,8 +215,15 @@ export function About() {
               As pessoas por trás do projeto.
             </p>
             <div className="about-team">
-              {team.map((name, index) => (
-                <article className="about-card about-person" key={name}>
+              {team.map(({ name, github }, index) => (
+                <a
+                  className="about-card about-person"
+                  key={name}
+                  href={github || undefined}
+                  target={github ? "_blank" : undefined}
+                  rel={github ? "noopener noreferrer" : undefined}
+                  aria-label={github ? `Abrir GitHub de ${name}` : undefined}
+                >
                   <div className="about-person-icon">
                     <img
                       src={
@@ -235,7 +242,7 @@ export function About() {
                     />
                   </div>
                   <h3>{name}</h3>
-                </article>
+                </a>
               ))}
             </div>
           </section>

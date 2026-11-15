@@ -4,6 +4,7 @@ import type { Map as MapLibreMap, Marker, Popup } from "maplibre-gl";
 import "maplibre-gl-original/dist/maplibre-gl.css";
 import type { MonitoredService, ServiceStatus } from "../types/service";
 import "./ServicesMap.css";
+import { statusPriority, statusLabels } from "./ServicesMapLegend";
 import { isSameMapTarget, type MapCameraTarget } from "../lib/mapFocus";
 
 const WORLD_BOUNDS: [[number, number], [number, number]] = [
@@ -114,24 +115,6 @@ function buildPopupContent(title: string, subtitle: string) {
   content.append(heading, meta);
   return content;
 }
-
-const statusPriority: ServiceStatus[] = [
-  "unavailable",
-  "removed",
-  "no_metrics",
-  "new",
-  "returned",
-  "active",
-];
-
-const statusLabels: Record<ServiceStatus, string> = {
-  active: "Ativo",
-  new: "Novo",
-  returned: "Retornou",
-  no_metrics: "Sem métricas",
-  unavailable: "Indisponível",
-  removed: "Removido",
-};
 
 type ServiceGroup = {
   key: string;
@@ -317,7 +300,7 @@ export function ServicesMap({
     onSelectServiceRef.current = onSelectService;
   }, [onSelectService]);
 
-  const { groups, withoutLocation } = useMemo(
+  const { groups } = useMemo(
     () => groupServices(services),
     [services],
   );
@@ -334,10 +317,6 @@ export function ServicesMap({
         )
         .join("|"),
     [groups],
-  );
-
-  const legendStatuses = statusPriority.filter((status) =>
-    services.some((service) => service.status === status),
   );
 
   const focusKey = focus?.key;
@@ -826,27 +805,6 @@ export function ServicesMap({
         {ready && groups.length === 0 && (
           <p className="services-map-empty">
             Nenhum serviço com coordenadas cadastradas.
-          </p>
-        )}
-      </div>
-      <div className="services-map-footer">
-        <ul className="services-map-legend" aria-label="Legenda dos status">
-          {legendStatuses.map((status) => (
-            <li key={status}>
-              <span
-                className={`services-map-legend-dot ${status}`}
-                aria-hidden="true"
-              />
-              {statusLabels[status]}
-            </li>
-          ))}
-        </ul>
-        {withoutLocation > 0 && (
-          <p className="services-map-note">
-            {withoutLocation}{" "}
-            {withoutLocation === 1
-              ? "serviço sem localização cadastrada"
-              : "serviços sem localização cadastrada"}
           </p>
         )}
       </div>

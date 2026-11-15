@@ -517,7 +517,7 @@
   }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 600px) {
   .how-steps {
     grid-template-columns: 1fr;
     gap: 12px;

@@ -419,7 +419,8 @@
   min-height: 0;
 }
 
-.monitoring-charts-layout > .monitoring-map-shell {
+.monitoring-map-column {
+  min-width: 0;
   align-self: start;
 }
 
@@ -569,9 +570,9 @@
 
     inset: auto;
 
-    width: 45%;
+    width: calc(100% - 36px);
 
-    margin: 12px 18px 0 auto;
+    margin: 12px 18px;
   }
 
   .services-map-overlay .map-service-panel {
