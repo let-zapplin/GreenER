@@ -100,7 +100,9 @@ nada.
 | --- | --- | --- | --- |
 | `RANKING_ENERGY` | “Qual serviço gasta mais energia?” | `IndicadoresService.getIndicators` | Barras, top 5 em kWh |
 | `RANKING_EMISSIONS` | “Qual serviço emite mais CO₂?” | `IndicadoresService.getIndicators` | Barras, top 5 em gCO₂e |
-| `SERVICE_SUMMARY` | “Como está o serviço X?” | `IndicadoresService.getIndicators` + `getServiceHistory` | Linha do consumo em kWh |
+| `RANKING_RESOURCE` | “Qual serviço usa mais CPU?”, “Qual serviço usa mais memória?” | `IndicadoresService.getIndicators` | Barras, top 5 em % ou GB da métrica pedida |
+| `SERVICE_SUMMARY` | “Como está o serviço X?”, “Qual o uso de CPU do serviço X?” | `IndicadoresService.getIndicators` + `getServiceHistory` | Linha do consumo em kWh ou da métrica de recurso pedida |
+| `COMPARE_SERVICES` | “Compare o serviço X com o serviço Y”, “Compare a CPU de X com Y” | `IndicadoresService.getIndicators` | Barras com o consumo ou a métrica de recurso pedida |
 | `ENVIRONMENT_SUMMARY` | “Panorama ambiental do período” | `DashboardService.getSummary` | Barras de disponibilidade |
 | `PROJECT_INFO` | “O que é o GreenER?”, “Quem fez o projeto?” | Base curada em `chat.knowledge.ts` | Nenhum |
 | `METHODOLOGY` | “Como a energia é calculada?”, “Quais são as limitações?” | Base curada em `chat.knowledge.ts` | Nenhum |
@@ -115,8 +117,34 @@ nada.
   (“o segundo”), usando a clarificação pendente da conversa.
 - Perguntas de continuidade (“e as emissões dele?”, “e o histórico?”) reaproveitam o
   último serviço ativo da mesma conversa.
+- Comparações (“compare o serviço X com o serviço Y”, “X vs Y”) aceitam nomes completos
+  ou parciais; com apenas um nome, o outro lado é completado pelo serviço ativo da
+  conversa. Sem dois serviços identificados, a resposta pede os dois nomes e lista os
+  serviços ativos.
 - O contexto da página pode indicar um serviço quando a pergunta não cita o nome.
 - Cada resposta inclui até 3 `suggestions` com pergunta, rótulo e período.
+
+### Métricas de recurso (CPU, memória, disco e rede)
+
+A pergunta pode especificar qual dado quer ver. O backend reconhece quatro métricas
+em `chat.service.ts`:
+
+| Métrica | Como é reconhecida | Valor usado |
+| --- | --- | --- |
+| `cpu` | “cpu”, “processador” | média e pico de `resourceSummary.cpu.averagePercent/peakPercent` (%) |
+| `memory` | “memória”, “ram” | média e pico de `resourceSummary.memory.averageGb/peakGb` (GB) |
+| `disk` | “disco”, “disk”, “armazenamento” | média e pico de `resourceSummary.disk.averageGb/peakGb` (GB) |
+| `network` | “rede”, “network”, “tráfego”, “banda” | total de `resourceSummary.network.totalGb` (GB) |
+
+- Sem menção a métrica, a resposta padrão continua sendo energia/emissões.
+- Métrica + nome de serviço → `SERVICE_SUMMARY` da métrica, com linha do histórico
+  (`metrics.cpuPercent`, `memoryGb`, `diskGb`, `networkGb` por amostra).
+- Métrica + ranking (“mais”, “maior”, “menos”, “menor”) → `RANKING_RESOURCE`.
+- Métrica + comparação → `COMPARE_SERVICES`; CPU é comparada em pontos percentuais,
+  as demais em GB.
+- Continuações reaproveitam a métrica citada na pergunta, não a anterior.
+- Se o serviço não tem amostra válida para a métrica, a resposta diz que não há dados
+  em vez de inventar zero.
 
 ### Conhecimento do projeto e cálculos
 
@@ -283,9 +311,10 @@ Exemplo: **“Qual serviço gasta mais energia nas últimas 24 horas?”**
     serviços ativos e o histórico recente; resultados válidos ficam em cache por 30 min.
 11. As regras corrigem excessos do modelo: nome ambíguo nunca é escolhido pelo LLM,
     nome de serviço sozinho vira resumo e “ranking” explícito não vira resumo.
-12. Para `RANKING_ENERGY`/`RANKING_EMISSIONS`, o backend filtra serviços ativos,
-    descarta valores zerados, ordena pelo sentido pedido (“mais”/“maior” → decrescente,
-    “menos”/“menor” → crescente), pega o top 5 e monta o gráfico.
+12. Para `RANKING_ENERGY`/`RANKING_EMISSIONS`/`RANKING_RESOURCE`, o backend filtra
+    serviços ativos, descarta valores zerados, ordena pelo sentido pedido
+    (“mais”/“maior” → decrescente, “menos”/“menor” → crescente), pega o top 5 e monta o
+    gráfico.
 13. Intenções de dados recebem a **resposta determinística** montada pelo backend
     (texto + gráfico), sem reescrita pelo modelo. O campo `model` fica `"regras"` e
     `degraded` é `false` quando o LLM está ligado e a classificação foi concluída.
@@ -870,6 +899,10 @@ Regras de classificação resumidas:
 
 - emissões + palavras de ranking → `RANKING_EMISSIONS`;
 - energia/consumo + palavras de ranking → `RANKING_ENERGY`;
+- CPU/memória/disco/rede + palavras de ranking → `RANKING_RESOURCE`;
+- palavra de comparação (“comparar”, “versus”, “vs”, “contra”, “diferença”) com pelo
+  menos um serviço identificado, ou dois nomes ligados por “com/x/vs/contra” →
+  `COMPARE_SERVICES`;
 - nome de serviço citado → `SERVICE_SUMMARY`;
 - ambiente/panorama/disponibilidade → `ENVIRONMENT_SUMMARY`;
 - serviço/histórico/evolução sem nome → `SERVICE_SUMMARY`;

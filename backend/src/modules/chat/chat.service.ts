@@ -34,6 +34,7 @@ import {
   type ChatPeriod,
   type ChatReply,
   type ChatRequestOptions,
+  type ChatResourceMetric,
   type ChatSuggestion,
 } from "./chat.types.js";
 import { OllamaClient } from "./ollama.client.js";
@@ -159,15 +160,79 @@ type IndicatorsResult = Awaited<
 
 type IndicatorService = IndicatorsResult["services"][number];
 
+type ChatServiceHistory = Awaited<
+  ReturnType<IndicadoresService["getServiceHistory"]>
+>;
+
+type HistorySample = ChatServiceHistory["samples"][number];
+
+function sampleResourceValue(
+  sample: HistorySample,
+  metric: ChatResourceMetric,
+): number | null {
+  const metrics = sample.metrics;
+
+  if (metrics === null) {
+    return null;
+  }
+
+  switch (metric) {
+    case "cpu":
+      return metrics.cpuPercent;
+    case "memory":
+      return metrics.memoryGb;
+    case "disk":
+      return metrics.diskGb;
+    case "network":
+      return metrics.networkGb;
+  }
+}
+
+function resourceFacts(service: IndicatorService) {
+  const { cpu, memory, disk, network } = service.resourceSummary;
+
+  return {
+    cpuAveragePercent:
+      cpu.averagePercent === null ? null : round(cpu.averagePercent, 2),
+    cpuPeakPercent:
+      cpu.peakPercent === null ? null : round(cpu.peakPercent, 2),
+    memoryAverageGb:
+      memory.averageGb === null ? null : round(memory.averageGb, 2),
+    memoryPeakGb: memory.peakGb === null ? null : round(memory.peakGb, 2),
+    diskAverageGb: disk.averageGb === null ? null : round(disk.averageGb, 2),
+    diskPeakGb: disk.peakGb === null ? null : round(disk.peakGb, 2),
+    networkTotalGb:
+      network.totalGb === null ? null : round(network.totalGb, 3),
+  };
+}
+
+function regionalFacts(service: IndicatorService) {
+  return {
+    regionCode: service.regionalContext.regionCode ?? service.regionCode,
+    carbonIntensityGco2ePerKwh:
+      service.regionalContext.carbonIntensityGco2ePerKwh,
+    renewableSharePercent: service.regionalContext.renewableSharePercent,
+  };
+}
+
 type ServiceResolution =
   | { kind: "unique"; service: IndicatorService }
   | { kind: "ambiguous"; candidates: IndicatorService[] }
+  | { kind: "none" };
+
+// Par de serviços de uma pergunta de comparação.
+type ComparisonResolution =
+  | { kind: "pair"; first: IndicatorService; second: IndicatorService }
+  | { kind: "ambiguous"; candidates: IndicatorService[] }
+  | { kind: "partial"; known: IndicatorService }
   | { kind: "none" };
 
 type MergedClassification = {
   intent: ChatIntent;
   service: IndicatorService | null;
   resolution: ServiceResolution;
+  comparison: ComparisonResolution;
+  metric: ChatResourceMetric | null;
   unknownServiceName: string | null;
 };
 
@@ -195,7 +260,9 @@ type CachedReply = {
 const DATA_INTENTS = new Set<ChatIntent>([
   "RANKING_ENERGY",
   "RANKING_EMISSIONS",
+  "RANKING_RESOURCE",
   "SERVICE_SUMMARY",
+  "COMPARE_SERVICES",
   "ENVIRONMENT_SUMMARY",
 ]);
 
@@ -227,6 +294,10 @@ function capitalize(value: string): string {
 function round(value: number, digits = 6): number {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+
+function roundNullable(value: number | null, digits = 2): number | null {
+  return value === null ? null : round(value, digits);
 }
 
 function formatNumber(value: number): string {
@@ -278,6 +349,172 @@ function mentionsRanking(text: string): boolean {
 // "Quem gastou menos energia?" pede o ranking crescente; o padrão é decrescente.
 function mentionsLowest(text: string): boolean {
   return /\b(menor|menores|menos)\b/.test(text);
+}
+
+function mentionsComparison(text: string): boolean {
+  return /compar|\bversus\b|\bvs\b|\bcontra\b|\bdiferenca/.test(text);
+}
+
+// Liga dois nomes de serviço na mesma frase ("A com B", "A vs B", "A contra B").
+function hasComparisonConnector(text: string): boolean {
+  return /(?:^|[^a-z0-9])(?:x|com|versus|vs|contra)(?:[^a-z0-9]|$)/.test(text);
+}
+
+const RESOURCE_METRIC_INFO: Record<
+  ChatResourceMetric,
+  {
+    label: string;
+    unit: string;
+    noun: string;
+    chartTitle: string;
+    rankingTitle: string;
+  }
+> = {
+  cpu: {
+    label: "CPU",
+    unit: "%",
+    noun: "uso de CPU",
+    chartTitle: "Uso de CPU",
+    rankingTitle: "Uso médio de CPU por serviço",
+  },
+  memory: {
+    label: "memória",
+    unit: "GB",
+    noun: "uso de memória",
+    chartTitle: "Uso de memória",
+    rankingTitle: "Uso médio de memória por serviço",
+  },
+  disk: {
+    label: "disco",
+    unit: "GB",
+    noun: "uso de disco",
+    chartTitle: "Uso de disco",
+    rankingTitle: "Uso médio de disco por serviço",
+  },
+  network: {
+    label: "rede",
+    unit: "GB",
+    noun: "tráfego de rede",
+    chartTitle: "Tráfego de rede",
+    rankingTitle: "Tráfego de rede por serviço",
+  },
+};
+
+function mentionsCpu(text: string): boolean {
+  return /\bcpu\b/.test(text);
+}
+
+function mentionsMemoryResource(text: string): boolean {
+  return /\b(memoria|ram)\b/.test(text);
+}
+
+function mentionsDiskResource(text: string): boolean {
+  return /\b(disco|disk|armazenamento)\b/.test(text);
+}
+
+function mentionsNetworkResource(text: string): boolean {
+  return /\b(rede|network|trafego|banda)\b/.test(text);
+}
+
+// Energia e emissões já têm intenções próprias; aqui ficam só os recursos.
+function detectResourceMetric(text: string): ChatResourceMetric | null {
+  if (mentionsCpu(text)) {
+    return "cpu";
+  }
+
+  if (mentionsMemoryResource(text)) {
+    return "memory";
+  }
+
+  if (mentionsDiskResource(text)) {
+    return "disk";
+  }
+
+  if (mentionsNetworkResource(text)) {
+    return "network";
+  }
+
+  return null;
+}
+
+function resourceMetricValue(
+  service: IndicatorService,
+  metric: ChatResourceMetric,
+): number | null {
+  switch (metric) {
+    case "cpu":
+      return service.resourceSummary.cpu.averagePercent;
+    case "memory":
+      return service.resourceSummary.memory.averageGb;
+    case "disk":
+      return service.resourceSummary.disk.averageGb;
+    case "network":
+      return service.resourceSummary.network.totalGb;
+  }
+}
+
+function resourceMetricPeak(
+  service: IndicatorService,
+  metric: ChatResourceMetric,
+): number | null {
+  switch (metric) {
+    case "cpu":
+      return service.resourceSummary.cpu.peakPercent;
+    case "memory":
+      return service.resourceSummary.memory.peakGb;
+    case "disk":
+      return service.resourceSummary.disk.peakGb;
+    case "network":
+      return null;
+  }
+}
+
+function roundResourceValue(
+  value: number,
+  metric: ChatResourceMetric,
+): number {
+  return metric === "network" ? round(value, 4) : round(value, 2);
+}
+
+function formatResourceValue(
+  value: number,
+  metric: ChatResourceMetric,
+): string {
+  const rounded = formatNumber(roundResourceValue(value, metric));
+
+  return RESOURCE_METRIC_INFO[metric].unit === "%"
+    ? `${rounded}%`
+    : `${rounded} GB`;
+}
+
+// Agregados de rede somam muitas amostras; duas casas mantêm o texto legível.
+function formatResourceTotal(
+  value: number,
+  metric: ChatResourceMetric,
+): string {
+  const rounded = formatNumber(
+    metric === "network" ? round(value, 2) : roundResourceValue(value, metric),
+  );
+
+  return RESOURCE_METRIC_INFO[metric].unit === "%"
+    ? `${rounded}%`
+    : `${rounded} GB`;
+}
+
+// Trecho usado em respostas: "uso médio de 12,3% (pico de 45,6%)".
+function resourceUsagePhrase(
+  value: number,
+  peak: number | null,
+  metric: ChatResourceMetric,
+): string {
+  const base =
+    metric === "network"
+      ? `tráfego total de ${formatResourceTotal(value, metric)}`
+      : `uso médio de ${formatResourceValue(value, metric)}`;
+
+  return peak === null
+    ? base
+    : `${base} (pico de ${formatResourceValue(peak, metric)})`;
 }
 
 function isFollowUp(message: string): boolean {
@@ -509,6 +746,160 @@ function resolveServiceFromText(
   return { kind: "none" };
 }
 
+// Diferente de resolveServiceFromText, devolve todos os serviços citados na
+// mensagem, na ordem em que aparecem — necessário para comparações. Nomes
+// parciais só entram quando a pergunta é de comparação (includePartialTokens),
+// para "serviço Solar" continuar ambíguo em vez de virar um par.
+function matchServicesInOrder(
+  message: string,
+  services: IndicatorService[],
+  includePartialTokens: boolean = false,
+): IndicatorService[] {
+  const normalized = normalizeText(message);
+  const found: Array<{
+    service: IndicatorService;
+    start: number;
+    end: number;
+  }> = [];
+
+  for (const service of services) {
+    const name = normalizeText(service.name);
+
+    if (name.length < 2 || !containsWholePhrase(normalized, name)) {
+      continue;
+    }
+
+    const start = normalized.indexOf(name);
+    found.push({ service, start, end: start + name.length });
+  }
+
+  // "Alpha" e "Alpha Beta" casam juntos; o nome mais específico fica.
+  const kept: typeof found = [];
+
+  for (const entry of [...found].sort(
+    (left, right) =>
+      right.end - right.start - (left.end - left.start),
+  )) {
+    const overlaps = kept.some(
+      (other) => entry.start < other.end && other.start < entry.end,
+    );
+
+    if (!overlaps) {
+      kept.push(entry);
+    }
+  }
+
+  if (!includePartialTokens) {
+    return kept
+      .sort((left, right) => left.start - right.start)
+      .map((entry) => entry.service);
+  }
+
+  const tokenOffsets = [...normalized.matchAll(/[a-z0-9]+/g)].map((match) => ({
+    token: match[0],
+    offset: match.index ?? 0,
+  }));
+
+  const unmatched = services.filter(
+    (service) =>
+      !kept.some((entry) => entry.service.serviceId === service.serviceId),
+  );
+
+  // Nomes parciais: aceita apenas os que mais casam tokens, como em matchByTokens.
+  const partialMatches = unmatched.map((service) => {
+    const tokens = new Set(serviceNameTokens(service.name));
+    const hits = tokenOffsets.filter((item) => tokens.has(item.token));
+
+    return { service, score: hits.length, start: hits[0]?.offset ?? -1 };
+  });
+  const bestScore = Math.max(0, ...partialMatches.map((item) => item.score));
+
+  if (bestScore > 0) {
+    for (const item of partialMatches) {
+      if (item.score === bestScore) {
+        kept.push({
+          service: item.service,
+          start: item.start,
+          end: item.start + 1,
+        });
+      }
+    }
+  }
+
+  return kept
+    .sort((left, right) => left.start - right.start)
+    .map((entry) => entry.service);
+}
+
+function buildComparisonResolution(
+  matches: IndicatorService[],
+  named: Array<string | null>,
+  services: IndicatorService[],
+  conversation: ChatConversationState | null,
+  context: ChatContext,
+): ComparisonResolution {
+  const pair: IndicatorService[] = [...matches];
+
+  const push = (service: IndicatorService | undefined) => {
+    if (
+      service === undefined ||
+      pair.some((candidate) => candidate.serviceId === service.serviceId)
+    ) {
+      return;
+    }
+
+    pair.push(service);
+  };
+
+  for (const name of named) {
+    if (name === null) {
+      continue;
+    }
+
+    const normalized = normalizeText(name);
+    push(
+      services.find(
+        (service) => normalizeText(service.name) === normalized,
+      ),
+    );
+  }
+
+  // Continuações: "compare com o Beta" usa o serviço ativo da conversa.
+  if (pair.length < 2 && conversation?.activeService != null) {
+    push(
+      services.find(
+        (service) =>
+          service.serviceId === conversation.activeService?.serviceId,
+      ),
+    );
+  }
+
+  if (pair.length < 2 && context.serviceName !== null) {
+    const contextResolution = resolveServiceFromText(
+      context.serviceName,
+      services,
+    );
+
+    if (contextResolution.kind === "unique") {
+      push(contextResolution.service);
+    }
+  }
+
+  if (pair.length >= 3) {
+    return { kind: "ambiguous", candidates: pair };
+  }
+
+  if (pair.length === 2) {
+    return { kind: "pair", first: pair[0], second: pair[1] };
+  }
+
+  if (pair.length === 1) {
+    return { kind: "partial", known: pair[0] };
+  }
+
+  return { kind: "none" };
+}
+
 function resolveFromPendingClarification(
   message: string,
   services: IndicatorService[],
@@ -609,48 +1000,139 @@ function resolveServiceReference(
 function classifyByRules(
   message: string,
   resolution: ServiceResolution,
+  services: IndicatorService[],
 ): ChatClassification {
   const text = normalizeText(message);
   const ranking = mentionsRanking(text);
   const emissions = mentionsEmissions(text);
   const energy = mentionsEnergy(text);
+  const metric = detectResourceMetric(text);
+  const explicitMatches = matchServicesInOrder(message, services);
+  const comparisonMatches = mentionsComparison(text)
+    ? matchServicesInOrder(message, services, true)
+    : explicitMatches;
   const dataReference =
     ranking ||
     resolution.kind !== "none" ||
+    metric !== null ||
     mentionsEnvironment(text) ||
     mentionsService(text);
 
   const knowledgeIntent = classifyKnowledgeByRules(message, dataReference);
 
   if (knowledgeIntent !== null) {
-    return { intent: knowledgeIntent, serviceName: null };
+    return {
+      intent: knowledgeIntent,
+      serviceName: null,
+      compareWith: null,
+      metric: null,
+    };
+  }
+
+  if (
+    mentionsComparison(text) &&
+    (comparisonMatches.length >= 1 ||
+      resolution.kind !== "none" ||
+      mentionsService(text))
+  ) {
+    return {
+      intent: "COMPARE_SERVICES",
+      serviceName: null,
+      compareWith: null,
+      metric,
+    };
+  }
+
+  // "Alpha vs Beta" não usa a palavra comparação, mas liga dois serviços.
+  if (explicitMatches.length >= 2 && hasComparisonConnector(text)) {
+    return {
+      intent: "COMPARE_SERVICES",
+      serviceName: null,
+      compareWith: null,
+      metric,
+    };
+  }
+
+  if (ranking && metric !== null) {
+    return {
+      intent: "RANKING_RESOURCE",
+      serviceName: null,
+      compareWith: null,
+      metric,
+    };
   }
 
   if (ranking && emissions) {
-    return { intent: "RANKING_EMISSIONS", serviceName: null };
+    return {
+      intent: "RANKING_EMISSIONS",
+      serviceName: null,
+      compareWith: null,
+      metric: null,
+    };
   }
 
   if (ranking && energy) {
-    return { intent: "RANKING_ENERGY", serviceName: null };
+    return {
+      intent: "RANKING_ENERGY",
+      serviceName: null,
+      compareWith: null,
+      metric: null,
+    };
   }
 
   if (resolution.kind === "unique") {
-    return { intent: "SERVICE_SUMMARY", serviceName: resolution.service.name };
+    return {
+      intent: "SERVICE_SUMMARY",
+      serviceName: resolution.service.name,
+      compareWith: null,
+      metric,
+    };
   }
 
   if (resolution.kind === "ambiguous") {
-    return { intent: "SERVICE_SUMMARY", serviceName: null };
+    return {
+      intent: "SERVICE_SUMMARY",
+      serviceName: null,
+      compareWith: null,
+      metric,
+    };
+  }
+
+  // "Qual o uso de CPU?" sem nome ainda é resumo de serviço, completado
+  // pelo serviço ativo da conversa ou por uma clarificação.
+  if (metric !== null) {
+    return {
+      intent: "SERVICE_SUMMARY",
+      serviceName: null,
+      compareWith: null,
+      metric,
+    };
   }
 
   if (mentionsEnvironment(text)) {
-    return { intent: "ENVIRONMENT_SUMMARY", serviceName: null };
+    return {
+      intent: "ENVIRONMENT_SUMMARY",
+      serviceName: null,
+      compareWith: null,
+      metric: null,
+    };
   }
 
   if (mentionsService(text)) {
-    return { intent: "SERVICE_SUMMARY", serviceName: null };
+    return {
+      intent: "SERVICE_SUMMARY",
+      serviceName: null,
+      compareWith: null,
+      metric: null,
+    };
   }
 
-  return { intent: "OUT_OF_SCOPE", serviceName: null };
+  return {
+    intent: "OUT_OF_SCOPE",
+    serviceName: null,
+    compareWith: null,
+    metric: null,
+  };
 }
 
 // As regras só dispensam o classificador quando a intenção é sustentada por
@@ -660,22 +1142,31 @@ function isRulesClassificationConfident(
   message: string,
   resolution: ServiceResolution,
   classification: ChatClassification,
+  services: IndicatorService[],
 ): boolean {
   const text = normalizeText(message);
 
   switch (classification.intent) {
     case "RANKING_ENERGY":
     case "RANKING_EMISSIONS":
+    case "RANKING_RESOURCE":
     case "ENVIRONMENT_SUMMARY":
     case "PROJECT_INFO":
     case "METHODOLOGY":
       return true;
 
+    case "COMPARE_SERVICES":
+      return (
+        matchServicesInOrder(message, services, true).length >= 1 ||
+        resolution.kind !== "none"
+      );
+
     case "SERVICE_SUMMARY":
       return (
         resolution.kind !== "none" ||
         mentionsEnergy(text) ||
-        mentionsEmissions(text)
+        mentionsEmissions(text) ||
+        detectResourceMetric(text) !== null
       );
 
     default:
@@ -701,7 +1192,7 @@ function buildOutOfScope(indicators: IndicatorsResult): ChatDraft {
   return {
     intent: "OUT_OF_SCOPE",
     answer:
-      'Consigo responder apenas perguntas sobre os dados monitorados pelo GreenER, como consumo de energia, emissões, ranking entre serviços e disponibilidade. Por exemplo: "Qual serviço gasta mais energia?" ou "Resumo ambiental das últimas 24 horas".',
+      'Consigo responder apenas perguntas sobre os dados monitorados pelo GreenER, como energia, emissões, CPU, memória, disco, rede, ranking, comparação entre serviços e disponibilidade. Por exemplo: "Qual o uso de CPU do serviço Alpha?", "Qual serviço usa mais memória?", "Compare a rede do serviço Alpha com o serviço Beta" ou "Resumo ambiental das últimas 24 horas".',
     chart: null,
     partial: false,
     facts: {
@@ -1002,7 +1493,11 @@ export class ChatService {
     );
 
     // Regras primeiro: o classificador só é chamado quando elas não decidem.
-    const rulesClassification = classifyByRules(message, resolution);
+    const rulesClassification = classifyByRules(
+      message,
+      resolution,
+      activeServices,
+    );
     let classification = rulesClassification;
     let classificationFailed = !this.llm.enabled;
 
@@ -1011,6 +1506,7 @@ export class ChatService {
         message,
         resolution,
         rulesClassification,
+        activeServices,
       )
     ) {
       const llmClassification = await this.classifyCached(
@@ -1146,12 +1642,20 @@ export class ChatService {
         ? "-"
         : normalizeText(conversation?.lastQuestion ?? "-");
 
+    // Comparações podem completar o par com o serviço ativo da conversa, então
+    // a chave inclui esse serviço para não devolver o par de outra conversa.
+    const comparisonService =
+      mentionsComparison(text) || /\b(versus|vs|contra)\b/.test(text)
+        ? (conversation?.activeService?.serviceId ?? "-")
+        : "-";
+
     return [
       text,
       period,
       context.serviceName === null ? "-" : normalizeText(context.serviceName),
       hashHistory(history),
       knowledgeHint,
+      comparisonService,
     ].join("|");
   }
 
@@ -1257,11 +1761,29 @@ export class ChatService {
     let intent = classification.intent;
     let resolution = initialResolution;
     const hasExplicitService = initialResolution.kind !== "none";
+    const metric = detectResourceMetric(text) ?? classification.metric ?? null;
     const dataReference =
       mentionsRanking(text) ||
       initialResolution.kind !== "none" ||
+      metric !== null ||
       mentionsEnvironment(text) ||
       mentionsService(text);
+
+    const explicitMatches = matchServicesInOrder(message, services);
+    const comparisonCue =
+      mentionsComparison(text) ||
+      (explicitMatches.length >= 2 && hasComparisonConnector(text));
+    const comparison = buildComparisonResolution(
+      comparisonCue
+        ? matchServicesInOrder(message, services, true)
+        : explicitMatches,
+      classification.intent === "COMPARE_SERVICES"
+        ? [classification.serviceName, classification.compareWith]
+        : [null, null],
+      services,
+      conversation,
+      context,
+    );
 
     if (intent === "PROJECT_INFO" || intent === "METHODOLOGY") {
       const section = retrieveKnowledge(
@@ -1272,10 +1794,26 @@ export class ChatService {
       if (dataReference && !hasStrongKnowledgeCue(text)) {
         // O modelo pode confundir "energia" com explicação; com referência
         // explícita a dados, a intenção de consulta tem prioridade.
-        intent = classifyByRules(message, initialResolution).intent;
+        intent = classifyByRules(message, initialResolution, services).intent;
       } else if (section !== null) {
         intent = section.intent;
       }
+    }
+
+    // Dois serviços citados com sinal de comparação viram comparação direta,
+    // mesmo que o modelo tenha escolhido resumo, ranking ou fora de escopo.
+    if (
+      comparison.kind === "pair" &&
+      intent !== "PROJECT_INFO" &&
+      intent !== "METHODOLOGY" &&
+      comparisonCue
+    ) {
+      intent = "COMPARE_SERVICES";
+    }
+
+    // Ranking com recurso explícito ("mais CPU") tem intenção própria.
+    if (mentionsRanking(text) && metric !== null && !hasExplicitService) {
+      intent = "RANKING_RESOURCE";
     }
 
     // O classificador pode devolver um nome; ele só vale se existir de fato.
@@ -1302,6 +1840,8 @@ export class ChatService {
 
       if (knowledgeIntent !== null) {
         intent = knowledgeIntent;
+      } else if (mentionsRanking(text) && metric !== null) {
+        intent = "RANKING_RESOURCE";
       } else if (mentionsRanking(text) && mentionsEmissions(text)) {
         intent = "RANKING_EMISSIONS";
       } else if (mentionsRanking(text) && mentionsEnergy(text)) {
@@ -1318,6 +1858,8 @@ export class ChatService {
             : "RANKING_ENERGY";
       } else if (mentionsEnvironment(text)) {
         intent = "ENVIRONMENT_SUMMARY";
+      } else if (metric !== null) {
+        intent = "SERVICE_SUMMARY";
       } else if (mentionsService(text)) {
         intent = "SERVICE_SUMMARY";
       } else if (isContextDependent(text)) {
@@ -1404,6 +1946,8 @@ export class ChatService {
       intent,
       service: resolution.kind === "unique" ? resolution.service : null,
       resolution,
+      comparison,
+      metric,
       unknownServiceName:
         intent === "SERVICE_SUMMARY" && resolution.kind === "none"
           ? extractRequestedServiceName(message)
@@ -1434,8 +1978,34 @@ export class ChatService {
           mentionsLowest(normalizeText(message)),
         );
 
+      case "RANKING_RESOURCE": {
+        const metric = merged.metric;
+
+        return metric === null
+          ? this.buildRanking(
+              "RANKING_ENERGY",
+              period,
+              indicators,
+              mentionsLowest(normalizeText(message)),
+            )
+          : this.buildResourceRanking(
+              metric,
+              period,
+              indicators,
+              mentionsLowest(normalizeText(message)),
+            );
+      }
+
       case "ENVIRONMENT_SUMMARY":
         return this.buildEnvironment(period, startISO, endISO);
+
+      case "COMPARE_SERVICES":
+        return this.buildComparison(
+          merged.comparison,
+          period,
+          indicators,
+          merged.metric,
+        );
 
       case "PROJECT_INFO":
       case "METHODOLOGY":
@@ -1474,6 +2044,7 @@ export class ChatService {
           indicators,
           startISO,
           endISO,
+          merged.metric,
         );
       }
 
@@ -1669,6 +2240,357 @@ export class ChatService {
       };
   }
 
+  private buildResourceRanking(
+    metric: ChatResourceMetric,
+    period: ChatPeriod,
+    indicators: IndicatorsResult,
+    lowest: boolean,
+  ): ChatDraft {
+    const info = RESOURCE_METRIC_INFO[metric];
+
+    const ranking = indicators.services
+      .filter((service) => service.status === "active")
+      .map((service) => ({
+        service,
+        value: resourceMetricValue(service, metric),
+      }))
+      .filter(
+        (item): item is { service: IndicatorService; value: number } =>
+          item.value !== null && item.value > 0,
+      )
+      .map((item) => ({
+        service: item.service,
+        value: roundResourceValue(item.value, metric),
+      }))
+      .sort((left, right) =>
+        lowest ? left.value - right.value : right.value - left.value,
+      )
+      .slice(0, MAX_RANKING_ITEMS);
+
+    if (ranking.length === 0) {
+      return {
+        intent: "RANKING_RESOURCE",
+        answer: `Não encontrei dados de ${info.noun} registrados ${periodPhrase(period)} para os serviços ativos. Isso pode acontecer quando não houve coletas no período.`,
+        chart: null,
+        partial: indicators.summary.isPartial,
+        facts: {
+          ranking: [],
+          metric,
+          unit: info.unit,
+          order: lowest ? "asc" : "desc",
+          activeServiceCount: indicators.summary.activeServiceCount,
+        },
+        activeService: null,
+        clarification: null,
+        clarificationCandidates: [],
+      };
+    }
+
+    const [top, ...rest] = ranking;
+    const restText =
+      rest.length > 0
+        ? ` Em seguida aparecem ${rest
+            .map(
+              (item) =>
+                `${item.service.name} (${formatResourceValue(item.value, metric)})`,
+            )
+            .join(", ")}.`
+        : "";
+
+    const chart: ChatChart = {
+      type: "bar",
+      title: info.rankingTitle,
+      unit: info.unit,
+      data: ranking.map((item) => ({
+        label: item.service.name,
+        value: item.value,
+      })),
+    };
+
+    return {
+      intent: "RANKING_RESOURCE",
+      answer: `${capitalize(periodPhrase(period))}, o serviço com ${lowest ? "menor" : "maior"} ${info.noun} foi ${top.service.name}, com ${formatResourceValue(top.value, metric)}.${restText}`,
+      chart,
+      partial: indicators.summary.isPartial,
+      facts: {
+        ranking: ranking.map((item) => ({
+          service: item.service.name,
+          value: item.value,
+          unit: info.unit,
+        })),
+        metric,
+        order: lowest ? "asc" : "desc",
+        activeServiceCount: indicators.summary.activeServiceCount,
+      },
+      activeService: {
+        serviceId: top.service.serviceId,
+        name: top.service.name,
+      },
+      clarification: null,
+      clarificationCandidates: [],
+    };
+  }
+
+  private buildComparison(
+    comparison: ComparisonResolution,
+    period: ChatPeriod,
+    indicators: IndicatorsResult,
+    metric: ChatResourceMetric | null,
+  ): ChatDraft {
+    const availableServices = indicators.services
+      .filter((service) => service.status === "active")
+      .map((service) => service.name);
+
+    if (comparison.kind !== "pair") {
+      const candidateNames =
+        comparison.kind === "ambiguous"
+          ? comparison.candidates.map((service) => service.name)
+          : comparison.kind === "partial"
+            ? [comparison.known.name]
+            : [];
+
+      let answer: string;
+
+      if (comparison.kind === "ambiguous") {
+        answer = `Encontrei mais de dois serviços na pergunta (${candidateNames.join(", ")}). Diga apenas dois nomes, por exemplo: "Compare ${candidateNames[0]} com ${candidateNames[1]}".`;
+      } else if (comparison.kind === "partial") {
+        const other = availableServices.find(
+          (name) => name !== comparison.known.name,
+        );
+
+        answer =
+          other === undefined
+            ? `Encontrei apenas o serviço ${comparison.known.name}, e não há outro serviço ativo para comparar.`
+            : `Encontrei apenas o serviço ${comparison.known.name}. Para comparar, informe o outro serviço. Exemplo: "Compare ${comparison.known.name} com ${other}".`;
+      } else {
+        answer =
+          availableServices.length >= 2
+            ? `Para comparar, informe dois serviços. Os serviços ativos são: ${availableServices.join(", ")}. Exemplo: "Compare ${availableServices[0]} com ${availableServices[1]}".`
+            : "Não há serviços ativos suficientes para comparar.";
+      }
+
+      return {
+        intent: "COMPARE_SERVICES",
+        answer,
+        chart: null,
+        partial: indicators.summary.isPartial,
+        facts: {
+          candidates: candidateNames,
+          availableServices,
+        },
+        activeService:
+          comparison.kind === "partial"
+            ? {
+                serviceId: comparison.known.serviceId,
+                name: comparison.known.name,
+              }
+            : null,
+        clarification: null,
+        clarificationCandidates: [],
+      };
+    }
+
+    const first = comparison.first;
+    const second = comparison.second;
+    const partial = first.periodTotals.isPartial || second.periodTotals.isPartial;
+    const partialNote = partial
+      ? " Os dados de pelo menos um dos serviços são parciais por lacunas de coleta no período."
+      : "";
+
+    const summarize = (service: IndicatorService) => ({
+      name: service.name,
+      energyKwh: round(service.periodTotals.energyKwh),
+      emissionsGco2e: round(service.periodTotals.emissionsGco2e),
+      collectionCount: service.periodTotals.collectionCount,
+      validMetricCount: service.periodTotals.validMetricCount,
+      metricCoveragePercent: round(
+        service.periodTotals.metricCoveragePercent,
+        2,
+      ),
+      ...regionalFacts(service),
+      ...resourceFacts(service),
+      energyBreakdown: {
+        cpuKwh: roundNullable(service.energyBreakdown.cpuKwh),
+        memoryKwh: roundNullable(service.energyBreakdown.memoryKwh),
+        diskKwh: roundNullable(service.energyBreakdown.diskKwh),
+        networkKwh: roundNullable(service.energyBreakdown.networkKwh),
+      },
+      isPartial: service.periodTotals.isPartial,
+    });
+
+    if (metric !== null) {
+      const info = RESOURCE_METRIC_INFO[metric];
+      const firstValue = resourceMetricValue(first, metric);
+      const secondValue = resourceMetricValue(second, metric);
+
+      if (firstValue === null || secondValue === null) {
+        const missing = [
+          firstValue === null ? first.name : null,
+          secondValue === null ? second.name : null,
+        ].filter((name): name is string => name !== null);
+
+        return {
+          intent: "COMPARE_SERVICES",
+          answer: `Não encontrei dados de ${info.noun} para ${missing.join(" e ")} ${periodPhrase(period)}, então não é possível comparar os dois serviços.${partialNote}`,
+          chart: null,
+          partial,
+          facts: {
+            comparison: {
+              metric,
+              first: summarize(first),
+              second: summarize(second),
+              firstValue: null,
+              secondValue: null,
+            },
+          },
+          activeService: {
+            serviceId: first.serviceId,
+            name: first.name,
+          },
+          clarification: null,
+          clarificationCandidates: [],
+        };
+      }
+
+      const firstRounded = roundResourceValue(firstValue, metric);
+      const secondRounded = roundResourceValue(secondValue, metric);
+      const firstPeak = resourceMetricPeak(first, metric);
+      const secondPeak = resourceMetricPeak(second, metric);
+      const firstPeakRounded =
+        firstPeak === null ? null : roundResourceValue(firstPeak, metric);
+      const secondPeakRounded =
+        secondPeak === null ? null : roundResourceValue(secondPeak, metric);
+
+      const higher = firstRounded >= secondRounded ? first : second;
+      const lower = higher === first ? second : first;
+      const difference = roundResourceValue(
+        Math.abs(firstRounded - secondRounded),
+        metric,
+      );
+      const percent =
+        Math.min(firstRounded, secondRounded) > 0
+          ? round(
+              (difference / Math.min(firstRounded, secondRounded)) * 100,
+              2,
+            )
+          : null;
+
+      const deltaSentence =
+        difference === 0
+          ? `O ${info.noun} ficou empatado entre os dois serviços.`
+          : `${higher.name} registrou ${metric === "cpu" ? `${formatNumber(difference)} pontos percentuais` : formatResourceTotal(difference, metric)} a mais que ${lower.name}${metric === "cpu" || percent === null ? "" : `, ${formatNumber(percent)}% acima`}.`;
+
+      const chart: ChatChart = {
+        type: "bar",
+        title: `${info.chartTitle} — ${first.name} vs ${second.name}`,
+        unit: info.unit,
+        data: [
+          { label: first.name, value: firstRounded },
+          { label: second.name, value: secondRounded },
+        ],
+      };
+
+      return {
+        intent: "COMPARE_SERVICES",
+        answer: `${capitalize(periodPhrase(period))}, ${first.name} registrou ${resourceUsagePhrase(firstRounded, firstPeakRounded, metric)}, enquanto ${second.name} registrou ${resourceUsagePhrase(secondRounded, secondPeakRounded, metric)}. ${deltaSentence}${partialNote}`,
+        chart,
+        partial,
+        facts: {
+          comparison: {
+            metric,
+            first: summarize(first),
+            second: summarize(second),
+            firstValue: firstRounded,
+            secondValue: secondRounded,
+            difference,
+            percentDifference: percent,
+          },
+        },
+        activeService: {
+          serviceId: first.serviceId,
+          name: first.name,
+        },
+        clarification: null,
+        clarificationCandidates: [],
+      };
+    }
+
+    const firstEnergy = round(first.periodTotals.energyKwh);
+    const secondEnergy = round(second.periodTotals.energyKwh);
+    const firstEmissions = round(first.periodTotals.emissionsGco2e);
+    const secondEmissions = round(second.periodTotals.emissionsGco2e);
+
+    const energyHigher = firstEnergy >= secondEnergy ? first : second;
+    const energyLower = energyHigher === first ? second : first;
+    const energyDifference = round(Math.abs(firstEnergy - secondEnergy));
+    const energyPercent =
+      Math.min(firstEnergy, secondEnergy) > 0
+        ? round(
+            (energyDifference / Math.min(firstEnergy, secondEnergy)) * 100,
+            2,
+          )
+        : null;
+
+    const emissionsHigher = firstEmissions >= secondEmissions ? first : second;
+    const emissionsLower = emissionsHigher === first ? second : first;
+    const emissionsDifference = round(
+      Math.abs(firstEmissions - secondEmissions),
+    );
+    const emissionsPercent =
+      Math.min(firstEmissions, secondEmissions) > 0
+        ? round(
+            (emissionsDifference / Math.min(firstEmissions, secondEmissions)) *
+              100,
+            2,
+          )
+        : null;
+
+    const energySentence =
+      energyDifference === 0
+        ? "O consumo de energia ficou empatado entre os dois serviços."
+        : energyPercent === null
+          ? `${energyHigher.name} consumiu ${formatNumber(energyDifference)} kWh a mais que ${energyLower.name}.`
+          : `${energyHigher.name} consumiu ${formatNumber(energyDifference)} kWh a mais, ${formatNumber(energyPercent)}% acima de ${energyLower.name}.`;
+
+    const emissionsSentence =
+      emissionsDifference === 0
+        ? "As emissões também ficaram empatadas."
+        : emissionsPercent === null
+          ? `${emissionsHigher.name} emitiu ${formatNumber(emissionsDifference)} gCO₂e a mais que ${emissionsLower.name}.`
+          : `${emissionsHigher.name} emitiu ${formatNumber(emissionsDifference)} gCO₂e a mais, ${formatNumber(emissionsPercent)}% acima de ${emissionsLower.name}.`;
+
+    const chart: ChatChart = {
+      type: "bar",
+      title: `Consumo de energia — ${first.name} vs ${second.name}`,
+      unit: "kWh",
+      data: [
+        { label: first.name, value: firstEnergy },
+        { label: second.name, value: secondEnergy },
+      ],
+    };
+
+    return {
+      intent: "COMPARE_SERVICES",
+      answer: `${capitalize(periodPhrase(period))}, ${first.name} consumiu ${formatNumber(firstEnergy)} kWh e emitiu ${formatNumber(firstEmissions)} gCO₂e, enquanto ${second.name} consumiu ${formatNumber(secondEnergy)} kWh e emitiu ${formatNumber(secondEmissions)} gCO₂e. ${energySentence} ${emissionsSentence}${partialNote}`,
+      chart,
+      partial,
+      facts: {
+        comparison: {
+          first: summarize(first),
+          second: summarize(second),
+          energyDifferenceKwh: energyDifference,
+          emissionsDifferenceGco2e: emissionsDifference,
+        },
+      },
+      activeService: {
+        serviceId: first.serviceId,
+        name: first.name,
+      },
+      clarification: null,
+      clarificationCandidates: [],
+    };
+  }
+
   private async buildEnvironment(
     period: ChatPeriod,
     startISO: string,
@@ -1720,6 +2642,7 @@ export class ChatService {
     indicators: IndicatorsResult,
     startISO: string,
     endISO: string,
+    metric: ChatResourceMetric | null,
   ): Promise<ChatDraft> {
     if (service === null) {
       const availableServices = indicators.services
@@ -1758,6 +2681,98 @@ export class ChatService {
       Math.ceil(history.samples.length / MAX_CHART_POINTS),
     );
 
+    const partialNote = totals.isPartial
+      ? " Os dados são parciais porque há lacunas de coleta ou de intensidade de carbono no período."
+      : "";
+
+    if (metric !== null) {
+      const info = RESOURCE_METRIC_INFO[metric];
+      const rawValue = resourceMetricValue(service, metric);
+      const rawPeak = resourceMetricPeak(service, metric);
+      const chartData: ChatChartPoint[] = [];
+
+      for (let index = 0; index < history.samples.length; index += stride) {
+        const bucket = history.samples.slice(index, index + stride);
+        const sample = bucket[bucket.length - 1];
+        const sampleValue = sampleResourceValue(sample, metric);
+
+        chartData.push({
+          label: formatSampleLabel(sample.attemptedAt, period),
+          value:
+            sampleValue === null
+              ? null
+              : roundResourceValue(sampleValue, metric),
+        });
+      }
+
+      const chart: ChatChart | null = chartData.some(
+        (point) => point.value !== null,
+      )
+        ? {
+            type: "line",
+            title: `${info.chartTitle} — ${service.name}`,
+            unit: info.unit,
+            data: chartData,
+          }
+        : null;
+
+      if (rawValue === null) {
+        return {
+          intent: "SERVICE_SUMMARY",
+          answer: `Não encontrei dados de ${info.noun} para o serviço ${service.name} ${periodPhrase(period)}. Isso pode acontecer quando não houve coletas com métricas válidas no período.`,
+          chart,
+          partial: totals.isPartial,
+          facts: {
+            service: {
+              name: service.name,
+              status: service.status,
+              regionCode: service.regionCode,
+            },
+            metric,
+            resources: resourceFacts(service),
+          },
+          activeService: {
+            serviceId: service.serviceId,
+            name: service.name,
+          },
+          clarification: null,
+          clarificationCandidates: [],
+        };
+      }
+
+      const value = roundResourceValue(rawValue, metric);
+      const peak =
+        rawPeak === null ? null : roundResourceValue(rawPeak, metric);
+
+      return {
+        intent: "SERVICE_SUMMARY",
+        answer: `${capitalize(periodPhrase(period))}, o serviço ${service.name} registrou ${resourceUsagePhrase(value, peak, metric)}, com ${totals.validMetricCount} de ${totals.collectionCount} coletas com métricas válidas.${partialNote}`,
+        chart,
+        partial: totals.isPartial,
+        facts: {
+          service: {
+            name: service.name,
+            status: service.status,
+            regionCode: service.regionCode,
+          },
+          metric,
+          metricValue: value,
+          metricPeak: peak,
+          resources: resourceFacts(service),
+          regionalContext: regionalFacts(service),
+          collectionCount: totals.collectionCount,
+          validMetricCount: totals.validMetricCount,
+          chartPoints: chartData.length,
+        },
+        activeService: {
+          serviceId: service.serviceId,
+          name: service.name,
+        },
+        clarification: null,
+        clarificationCandidates: [],
+      };
+    }
+
     const chartData: ChatChartPoint[] = [];
 
     for (let index = 0; index < history.samples.length; index += stride) {
@@ -1775,10 +2790,6 @@ export class ChatService {
       });
     }
 
-    const partialNote = totals.isPartial
-      ? " Os dados são parciais porque há lacunas de coleta ou de intensidade de carbono no período."
-      : "";
-
     const chart: ChatChart | null =
       chartData.length > 0
         ? {
@@ -1789,9 +2800,63 @@ export class ChatService {
           }
         : null;
 
+    const resourceParts: string[] = [];
+    const { cpu, memory, disk, network } = service.resourceSummary;
+
+    if (cpu.averagePercent !== null) {
+      resourceParts.push(
+        `CPU média de ${formatResourceValue(cpu.averagePercent, "cpu")}${
+          cpu.peakPercent === null
+            ? ""
+            : ` (pico de ${formatResourceValue(cpu.peakPercent, "cpu")})`
+        }`,
+      );
+    }
+
+    if (memory.averageGb !== null) {
+      resourceParts.push(
+        `memória média de ${formatResourceValue(memory.averageGb, "memory")}${
+          memory.peakGb === null
+            ? ""
+            : ` (pico de ${formatResourceValue(memory.peakGb, "memory")})`
+        }`,
+      );
+    }
+
+    if (disk.averageGb !== null) {
+      resourceParts.push(
+        `disco médio de ${formatResourceValue(disk.averageGb, "disk")}${
+          disk.peakGb === null
+            ? ""
+            : ` (pico de ${formatResourceValue(disk.peakGb, "disk")})`
+        }`,
+      );
+    }
+
+    if (network.totalGb !== null) {
+      resourceParts.push(
+        `tráfego de rede de ${formatResourceTotal(network.totalGb, "network")}`,
+      );
+    }
+
+    const resourceSentence =
+      resourceParts.length > 0
+        ? ` No período, a leitura de recursos mostrou ${resourceParts.join(", ")}.`
+        : "";
+
+    const region = service.regionalContext;
+    const regionSentence =
+      region.carbonIntensityGco2ePerKwh === null
+        ? ""
+        : ` A região ${region.regionCode ?? service.regionCode} tem intensidade de carbono de ${formatNumber(region.carbonIntensityGco2ePerKwh)} gCO₂e/kWh${
+            region.renewableSharePercent === null
+              ? ""
+              : ` e ${formatNumber(region.renewableSharePercent)}% de matriz renovável`
+          }.`;
+
     return {
       intent: "SERVICE_SUMMARY",
-      answer: `${capitalize(periodPhrase(period))}, o serviço ${service.name} consumiu ${formatNumber(round(totals.energyKwh))} kWh e emitiu ${formatNumber(round(totals.emissionsGco2e))} gCO₂e, com ${totals.validMetricCount} de ${totals.collectionCount} coletas com métricas válidas.${partialNote}`,
+      answer: `${capitalize(periodPhrase(period))}, o serviço ${service.name} consumiu ${formatNumber(round(totals.energyKwh))} kWh e emitiu ${formatNumber(round(totals.emissionsGco2e))} gCO₂e, com ${totals.validMetricCount} de ${totals.collectionCount} coletas com métricas válidas.${resourceSentence}${regionSentence}${partialNote}`,
       chart,
       partial: totals.isPartial,
       facts: {
@@ -1805,6 +2870,14 @@ export class ChatService {
           emissionsGco2e: round(totals.emissionsGco2e),
           collectionCount: totals.collectionCount,
           validMetricCount: totals.validMetricCount,
+        },
+        resources: resourceFacts(service),
+        regionalContext: regionalFacts(service),
+        energyBreakdown: {
+          cpuKwh: roundNullable(service.energyBreakdown.cpuKwh),
+          memoryKwh: roundNullable(service.energyBreakdown.memoryKwh),
+          diskKwh: roundNullable(service.energyBreakdown.diskKwh),
+          networkKwh: roundNullable(service.energyBreakdown.networkKwh),
         },
         chartPoints: chartData.length,
       },
@@ -1872,6 +2945,17 @@ export class ChatService {
         add("Panorama ambiental", "Resumo ambiental do período");
         break;
 
+      case "RANKING_RESOURCE":
+        add("Ver energia", "Qual serviço gasta mais energia no mesmo período?");
+        add("Maiores emissões", "Qual serviço emite mais CO₂?");
+        if (activeService !== null) {
+          add(
+            `Detalhar ${activeService.name}`,
+            `Como está o serviço ${activeService.name}?`,
+          );
+        }
+        break;
+
       case "SERVICE_SUMMARY":
         if (activeService !== null) {
           add("Ver ranking de energia", "Qual serviço gasta mais energia?");
@@ -1889,6 +2973,17 @@ export class ChatService {
           add("Maiores emissões", "Qual serviço emite mais CO₂?");
           add("Panorama ambiental", "Resumo ambiental do período");
         }
+        break;
+
+      case "COMPARE_SERVICES":
+        if (activeService !== null) {
+          add(
+            `Detalhar ${activeService.name}`,
+            `Como está o serviço ${activeService.name}?`,
+          );
+        }
+        add("Ver ranking de energia", "Qual serviço gasta mais energia?");
+        add("Panorama ambiental", "Resumo ambiental do período");
         break;
 
       case "ENVIRONMENT_SUMMARY":

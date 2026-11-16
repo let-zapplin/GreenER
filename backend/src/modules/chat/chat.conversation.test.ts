@@ -48,6 +48,23 @@ function createIndicatorService({
     status,
     regionCode: "BR",
     latestSampleInPeriod: null,
+    resourceSummary: {
+      cpu: { averagePercent: null, peakPercent: null },
+      memory: { averageGb: null, peakGb: null },
+      disk: { averageGb: null, peakGb: null },
+      network: { totalGb: null },
+    },
+    energyBreakdown: {
+      cpuKwh: null,
+      memoryKwh: null,
+      diskKwh: null,
+      networkKwh: null,
+    },
+    regionalContext: {
+      regionCode: "BR",
+      carbonIntensityGco2ePerKwh: null,
+      renewableSharePercent: null,
+    },
     periodTotals: {
       energyKwh,
       emissionsGco2e,

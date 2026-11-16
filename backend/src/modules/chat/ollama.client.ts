@@ -8,10 +8,12 @@ import {
 } from "./chat.prompt.js";
 import {
   CHAT_INTENTS,
+  CHAT_RESOURCE_METRICS,
   type ChatClassification,
   type ChatHistoryMessage,
   type ChatIntent,
   type ChatLlm,
+  type ChatResourceMetric,
 } from "./chat.types.js";
 
 type OllamaClientOptions = {
@@ -47,10 +49,19 @@ function parseClassification(text: string): ChatClassification | null {
 
   const serviceName =
     typeof record.serviceName === "string" ? record.serviceName : null;
+  const compareWith =
+    typeof record.compareWith === "string" ? record.compareWith : null;
+  const metric =
+    typeof record.metric === "string" &&
+    (CHAT_RESOURCE_METRICS as readonly string[]).includes(record.metric)
+      ? (record.metric as ChatResourceMetric)
+      : null;
 
   return {
     intent: intent as ChatIntent,
     serviceName,
+    compareWith,
+    metric,
   };
 }
 

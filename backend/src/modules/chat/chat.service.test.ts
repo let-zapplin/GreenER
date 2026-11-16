@@ -31,6 +31,15 @@ function createIndicatorService({
   collectionCount = 1,
   validMetricCount = 1,
   isPartial = false,
+  cpuAveragePercent = null,
+  cpuPeakPercent = null,
+  memoryAverageGb = null,
+  memoryPeakGb = null,
+  diskAverageGb = null,
+  diskPeakGb = null,
+  networkTotalGb = null,
+  carbonIntensity = null,
+  renewableSharePercent = null,
 }: {
   serviceId?: number;
   name: string;
@@ -40,6 +49,15 @@ function createIndicatorService({
   collectionCount?: number;
   validMetricCount?: number;
   isPartial?: boolean;
+  cpuAveragePercent?: number | null;
+  cpuPeakPercent?: number | null;
+  memoryAverageGb?: number | null;
+  memoryPeakGb?: number | null;
+  diskAverageGb?: number | null;
+  diskPeakGb?: number | null;
+  networkTotalGb?: number | null;
+  carbonIntensity?: number | null;
+  renewableSharePercent?: number | null;
 }) {
   return {
     serviceId,
@@ -47,6 +65,23 @@ function createIndicatorService({
     status,
     regionCode: "BR",
     latestSampleInPeriod: null,
+    resourceSummary: {
+      cpu: { averagePercent: cpuAveragePercent, peakPercent: cpuPeakPercent },
+      memory: { averageGb: memoryAverageGb, peakGb: memoryPeakGb },
+      disk: { averageGb: diskAverageGb, peakGb: diskPeakGb },
+      network: { totalGb: networkTotalGb },
+    },
+    energyBreakdown: {
+      cpuKwh: null,
+      memoryKwh: null,
+      diskKwh: null,
+      networkKwh: null,
+    },
+    regionalContext: {
+      regionCode: "BR",
+      carbonIntensityGco2ePerKwh: carbonIntensity,
+      renewableSharePercent,
+    },
     periodTotals: {
       energyKwh,
       emissionsGco2e,
@@ -210,6 +245,374 @@ describe("ChatService", () => {
     });
     expect(result.model).toBe("regras");
     expect(answer).not.toHaveBeenCalled();
+  });
+
+  it("compara dois serviços citados e gera gráfico de barras determinístico", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({
+          name: "Alpha",
+          energyKwh: 0.2,
+          emissionsGco2e: 50,
+        }),
+        createIndicatorService({
+          serviceId: 2,
+          name: "Beta",
+          energyKwh: 0.8,
+          emissionsGco2e: 120,
+        }),
+      ]),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(true),
+      () => NOW,
+    );
+
+    const result = await service.chat(
+      "Compare o serviço Alpha com o serviço Beta",
+    );
+
+    expect(result.intent).toBe("COMPARE_SERVICES");
+    expect(result.answer).toContain("Alpha");
+    expect(result.answer).toContain("Beta");
+    expect(result.answer).toContain("300%");
+    expect(result.chart).toEqual({
+      type: "bar",
+      title: "Consumo de energia — Alpha vs Beta",
+      unit: "kWh",
+      data: [
+        { label: "Alpha", value: 0.2 },
+        { label: "Beta", value: 0.8 },
+      ],
+    });
+    expect(result.model).toBe("regras");
+    expect(classify).not.toHaveBeenCalled();
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it("reconhece comparação com conectivo versus", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({ name: "Alpha", energyKwh: 0.2 }),
+        createIndicatorService({ serviceId: 2, name: "Beta", energyKwh: 0.8 }),
+      ]),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => NOW,
+    );
+
+    const result = await service.chat("Alpha vs Beta");
+
+    expect(result.intent).toBe("COMPARE_SERVICES");
+    expect(result.chart).toEqual({
+      type: "bar",
+      title: "Consumo de energia — Alpha vs Beta",
+      unit: "kWh",
+      data: [
+        { label: "Alpha", value: 0.2 },
+        { label: "Beta", value: 0.8 },
+      ],
+    });
+  });
+
+  it("pede dois nomes quando a comparação não identifica os serviços", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({ name: "Alpha", energyKwh: 0.2 }),
+        createIndicatorService({ serviceId: 2, name: "Beta", energyKwh: 0.8 }),
+      ]),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => NOW,
+    );
+
+    const result = await service.chat("Compare os serviços");
+
+    expect(result.intent).toBe("COMPARE_SERVICES");
+    expect(result.chart).toBeNull();
+    expect(result.answer).toContain("Alpha");
+    expect(result.answer).toContain("Beta");
+  });
+
+  it("completa a comparação com o serviço ativo da conversa", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({ name: "Alpha", energyKwh: 0.2 }),
+        createIndicatorService({ serviceId: 2, name: "Beta", energyKwh: 0.8 }),
+      ]),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => NOW,
+    );
+    const conversationId = "conversa-comparacao";
+
+    getServiceHistory.mockResolvedValue({ samples: [] });
+
+    await service.chat("Como está o serviço Alpha?", "24h", {
+      conversationId,
+    });
+    const result = await service.chat("Compare com o serviço Beta", "24h", {
+      conversationId,
+    });
+
+    expect(result.intent).toBe("COMPARE_SERVICES");
+    expect(result.answer).toContain("Alpha");
+    expect(result.answer).toContain("Beta");
+    expect(result.chart?.data.map((point) => point.label)).toEqual([
+      "Beta",
+      "Alpha",
+    ]);
+  });
+
+  it("responde o uso de CPU de um serviço com gráfico de linha", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({
+          name: "Alpha",
+          energyKwh: 0.2,
+          cpuAveragePercent: 12.5,
+          cpuPeakPercent: 40,
+        }),
+      ]),
+    );
+    getServiceHistory.mockResolvedValue({
+      samples: [
+        {
+          collectionId: "1",
+          attemptedAt: new Date("2026-11-10T11:00:00.000Z"),
+          status: "success",
+          metrics: { cpuPercent: 10, memoryGb: 1, diskGb: 10, networkGb: 0.1 },
+          collectionIntervalSeconds: 60,
+          energyKwh: 0.1,
+          emissionsGco2e: 20,
+          carbonIntensityGco2ePerKwh: 200,
+          gapReason: null,
+        },
+        {
+          collectionId: "2",
+          attemptedAt: new Date("2026-11-10T11:30:00.000Z"),
+          status: "success",
+          metrics: { cpuPercent: 15, memoryGb: 1.2, diskGb: 10, networkGb: 0.2 },
+          collectionIntervalSeconds: 60,
+          energyKwh: 0.1,
+          emissionsGco2e: 20,
+          carbonIntensityGco2ePerKwh: 200,
+          gapReason: null,
+        },
+      ],
+    });
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(true),
+      () => NOW,
+    );
+
+    const result = await service.chat("Qual o gasto de CPU do serviço Alpha?");
+
+    expect(result.intent).toBe("SERVICE_SUMMARY");
+    expect(result.answer).toContain("12,5%");
+    expect(result.answer).toContain("pico de 40%");
+    expect(result.chart?.type).toBe("line");
+    expect(result.chart?.title).toBe("Uso de CPU — Alpha");
+    expect(result.chart?.unit).toBe("%");
+    expect(result.chart?.data.map((point) => point.value)).toEqual([10, 15]);
+    expect(classify).not.toHaveBeenCalled();
+  });
+
+  it("compara CPU entre dois serviços citados", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({
+          name: "Alpha",
+          energyKwh: 0.2,
+          cpuAveragePercent: 12.5,
+          cpuPeakPercent: 40,
+        }),
+        createIndicatorService({
+          serviceId: 2,
+          name: "Beta",
+          energyKwh: 0.8,
+          cpuAveragePercent: 25,
+          cpuPeakPercent: 60,
+        }),
+      ]),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(true),
+      () => NOW,
+    );
+
+    const result = await service.chat(
+      "Compare a CPU do serviço Alpha com o serviço Beta",
+    );
+
+    expect(result.intent).toBe("COMPARE_SERVICES");
+    expect(result.answer).toContain("12,5%");
+    expect(result.answer).toContain("25%");
+    expect(result.answer).toContain("12,5 pontos percentuais");
+    expect(result.chart).toEqual({
+      type: "bar",
+      title: "Uso de CPU — Alpha vs Beta",
+      unit: "%",
+      data: [
+        { label: "Alpha", value: 12.5 },
+        { label: "Beta", value: 25 },
+      ],
+    });
+    expect(classify).not.toHaveBeenCalled();
+  });
+
+  it("monta ranking de memória quando a pergunta pede o maior uso", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({ name: "Alpha", memoryAverageGb: 2 }),
+        createIndicatorService({
+          serviceId: 2,
+          name: "Beta",
+          memoryAverageGb: 8,
+        }),
+        createIndicatorService({
+          serviceId: 3,
+          name: "Gamma",
+          memoryAverageGb: 4,
+        }),
+      ]),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => NOW,
+    );
+
+    const result = await service.chat("Qual serviço usa mais memória?");
+
+    expect(result.intent).toBe("RANKING_RESOURCE");
+    expect(result.answer).toContain("Beta");
+    expect(result.answer).toContain("8 GB");
+    expect(result.chart).toEqual({
+      type: "bar",
+      title: "Uso médio de memória por serviço",
+      unit: "GB",
+      data: [
+        { label: "Beta", value: 8 },
+        { label: "Gamma", value: 4 },
+        { label: "Alpha", value: 2 },
+      ],
+    });
+    expect(result.model).toBe("regras");
+  });
+
+  it("resume todos os recursos do serviço, incluindo a região", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({
+          name: "Alpha",
+          energyKwh: 0.2,
+          emissionsGco2e: 50,
+          cpuAveragePercent: 12.5,
+          cpuPeakPercent: 40,
+          memoryAverageGb: 1.5,
+          memoryPeakGb: 2,
+          diskAverageGb: 10,
+          diskPeakGb: 12,
+          networkTotalGb: 0.5,
+          carbonIntensity: 120,
+          renewableSharePercent: 80,
+        }),
+      ]),
+    );
+    getServiceHistory.mockResolvedValue({ samples: [] });
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => NOW,
+    );
+
+    const result = await service.chat(
+      "Quais são todos os dados do serviço Alpha?",
+    );
+
+    expect(result.intent).toBe("SERVICE_SUMMARY");
+    expect(result.answer).toContain("CPU média de 12,5% (pico de 40%)");
+    expect(result.answer).toContain("memória média de 1,5 GB (pico de 2 GB)");
+    expect(result.answer).toContain("disco médio de 10 GB (pico de 12 GB)");
+    expect(result.answer).toContain("tráfego de rede de 0,5 GB");
+    expect(result.answer).toContain("intensidade de carbono de 120 gCO₂e/kWh");
+    expect(result.answer).toContain("80% de matriz renovável");
+  });
+
+  it("continua com o recurso pedido na sequência da conversa", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([
+        createIndicatorService({
+          name: "Alpha",
+          energyKwh: 0.2,
+          cpuAveragePercent: 12.5,
+          cpuPeakPercent: 40,
+        }),
+      ]),
+    );
+    getServiceHistory.mockResolvedValue({ samples: [] });
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => NOW,
+    );
+    const conversationId = "conversa-cpu";
+
+    await service.chat("Como está o serviço Alpha?", "24h", {
+      conversationId,
+    });
+    const result = await service.chat("e a CPU dele?", "24h", {
+      conversationId,
+    });
+
+    expect(result.intent).toBe("SERVICE_SUMMARY");
+    expect(result.answer).toContain("12,5%");
+    expect(result.answer).toContain("pico de 40%");
+  });
+
+  it("mantém pergunta de metodologia sobre CPU no caminho de conhecimento", async () => {
+    getIndicators.mockResolvedValue(
+      createIndicatorsResult([createIndicatorService({ name: "Alpha" })]),
+    );
+
+    const service = new ChatService(
+      { getIndicators, getServiceHistory },
+      { getSummary },
+      createLlm(false),
+      () => NOW,
+    );
+
+    const result = await service.chat("Como a CPU entra no cálculo de energia?");
+
+    expect(result.intent).toBe("METHODOLOGY");
   });
 
   it("não chama o modelo quando as regras decidem uma resposta de dados", async () => {

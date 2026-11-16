@@ -77,6 +77,8 @@ const STRONG_KNOWLEDGE_CUES = [
   "como funciona",
   "como calcul",
   "como e calcul",
+  "calculo de",
+  "no calculo",
   "calculad",
   "formula",
   "metodologia",

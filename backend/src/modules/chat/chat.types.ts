@@ -5,7 +5,9 @@ export type ChatPeriod = (typeof CHAT_PERIODS)[number];
 export const CHAT_INTENTS = [
   "RANKING_ENERGY",
   "RANKING_EMISSIONS",
+  "RANKING_RESOURCE",
   "SERVICE_SUMMARY",
+  "COMPARE_SERVICES",
   "ENVIRONMENT_SUMMARY",
   "PROJECT_INFO",
   "METHODOLOGY",
@@ -14,9 +16,23 @@ export const CHAT_INTENTS = [
 
 export type ChatIntent = (typeof CHAT_INTENTS)[number];
 
+// Recursos medidos por serviço, além de energia e emissões.
+export const CHAT_RESOURCE_METRICS = [
+  "cpu",
+  "memory",
+  "disk",
+  "network",
+] as const;
+
+export type ChatResourceMetric = (typeof CHAT_RESOURCE_METRICS)[number];
+
 export type ChatClassification = {
   intent: ChatIntent;
   serviceName: string | null;
+  // Segundo serviço de uma comparação ("compare A com B").
+  compareWith: string | null;
+  // Recurso pedido explicitamente ("cpu", "memória", "disco", "rede").
+  metric: ChatResourceMetric | null;
 };
 
 export type ChatChartPoint = {

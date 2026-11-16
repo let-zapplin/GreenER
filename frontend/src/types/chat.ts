@@ -5,7 +5,9 @@ export type ChatPeriod = (typeof CHAT_PERIODS)[number];
 export type ChatIntent =
   | "RANKING_ENERGY"
   | "RANKING_EMISSIONS"
+  | "RANKING_RESOURCE"
   | "SERVICE_SUMMARY"
+  | "COMPARE_SERVICES"
   | "ENVIRONMENT_SUMMARY"
   | "PROJECT_INFO"
   | "METHODOLOGY"

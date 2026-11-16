@@ -36,6 +36,8 @@ const PERIOD_LABELS: Record<ChatPeriod, string> = {
 const SUGGESTIONS = [
   "Qual serviço gasta mais energia?",
   "Qual serviço emite mais CO₂?",
+  "Qual serviço usa mais CPU?",
+  "Compare dois serviços",
   "Resumo ambiental do período",
   "O que é o GreenER?",
   "Como o CO₂ é calculado?",
@@ -76,6 +78,9 @@ function formatChartValue(value: number): string {
 
 function ChatChartView({ chart }: { chart: ChatChart }) {
   const hasValues = chart.data.some((point) => point.value !== null);
+  // Rankings têm até 5 barras; rótulos menores evitam sobreposição no eixo X.
+  const denseTicks = chart.type === "bar" && chart.data.length > 3;
+  const tickLimit = denseTicks ? 9 : 14;
 
   return (
     <figure className="assistant-chat-chart">
@@ -103,9 +108,13 @@ function ChatChartView({ chart }: { chart: ChatChart }) {
                   axisLine={false}
                   tickLine={false}
                   interval={0}
-                  height={46}
+                  angle={denseTicks ? -25 : 0}
+                  textAnchor={denseTicks ? "end" : "middle"}
+                  height={denseTicks ? 64 : 46}
                   tickFormatter={(value: string) =>
-                    value.length > 14 ? `${value.slice(0, 14)}…` : value
+                    value.length > tickLimit
+                      ? `${value.slice(0, tickLimit)}…`
+                      : value
                   }
                 />
                 <YAxis
