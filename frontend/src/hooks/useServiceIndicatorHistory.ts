@@ -4,12 +4,13 @@ import { useAuth } from "./useAuth";
 import { ApiError } from "../services/api";
 import { getServiceIndicatorHistory } from "../services/indicatorsApi";
 import type { ServiceIndicatorHistoryResponse } from "../types/indicators";
+import type { AnalysisPeriodWindow } from "../services/analysisPeriod";
 
 const REFRESH_INTERVAL_MS = 60_000;
 
 export function useServiceIndicatorHistory(
   serviceId: number | null,
-  periodMs: number,
+  period: number | AnalysisPeriodWindow,
 ) {
   const { token, logout } = useAuth();
 
@@ -34,9 +35,15 @@ export function useServiceIndicatorHistory(
     let requestInFlight = false;
     let controller: AbortController | null = null;
 
-    setHistory(null);
-    setLoading(true);
-    setError(null);
+setHistory((currentHistory) =>
+  currentHistory?.service.serviceId ===
+  selectedServiceId
+    ? currentHistory
+    : null,
+);
+
+setLoading(true);
+setError(null);
 
     async function loadHistory(authToken: string, selectedServiceId: number) {
       if (disposed || requestInFlight) return;
@@ -51,16 +58,27 @@ export function useServiceIndicatorHistory(
         15_000,
       );
 
-      const end = new Date();
-      const start = new Date(end.getTime() - periodMs);
+      const requestPeriod =
+        typeof period === "number"
+          ? (() => {
+              const end = new Date();
+
+              const start = new Date(end.getTime() - period);
+
+              return {
+                start: start.toISOString(),
+                end: end.toISOString(),
+              };
+            })()
+          : {
+              start: period.start,
+              end: period.end,
+            };
 
       try {
         const data = await getServiceIndicatorHistory(
           selectedServiceId,
-          {
-            start: start.toISOString(),
-            end: end.toISOString(),
-          },
+          requestPeriod,
           requestController.signal,
           authToken,
         );
@@ -96,17 +114,23 @@ export function useServiceIndicatorHistory(
 
     void loadHistory(authToken, selectedServiceId);
 
-    const refreshTimer = setInterval(
-      () => void loadHistory(authToken, selectedServiceId),
-      REFRESH_INTERVAL_MS,
-    );
+    const refreshTimer =
+      typeof period === "number"
+        ? setInterval(
+            () => void loadHistory(authToken, selectedServiceId),
+            REFRESH_INTERVAL_MS,
+          )
+        : null;
 
     return () => {
       disposed = true;
-      clearInterval(refreshTimer);
-      controller?.abort();
-    };
-  }, [serviceId, periodMs, token, logout]);
+      if (refreshTimer !== null) {
+    clearInterval(refreshTimer);
+  }
+
+  controller?.abort();
+};
+  }, [serviceId, period, token, logout]);
 
   return {
     history,

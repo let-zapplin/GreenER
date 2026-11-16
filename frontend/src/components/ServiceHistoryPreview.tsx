@@ -8,18 +8,30 @@ import {
 
 import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
 
+import type { AnalysisPeriodWindow } from "../services/analysisPeriod";
+
 import "./ServiceHistoryPreview.css";
 
 type ServiceHistoryPreviewProps = {
   serviceId: number;
   name: string;
   regionCode: string;
-  periodMs: number;
+
+  period: AnalysisPeriodWindow;
+
   isSelected: boolean;
+
   onSelect: () => void;
+
+  isComparisonSelected?: boolean;
+  isComparisonDisabled?: boolean;
+
+  onToggleComparison?: () => void;
 };
 
-function formatEnergy(value: number): string {
+function formatEnergy(
+  value: number,
+): string {
   return value.toLocaleString("pt-BR", {
     minimumFractionDigits: 4,
     maximumFractionDigits: 6,
@@ -30,126 +42,213 @@ export function ServiceHistoryPreview({
   serviceId,
   name,
   regionCode,
-  periodMs,
+  period,
   isSelected,
   onSelect,
+  isComparisonSelected = false,
+  isComparisonDisabled = false,
+  onToggleComparison,
 }: ServiceHistoryPreviewProps) {
   const {
     history,
     loading,
     error,
-  } = useServiceIndicatorHistory(serviceId, periodMs);
+  } = useServiceIndicatorHistory(
+    serviceId,
+    period,
+  );
 
   const chartData =
     history?.samples.map((sample) => ({
-      timestamp: new Date(sample.attemptedAt).getTime(),
-      energyKwh: sample.energyKwh,
+      timestamp: new Date(
+        sample.attemptedAt,
+      ).getTime(),
+
+      energyKwh:
+        sample.energyKwh,
     })) ?? [];
 
   const validSamples =
     history?.samples.filter(
-      (sample) => sample.energyKwh !== null,
+      (sample) =>
+        sample.energyKwh !== null,
     ) ?? [];
 
   const latestEnergy =
     validSamples.length > 0
-      ? validSamples[validSamples.length - 1].energyKwh
+      ? validSamples[
+          validSamples.length - 1
+        ].energyKwh
       : null;
 
+  const sampleCount =
+    history?.samples.length ?? 0;
+
   return (
-    <button
-      type="button"
+    <article
       data-service-id={serviceId}
       className={
         isSelected
           ? "service-history-preview is-selected"
           : "service-history-preview"
       }
-      onClick={onSelect}
-      aria-pressed={isSelected}
     >
-      <div className="service-history-preview-header">
-        <div>
-          <strong>{name}</strong>
-          <span>{regionCode}</span>
-        </div>
+      {/* CONTEÚDO PRINCIPAL DO CARD */}
+      <button
+        type="button"
+        className="service-history-preview-main"
+        onClick={onSelect}
+        aria-pressed={isSelected}
+      >
+        <div className="service-history-preview-header">
+          <div>
+            <strong>{name}</strong>
 
-        <div className="service-history-preview-value">
-          {latestEnergy !== null ? (
-            <>
-              <strong>{formatEnergy(latestEnergy)}</strong>
-              <span>kWh</span>
-            </>
-          ) : (
-            <span>Sem energia</span>
-          )}
-        </div>
-      </div>
-
-      <div className="service-history-preview-chart">
-        {loading && !history && (
-          <div className="service-history-preview-loading" />
-        )}
-
-        {error && !history && (
-          <div className="service-history-preview-empty">
-            Histórico indisponível
+            <span>
+              {regionCode}
+            </span>
           </div>
-        )}
 
-        {history &&
-          history.samples.length === 0 && (
+          <div className="service-history-preview-value">
+            {latestEnergy !== null ? (
+              <>
+                <strong>
+                  {formatEnergy(
+                    latestEnergy,
+                  )}
+                </strong>
+
+                <span>kWh</span>
+              </>
+            ) : (
+              <span>
+                Sem energia
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="service-history-preview-chart">
+          {loading && !history && (
+            <div className="service-history-preview-loading" />
+          )}
+
+          {error && !history && (
             <div className="service-history-preview-empty">
-              Sem coletas no período
+              Histórico indisponível
             </div>
           )}
 
-        {history &&
-          history.samples.length > 0 &&
-          validSamples.length === 0 && (
-            <div className="service-history-preview-empty">
-              Energia indisponível
-            </div>
-          )}
+          {history &&
+            history.samples.length ===
+              0 && (
+              <div className="service-history-preview-empty">
+                Sem coletas no período
+              </div>
+            )}
 
-        {history && validSamples.length > 0 && (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <XAxis
-                dataKey="timestamp"
-                type="number"
-                scale="time"
-                domain={["dataMin", "dataMax"]}
-                hide
-              />
+          {history &&
+            history.samples.length >
+              0 &&
+            validSamples.length === 0 && (
+              <div className="service-history-preview-empty">
+                Energia indisponível
+              </div>
+            )}
 
-              <YAxis hide domain={["auto", "auto"]} />
+          {history &&
+            validSamples.length > 0 && (
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+              >
+                <LineChart
+                  data={chartData}
+                >
+                  <XAxis
+                    dataKey="timestamp"
+                    type="number"
+                    scale="time"
+                    domain={[
+                      "dataMin",
+                      "dataMax",
+                    ]}
+                    hide
+                  />
 
-              <Line
-                type="monotone"
-                dataKey="energyKwh"
-                stroke="currentColor"
-                strokeWidth={2}
-                dot={false}
-                activeDot={false}
-                connectNulls={false}
-                isAnimationActive
-                animationDuration={450}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+                  <YAxis
+                    hide
+                    domain={[
+                      "auto",
+                      "auto",
+                    ]}
+                  />
 
+                  <Line
+                    type="monotone"
+                    dataKey="energyKwh"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={false}
+                    connectNulls={false}
+                    isAnimationActive
+                    animationDuration={
+                      450
+                    }
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+        </div>
+      </button>
+
+      {/* RODAPÉ */}
       <div className="service-history-preview-footer">
-        <span>
-          {history?.samples.length ?? 0} coletas
+        <span className="service-history-preview-count">
+          {sampleCount} coletas
         </span>
 
-        <span className="service-history-preview-action">
-          Ver detalhes →
-        </span>
+        {onToggleComparison ? (
+          <button
+            type="button"
+            className={
+              isComparisonSelected
+                ? "service-history-preview-compare is-selected"
+                : "service-history-preview-compare"
+            }
+            aria-pressed={
+              isComparisonSelected
+            }
+            disabled={
+              isComparisonDisabled
+            }
+            onClick={
+              onToggleComparison
+            }
+          >
+            <span
+              aria-hidden="true"
+            >
+              {isComparisonSelected
+                ? "✓"
+                : "+"}
+            </span>
+
+            {isComparisonSelected
+              ? "Selecionado"
+              : "Comparar"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="service-history-preview-link"
+            onClick={onSelect}
+          >
+            Ver detalhes →
+          </button>
+        )}
       </div>
-    </button>
+    </article>
   );
 }

@@ -5,41 +5,33 @@ import { HistoryChart } from "../components/HistoryChart";
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
 import { ServiceHistoryPreview } from "../components/ServiceHistoryPreview";
+import { useAnalysisPeriod } from "../hooks/useAnalysisPeriod";
+import { useServiceIndicators } from "../hooks/useServiceIndicators";
+import { ImpactRanking, type RankingMetric } from "../components/ImpactRanking";
+import { ComparisonMetricSelector } from "../components/ComparisonMetricSelector";
+import { useComparisonHistories } from "../hooks/useComparisonHistories";
+import { buildComparisonSeries } from "../lib/comparisonSeries";
+import { ComparisonChart } from "../components/ComparisonChart";
+import { ComparisonSummary } from "../components/ComparisonSummary";
+import type {
+  ComparisonMetric,
+  ComparisonVisualization,
+} from "../types/comparison";
+import { ComparisonPeriodChart } from "../components/ComparisonPeriodChart";
 
 import "./Analyses.css";
-type HistoryPeriod = {
-  label: string;
-  value: number;
-};
+import { ComparisonServiceSelector } from "../components/ComparisonServiceSelector";
 
 type AnalysisLayout = "focus" | "overview" | "side";
+type OverviewView = "charts" | "ranking";
+type AnalysisMode = "explore" | "compare";
 
-const HISTORY_PERIODS: HistoryPeriod[] = [
-  {
-    label: "1h",
-    value: 1 * 60 * 60 * 1000,
-  },
-  {
-    label: "6h",
-    value: 6 * 60 * 60 * 1000,
-  },
-  {
-    label: "24h",
-    value: 24 * 60 * 60 * 1000,
-  },
-  {
-    label: "7d",
-    value: 7 * 24 * 60 * 60 * 1000,
-  },
-];
-
-const DEFAULT_HISTORY_PERIOD_MS = 24 * 60 * 60 * 1000;
+const MIN_COMPARISON_SERVICES = 2;
+const MAX_COMPARISON_SERVICES = 4;
 
 const ANALYSES_LAYOUT_STORAGE_KEY = "greener:analyses:layout";
 
 const ANALYSES_OVERVIEW_STORAGE_KEY = "greener:analyses:overview-collapsed";
-
-const ANALYSES_PERIOD_STORAGE_KEY = "greener:analyses:period";
 
 function getServiceInitials(name: string): string {
   return name
@@ -72,17 +64,119 @@ export function Analyses() {
     null,
   );
 
-  const [historyPeriodMs, setHistoryPeriodMs] = useState(() => {
-    const savedPeriod = Number(
-      localStorage.getItem(ANALYSES_PERIOD_STORAGE_KEY),
-    );
+  const {
+    periods: analysisPeriods,
+    durationMs: historyPeriodMs,
+    period: analysisPeriod,
+    selectPeriod,
+  } = useAnalysisPeriod();
 
-    const periodExists = HISTORY_PERIODS.some(
-      (period) => period.value === savedPeriod,
-    );
+  const {
+    indicators: serviceIndicators,
+    loading: indicatorsLoading,
+    error: indicatorsError,
+  } = useServiceIndicators(analysisPeriod);
 
-    return periodExists ? savedPeriod : DEFAULT_HISTORY_PERIOD_MS;
-  });
+  const analysisPeriodLabel =
+    analysisPeriods.find((period) => period.value === historyPeriodMs)?.label ??
+    "Período atual";
+
+  const indicatorsPeriodDurationMs = serviceIndicators
+    ? new Date(serviceIndicators.period.end).getTime() -
+      new Date(serviceIndicators.period.start).getTime()
+    : null;
+
+  const visibleServiceIndicators =
+    indicatorsPeriodDurationMs !== null &&
+    Math.abs(indicatorsPeriodDurationMs - historyPeriodMs) < 1000
+      ? serviceIndicators
+      : null;
+
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("explore");
+
+  const [overviewView, setOverviewView] = useState<OverviewView>("charts");
+
+  const [rankingMetric, setRankingMetric] = useState<RankingMetric>("energy");
+
+  const [comparisonServiceIds, setComparisonServiceIds] = useState<number[]>(
+    [],
+  );
+
+  const [comparisonMetric, setComparisonMetric] =
+    useState<ComparisonMetric>("energy");
+
+  const [comparisonVisualization, setComparisonVisualization] =
+    useState<ComparisonVisualization>("timeline");
+
+  const [comparisonFocusServiceId, setComparisonFocusServiceId] = useState<
+    number | null
+  >(null);
+
+  function toggleComparisonService(serviceId: number) {
+    setComparisonServiceIds((currentIds) => {
+      const isSelected = currentIds.includes(serviceId);
+
+      if (isSelected) {
+        return currentIds.filter((currentId) => currentId !== serviceId);
+      }
+      if (currentIds.length >= MAX_COMPARISON_SERVICES) {
+        return currentIds;
+      }
+
+      return [...currentIds, serviceId];
+    });
+  }
+
+  const canCompare = comparisonServiceIds.length >= MIN_COMPARISON_SERVICES;
+
+  const comparisonLimitReached =
+    comparisonServiceIds.length >= MAX_COMPARISON_SERVICES;
+
+  function openSelectedServicesComparison() {
+    if (!canCompare) {
+      return;
+    }
+
+    setAnalysisMode("compare");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  const {
+    histories: comparisonHistories,
+    loading: comparisonHistoriesLoading,
+    error: comparisonHistoriesError,
+  } = useComparisonHistories(comparisonServiceIds, analysisPeriod, canCompare);
+
+  const comparisonSeries = buildComparisonSeries(
+    comparisonHistories,
+    comparisonMetric,
+  );
+
+  const comparisonIndicators =
+    serviceIndicators?.services.filter((service) =>
+      comparisonServiceIds.includes(service.serviceId),
+    ) ?? [];
+
+  // ----------------------------------
+  // ESTADOS DERIVADOS DE CARREGAMENTO
+  // DA COMPARAÇÃO
+  // ----------------------------------
+
+  const isComparisonInitialLoading =
+    canCompare && comparisonHistoriesLoading && comparisonSeries.length === 0;
+
+  const isComparisonRefreshing =
+    canCompare && comparisonHistoriesLoading && comparisonSeries.length > 0;
+
+  const isPeriodInitialLoading =
+    canCompare && indicatorsLoading && comparisonIndicators.length === 0;
+
+  const isPeriodRefreshing =
+    canCompare && indicatorsLoading && comparisonIndicators.length > 0;
 
   const [analysisLayout, setAnalysisLayout] = useState<AnalysisLayout>(() => {
     const savedLayout = localStorage.getItem(ANALYSES_LAYOUT_STORAGE_KEY);
@@ -106,53 +200,54 @@ export function Analyses() {
 
   const [isChartTransitioning, setIsChartTransitioning] = useState(false);
 
-useEffect(() => {
-  if (services.length === 0) {
-    setSelectedServiceId(null);
-    return;
-  }
+  useEffect(() => {
+    if (comparisonServiceIds.length === 0) {
+      setComparisonFocusServiceId(null);
+      return;
+    }
 
-  const requestedServiceExists =
-    requestedServiceId !== null &&
-    services.some(
-      (service) =>
-        service.serviceId ===
-        requestedServiceId,
-    );
+    const focusedServiceStillSelected =
+      comparisonFocusServiceId !== null &&
+      comparisonServiceIds.includes(comparisonFocusServiceId);
 
-  if (
-    requestedServiceExists &&
-    appliedQueryServiceRef.current !==
-      requestedServiceId
-  ) {
-    appliedQueryServiceRef.current =
-      requestedServiceId;
+    if (!focusedServiceStillSelected) {
+      setComparisonFocusServiceId(comparisonServiceIds[0]);
+    }
+  }, [comparisonServiceIds, comparisonFocusServiceId]);
 
-    setSelectedServiceId(
-      requestedServiceId,
-    );
+  useEffect(() => {
+    if (services.length === 0) {
+      setSelectedServiceId(null);
+      return;
+    }
 
-    return;
-  }
+    const requestedServiceExists =
+      requestedServiceId !== null &&
+      services.some((service) => service.serviceId === requestedServiceId);
 
-  setSelectedServiceId(
-    (currentServiceId) => {
+    if (
+      requestedServiceExists &&
+      appliedQueryServiceRef.current !== requestedServiceId
+    ) {
+      appliedQueryServiceRef.current = requestedServiceId;
+
+      setSelectedServiceId(requestedServiceId);
+
+      return;
+    }
+
+    setSelectedServiceId((currentServiceId) => {
       const currentServiceStillExists =
         currentServiceId !== null &&
-        services.some(
-          (service) =>
-            service.serviceId ===
-            currentServiceId,
-        );
+        services.some((service) => service.serviceId === currentServiceId);
 
       if (currentServiceStillExists) {
         return currentServiceId;
       }
 
       return services[0].serviceId;
-    },
-  );
-}, [services, requestedServiceId]);
+    });
+  }, [services, requestedServiceId]);
   useEffect(() => {
     if (selectedServiceId === null) {
       return;
@@ -227,10 +322,6 @@ useEffect(() => {
     );
   }, [isOverviewCollapsed]);
 
-  useEffect(() => {
-    localStorage.setItem(ANALYSES_PERIOD_STORAGE_KEY, String(historyPeriodMs));
-  }, [historyPeriodMs]);
-
   const selectedService =
     services.find((service) => service.serviceId === selectedServiceId) ?? null;
 
@@ -268,7 +359,7 @@ useEffect(() => {
     history,
     loading: historyLoading,
     error: historyError,
-  } = useServiceIndicatorHistory(selectedServiceId, historyPeriodMs);
+  } = useServiceIndicatorHistory(selectedServiceId, analysisPeriod);
 
   const [previousHistory, setPreviousHistory] = useState<typeof history>(null);
 
@@ -286,7 +377,13 @@ useEffect(() => {
 
   return (
     <div className="analyses-screen">
-      <main className="analyses-page">
+      <main
+        className={
+          analysisMode === "compare"
+            ? "analyses-page analyses-page-compare"
+            : "analyses-page"
+        }
+      >
         <header className="analyses-header">
           <p className="analyses-eyebrow">ANÁLISE TEMPORAL</p>
 
@@ -299,6 +396,33 @@ useEffect(() => {
             tempo a partir das coletas realizadas pelo GreenER.
           </p>
         </header>
+        <div className="analyses-mode-switch" aria-label="Modo de análise">
+          <button
+            type="button"
+            className={
+              analysisMode === "explore"
+                ? "analyses-mode-button is-active"
+                : "analyses-mode-button"
+            }
+            aria-pressed={analysisMode === "explore"}
+            onClick={() => setAnalysisMode("explore")}
+          >
+            Explorar
+          </button>
+
+          <button
+            type="button"
+            className={
+              analysisMode === "compare"
+                ? "analyses-mode-button is-active"
+                : "analyses-mode-button"
+            }
+            aria-pressed={analysisMode === "compare"}
+            onClick={() => setAnalysisMode("compare")}
+          >
+            Comparar serviços
+          </button>
+        </div>
 
         <section
           className="analyses-controls analyses-global-controls"
@@ -310,8 +434,9 @@ useEffect(() => {
             <h2 id="analysis-period-title">Período analisado</h2>
 
             <p className="analyses-control-description">
-              O período selecionado é aplicado a todos os históricos exibidos na
-              página.
+              {analysisMode === "explore"
+                ? "O período selecionado é aplicado a todos os históricos exibidos na página."
+                : "O período selecionado é aplicado a todos os serviços da comparação."}
             </p>
           </div>
 
@@ -323,7 +448,7 @@ useEffect(() => {
                 className="analyses-period-options"
                 aria-label="Período analisado"
               >
-                {HISTORY_PERIODS.map((period) => {
+                {analysisPeriods.map((period) => {
                   const isActive = historyPeriodMs === period.value;
 
                   return (
@@ -336,7 +461,7 @@ useEffect(() => {
                           : "analyses-period-button"
                       }
                       aria-pressed={isActive}
-                      onClick={() => setHistoryPeriodMs(period.value)}
+                      onClick={() => selectPeriod(period.value)}
                     >
                       {period.label}
                     </button>
@@ -344,51 +469,52 @@ useEffect(() => {
                 })}
               </div>
             </div>
+            {analysisMode === "explore" && (
+              <div className="analyses-control-group">
+                <span>Layout</span>
 
-            <div className="analyses-control-group">
-              <span>Layout</span>
-
-              <div
-                className="analyses-layout-options"
-                aria-label="Layout da análise"
-              >
-                <button
-                  type="button"
-                  className={
-                    analysisLayout === "focus"
-                      ? "analyses-layout-button is-active"
-                      : "analyses-layout-button"
-                  }
-                  onClick={() => setAnalysisLayout("focus")}
+                <div
+                  className="analyses-layout-options"
+                  aria-label="Layout da análise"
                 >
-                  Foco
-                </button>
+                  <button
+                    type="button"
+                    className={
+                      analysisLayout === "focus"
+                        ? "analyses-layout-button is-active"
+                        : "analyses-layout-button"
+                    }
+                    onClick={() => setAnalysisLayout("focus")}
+                  >
+                    Foco
+                  </button>
 
-                <button
-                  type="button"
-                  className={
-                    analysisLayout === "overview"
-                      ? "analyses-layout-button is-active"
-                      : "analyses-layout-button"
-                  }
-                  onClick={() => setAnalysisLayout("overview")}
-                >
-                  Geral
-                </button>
+                  <button
+                    type="button"
+                    className={
+                      analysisLayout === "overview"
+                        ? "analyses-layout-button is-active"
+                        : "analyses-layout-button"
+                    }
+                    onClick={() => setAnalysisLayout("overview")}
+                  >
+                    Geral
+                  </button>
 
-                <button
-                  type="button"
-                  className={
-                    analysisLayout === "side"
-                      ? "analyses-layout-button is-active"
-                      : "analyses-layout-button"
-                  }
-                  onClick={() => setAnalysisLayout("side")}
-                >
-                  Lateral
-                </button>
+                  <button
+                    type="button"
+                    className={
+                      analysisLayout === "side"
+                        ? "analyses-layout-button is-active"
+                        : "analyses-layout-button"
+                    }
+                    onClick={() => setAnalysisLayout("side")}
+                  >
+                    Lateral
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
 
@@ -416,300 +542,637 @@ useEffect(() => {
             </p>
           </section>
         )}
-        <div className={`analyses-layout analyses-layout-${analysisLayout}`}>
-          {services.length > 0 && (
-            <section
-              className="analyses-overview"
-              aria-labelledby="analyses-overview-title"
-            >
-              <div className="analyses-overview-header">
-                <div>
-                  <p className="analyses-section-label">VISÃO GERAL</p>
+        {analysisMode === "compare" && services.length > 0 && (
+          <div className="analyses-comparison-workspace">
+            <div className="analyses-comparison-controls">
+              <ComparisonServiceSelector
+                services={services}
+                selectedServiceIds={comparisonServiceIds}
+                minServices={MIN_COMPARISON_SERVICES}
+                maxServices={MAX_COMPARISON_SERVICES}
+                canCompare={canCompare}
+                limitReached={comparisonLimitReached}
+                onToggleService={toggleComparisonService}
+              />
 
-                  <h2 id="analyses-overview-title">Histórico dos serviços</h2>
+              <ComparisonMetricSelector
+                metric={comparisonMetric}
+                onMetricChange={setComparisonMetric}
+              />
+            </div>
 
-                  {!isOverviewCollapsed && (
-                    <p>
-                      Compare rapidamente a evolução energética dos serviços no
-                      período selecionado.
-                    </p>
+            {/* SELETOR DO TIPO DE VISUALIZAÇÃO */}
+            {canCompare && (
+              <div className="comparison-visualization-switch">
+                <button
+                  type="button"
+                  className={
+                    comparisonVisualization === "timeline"
+                      ? "comparison-visualization-button is-active"
+                      : "comparison-visualization-button"
+                  }
+                  aria-pressed={comparisonVisualization === "timeline"}
+                  onClick={() => setComparisonVisualization("timeline")}
+                >
+                  Evolução temporal
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    comparisonVisualization === "period"
+                      ? "comparison-visualization-button is-active"
+                      : "comparison-visualization-button"
+                  }
+                  aria-pressed={comparisonVisualization === "period"}
+                  onClick={() => setComparisonVisualization("period")}
+                >
+                  Comparação do período
+                </button>
+              </div>
+            )}
+
+            {/* SEM SERVIÇOS SUFICIENTES */}
+            {!canCompare && (
+              <div className="analyses-history-state" role="status">
+                <h3>Selecione pelo menos 2 serviços</h3>
+
+                <p>
+                  A comparação ficará disponível quando houver entre 2 e 4
+                  serviços selecionados.
+                </p>
+              </div>
+            )}
+
+            {/* LOADING INICIAL DA EVOLUÇÃO TEMPORAL */}
+            {comparisonVisualization === "timeline" &&
+              isComparisonInitialLoading && (
+                <div className="analyses-history-state" role="status">
+                  <h3>Carregando comparação</h3>
+
+                  <p>Consultando os históricos dos serviços selecionados.</p>
+                </div>
+              )}
+
+            {/* ERRO */}
+            {canCompare && comparisonHistoriesError && (
+              <div
+                className="analyses-history-state analyses-state-error"
+                role="alert"
+              >
+                <h3>Não foi possível carregar a comparação</h3>
+
+                <p>{comparisonHistoriesError}</p>
+              </div>
+            )}
+
+            {/* VISUALIZAÇÃO TEMPORAL */}
+            {canCompare &&
+              !comparisonHistoriesError &&
+              comparisonSeries.length > 0 &&
+              comparisonVisualization === "timeline" && (
+                <div
+                  className={
+                    isComparisonRefreshing
+                      ? "comparison-visualization-frame is-refreshing"
+                      : "comparison-visualization-frame"
+                  }
+                >
+                  <ComparisonChart
+                    series={comparisonSeries}
+                    metric={comparisonMetric}
+                    periodStart={analysisPeriod.start}
+                    periodEnd={analysisPeriod.end}
+                    focusServiceId={comparisonFocusServiceId}
+                    onFocusServiceChange={setComparisonFocusServiceId}
+                  />
+
+                  {isComparisonRefreshing && (
+                    <div
+                      className="comparison-refresh-overlay"
+                      aria-hidden="true"
+                    >
+                      Atualizando…
+                    </div>
                   )}
                 </div>
+              )}
+            {/* LOADING INICIAL DA COMPARAÇÃO DO PERÍODO */}
+            {comparisonVisualization === "period" && isPeriodInitialLoading && (
+              <div className="analyses-history-state" role="status">
+                <h3>Carregando comparação consolidada</h3>
 
-                <div className="analyses-overview-actions">
-                  <span className="analyses-overview-unit">kWh</span>
-
-                  <button
-                    type="button"
-                    className="analyses-overview-toggle"
-                    onClick={() =>
-                      setIsOverviewCollapsed((current) => !current)
-                    }
-                    aria-expanded={!isOverviewCollapsed}
-                    aria-controls="analyses-overview-content"
-                    title={
-                      isOverviewCollapsed
-                        ? "Expandir visão geral"
-                        : "Minimizar visão geral"
-                    }
-                  >
-                    <span aria-hidden="true">
-                      {isOverviewCollapsed ? "+" : "−"}
-                    </span>
-                  </button>
-                </div>
+                <p>Preparando os indicadores consolidados do período.</p>
               </div>
+            )}
 
-              {!isOverviewCollapsed && (
+            {/* COMPARAÇÃO CONSOLIDADA DO PERÍODO */}
+            {canCompare &&
+              comparisonIndicators.length > 0 &&
+              comparisonVisualization === "period" && (
                 <div
-                  ref={overviewScrollRef}
-                  id="analyses-overview-content"
-                  className="analyses-overview-scroll"
+                  className={
+                    isPeriodRefreshing
+                      ? "comparison-visualization-frame is-refreshing"
+                      : "comparison-visualization-frame"
+                  }
                 >
-                  <div className="analyses-overview-grid">
-                    {services.map((service) => (
-                      <ServiceHistoryPreview
-                        key={service.serviceId}
-                        serviceId={service.serviceId}
-                        name={service.name}
-                        regionCode={service.location.region_code}
-                        periodMs={historyPeriodMs}
-                        isSelected={selectedServiceId === service.serviceId}
-                        onSelect={() => setSelectedServiceId(service.serviceId)}
-                      />
-                    ))}
-                  </div>
+                  <ComparisonPeriodChart
+                    services={comparisonIndicators}
+                    selectedServiceIds={comparisonServiceIds}
+                    metric={comparisonMetric}
+                    focusServiceId={comparisonFocusServiceId}
+                    onFocusServiceChange={setComparisonFocusServiceId}
+                  />
+
+                  {isPeriodRefreshing && (
+                    <div
+                      className="comparison-refresh-overlay"
+                      aria-hidden="true"
+                    >
+                      Atualizando…
+                    </div>
+                  )}
                 </div>
               )}
-              {isOverviewCollapsed && (
-                <div className="analyses-overview-collapsed">
-                  <span>{services.length} serviços</span>
 
-                  <span aria-hidden="true">·</span>
-
-                  <span>
-                    {
-                      HISTORY_PERIODS.find(
-                        (period) => period.value === historyPeriodMs,
-                      )?.label
-                    }
-                  </span>
-
-                  <span aria-hidden="true">·</span>
-
-                  <span>Energia estimada</span>
-                </div>
-              )}
-            </section>
-          )}
-
-          {selectedService && (
-            <section
-              className="analyses-history"
-              aria-labelledby="history-title"
-            >
-              <div className="analyses-history-corner-nav">
-                <button
-                  type="button"
-                  className="analyses-service-corner-button is-previous"
-                  onClick={selectPreviousService}
-                  aria-label="Serviço anterior"
-                  title="Serviço anterior"
-                >
-                  <span aria-hidden="true" />
-                </button>
-
-                <button
-                  type="button"
-                  className="analyses-service-corner-button is-next"
-                  onClick={selectNextService}
-                  aria-label="Próximo serviço"
-                  title="Próximo serviço"
-                >
-                  <span aria-hidden="true" />
-                </button>
-              </div>
-              <div className="analyses-history-header">
-                <div
-                  key={selectedServiceId}
-                  className="analyses-history-identity"
-                >
-                  <div className="analyses-service-badge" aria-hidden="true">
-                    {getServiceInitials(selectedService.name)}
-                  </div>
-
+            {/* RESUMO CONSOLIDADO */}
+            {canCompare && comparisonIndicators.length > 0 && (
+              <ComparisonSummary
+                services={comparisonIndicators}
+                selectedServiceIds={comparisonServiceIds}
+                focusServiceId={comparisonFocusServiceId}
+                onFocusServiceChange={setComparisonFocusServiceId}
+              />
+            )}
+          </div>
+        )}
+        {analysisMode === "explore" && (
+          <div className={`analyses-layout analyses-layout-${analysisLayout}`}>
+            {services.length > 0 && (
+              <section
+                className="analyses-overview"
+                aria-labelledby="analyses-overview-title"
+              >
+                <div className="analyses-overview-header">
                   <div>
-                    <p className="analyses-section-label">
-                      HISTÓRICO AMBIENTAL
-                    </p>
+                    <p className="analyses-section-label">VISÃO GERAL</p>
 
-                    <h2 id="history-title">Energia estimada</h2>
+                    <h2 id="analyses-overview-title">
+                      Visão geral dos serviços
+                    </h2>
 
-                    <p className="analyses-history-service">
-                      <strong>{selectedService.name}</strong>
-                      <span aria-hidden="true">{" · "}</span>
-                      {selectedService.location.region_code}
-                    </p>
+                    {!isOverviewCollapsed && (
+                      <p>
+                        Explore a evolução e o impacto ambiental dos serviços no
+                        período selecionado
+                      </p>
+                    )}
                   </div>
-                </div>
 
-                <div className="analyses-history-actions">
-                  <label className="analyses-history-service-select">
-                    <span>Serviço em destaque</span>
+                  <div className="analyses-overview-actions">
+                    {overviewView === "charts" && (
+                      <span className="analyses-overview-unit">kWh</span>
+                    )}
 
-                    <select
-                      value={selectedServiceId ?? ""}
-                      onChange={(event) =>
-                        setSelectedServiceId(Number(event.target.value))
+                    <button
+                      type="button"
+                      className="analyses-overview-toggle"
+                      onClick={() =>
+                        setIsOverviewCollapsed((current) => !current)
+                      }
+                      aria-expanded={!isOverviewCollapsed}
+                      aria-controls="analyses-overview-content"
+                      title={
+                        isOverviewCollapsed
+                          ? "Expandir visão geral"
+                          : "Minimizar visão geral"
                       }
                     >
-                      {services.map((service) => (
-                        <option
-                          key={service.serviceId}
-                          value={service.serviceId}
-                        >
-                          {service.name} · {service.location.region_code}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <div className="analyses-history-unit">
-                    <span>Unidade</span>
-                    <strong>kWh</strong>
-                  </div>
-                </div>
-              </div>
-
-              {servicesError && (
-                <div className="analyses-warning" role="status">
-                  A lista de serviços pode estar desatualizada. Estamos usando a
-                  última consulta disponível.
-                </div>
-              )}
-
-              <div className="analyses-history-content">
-                <div
-                  key={`${selectedServiceId}-${historyPeriodMs}`}
-                  className={
-                    isChartTransitioning
-                      ? "analyses-chameleon-transition is-active"
-                      : "analyses-chameleon-transition"
-                  }
-                  aria-hidden="true"
-                >
-                  <div className="analyses-transition-glow" />
-
-                  <div className="analyses-transition-fragments">
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                    <span />
+                      <span aria-hidden="true">
+                        {isOverviewCollapsed ? "+" : "−"}
+                      </span>
+                    </button>
                   </div>
                 </div>
 
-                {historyError && !history && (
+                {!isOverviewCollapsed && (
+                  <div className="analyses-overview-toolbar">
+                    <div
+                      className="analyses-overview-view-options"
+                      aria-label="Visualização da visão geral"
+                    >
+                      <button
+                        type="button"
+                        className={
+                          overviewView === "charts"
+                            ? "analyses-overview-view-button is-active"
+                            : "analyses-overview-view-button"
+                        }
+                        aria-pressed={overviewView === "charts"}
+                        onClick={() => setOverviewView("charts")}
+                      >
+                        Gráficos
+                      </button>
+
+                      <button
+                        type="button"
+                        className={
+                          overviewView === "ranking"
+                            ? "analyses-overview-view-button is-active"
+                            : "analyses-overview-view-button"
+                        }
+                        aria-pressed={overviewView === "ranking"}
+                        onClick={() => setOverviewView("ranking")}
+                      >
+                        Ranking
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!isOverviewCollapsed && overviewView === "charts" && (
                   <div
-                    className="analyses-history-state analyses-state-error"
-                    role="alert"
+                    ref={overviewScrollRef}
+                    id="analyses-overview-content"
+                    className="analyses-overview-scroll"
                   >
-                    <h3>Não foi possível carregar o histórico</h3>
-                    <p>{historyError}</p>
+                    <div className="analyses-overview-grid">
+                      {services.map((service) => {
+                        const isComparisonSelected =
+                          comparisonServiceIds.includes(service.serviceId);
+
+                        const comparisonDisabled =
+                          comparisonLimitReached && !isComparisonSelected;
+
+                        return (
+                          <div
+                            key={service.serviceId}
+                            className={
+                              isComparisonSelected
+                                ? "analyses-preview-wrapper is-comparison-selected"
+                                : "analyses-preview-wrapper"
+                            }
+                          >
+                            <ServiceHistoryPreview
+                              serviceId={service.serviceId}
+                              name={service.name}
+                              regionCode={service.location.region_code}
+                              period={analysisPeriod}
+                              isSelected={
+                                selectedServiceId === service.serviceId
+                              }
+                              onSelect={() =>
+                                setSelectedServiceId(service.serviceId)
+                              }
+                              isComparisonSelected={isComparisonSelected}
+                              isComparisonDisabled={comparisonDisabled}
+                              onToggleComparison={() =>
+                                toggleComparisonService(service.serviceId)
+                              }
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
-
-                {historyError && history && (
-                  <div className="analyses-warning" role="status">
-                    Não foi possível atualizar o histórico. Os últimos dados
-                    carregados permanecem visíveis.
-                  </div>
-                )}
-
-                {visibleHistory && (
-                  <>
-                    <dl className="analyses-history-summary">
-                      <div>
-                        <dt>Coletas no período</dt>
-                        <dd>{visibleHistory.samples.length}</dd>
-                      </div>
-
-                      <div>
-                        <dt>Com energia calculada</dt>
-                        <dd>{validEnergySamples}</dd>
-                      </div>
-
-                      <div>
-                        <dt>Período</dt>
-                        <dd>
-                          {new Date(visibleHistory.period.start).toLocaleString(
-                            "pt-BR",
-                            {
-                              day: "2-digit",
-                              month: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}
-                          {" — "}
-                          {new Date(visibleHistory.period.end).toLocaleString(
-                            "pt-BR",
-                            {
-                              day: "2-digit",
-                              month: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}
-                        </dd>
-                      </div>
-                    </dl>
-
-                    {visibleHistory.samples.length === 0 && (
+                {!isOverviewCollapsed && overviewView === "ranking" && (
+                  <div
+                    id="analyses-overview-content"
+                    className="analyses-overview-ranking"
+                  >
+                    {indicatorsLoading && !visibleServiceIndicators && (
                       <div className="analyses-history-state" role="status">
-                        <h3>Sem histórico neste período</h3>
+                        <h3>Carregando ranking</h3>
+
                         <p>
-                          Ainda não existem coletas registradas para este
-                          serviço no período selecionado.
+                          Consultando os indicadores dos serviços para o período
+                          de {analysisPeriodLabel}.
                         </p>
                       </div>
                     )}
 
-                    {visibleHistory.samples.length > 0 &&
-                      validEnergySamples === 0 && (
+                    {indicatorsError && !visibleServiceIndicators && (
+                      <div
+                        className="analyses-history-state analyses-state-error"
+                        role="alert"
+                      >
+                        <h3>Não foi possível carregar o ranking</h3>
+
+                        <p>{indicatorsError}</p>
+                      </div>
+                    )}
+
+                    {indicatorsError && visibleServiceIndicators && (
+                      <div className="analyses-warning" role="status">
+                        Não foi possível atualizar o ranking. Os últimos dados
+                        válidos permanecem visíveis.
+                      </div>
+                    )}
+
+                    {visibleServiceIndicators &&
+                      visibleServiceIndicators.services.length === 0 && (
                         <div className="analyses-history-state" role="status">
-                          <h3>Energia ainda indisponível</h3>
+                          <h3>Nenhum serviço disponível para o ranking</h3>
+
                           <p>
-                            Existem coletas no período, mas nenhuma possui dados
-                            suficientes para calcular o consumo energético.
+                            Não existem indicadores de serviços no período
+                            selecionado.
                           </p>
                         </div>
                       )}
 
-                    {visibleHistory.samples.length > 0 &&
-                      validEnergySamples > 0 && (
-                        <HistoryChart
-                          key={`${visibleHistory.service.serviceId}-${visibleHistory.period.start}-${visibleHistory.period.end}`}
-                          samples={visibleHistory.samples}
-                          periodStart={visibleHistory.period.start}
-                          periodEnd={visibleHistory.period.end}
-                          collectionIntervalMs={
-                            visibleHistory.period.collectionIntervalMs
-                          }
-                          displayIntervalMs={
-                            visibleHistory.period.displayIntervalMs
-                          }
+                    {visibleServiceIndicators &&
+                      visibleServiceIndicators.services.length > 0 && (
+                        <ImpactRanking
+                          services={visibleServiceIndicators.services}
+                          periodLabel={analysisPeriodLabel}
+                          metric={rankingMetric}
+                          onMetricChange={setRankingMetric}
                         />
                       )}
-                  </>
+                  </div>
                 )}
+                {isOverviewCollapsed && (
+                  <div className="analyses-overview-collapsed">
+                    <span>{services.length} serviços</span>
+
+                    <span aria-hidden="true">·</span>
+
+                    <span>
+                      {
+                        analysisPeriods.find(
+                          (period) => period.value === historyPeriodMs,
+                        )?.label
+                      }
+                    </span>
+
+                    <span aria-hidden="true">·</span>
+
+                    <span>
+                      {overviewView === "charts" ? "Gráficos" : "Ranking"}
+                    </span>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {selectedService && (
+              <section
+                className="analyses-history"
+                aria-labelledby="history-title"
+              >
+                <div className="analyses-history-corner-nav">
+                  <button
+                    type="button"
+                    className="analyses-service-corner-button is-previous"
+                    onClick={selectPreviousService}
+                    aria-label="Serviço anterior"
+                    title="Serviço anterior"
+                  >
+                    <span aria-hidden="true" />
+                  </button>
+
+                  <button
+                    type="button"
+                    className="analyses-service-corner-button is-next"
+                    onClick={selectNextService}
+                    aria-label="Próximo serviço"
+                    title="Próximo serviço"
+                  >
+                    <span aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="analyses-history-header">
+                  <div
+                    key={selectedServiceId}
+                    className="analyses-history-identity"
+                  >
+                    <div className="analyses-service-badge" aria-hidden="true">
+                      {getServiceInitials(selectedService.name)}
+                    </div>
+
+                    <div>
+                      <p className="analyses-section-label">
+                        HISTÓRICO AMBIENTAL
+                      </p>
+
+                      <h2 id="history-title">Energia estimada</h2>
+
+                      <p className="analyses-history-service">
+                        <strong>{selectedService.name}</strong>
+                        <span aria-hidden="true">{" · "}</span>
+                        {selectedService.location.region_code}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="analyses-history-actions">
+                    <label className="analyses-history-service-select">
+                      <span>Serviço em destaque</span>
+
+                      <select
+                        value={selectedServiceId ?? ""}
+                        onChange={(event) =>
+                          setSelectedServiceId(Number(event.target.value))
+                        }
+                      >
+                        {services.map((service) => (
+                          <option
+                            key={service.serviceId}
+                            value={service.serviceId}
+                          >
+                            {service.name} · {service.location.region_code}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="analyses-history-unit">
+                      <span>Unidade</span>
+                      <strong>kWh</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {servicesError && (
+                  <div className="analyses-warning" role="status">
+                    A lista de serviços pode estar desatualizada. Estamos usando
+                    a última consulta disponível.
+                  </div>
+                )}
+
+                <div className="analyses-history-content">
+                  <div
+                    key={`${selectedServiceId}-${historyPeriodMs}`}
+                    className={
+                      isChartTransitioning
+                        ? "analyses-chameleon-transition is-active"
+                        : "analyses-chameleon-transition"
+                    }
+                    aria-hidden="true"
+                  >
+                    <div className="analyses-transition-glow" />
+
+                    <div className="analyses-transition-fragments">
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                  </div>
+
+                  {historyError && !history && (
+                    <div
+                      className="analyses-history-state analyses-state-error"
+                      role="alert"
+                    >
+                      <h3>Não foi possível carregar o histórico</h3>
+                      <p>{historyError}</p>
+                    </div>
+                  )}
+
+                  {historyError && history && (
+                    <div className="analyses-warning" role="status">
+                      Não foi possível atualizar o histórico. Os últimos dados
+                      carregados permanecem visíveis.
+                    </div>
+                  )}
+
+                  {visibleHistory && (
+                    <>
+                      <dl className="analyses-history-summary">
+                        <div>
+                          <dt>Coletas no período</dt>
+                          <dd>{visibleHistory.samples.length}</dd>
+                        </div>
+
+                        <div>
+                          <dt>Com energia calculada</dt>
+                          <dd>{validEnergySamples}</dd>
+                        </div>
+
+                        <div>
+                          <dt>Período</dt>
+                          <dd>
+                            {new Date(
+                              visibleHistory.period.start,
+                            ).toLocaleString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            {" — "}
+                            {new Date(visibleHistory.period.end).toLocaleString(
+                              "pt-BR",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      {visibleHistory.samples.length === 0 && (
+                        <div className="analyses-history-state" role="status">
+                          <h3>Sem histórico neste período</h3>
+                          <p>
+                            Ainda não existem coletas registradas para este
+                            serviço no período selecionado.
+                          </p>
+                        </div>
+                      )}
+
+                      {visibleHistory.samples.length > 0 &&
+                        validEnergySamples === 0 && (
+                          <div className="analyses-history-state" role="status">
+                            <h3>Energia ainda indisponível</h3>
+                            <p>
+                              Existem coletas no período, mas nenhuma possui
+                              dados suficientes para calcular o consumo
+                              energético.
+                            </p>
+                          </div>
+                        )}
+
+                      {visibleHistory.samples.length > 0 &&
+                        validEnergySamples > 0 && (
+                          <HistoryChart
+                            key={`${visibleHistory.service.serviceId}-${visibleHistory.period.start}-${visibleHistory.period.end}`}
+                            samples={visibleHistory.samples}
+                            periodStart={visibleHistory.period.start}
+                            periodEnd={visibleHistory.period.end}
+                            collectionIntervalMs={
+                              visibleHistory.period.collectionIntervalMs
+                            }
+                            displayIntervalMs={
+                              visibleHistory.period.displayIntervalMs
+                            }
+                          />
+                        )}
+                    </>
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
+        {analysisMode === "explore" && comparisonServiceIds.length > 0 && (
+          <aside
+            className="analyses-comparison-tray"
+            aria-label="Serviços selecionados para comparação"
+          >
+            <div className="analyses-comparison-tray-info">
+              <span className="analyses-comparison-tray-count">
+                {comparisonServiceIds.length}
+              </span>
+
+              <div>
+                <strong>
+                  {comparisonServiceIds.length === 1
+                    ? "1 serviço selecionado"
+                    : `${comparisonServiceIds.length} serviços selecionados`}
+                </strong>
+
+                <span>
+                  {canCompare
+                    ? "Pronto para comparar."
+                    : "Selecione pelo menos mais um serviço."}
+                </span>
               </div>
-            </section>
-          )}
-        </div>
+            </div>
+
+            <div className="analyses-comparison-tray-actions">
+              <button
+                type="button"
+                className="analyses-comparison-tray-clear"
+                onClick={() => setComparisonServiceIds([])}
+              >
+                Limpar
+              </button>
+
+              <button
+                type="button"
+                className="analyses-comparison-tray-open"
+                disabled={!canCompare}
+                onClick={openSelectedServicesComparison}
+              >
+                Comparar selecionados
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </aside>
+        )}
       </main>
 
       <div className="analyses-waves" aria-hidden="true" />
