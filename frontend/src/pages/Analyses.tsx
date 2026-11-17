@@ -20,6 +20,7 @@ import { ComparisonPeriodChart } from "../components/ComparisonPeriodChart";
 
 import "./Analyses.css";
 import { ComparisonServiceSelector } from "../components/ComparisonServiceSelector";
+import { formatServicePlace } from "../lib/serviceLocation";
 
 type AnalysisLayout = "focus" | "overview" | "side";
 type OverviewView = "charts" | "ranking";
@@ -374,6 +375,12 @@ export function Analyses() {
     visibleHistory?.samples.filter((sample) => sample.energyKwh !== null)
       .length ?? 0;
 
+  const servicePlaces: Record<number, string> = {};
+
+  for (const service of services) {
+    servicePlaces[service.serviceId] = formatServicePlace(service.location);
+  }
+
   return (
     <div className="analyses-screen">
       <main
@@ -699,6 +706,7 @@ export function Analyses() {
             {canCompare && comparisonIndicators.length > 0 && (
               <ComparisonSummary
                 services={comparisonIndicators}
+                places={servicePlaces}
                 selectedServiceIds={comparisonServiceIds}
                 focusServiceId={comparisonFocusServiceId}
                 onFocusServiceChange={setComparisonFocusServiceId}
@@ -816,7 +824,7 @@ export function Analyses() {
                             <ServiceHistoryPreview
                               serviceId={service.serviceId}
                               name={service.name}
-                              regionCode={service.location.region_code}
+                              place={formatServicePlace(service.location)}
                               period={analysisPeriod}
                               isSelected={
                                 selectedServiceId === service.serviceId
@@ -886,6 +894,7 @@ export function Analyses() {
                       visibleServiceIndicators.services.length > 0 && (
                         <ImpactRanking
                           services={visibleServiceIndicators.services}
+                          places={servicePlaces}
                           periodLabel={analysisPeriodLabel}
                           metric={rankingMetric}
                           onMetricChange={setRankingMetric}
@@ -962,7 +971,7 @@ export function Analyses() {
                       <p className="analyses-history-service">
                         <strong>{selectedService.name}</strong>
                         <span aria-hidden="true">{" · "}</span>
-                        {selectedService.location.region_code}
+                        {formatServicePlace(selectedService.location)}
                       </p>
                     </div>
                   </div>
@@ -982,7 +991,8 @@ export function Analyses() {
                             key={service.serviceId}
                             value={service.serviceId}
                           >
-                            {service.name} · {service.location.region_code}
+                            {service.name} ·{" "}
+                            {formatServicePlace(service.location)}
                           </option>
                         ))}
                       </select>

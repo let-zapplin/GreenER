@@ -1,6 +1,10 @@
 import { useId, useLayoutEffect, useRef } from "react";
 import type { MonitoredService } from "../types/service";
 import type { ServiceIndicators } from "../types/indicators";
+import {
+  formatServicePlace,
+  hasServiceCoordinates,
+} from "../lib/serviceLocation";
 import "./ServiceCard.css";
 
 type ServiceCardProps = {
@@ -49,8 +53,7 @@ export function ServiceCard({
 }: ServiceCardProps) {
   const cardRef = useRef<HTMLElement>(null);
   const titleId = useId();
-  const hasLocation =
-    service.location.latitude !== null && service.location.longitude !== null;
+  const hasLocation = hasServiceCoordinates(service.location);
 
   useLayoutEffect(() => {
     if (selectionKey === undefined || !scrollOnSelect) return;
@@ -124,8 +127,8 @@ export function ServiceCard({
             aria-label={`Ver ${service.name} no mapa`}
             title={
               hasLocation
-                ? `Aproximar o mapa em ${service.location.city ?? service.location.region}`
-                : "Serviço sem localização cadastrada"
+                ? `Aproximar o mapa em ${formatServicePlace(service.location)}`
+                : "Serviço sem coordenadas no mapa"
             }
           >
             <svg
@@ -160,10 +163,7 @@ export function ServiceCard({
   </span>
 
   <p className="service-location-value">
-    {service.location.city
-      ? `${service.location.city} · `
-      : ""}
-    {service.location.region}, {service.location.country}
+    {formatServicePlace(service.location)}
   </p>
 </div>
 <div className="service-card-indicators">
