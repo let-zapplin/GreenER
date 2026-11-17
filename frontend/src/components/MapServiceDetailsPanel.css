@@ -55,6 +55,10 @@ backdrop-filter: blur(14px);
   --panel-status-color: #ff5e57;
 }
 
+.map-service-panel.error {
+  --panel-status-color: #e879f9;
+}
+
 .map-service-panel.removed {
   --panel-status-color: #796493;
 }

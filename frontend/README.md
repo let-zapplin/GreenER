@@ -137,7 +137,13 @@ e cruza as informações necessárias para apresentar:
 - emissão estimada de CO₂e;
 - contadores do ambiente;
 - horário da última atualização;
-- visualização geográfica dos serviços.
+- visualização geográfica com clusters GeoJSON do MapLibre;
+- alternância entre mapa e consumo energético estimado por região nas últimas 24 horas.
+
+O mapa atualiza sua fonte GeoJSON quando os serviços são atualizados, colore os
+pontos conforme o estado operacional e mantém a seleção sincronizada com o HUD.
+Serviços sem coordenadas continuam disponíveis na lista e no HUD, mas não são
+incluídos no mapa nem no agrupamento geográfico.
 
 ### Estados apresentados
 
