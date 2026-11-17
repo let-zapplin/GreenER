@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 
 import type { ServiceIndicators } from "../types/indicators";
 import type { MonitoredService } from "../types/service";
+import { formatServicePlace } from "../lib/serviceLocation";
 import { ServiceMiniHistoryChart } from "./ServiceMiniHistoryChart";
 import "./MapServiceDetailsPanel.css";
 
@@ -50,13 +51,7 @@ export function MapServiceDetailsPanel({
 
   const emissionsGco2e = indicator?.periodTotals.emissionsGco2e ?? null;
 
-  const location = [
-    service.location.city,
-    service.location.region,
-    service.location.country,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const location = formatServicePlace(service.location);
 
   return (
     <aside

@@ -11,6 +11,10 @@ import { useDashboardSummary } from "../hooks/useDashboardSummary";
 import { useServiceIndicators } from "../hooks/useServiceIndicators";
 import { MapServiceDetailsPanel } from "../components/MapServiceDetailsPanel";
 import { EnvironmentOverviewDock } from "../components/EnvironmentOverviewDock";
+import {
+  formatServicePlace,
+  hasServiceCoordinates,
+} from "../lib/serviceLocation";
 
 const ServicesMap = lazy(() =>
   import("../components/ServicesMap").then((module) => ({
@@ -58,9 +62,8 @@ export function Monitoring() {
       )
     : undefined;
 
-  const servicesWithLocation = services.filter(
-    (service) =>
-      service.location.latitude !== null && service.location.longitude !== null,
+  const servicesWithLocation = services.filter((service) =>
+    hasServiceCoordinates(service.location),
   ).length;
 
   const stale = lastUpdated !== null && error !== null;
@@ -79,7 +82,7 @@ export function Monitoring() {
     const key = focusKeyRef.current;
     setSelection({ id, key, scroll: options?.scroll ?? true });
 
-    const { latitude, longitude, city, region, country } = service.location;
+    const { latitude, longitude, city } = service.location;
     if (latitude === null || longitude === null) return;
 
     setMapFocus({
@@ -88,7 +91,7 @@ export function Monitoring() {
       longitude,
       label: service.name,
       city,
-      place: `${city ? `${city} · ` : ""}${region}, ${country}`,
+      place: formatServicePlace(service.location),
       scrollToMap: options?.scroll === false,
     });
   }

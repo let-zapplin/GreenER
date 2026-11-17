@@ -25,8 +25,8 @@ export class LocalidadesRepository {
     country: string;
     region: string;
     city: string | null;
-    latitude: number;
-    longitude: number;
+    latitude: number | null;
+    longitude: number | null;
   }) {
     const result = await pool.query(
       `INSERT INTO location 

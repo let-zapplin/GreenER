@@ -5,6 +5,7 @@ import "maplibre-gl-original/dist/maplibre-gl.css";
 import type { MonitoredService, ServiceStatus } from "../types/service";
 import "./ServicesMap.css";
 import { isSameMapTarget, type MapCameraTarget } from "../lib/mapFocus";
+import { formatServicePlace } from "../lib/serviceLocation";
 
 const WORLD_BOUNDS: [[number, number], [number, number]] = [
   [-180, -85],
@@ -95,11 +96,6 @@ function hideRoadNames(map: MapLibreMap) {
   }
 }
 
-function formatPlace(location: MonitoredService["location"]) {
-  const { city, region, country } = location;
-  return `${city ? `${city} · ` : ""}${region}, ${country}`;
-}
-
 function buildPopupContent(title: string, subtitle: string) {
   const content = document.createElement("div");
   content.className = "services-map-popup-content";
@@ -156,7 +152,7 @@ function buildGroupPopupContent(
 
   place.className = "services-map-group-popup-place";
 
-  place.textContent = formatPlace(group.services[0].location);
+  place.textContent = formatServicePlace(group.services[0].location);
 
   const list = document.createElement("div");
 
@@ -280,10 +276,6 @@ export function ServicesMap({
     map: MapLibreMap;
     handler: () => void;
   } | null>(null);
-  const pendingIdleRef = useRef<{
-    map: MapLibreMap;
-    handler: () => void;
-  } | null>(null);
   const pendingFocusRef = useRef<MapFocusRequest | null>(null);
   const activeTargetRef = useRef<MapCameraTarget | null>(null);
   const [ready, setReady] = useState(false);
@@ -353,17 +345,6 @@ export function ServicesMap({
       pending.map.off("moveend", pending.handler);
       pendingArrivalRef.current = null;
     }
-
-    // Cancela também a espera pelos detalhes do destino anterior.
-    const pendingIdle = pendingIdleRef.current;
-    if (pendingIdle) {
-      pendingIdle.map.off("idle", pendingIdle.handler);
-      pendingIdleRef.current = null;
-    }
-
-    if (pending || pendingIdle) {
-      onLoadingChange?.(false);
-    }
   };
 
   const startOrbit = (
@@ -402,7 +383,7 @@ export function ServicesMap({
       pitch: FOCUS_PITCH,
     };
 
-    // Outro serviço no mesmo destino mantém o voo/carregamento já iniciado.
+    // Outro serviço no mesmo destino mantém o voo já iniciado.
     if (
       activeTargetRef.current &&
       isSameMapTarget(activeTargetRef.current, target)
@@ -421,14 +402,14 @@ export function ServicesMap({
       target,
     );
 
-    // Não interrompe a órbita nem reinicia o loading se a câmera já está no ponto.
+    // Não interrompe a órbita nem refaz o voo se a câmera já está no ponto.
     if (
       alreadyFramed &&
       !activeTargetRef.current &&
       (!map.isMoving() || orbitFrameRef.current !== null)
     ) {
       // O pointerdown no marcador/popup pode ter pausado a órbita.
-      // Retoma sem deslocar a câmera ou reabrir o indicador de carregamento.
+      // Retoma sem deslocar a câmera.
       if (orbitFrameRef.current === null) {
         startOrbit(map, longitude, latitude);
       }
@@ -444,27 +425,12 @@ export function ServicesMap({
     }
 
     activeTargetRef.current = target;
-    onLoadingChange?.(true);
 
     const onArrive = () => {
       if (pendingArrivalRef.current?.handler !== onArrive) return;
       pendingArrivalRef.current = null;
-
-      const finishLoading = () => {
-        // Ignora uma conclusão antiga caso o destino já tenha mudado.
-        if (pendingIdleRef.current?.handler !== finishLoading) return;
-        pendingIdleRef.current = null;
-        activeTargetRef.current = null;
-        onLoadingChange?.(false);
-        startOrbit(map, longitude, latitude);
-      };
-
-      pendingIdleRef.current = { map, handler: finishLoading };
-      if (map.loaded()) {
-        finishLoading();
-      } else {
-        map.once("idle", finishLoading);
-      }
+      activeTargetRef.current = null;
+      startOrbit(map, longitude, latitude);
     };
 
     pendingArrivalRef.current = { map, handler: onArrive };
@@ -547,7 +513,7 @@ export function ServicesMap({
       latitude,
       city,
       service.name,
-      formatPlace(service.location),
+      formatServicePlace(service.location),
     );
   };
 
@@ -734,8 +700,7 @@ export function ServicesMap({
 
     const markers: Marker[] = groups.map((group) => {
       const names = group.services.map((service) => service.name).join(", ");
-      const { city, country } = group.services[0].location;
-      const place = [city, country].filter(Boolean).join(", ");
+      const place = formatServicePlace(group.services[0].location);
 
       const element = document.createElement("button");
       element.type = "button";
@@ -841,8 +806,8 @@ export function ServicesMap({
           <p className="services-map-note">
             {withoutLocation}{" "}
             {withoutLocation === 1
-              ? "serviço sem localização cadastrada"
-              : "serviços sem localização cadastrada"}
+              ? "serviço sem coordenadas no mapa, disponível na lista abaixo"
+              : "serviços sem coordenadas no mapa, disponíveis na lista abaixo"}
           </p>
         )}
       </div>

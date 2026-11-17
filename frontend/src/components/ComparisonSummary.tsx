@@ -10,6 +10,8 @@ import "./ComparisonSummary.css";
 type ComparisonSummaryProps = {
   services: ServiceIndicators[];
 
+  places?: Record<number, string>;
+
   selectedServiceIds: number[];
 
   focusServiceId: number | null;
@@ -222,6 +224,7 @@ function ImpactBars({
 
 export function ComparisonSummary({
   services,
+  places,
   selectedServiceIds,
   focusServiceId,
   onFocusServiceChange,
@@ -519,10 +522,9 @@ export function ComparisonSummary({
                   </strong>
 
                   <span>
-                    {
+                    {places?.[service.serviceId] ??
                       service.regionalContext
-                        .regionCode
-                    }
+                        .regionCode}
                   </span>
                 </div>
 
