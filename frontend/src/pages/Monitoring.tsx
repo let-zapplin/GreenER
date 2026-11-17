@@ -22,6 +22,10 @@ import { ServicesMapLegend } from "../components/ServicesMapLegend";
 import { MonitoringBoard } from "../components/MonitoringBoard";
 import { useMonitoringBoard } from "../hooks/useMonitoringBoard";
 import type { MonitoringWidgetType } from "../lib/monitoringBoard";
+import {
+  formatServicePlace,
+  hasServiceCoordinates,
+} from "../lib/serviceLocation";
 
 const ServicesMap = lazy(() =>
   import("../components/ServicesMap").then((module) => ({
@@ -50,8 +54,6 @@ export function Monitoring() {
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     null,
   );
-  const [selectionKey, setSelectionKey] = useState(0);
-  const [scrollOnSelection, setScrollOnSelection] = useState(true);
   const [mapFocus, setMapFocus] = useState<MapFocusRequest | null>(null);
 
   const [mapLoading, setMapLoading] = useState(true);
@@ -99,14 +101,6 @@ export function Monitoring() {
   const selectedService =
     services.find((service) => service.id === selectedServiceId) ?? null;
 
-  const selection =
-    selectedServiceId === null
-      ? null
-      : {
-          id: selectedServiceId,
-          key: selectionKey,
-          scroll: scrollOnSelection,
-        };
 
   const selectedIndicator = selectedService
     ? serviceIndicators?.services.find(
@@ -114,9 +108,8 @@ export function Monitoring() {
       )
     : undefined;
 
-  const servicesWithLocation = services.filter(
-    (service) =>
-      service.location.latitude !== null && service.location.longitude !== null,
+  const servicesWithLocation = services.filter((service) =>
+    hasServiceCoordinates(service.location),
   ).length;
 
   const stale = lastUpdated !== null && error !== null;
@@ -131,7 +124,7 @@ export function Monitoring() {
 
     if (!service) return;
 
-    const { latitude, longitude, city, region, country } = service.location;
+    const { latitude, longitude, city } = service.location;
 
     const hasValidLocation =
       latitude !== null &&
@@ -152,14 +145,19 @@ export function Monitoring() {
 
     const key = focusKeyRef.current;
 
+    /*
+     * O serviço é selecionado mesmo que não possua
+     * coordenadas válidas.
+     *
+     * Dessa forma ele continua disponível no HUD
+     * e no painel de detalhes, conforme a US12.
+     */
     setSelectedServiceId(id);
-    setSelectionKey(key);
 
-    setScrollOnSelection(options?.scroll ?? true);
 
     /*
-     * Serviços sem localização continuam podendo
-     * ser selecionados, mas não iniciam animação.
+     * Sem coordenadas, não existe destino para o mapa.
+     * Limpamos apenas o foco geográfico.
      */
     if (!hasValidLocation) {
       setMapFocus(null);
@@ -174,9 +172,7 @@ export function Monitoring() {
       longitude,
       label: service.name,
       city,
-
-      place: `${city ? `${city} · ` : ""}` + `${region}, ${country}`,
-
+      place: formatServicePlace(service.location),
       scrollToMap: options?.scroll === false,
     });
   }
@@ -293,19 +289,6 @@ export function Monitoring() {
               </div>
             )}
 
-            {/* HUD aparece dentro do mapa em fullscreen */}
-            {isMapFullscreen && (
-              <ServiceHud
-                services={services}
-                selectedServiceId={selectedServiceId ?? undefined}
-                onSelect={(serviceId) =>
-                  focusServiceOnMap(serviceId, {
-                    scroll: false,
-                  })
-                }
-              />
-            )}
-
             {/* Detalhes do serviço */}
             {selectedService && (
               <div
@@ -326,8 +309,28 @@ export function Monitoring() {
           </div>
         </div>
 
-        {/* Legenda dentro do mapa somente em tela cheia */}
-        {isMapFullscreen && <ServicesMapLegend services={services} />}
+        {/* Rodapé operacional dentro do mapa em tela cheia */}
+        {isMapFullscreen && (
+          <div className="services-map-fullscreen-footer">
+            <div className="services-map-hud services-map-hud-fullscreen">
+              <span className="services-map-count">
+                {servicesWithLocation} de {services.length} localizados
+              </span>
+
+              <ServiceHud
+                services={services}
+                selectedServiceId={selectedServiceId ?? undefined}
+                onSelect={(serviceId) =>
+                  focusServiceOnMap(serviceId, {
+                    scroll: false,
+                  })
+                }
+              />
+            </div>
+
+            <ServicesMapLegend services={services} />
+          </div>
+        )}
       </div>
 
       {/* Legenda abaixo do mapa na visualização normal */}
@@ -441,7 +444,6 @@ export function Monitoring() {
             Monitoramento de <span>serviços.</span>
           </h1>
         </div>
-
       </section>
 
       {error && (
@@ -479,10 +481,7 @@ export function Monitoring() {
       )}
 
       {services.length > 0 && (
-        <section
-          className="services-map-section"
-          aria-labelledby="services-map-title"
-        >
+        <section className="services-map-section" aria-label="Painel de monitoramento">
           <div className="monitoring-charts-layout">
             <MonitoringBoard
               state={board}
@@ -492,8 +491,6 @@ export function Monitoring() {
           </div>
         </section>
       )}
-
-
-    </main>
+      </main>
   );
 }

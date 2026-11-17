@@ -15,6 +15,7 @@ import {
   type ServicePointFeatureCollection,
 } from "../lib/serviceGeoJson";
 
+
 const WORLD_BOUNDS: [[number, number], [number, number]] = [
   [-180, -85],
   [180, 85],
@@ -27,6 +28,22 @@ const FOCUS_ZOOM_BY_CITY: Record<string, number> = {
 };
 
 const FOCUS_PITCH = 58;
+
+const FOCUS_RIGHT_PADDING = 50;
+
+const NO_CAMERA_PADDING = {
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+};
+
+const FOCUS_CAMERA_PADDING = {
+  top: 0,
+  right: FOCUS_RIGHT_PADDING,
+  bottom: 0,
+  left: 0,
+};
 
 // Etapa 1: a câmera sobe antes de viajar.
 const TRANSITION_OUT_ZOOM = 7;
@@ -435,10 +452,7 @@ function hideRoadNames(map: MapLibreMap) {
   }
 }
 
-function formatPlace(location: MonitoredService["location"]) {
-  const { city, region, country } = location;
-  return `${city ? `${city} · ` : ""}${region}, ${country}`;
-}
+
 
 function buildPopupContent(title: string, subtitle: string) {
   const content = document.createElement("div");
@@ -554,9 +568,10 @@ export function ServicesMap({
     handler: () => void;
   } | null>(null);
   const pendingIdleRef = useRef<{
-    map: MapLibreMap;
-    handler: () => void;
-  } | null>(null);
+  map: MapLibreMap;
+  handler: () => void;
+} | null>(null);
+
   const pendingFocusRef = useRef<MapFocusRequest | null>(null);
   const activeTargetRef = useRef<MapCameraTarget | null>(null);
   const [ready, setReady] = useState(false);
@@ -687,22 +702,23 @@ export function ServicesMap({
       orbitFrameRef.current = null;
     }
 
-    const pending = pendingArrivalRef.current;
-    if (pending) {
-      pending.map.off("moveend", pending.handler);
-      pendingArrivalRef.current = null;
-    }
+const pending = pendingArrivalRef.current;
 
-    // Cancela também a espera pelos detalhes do destino anterior.
-    const pendingIdle = pendingIdleRef.current;
-    if (pendingIdle) {
-      pendingIdle.map.off("idle", pendingIdle.handler);
-      pendingIdleRef.current = null;
-    }
+if (pending) {
+  pending.map.off("moveend", pending.handler);
+  pendingArrivalRef.current = null;
+}
 
-    if (pending || pendingIdle) {
-      onLoadingChange?.(false);
-    }
+const pendingIdle = pendingIdleRef.current;
+
+if (pendingIdle) {
+  pendingIdle.map.off("idle", pendingIdle.handler);
+  pendingIdleRef.current = null;
+}
+
+if (pending || pendingIdle) {
+  onLoadingChange?.(false);
+}
   };
 
   const flyToPoint = (
@@ -803,40 +819,34 @@ export function ServicesMap({
       map.once("moveend", handler);
     };
 
-    /**
-     * FINAL
-     *
-     * Esperamos os tiles terminarem de
-     * carregar antes de desligar o loading.
-     */
-    const finishTransition = () => {
-      const finishLoading = () => {
-        if (pendingIdleRef.current?.handler !== finishLoading) {
-          return;
-        }
+const finishTransition = () => {
+  const finishLoading = () => {
+    if (pendingIdleRef.current?.handler !== finishLoading) {
+      return;
+    }
 
-        pendingIdleRef.current = null;
+    pendingIdleRef.current = null;
+    activeTargetRef.current = null;
 
-        activeTargetRef.current = null;
+    onLoadingChange?.(false);
 
-        onLoadingChange?.(false);
+    startOrbit(map, longitude, latitude);
+  };
 
-        startOrbit(map, longitude, latitude);
-      };
+  pendingIdleRef.current = {
+    map,
+    handler: finishLoading,
+  };
 
-      pendingIdleRef.current = {
-        map,
-        handler: finishLoading,
-      };
-
-      if (map.loaded()) {
-        finishLoading();
-      } else {
-        map.once("idle", finishLoading);
-      }
-    };
+  if (map.loaded()) {
+    finishLoading();
+  } else {
+    map.once("idle", finishLoading);
+  }
+};
 
     /**
+     * 
      * ETAPA 3
      *
      * Mergulho final.
@@ -857,6 +867,8 @@ export function ServicesMap({
         pitch: target.pitch,
 
         bearing: 0,
+
+        padding: FOCUS_CAMERA_PADDING,
 
         duration: TRANSITION_IN_DURATION,
 

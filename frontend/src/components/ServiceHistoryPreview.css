@@ -79,6 +79,7 @@
 .service-history-preview-header span {
   color: var(--text-muted);
   font-size: 10px;
+  overflow-wrap: anywhere;
 }
 
 .service-history-preview-value {
