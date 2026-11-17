@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useState } from "react";
 
 import "./EnvironmentOverviewDock.css";
 
@@ -18,9 +15,6 @@ type EnvironmentOverviewDockProps = {
   loading: boolean;
   error: string | null;
 };
-
-const STORAGE_KEY =
-  "greener-monitoring-environment-dock-collapsed";
 
 function formatValue(
   value: number | null,
@@ -52,21 +46,7 @@ export function EnvironmentOverviewDock({
   loading,
   error,
 }: EnvironmentOverviewDockProps) {
-  const [isCollapsed, setIsCollapsed] =
-    useState(() => {
-      return (
-        localStorage.getItem(
-          STORAGE_KEY,
-        ) === "true"
-      );
-    });
-
-  useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      String(isCollapsed),
-    );
-  }, [isCollapsed]);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const monitoredServiceCount =
     activeServiceCount +

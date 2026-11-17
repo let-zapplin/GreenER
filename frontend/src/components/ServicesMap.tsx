@@ -454,16 +454,6 @@ function buildPopupContent(title: string, subtitle: string) {
   return content;
 }
 
-const statusPriority: ServiceStatus[] = [
-  "unavailable",
-  "error",
-  "removed",
-  "no_metrics",
-  "new",
-  "returned",
-  "active",
-];
-
 const statusLabels: Record<ServiceStatus, string> = {
   active: "Ativo",
   new: "Novo",
@@ -599,120 +589,93 @@ export function ServicesMap({
     onSelectServiceRef.current = onSelectService;
   }, [onSelectService]);
 
-useEffect(() => {
-  /*
-   * Mantém os callbacks do MapLibre
-   * com acesso à versão atual dos serviços.
-   */
-  servicesRef.current =
-    services;
+  useEffect(() => {
+    /*
+     * Mantém os callbacks do MapLibre
+     * com acesso à versão atual dos serviços.
+     */
+    servicesRef.current = services;
 
-  /*
-   * Se não existe popup agrupado aberto,
-   * não precisamos atualizar nada.
-   */
-  const content =
-    groupPopupContentRef.current;
+    /*
+     * Se não existe popup agrupado aberto,
+     * não precisamos atualizar nada.
+     */
+    const content = groupPopupContentRef.current;
 
-  if (!content) {
-    return;
-  }
+    if (!content) {
+      return;
+    }
 
-  const buttons =
-    content.querySelectorAll<HTMLButtonElement>(
+    const buttons = content.querySelectorAll<HTMLButtonElement>(
       ".services-map-popup-service",
     );
 
-  let visibleServices = 0;
+    let visibleServices = 0;
 
-  buttons.forEach((button) => {
-    const serviceId =
-      button.dataset.serviceId;
+    buttons.forEach((button) => {
+      const serviceId = button.dataset.serviceId;
 
-    if (!serviceId) {
-      return;
-    }
+      if (!serviceId) {
+        return;
+      }
 
-    const service =
-      services.find(
-        (item) =>
-          item.id === serviceId,
-      );
+      const service = services.find((item) => item.id === serviceId);
+
+      /*
+       * Se o serviço deixou de existir,
+       * removemos sua opção.
+       */
+      if (!service) {
+        button.remove();
+        return;
+      }
+
+      visibleServices += 1;
+
+      /*
+       * Atualiza também a classe,
+       * fazendo a cor acompanhar o status.
+       */
+      button.className = `services-map-popup-service ${service.status}`;
+
+      const name = button.querySelector<HTMLElement>("[data-service-name]");
+
+      if (name) {
+        name.textContent = service.name;
+      }
+
+      const status = button.querySelector<HTMLElement>("[data-service-status]");
+
+      if (status) {
+        status.textContent = statusLabels[service.status];
+      }
+    });
 
     /*
-     * Se o serviço deixou de existir,
-     * removemos sua opção.
+     * Atualiza a quantidade mostrada
+     * no cabeçalho.
      */
-    if (!service) {
-      button.remove();
-      return;
-    }
+    const heading = content.querySelector("strong");
 
-    visibleServices += 1;
+    if (heading) {
+      heading.textContent = `${visibleServices} serviços neste local`;
+    }
 
     /*
-     * Atualiza também a classe,
-     * fazendo a cor acompanhar o status.
+     * Se deixou de ser um agrupamento,
+     * o popup não faz mais sentido.
      */
-    button.className =
-      `services-map-popup-service ${service.status}`;
+    if (visibleServices < 2) {
+      popupRef.current?.remove();
 
-    const name =
-      button.querySelector<HTMLElement>(
-        "[data-service-name]",
-      );
+      popupRef.current = null;
 
-    if (name) {
-      name.textContent =
-        service.name;
+      groupPopupContentRef.current = null;
     }
-
-    const status =
-      button.querySelector<HTMLElement>(
-        "[data-service-status]",
-      );
-
-    if (status) {
-      status.textContent =
-        statusLabels[
-          service.status
-        ];
-    }
-  });
-
-  /*
-   * Atualiza a quantidade mostrada
-   * no cabeçalho.
-   */
-  const heading =
-    content.querySelector("strong");
-
-  if (heading) {
-    heading.textContent =
-      `${visibleServices} serviços neste local`;
-  }
-
-  /*
-   * Se deixou de ser um agrupamento,
-   * o popup não faz mais sentido.
-   */
-  if (visibleServices < 2) {
-    popupRef.current?.remove();
-
-    popupRef.current = null;
-
-    groupPopupContentRef.current =
-      null;
-  }
-}, [services]);
+  }, [services]);
   const featureCollection = useMemo(
     () => buildServiceFeatureCollection(services, selectedServiceId),
     [services, selectedServiceId],
-  );
-  const withoutLocation = services.length - featureCollection.features.length;
-
-  const legendStatuses = statusPriority.filter((status) =>
-    services.some((service) => service.status === status),
   );
 
   const focusKey = focus?.key;
@@ -1035,46 +998,31 @@ useEffect(() => {
       .addTo(map);
   };
 
-const openGroupPopup = (
-  map: MapLibreMap,
-  longitude: number,
-  latitude: number,
-  groupedServices: MonitoredService[],
-) => {
-  const popup =
-    createPopup(false, "320px");
+  const openGroupPopup = (
+    map: MapLibreMap,
+    longitude: number,
+    latitude: number,
+    groupedServices: MonitoredService[],
+  ) => {
+    const popup = createPopup(false, "320px");
 
-  const content =
-    buildGroupPopupContent(
-      groupedServices,
-      (serviceId) => {
-        popup.remove();
+    const content = buildGroupPopupContent(groupedServices, (serviceId) => {
+      popup.remove();
 
-        popupRef.current = null;
-        groupPopupContentRef.current =
-          null;
+      popupRef.current = null;
+      groupPopupContentRef.current = null;
 
-        selectServiceFromMap(
-          serviceId,
-        );
-      },
-    );
+      selectServiceFromMap(serviceId);
+    });
 
-  /*
-   * Guardamos uma referência para o HTML
-   * que está atualmente aberto no mapa.
-   */
-  groupPopupContentRef.current =
-    content;
+    /*
+     * Guardamos uma referência para o HTML
+     * que está atualmente aberto no mapa.
+     */
+    groupPopupContentRef.current = content;
 
-  popup
-    .setLngLat([
-      longitude,
-      latitude,
-    ])
-    .setDOMContent(content)
-    .addTo(map);
-};
+    popup.setLngLat([longitude, latitude]).setDOMContent(content).addTo(map);
+  };
 
   const focusPoint = (
     map: MapLibreMap,
@@ -1266,6 +1214,8 @@ const openGroupPopup = (
         minZoom: 0.5,
         maxZoom: 19,
 
+        scrollZoom: false,
+
         maxPitch: 70,
         dragRotate: false,
         pitchWithRotate: false,
@@ -1280,6 +1230,24 @@ const openGroupPopup = (
     }
 
     mapRef.current = map;
+    const enableScrollZoom = () => {
+      map.scrollZoom.enable();
+    };
+
+    const disableScrollZoom = () => {
+      map.scrollZoom.disable();
+    };
+
+    const disableScrollZoomOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        disableScrollZoom();
+      }
+    };
+
+    container.addEventListener("click", enableScrollZoom);
+    container.addEventListener("mouseleave", disableScrollZoom);
+
+    window.addEventListener("keydown", disableScrollZoomOnEscape);
     map.fitBounds(WORLD_BOUNDS, { animate: false, padding: 0 });
 
     const applyMapLayers = () => {
@@ -1440,6 +1408,11 @@ const openGroupPopup = (
       map.off("mouseleave", CLUSTERS_LAYER_ID, onLayerMouseLeave);
       map.off("mouseenter", SERVICE_POINTS_LAYER_ID, onLayerMouseEnter);
       map.off("mouseleave", SERVICE_POINTS_LAYER_ID, onLayerMouseLeave);
+      container.removeEventListener("click", enableScrollZoom);
+
+      container.removeEventListener("mouseleave", disableScrollZoom);
+
+      window.removeEventListener("keydown", disableScrollZoomOnEscape);
       map.remove();
       mapRef.current = null;
       loadedRef.current = false;
@@ -1547,27 +1520,6 @@ const openGroupPopup = (
         {ready && featureCollection.features.length === 0 && (
           <p className="services-map-empty">
             Nenhum serviço com coordenadas cadastradas.
-          </p>
-        )}
-      </div>
-      <div className="services-map-footer">
-        <ul className="services-map-legend" aria-label="Legenda dos status">
-          {legendStatuses.map((status) => (
-            <li key={status}>
-              <span
-                className={`services-map-legend-dot ${status}`}
-                aria-hidden="true"
-              />
-              {statusLabels[status]}
-            </li>
-          ))}
-        </ul>
-        {withoutLocation > 0 && (
-          <p className="services-map-note">
-            {withoutLocation}{" "}
-            {withoutLocation === 1
-              ? "serviço sem localização cadastrada"
-              : "serviços sem localização cadastrada"}
           </p>
         )}
       </div>

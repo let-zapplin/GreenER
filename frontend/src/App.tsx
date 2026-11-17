@@ -8,6 +8,7 @@ import { HowItWorks } from "./pages/HowItWorks";
 import { Analyses } from "./pages/Analyses";
 import { Landing, LandingHeader } from "./pages/Landing";
 import { RequireAuth } from "./components/RequireAuth";
+import { Footer } from "./components/Footer";
 
 function App() {
   const { pathname } = useLocation();
@@ -32,6 +33,7 @@ function App() {
           <Route path="/funcionamento" element={<HowItWorks />} />
         </Routes>
       </div>
+      <Footer />
     </div>
   );
 }
