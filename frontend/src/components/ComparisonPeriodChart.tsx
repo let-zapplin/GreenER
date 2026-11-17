@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -5,6 +6,7 @@ import {
   Cell,
   ResponsiveContainer,
   Tooltip,
+  Text,
   XAxis,
   YAxis,
 } from "recharts";
@@ -50,6 +52,7 @@ export function ComparisonPeriodChart({
   focusServiceId,
   onFocusServiceChange,
 }: ComparisonPeriodChartProps) {
+  const [isCompact, setIsCompact] = useState(false);
   const metricDefinition = getComparisonMetricDefinition(metric);
 
   const chartData: ComparisonPeriodChartData[] = services.map((service) => ({
@@ -83,15 +86,19 @@ export function ComparisonPeriodChart({
       </div>
 
       <div className="comparison-period-chart-canvas">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          onResize={(width: number) => setIsCompact(width < 420)}
+        >
           <BarChart
             data={chartData}
             layout="vertical"
             margin={{
               top: 8,
-              right: 32,
+              right: isCompact ? 12 : 32,
               bottom: 8,
-              left: 16,
+              left: isCompact ? 0 : 16,
             }}
           >
             <CartesianGrid
@@ -102,8 +109,16 @@ export function ComparisonPeriodChart({
 
             <XAxis
               type="number"
+              tickCount={isCompact ? 3 : 5}
+              minTickGap={isCompact ? 12 : 5}
               tickFormatter={(value) =>
-                formatComparisonValue(Number(value), metric)
+                isCompact
+                  ? Number(value).toLocaleString("pt-BR", {
+                      maximumSignificantDigits: 3,
+                      notation: Number(value) !== 0 && Math.abs(Number(value)) < 0.001
+                        ? "scientific" : "compact",
+                    })
+                  : formatComparisonValue(Number(value), metric)
               }
               tickLine={false}
               axisLine={{
@@ -118,13 +133,26 @@ export function ComparisonPeriodChart({
             <YAxis
               type="category"
               dataKey="name"
-              width={160}
+              width={isCompact ? 88 : 160}
+              interval={0}
               tickLine={false}
               axisLine={false}
-              tick={{
-                fill: "#f4f8f5",
-                fontSize: 12,
-              }}
+              tick={isCompact
+                ? ({ y, payload }: { y?: number; payload?: { value?: string | number } }) => (
+                    <Text
+                      x={0}
+                      y={y}
+                      width={80}
+                      textAnchor="start"
+                      verticalAnchor="middle"
+                      fill="#f4f8f5"
+                      fontSize={11}
+                      breakAll
+                    >
+                      {String(payload?.value ?? "")}
+                    </Text>
+                  )
+                : { fill: "#f4f8f5", fontSize: 12 }}
             />
 
             <Tooltip

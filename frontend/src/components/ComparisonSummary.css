@@ -452,6 +452,12 @@
 }
 
 @media (max-width: 700px) {
+  .comparison-summary-header h2 {
+    font-size: 1.1rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
   .comparison-summary-values {
     grid-template-columns: 1fr;
   }
