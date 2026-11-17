@@ -1,114 +1,180 @@
 .analyses-screen {
   position: relative;
+
   isolation: isolate;
+
   overflow: clip;
+
   background: var(--background-page);
 }
 
 .analyses-waves {
   position: absolute;
+
   inset: auto 0 0;
+
   height: 180px;
+
   z-index: -1;
+
   pointer-events: none;
+
   background-image:
     url("../../assets/camadasFundo/Vector 8.png"),
     url("../../assets/camadasFundo/Vector 7.png"),
     url("../../assets/camadasFundo/Vector 6.png"),
     url("../../assets/camadasFundo/Vector 5.png");
+
   background-repeat: no-repeat;
+
   background-position:
     center 95px,
     center 65px,
     center 35px,
     center 0;
+
   background-size: 100% 260px;
 }
 
 .analyses-page {
   width: 100%;
-  max-width: 1328px;
+
+  max-width: 1560px;
+
   min-height: 0;
+
   margin: 0 auto;
+
   padding: 64px 64px 196px;
+
   color: #f4f8f5;
 }
 
 .analyses-coming-soon {
   width: 100%;
+
   max-width: 720px;
+
   padding: 48px 32px;
+
   text-align: center;
 }
+
 .analyses-icon {
   display: grid;
+
   place-items: center;
+
   width: 72px;
+
   height: 72px;
+
   margin: 0 auto 28px;
+
   border: 1px solid #426c60;
+
   border-radius: 18px;
+
   background: #12383b;
+
   color: #87e46c;
 }
+
 .analyses-icon svg {
   width: 36px;
+
   height: 36px;
 }
+
 .analyses-eyebrow {
   margin: 0 0 16px;
+
   color: #87e46c;
+
   font-size: var(--font-size-small);
+
   line-height: 1.5;
+
   font-weight: 600;
+
   letter-spacing: 0.14em;
 }
+
 .analyses-coming-soon h1 {
   margin: 0;
+
   font-size: clamp(32px, 4.4vw, 52px);
+
   font-weight: 600;
+
   letter-spacing: -0.04em;
+
   line-height: 1.16;
 }
+
 .analyses-coming-soon h1 span {
   color: #87e46c;
 }
+
 .analyses-description {
   max-width: 530px;
+
   margin: 24px auto 32px;
+
   color: var(--text-muted);
+
   font-size: 16px;
+
   line-height: 1.7;
 }
+
 .analyses-link {
   display: inline-flex;
+
   align-items: center;
+
   justify-content: center;
+
   gap: 14px;
+
   padding: 14px 24px;
+
   background: #69d337;
+
   color: #062f32;
+
   border-radius: 12px;
+
   text-decoration: none;
+
   font-family: "IBM Plex Mono", monospace;
+
   font-size: var(--font-size-small);
+
   line-height: 1.5;
+
   font-weight: 600;
 }
+
 .analyses-link:hover {
   background: #87e46c;
 }
 
 .analyses-header {
   max-width: 720px;
+
   margin-bottom: 40px;
 }
 
 .analyses-header h1 {
   margin: 0;
+
   font-size: clamp(32px, 4.4vw, 52px);
+
   font-weight: 600;
+
   letter-spacing: -0.04em;
+
   line-height: 1.16;
 }
 
@@ -122,26 +188,37 @@
 
 .analyses-history-navigation {
   display: flex;
+
   align-items: center;
+
   gap: 12px;
+
   min-width: 0;
 }
 
 .analyses-service-nav-button {
   display: grid;
+
   place-items: center;
+
   width: 34px;
+
   height: 34px;
+
   flex: 0 0 auto;
 
   border: 1px solid #315657;
+
   border-radius: 50%;
 
   background: #0c2d30;
+
   color: #c8d8d1;
 
   font: inherit;
+
   font-size: 16px;
+
   line-height: 1;
 
   cursor: pointer;
@@ -155,39 +232,57 @@
 
 .analyses-service-nav-button:hover {
   border-color: #87e46c;
+
   background: #12383b;
+
   color: #87e46c;
+
   transform: translateY(-1px);
 }
 
 .analyses-service-nav-button:focus-visible {
   outline: 2px solid #87e46c;
+
   outline-offset: 2px;
 }
 
 .analyses-section-label {
   margin: 0 0 6px;
+
   color: #87e46c;
+
   font-size: 11px;
+
   font-weight: 600;
+
   letter-spacing: 0.12em;
 }
 
 .analyses-controls {
   display: flex;
+
   align-items: end;
+
   justify-content: space-between;
+
   gap: 24px;
+
   margin-bottom: 24px;
+
   padding: 20px 22px;
+
   border: 1px solid #315657;
+
   border-radius: 16px;
+
   background: #12383b;
 }
 
 .analyses-controls h2 {
   margin: 0;
+
   font-size: 18px;
+
   font-weight: 600;
 }
 
@@ -203,30 +298,43 @@
   color: var(--text-muted);
 
   font-size: 12px;
+
   line-height: 1.5;
 }
 
 .analyses-service-select {
   display: grid;
+
   gap: 6px;
+
   width: min(100%, 360px);
 }
 
 .analyses-service-select > span {
   color: var(--text-muted);
+
   font-size: 11px;
+
   font-weight: 600;
 }
 
 .analyses-service-select select {
   width: 100%;
+
   min-height: 42px;
+
   padding: 0 38px 0 12px;
+
   border: 1px solid #426c60;
+
   border-radius: 10px;
+
   outline: none;
+
   background: #0c2d30;
+
   color: #f4f8f5;
+
   font: inherit;
 }
 
@@ -236,10 +344,15 @@
 
 .analyses-history {
   position: relative;
+
   padding: 20px 22px;
+
   border: 1px solid #315657;
+
   border-radius: 18px;
+
   background: #12383b;
+
   transition:
     border-color 180ms ease,
     background-color 180ms ease;
@@ -247,27 +360,39 @@
 
 .analyses-history-header {
   display: flex;
+
   align-items: flex-start;
+
   justify-content: space-between;
+
   gap: 20px;
+
   padding: 0 52px;
 }
 
 .analyses-history-identity {
   display: flex;
+
   align-items: center;
+
   gap: 14px;
+
   min-width: 0;
 }
 
 .analyses-history-corner-nav {
   position: absolute;
+
   top: 20px;
+
   left: 20px;
+
   right: 20px;
 
   display: flex;
+
   justify-content: space-between;
+
   align-items: flex-start;
 
   pointer-events: none;
@@ -275,17 +400,23 @@
 
 .analyses-service-corner-button {
   display: grid;
+
   place-items: center;
+
   width: 40px;
+
   height: 40px;
 
   border: 1px solid #315657;
+
   border-radius: 999px;
 
   background: #0c2d30cc;
+
   backdrop-filter: blur(4px);
 
   cursor: pointer;
+
   pointer-events: auto;
 
   transition:
@@ -297,52 +428,73 @@
 
 .analyses-service-corner-button:hover {
   border-color: #87e46c;
+
   background: #12383b;
+
   transform: translateY(-1px);
+
   box-shadow: 0 6px 16px #00000022;
 }
 
 .analyses-service-corner-button:focus-visible {
   outline: 2px solid #87e46c;
+
   outline-offset: 2px;
 }
 
 .analyses-service-corner-button span {
   display: block;
+
   width: 0;
+
   height: 0;
 }
 
 .analyses-service-corner-button.is-previous span {
   border-top: 7px solid transparent;
+
   border-bottom: 7px solid transparent;
+
   border-right: 11px solid #87e46c;
+
   margin-left: -2px;
 }
 
 .analyses-service-corner-button.is-next span {
   border-top: 7px solid transparent;
+
   border-bottom: 7px solid transparent;
+
   border-left: 11px solid #87e46c;
+
   margin-right: -2px;
 }
 
 .analyses-service-badge {
   position: relative;
+
   display: grid;
+
   place-items: center;
+
   width: 52px;
+
   height: 56px;
+
   flex: 0 0 auto;
 
   background: linear-gradient(180deg, #11383b 0%, #0c2d30 100%);
+
   border: 1px solid #87e46c66;
 
   color: #87e46c;
 
   font-size: 12px;
+
   font-weight: 700;
+
   letter-spacing: 0.08em;
+
   line-height: 1;
 
   clip-path: polygon(25% 6%, 75% 6%, 94% 50%, 75% 94%, 25% 94%, 6% 50%);
@@ -354,72 +506,97 @@
 
 .analyses-history-service strong {
   color: #e8f1eb;
+
   font-weight: 600;
 }
 
 .analyses-history-header h2 {
   margin: 0;
+
   font-size: 24px;
+
   font-weight: 600;
 }
 
 .analyses-history-service {
   margin: 6px 0 0;
+
   color: var(--text-muted);
+
   font-size: 14px;
+
   line-height: 1.4;
 }
 
 .analyses-history-unit {
   display: grid;
+
   justify-items: end;
+
   gap: 2px;
 }
 
 .analyses-history-unit span {
   color: var(--text-muted);
+
   font-size: 10px;
+
   text-transform: uppercase;
+
   letter-spacing: 0.08em;
 }
 
 .analyses-history-unit strong {
   color: #87e46c;
+
   font-size: 18px;
 }
 
 .analyses-history-summary {
   display: grid;
+
   grid-template-columns:
     repeat(2, minmax(120px, 180px))
     minmax(220px, 1fr);
+
   gap: 12px;
+
   margin: 16px 0 0;
 }
 
 .analyses-history-summary > div {
   padding: 10px 12px;
+
   border-top: 1px solid #ffffff12;
 }
 
 .analyses-history-summary dt {
   color: var(--text-muted);
+
   font-size: 10px;
+
   font-weight: 600;
+
   text-transform: uppercase;
+
   letter-spacing: 0.06em;
 }
 
 .analyses-history-summary dd {
   margin: 5px 0 0;
+
   color: #f4f8f5;
+
   font-size: 13px;
+
   font-weight: 600;
 }
 
 .analyses-history-actions {
   display: flex;
+
   align-items: flex-end;
+
   gap: 18px;
 
   min-width: 0;
@@ -427,6 +604,7 @@
 
 .analyses-history-service-select {
   display: grid;
+
   gap: 5px;
 
   width: min(290px, 34vw);
@@ -436,19 +614,23 @@
   color: var(--text-muted);
 
   font-size: 9px;
+
   font-weight: 600;
 
   text-transform: uppercase;
+
   letter-spacing: 0.08em;
 }
 
 .analyses-history-service-select select {
   width: 100%;
+
   min-height: 38px;
 
   padding: 0 34px 0 11px;
 
   border: 1px solid #315657;
+
   border-radius: 9px;
 
   outline: none;
@@ -458,6 +640,7 @@
   color: #e8f1eb;
 
   font: inherit;
+
   font-size: 11px;
 
   cursor: pointer;
@@ -478,15 +661,21 @@
 .analyses-state,
 .analyses-history-state {
   padding: 32px;
+
   border: 1px solid #315657;
+
   border-radius: 16px;
+
   background: #12383b;
+
   text-align: center;
 }
 
 .analyses-history-state {
   margin-top: 22px;
+
   border-color: #ffffff12;
+
   background: #0c2d3066;
 }
 
@@ -498,22 +687,29 @@
 .analyses-state p,
 .analyses-history-state p {
   margin: 0;
+
   color: var(--text-muted);
 }
 
 .analyses-history-content {
   position: relative;
+
   min-height: 390px;
+
   overflow: hidden;
+
   border-radius: 12px;
 }
 
 .analyses-chameleon-transition {
   position: absolute;
+
   inset: 0;
+
   z-index: 12;
 
   overflow: hidden;
+
   border-radius: inherit;
 
   opacity: 0;
@@ -531,7 +727,9 @@
   position: absolute;
 
   top: 5%;
+
   bottom: 5%;
+
   left: -30%;
 
   width: 46%;
@@ -540,9 +738,13 @@
 
   background: radial-gradient(
     ellipse at center,
+
     #65d7ff66 0%,
+
     #3aa7c94d 24%,
+
     #2f7f9f2e 48%,
+
     transparent 72%
   );
 
@@ -561,7 +763,9 @@
 @keyframes analyses-chameleon-glow {
   0% {
     left: -30%;
+
     opacity: 0;
+
     transform: scaleX(0.65);
   }
 
@@ -575,13 +779,16 @@
 
   100% {
     left: 92%;
+
     opacity: 0;
+
     transform: scaleX(1.2);
   }
 }
 
 .analyses-transition-fragments {
   position: absolute;
+
   inset: 0;
 }
 
@@ -589,6 +796,7 @@
   position: absolute;
 
   width: 10px;
+
   height: 10px;
 
   background: #87e46c;
@@ -606,49 +814,65 @@
 
 .analyses-transition-fragments span:nth-child(1) {
   top: 24%;
+
   left: 18%;
+
   animation-delay: 20ms;
 }
 
 .analyses-transition-fragments span:nth-child(2) {
   top: 56%;
+
   left: 27%;
+
   animation-delay: 70ms;
 }
 
 .analyses-transition-fragments span:nth-child(3) {
   top: 36%;
+
   left: 39%;
+
   animation-delay: 110ms;
 }
 
 .analyses-transition-fragments span:nth-child(4) {
   top: 70%;
+
   left: 48%;
+
   animation-delay: 150ms;
 }
 
 .analyses-transition-fragments span:nth-child(5) {
   top: 29%;
+
   left: 58%;
+
   animation-delay: 190ms;
 }
 
 .analyses-transition-fragments span:nth-child(6) {
   top: 61%;
+
   left: 67%;
+
   animation-delay: 230ms;
 }
 
 .analyses-transition-fragments span:nth-child(7) {
   top: 42%;
+
   left: 77%;
+
   animation-delay: 270ms;
 }
 
 .analyses-transition-fragments span:nth-child(8) {
   top: 68%;
+
   left: 84%;
+
   animation-delay: 310ms;
 }
 
@@ -662,14 +886,18 @@
 
 .analyses-chameleon-transition.is-active .analyses-transition-fragments span {
   animation-name: analyses-fragment-shift;
+
   animation-duration: 520ms;
+
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+
   animation-fill-mode: both;
 }
 
 @keyframes analyses-fragment-shift {
   0% {
     opacity: 0;
+
     transform: translateX(-8px) scale(0.45) rotate(-12deg);
   }
 
@@ -679,11 +907,13 @@
 
   65% {
     opacity: 0.55;
+
     transform: translateX(8px) scale(1) rotate(6deg);
   }
 
   100% {
     opacity: 0;
+
     transform: translateX(18px) scale(0.55) rotate(12deg);
   }
 }
@@ -715,11 +945,13 @@
 @keyframes analyses-history-enter {
   from {
     opacity: 0;
+
     filter: saturate(0.65);
   }
 
   to {
     opacity: 1;
+
     filter: saturate(1);
   }
 }
@@ -731,11 +963,13 @@
 @keyframes analyses-service-enter {
   from {
     opacity: 0.45;
+
     filter: saturate(0.45);
   }
 
   to {
     opacity: 1;
+
     filter: saturate(1);
   }
 }
@@ -746,44 +980,71 @@
 
 .analyses-warning {
   margin-top: 18px;
+
   padding: 10px 12px;
+
   border: 1px solid #e6c75a33;
+
   border-radius: 10px;
+
   color: #e9dc9a;
+
   font-size: 12px;
 }
 
 .analyses-loader {
   display: inline-block;
+
   width: 20px;
+
   height: 20px;
+
   margin-bottom: 12px;
+
   border: 2px solid #ffffff22;
+
   border-top-color: #87e46c;
+
   border-radius: 50%;
+
   animation: analyses-spin 700ms linear infinite;
 }
 
 .analyses-chart-ready {
   display: flex;
+
   align-items: center;
+
   gap: 12px;
+
   margin-top: 22px;
+
   padding: 18px;
+
   border: 1px dashed #87e46c55;
+
   border-radius: 12px;
+
   background: #87e46c0a;
 }
 
 .analyses-chart-ready > span {
   display: grid;
+
   place-items: center;
+
   width: 30px;
+
   height: 30px;
+
   flex: 0 0 auto;
+
   border-radius: 50%;
+
   background: #87e46c;
+
   color: #062f32;
+
   font-weight: 700;
 }
 
@@ -793,7 +1054,9 @@
 
 .analyses-chart-ready p {
   margin: 3px 0 0;
+
   color: var(--text-muted);
+
   font-size: 12px;
 }
 
@@ -805,40 +1068,61 @@
 
 .analyses-period-selector {
   display: flex;
+
   align-items: center;
+
   justify-content: flex-end;
 
   gap: 12px;
+
   margin: 0;
 }
 
 .analyses-period-selector > span {
   color: var(--text-muted);
+
   font-size: 10px;
+
   font-weight: 600;
+
   letter-spacing: 0.08em;
+
   text-transform: uppercase;
 }
 
 .analyses-period-options {
   display: inline-flex;
+
   padding: 3px;
+
   border: 1px solid #315657;
+
   border-radius: 10px;
+
   background: #0c2d30;
 }
 
 .analyses-period-button {
   min-width: 48px;
+
   padding: 7px 10px;
+
   border: 0;
+
   border-radius: 7px;
+
   background: transparent;
+
   color: var(--text-muted);
+
   font: inherit;
+
   font-size: 11px;
+
   font-weight: 600;
+
   cursor: pointer;
+
   transition:
     background 160ms ease,
     color 160ms ease;
@@ -850,14 +1134,17 @@
 
 .analyses-period-button.is-active {
   background: #87e46c;
+
   color: #062f32;
 }
 
 .analyses-overview {
   margin-bottom: 24px;
+
   padding: 22px;
 
   border: 1px solid #315657;
+
   border-radius: 18px;
 
   background: #12383b;
@@ -865,8 +1152,11 @@
 
 .analyses-overview-header {
   display: flex;
+
   align-items: flex-start;
+
   justify-content: space-between;
+
   gap: 24px;
 
   margin-bottom: 20px;
@@ -878,15 +1168,19 @@
   color: #f4f8f5;
 
   font-size: 20px;
+
   font-weight: 600;
 }
 
 .analyses-overview-header > div > p:last-child {
   max-width: 560px;
+
   margin: 7px 0 0;
 
   color: var(--text-muted);
+
   font-size: 12px;
+
   line-height: 1.5;
 }
 
@@ -894,6 +1188,7 @@
   padding: 6px 9px;
 
   border: 1px solid #58cbb733;
+
   border-radius: 8px;
 
   background: #0c2d30;
@@ -901,11 +1196,13 @@
   color: #58cbb7;
 
   font-size: 11px;
+
   font-weight: 600;
 }
 
 .analyses-overview-grid {
   display: grid;
+
   grid-template-columns: repeat(2, minmax(0, 1fr));
 
   gap: 14px;
@@ -913,25 +1210,33 @@
 
 .analyses-overview-actions {
   display: flex;
+
   align-items: center;
+
   gap: 8px;
 }
 
 .analyses-overview-toggle {
   display: grid;
+
   place-items: center;
 
   width: 30px;
+
   height: 30px;
 
   border: 1px solid #315657;
+
   border-radius: 8px;
 
   background: #0c2d30;
+
   color: #87e46c;
 
   font: inherit;
+
   font-size: 18px;
+
   line-height: 1;
 
   cursor: pointer;
@@ -944,18 +1249,23 @@
 
 .analyses-overview-toggle:hover {
   border-color: #87e46c;
+
   background: #12383b;
+
   transform: translateY(-1px);
 }
 
 .analyses-overview-toggle:focus-visible {
   outline: 2px solid #87e46c;
+
   outline-offset: 2px;
 }
 
 .analyses-overview-collapsed {
   display: flex;
+
   align-items: center;
+
   gap: 8px;
 
   padding-top: 4px;
@@ -965,40 +1275,56 @@
   font-size: 11px;
 }
 
-.analyses-overview:has(
-  .analyses-overview-collapsed
-) {
+.analyses-overview:has(.analyses-overview-collapsed) {
   padding: 16px 18px;
-}
-
-.analyses-overview:has(
-  .analyses-overview-collapsed
-)
-.analyses-overview-header {
-  margin-bottom: 6px;
 }
 
 .analyses-overview:has(.analyses-overview-collapsed) .analyses-overview-header {
   margin-bottom: 4px;
 }
 
+.analyses-overview-ranking {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* =========================================================
+   LAYOUT PRINCIPAL DA ÁREA DE ANÁLISES
+   ---------------------------------------------------------
+   A página usa apenas dois cards:
+   1) .analyses-history  -> histórico do serviço selecionado
+   2) .analyses-overview -> visão geral dos serviços
+
+   O ranking deixa de ser uma terceira área da página.
+   Na próxima etapa ele será uma visualização interna do
+   próprio card de Visão Geral.
+   ========================================================= */
+
 .analyses-layout {
   display: grid;
   gap: 24px;
+  align-items: start;
 }
 
+/* Impede que conteúdos internos forcem o grid a ficar maior
+   que a largura disponível. */
 .analyses-layout > * {
   min-width: 0;
 }
 
+/* O espaçamento entre os cards é controlado pelo gap do grid. */
 .analyses-layout .analyses-overview {
   margin-bottom: 0;
 }
 
-/* FOCO
-   gráfico principal primeiro
-   visão geral depois
-*/
+/* =========================================================
+   MODO FOCO
+   ---------------------------------------------------------
+   Prioriza o histórico do serviço selecionado.
+   Ordem:
+   1) Histórico principal
+   2) Visão geral
+   ========================================================= */
 
 .analyses-layout-focus .analyses-history {
   order: 1;
@@ -1008,10 +1334,14 @@
   order: 2;
 }
 
-/* GERAL
-   visão geral primeiro
-   gráfico principal depois
-*/
+/* =========================================================
+   MODO GERAL
+   ---------------------------------------------------------
+   Prioriza a visão macro dos serviços.
+   Ordem:
+   1) Visão geral
+   2) Histórico principal
+   ========================================================= */
 
 .analyses-layout-overview .analyses-overview {
   order: 1;
@@ -1021,54 +1351,15 @@
   order: 2;
 }
 
-/* LATERAL */
+/* =========================================================
+   MODO LATERAL
+   ---------------------------------------------------------
+   Histórico à esquerda e Visão Geral à direita.
 
-.analyses-layout-side
-  .analyses-history-content {
-  display: flex;
-  flex-direction: column;
-
-  flex: 1;
-  min-height: 0;
-
-  height: auto;
-}
-
-.analyses-layout-side
-  .history-chart {
-  display: flex;
-  flex-direction: column;
-
-  flex: 1 1 0;
-  min-height: 0;
-}
-
-.analyses-layout-side
-  .history-chart-canvas {
-  flex: 1 1 0;
-
-  min-height: 300px;
-  height: auto;
-}
-
-.analyses-layout-side
-  .history-chart-footer {
-  flex: 0 0 auto;
-
-  margin-top: 12px;
-}
-
-.analyses-layout-side
-  .history-chart-legend {
-  flex: 0 0 auto;
-
-  margin-top: 10px;
-}
-
-.analyses-layout-side
-  .analyses-history-header {
-  gap: 28px;
-}
+   Os dois cards recebem a mesma altura no desktop.
+   O conteúdo da Visão Geral rola internamente quando houver
+   muitos serviços, sem empurrar o restante da página.
+   ========================================================= */
 
 .analyses-layout-side {
   grid-template-columns:
@@ -1078,79 +1369,176 @@
   align-items: stretch;
 }
 
-.analyses-layout-side
-  .analyses-history-actions {
-  align-items: flex-start;
-}
-
-.analyses-layout-side
-  .analyses-history-service-select {
-  margin-top: 14px;
-}
-
-.analyses-layout-side
-  .analyses-history,
-.analyses-layout-side
-  .analyses-overview {
-  height: clamp(
-    620px,
-    72vh,
-    760px
-  );
-}
-
-.analyses-layout-side
-  .analyses-overview:has(
-    .analyses-overview-collapsed
-  ) {
-  height: auto;
-  min-height: 0;
-
-  align-self: start;
-}
-
 .analyses-layout-side .analyses-history {
   grid-column: 1;
   grid-row: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  height: clamp(620px, 72vh, 760px);
+
+  min-height: 620px;
 }
 
 .analyses-layout-side .analyses-overview {
   grid-column: 2;
   grid-row: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  height: clamp(620px, 72vh, 760px);
+
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Ao minimizar a Visão Geral no modo lateral, ela deixa de
+   ocupar toda a altura e volta ao tamanho natural do conteúdo. */
+.analyses-layout-side .analyses-overview:has(.analyses-overview-collapsed) {
+  height: auto;
+  min-height: 0;
+  align-self: start;
+}
+
+/* =========================================================
+   HISTÓRICO NO MODO LATERAL
+   ---------------------------------------------------------
+   Faz o gráfico principal aproveitar corretamente a altura
+   disponível sem cortar legenda ou rodapé.
+   ========================================================= */
+
+.analyses-layout-side .analyses-history-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
+  min-height: 0;
+  height: auto;
+}
+
+.analyses-layout-side .history-chart {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+
+  min-height: 0;
+}
+
+.analyses-layout-side .history-chart-canvas {
+  flex: 1 1 0;
+
+  min-height: 300px;
+  height: auto;
+}
+
+.analyses-layout-side .history-chart-footer,
+.analyses-layout-side .history-chart-legend {
+  flex: 0 0 auto;
+}
+
+.analyses-layout-side .history-chart-footer {
+  margin-top: 12px;
+}
+
+.analyses-layout-side .history-chart-legend {
+  margin-top: 10px;
+}
+
+.analyses-layout-side .analyses-history-header {
+  gap: 28px;
+}
+
+.analyses-layout-side .analyses-history-actions {
+  align-items: flex-start;
+}
+
+.analyses-layout-side .analyses-history-service-select {
+  margin-top: 14px;
+}
+
+/* =========================================================
+   VISÃO GERAL NO MODO LATERAL
+   ---------------------------------------------------------
+   No painel lateral os previews ficam em uma única coluna.
+   O cabeçalho permanece no topo e a lista usa scroll interno.
+   ========================================================= */
+
+.analyses-overview-scroll {
+  min-height: 0;
+}
+
+.analyses-layout-side .analyses-overview-header {
+  flex: 0 0 auto;
+}
+
+.analyses-layout-side .analyses-overview-scroll,
+.analyses-layout-side .analyses-overview-ranking {
+  flex: 1;
+
+  min-height: 0;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding-right: 8px;
+
+  scroll-behavior: smooth;
 }
 
 .analyses-layout-side .analyses-overview-grid {
   grid-template-columns: 1fr;
 }
 
-.analyses-global-actions {
+/* Scrollbar discreta para o painel lateral. */
+.analyses-layout-side .analyses-overview-scroll,
+.analyses-layout-side .analyses-overview-ranking {
+  scrollbar-width: thin;
+  scrollbar-color: #58cbb755 transparent;
+}
+
+.analyses-layout-side .analyses-overview-scroll::-webkit-scrollbar,
+.analyses-layout-side .analyses-overview-ranking::-webkit-scrollbar {
+  width: 6px;
+}
+
+.analyses-layout-side .analyses-overview-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.analyses-layout-side .analyses-overview-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #58cbb755;
+}
+
+.analyses-layout-side .analyses-overview-scroll::-webkit-scrollbar-thumb:hover {
+  background: #87e46c88;
+}
+
+/* =========================================================
+   CONTROLES DA NOVA VISÃO GERAL
+   ---------------------------------------------------------
+   Estas classes ficam prontas para a próxima etapa:
+   - [Gráficos | Ranking]
+   - seletor de ordenação dos serviços
+
+   Enquanto o JSX ainda não usar essas classes, elas não
+   alteram o visual atual.
+   ========================================================= */
+
+.analyses-overview-toolbar {
   display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
 
-  gap: 16px;
+  gap: 12px;
 
-  margin-left: auto;
+  margin-bottom: 16px;
 }
 
-.analyses-control-group {
-  display: grid;
-  gap: 5px;
-}
-
-.analyses-control-group > span {
-  color: var(--text-muted);
-
-  font-size: 9px;
-  font-weight: 600;
-
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-
-.analyses-layout-options {
-  display: flex;
+.analyses-overview-view-options {
+  display: inline-flex;
 
   padding: 3px;
 
@@ -1160,8 +1548,8 @@
   background: #0c2d30;
 }
 
-.analyses-layout-button {
-  padding: 7px 10px;
+.analyses-overview-view-button {
+  padding: 7px 11px;
 
   border: 0;
   border-radius: 7px;
@@ -1171,6 +1559,121 @@
 
   font: inherit;
   font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.analyses-overview-view-button:hover {
+  color: #f4f8f5;
+}
+
+.analyses-overview-view-button.is-active {
+  background: #58cbb7;
+  color: #062f32;
+}
+
+.analyses-overview-sort {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+.analyses-overview-sort > span {
+  color: var(--text-muted);
+
+  font-size: 9px;
+  font-weight: 600;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analyses-overview-sort select {
+  min-height: 34px;
+
+  padding: 0 30px 0 10px;
+
+  border: 1px solid #315657;
+  border-radius: 8px;
+
+  outline: none;
+
+  background: #0c2d30;
+  color: #e8f1eb;
+
+  font: inherit;
+  font-size: 10px;
+
+  cursor: pointer;
+}
+
+.analyses-overview-sort select:focus {
+  border-color: #87e46c;
+}
+
+.analyses-global-actions {
+  display: flex;
+
+  align-items: flex-end;
+
+  justify-content: flex-end;
+
+  gap: 16px;
+
+  margin-left: auto;
+}
+
+.analyses-control-group {
+  display: grid;
+
+  gap: 5px;
+}
+
+.analyses-control-group > span {
+  color: var(--text-muted);
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.08em;
+
+  text-transform: uppercase;
+}
+
+.analyses-layout-options {
+  display: flex;
+
+  padding: 3px;
+
+  border: 1px solid #315657;
+
+  border-radius: 10px;
+
+  background: #0c2d30;
+}
+
+.analyses-layout-button {
+  padding: 7px 10px;
+
+  border: 0;
+
+  border-radius: 7px;
+
+  background: transparent;
+
+  color: var(--text-muted);
+
+  font: inherit;
+
+  font-size: 10px;
+
   font-weight: 600;
 
   cursor: pointer;
@@ -1186,125 +1689,491 @@
 
 .analyses-layout-button.is-active {
   background: #58cbb7;
+
   color: #062f32;
 }
 
-.analyses-overview-scroll {
-  min-height: 0;
+/* =========================================================
+   MODOS DA PÁGINA DE ANÁLISES
+   ---------------------------------------------------------
+   Alterna entre a exploração individual dos dados e
+   o workspace dedicado à comparação entre serviços.
+   ========================================================= */
+
+.analyses-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  width: min(100%, 560px);
+
+  margin-top: 8px;
+  margin-bottom: 18px;
+
+  padding: 5px;
+
+  background: #0c2d30;
+
+  border: 1px solid #426c60;
+  border-radius: 13px;
 }
 
-.analyses-layout-side
-  .analyses-overview {
-  display: flex;
-  flex-direction: column;
+.analyses-mode-button {
+  min-height: 44px;
 
-  min-height: 0;
-}
+  padding: 10px 18px;
 
-.analyses-layout-side
-  .analyses-overview-header {
-  flex: 0 0 auto;
-}
-
-.analyses-layout-side
-  .analyses-overview-scroll {
-  flex: 1;
-
-  min-height: 0;
-
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  padding-right: 8px;
-
-  scroll-behavior: smooth;
-}
-
-.analyses-layout-side
-  .analyses-overview-scroll {
-  scrollbar-width: thin;
-  scrollbar-color:
-    #58cbb755
-    transparent;
-}
-
-.analyses-layout-side
-  .analyses-overview-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.analyses-layout-side
-  .analyses-overview-scroll::-webkit-scrollbar-track {
   background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+
+  color: #b9ccc6;
+
+  cursor: pointer;
+
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+
+  opacity: 0.76;
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
-.analyses-layout-side
-  .analyses-overview-scroll::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: #58cbb755;
+.analyses-mode-button:hover {
+  color: #f4f8f5;
+
+  opacity: 1;
 }
 
-.analyses-layout-side
-  .analyses-overview-scroll::-webkit-scrollbar-thumb:hover {
-  background: #87e46c88;
+.analyses-mode-button.is-active {
+  background: #58cbb7;
+  border-color: #87e46c;
+
+  color: #082627;
+
+  opacity: 1;
+
+  box-shadow: 0 5px 18px rgba(88, 203, 183, 0.14);
 }
 
-.analyses-layout-side
-  .analyses-history {
+.analyses-comparison-workspace {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+
+  min-width: 0;
 }
 
+.analyses-comparison-controls {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.65fr)
+    minmax(320px, 0.85fr);
+
+  gap: 16px;
+
+  align-items: stretch;
+}
+
+.analyses-comparison-controls > * {
+  min-width: 0;
+  height: 100%;
+}
+
+.comparison-visualization-switch {
+  display: inline-flex;
+  align-self: flex-start;
+
+  padding: 4px;
+
+  background: #0c2d30;
+
+  border: 1px solid #426c60;
+  border-radius: 11px;
+}
+
+.comparison-visualization-button {
+  padding: 8px 14px;
+
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+
+  color: #b9ccc6;
+
+  cursor: pointer;
+
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+
+  opacity: 0.72;
+}
+
+.comparison-visualization-button:hover {
+  opacity: 1;
+}
+
+.comparison-visualization-button.is-active {
+  background: rgba(88, 203, 183, 0.16);
+
+  color: #f4f8f5;
+
+  opacity: 1;
+}
+
+/* ----------------------------------
+   SELEÇÃO PARA COMPARAÇÃO
+---------------------------------- */
+
+.analyses-preview-wrapper {
+  position: relative;
+
+  min-width: 0;
+
+  border-radius: 16px;
+
+  transition:
+    outline-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.analyses-preview-wrapper.is-comparison-selected {
+  outline: 2px solid rgba(139, 255, 93, 0.4);
+  outline-offset: 3px;
+
+  box-shadow:
+    0 0 22px rgba(139, 255, 93, 0.06);
+}
+
+
+/* ----------------------------------
+   ATALHO PARA COMPARAÇÃO
+---------------------------------- */
+
+.analyses-comparison-tray {
+  position: sticky;
+
+  bottom: 22px;
+
+  z-index: 20;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  width: min(100%, 760px);
+
+  margin: 24px auto 0;
+
+  padding: 12px 14px;
+
+  background:
+    rgba(8, 38, 40, 0.94);
+
+  border: 1px solid #426c60;
+  border-radius: 16px;
+
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.28);
+
+  backdrop-filter: blur(12px);
+}
+
+.analyses-comparison-tray-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-width: 0;
+}
+
+.analyses-comparison-tray-count {
+  display: grid;
+  place-items: center;
+
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  background: rgba(139, 255, 93, 0.12);
+
+  border: 1px solid rgba(139, 255, 93, 0.38);
+  border-radius: 50%;
+
+  color: #8bff5d;
+
+  font-weight: 900;
+}
+
+.analyses-comparison-tray-info > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.analyses-comparison-tray-info strong {
+  font-size: 0.78rem;
+}
+
+.analyses-comparison-tray-info div > span {
+  font-size: 0.68rem;
+
+  opacity: 0.62;
+}
+
+.analyses-comparison-tray-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  flex-shrink: 0;
+}
+
+.analyses-comparison-tray-clear,
+.analyses-comparison-tray-open {
+  min-height: 34px;
+
+  padding: 7px 12px;
+
+  border-radius: 9px;
+
+  cursor: pointer;
+
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.analyses-comparison-tray-clear {
+  background: transparent;
+
+  border: 1px solid #426c60;
+
+  color: #b9ccc6;
+}
+
+.analyses-comparison-tray-open {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  background: #8bff5d;
+
+  border: 1px solid #8bff5d;
+
+  color: #082627;
+}
+
+.analyses-comparison-tray-open:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.35;
+}
+
+/* =========================================================
+  Animação transição carregamento automatico
+
+   ========================================================= */
+.comparison-visualization-frame {
+  position: relative;
+
+  min-width: 0;
+
+  transition: opacity 180ms ease;
+}
+
+.comparison-refresh-overlay {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 7px 10px;
+
+  background: rgba(8, 38, 40, 0.88);
+
+  border: 1px solid rgba(88, 203, 183, 0.22);
+  border-radius: 999px;
+
+  color: #b9ccc6;
+
+  font-size: 0.72rem;
+  font-weight: 700;
+
+  backdrop-filter: blur(10px);
+
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.comparison-visualization-frame.is-refreshing {
+  opacity: 0.92;
+}
+
+.comparison-refresh-overlay::before {
+  content: "";
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #58cbb7;
+
+  box-shadow: 0 0 0 0 rgba(88, 203, 183, 0.4);
+
+  animation: comparison-refresh-pulse 1.4s ease infinite;
+}
+
+@keyframes comparison-refresh-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(88, 203, 183, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(88, 203, 183, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(88, 203, 183, 0);
+  }
+}
+
+
+/* =========================================================
+   RESPONSIVIDADE DOS LAYOUTS
+   ---------------------------------------------------------
+   Abaixo de 1050px o modo lateral deixa de usar duas colunas.
+   Os cards voltam a fluir verticalmente e deixam de usar as
+   alturas fixas aplicadas no desktop.
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .analyses-comparison-controls {
+    grid-template-columns: 1fr;
+  }
+}
 
 @media (max-width: 1050px) {
   .analyses-layout-side {
     grid-template-columns: 1fr;
   }
 
-  .analyses-layout-side .analyses-history {
+  .analyses-layout-side .analyses-history,
+  .analyses-layout-side .analyses-overview {
     grid-column: 1;
     grid-row: auto;
+
+    height: auto;
+    min-height: 0;
+  }
+
+  .analyses-layout-side .analyses-history {
     order: 1;
   }
 
   .analyses-layout-side .analyses-overview {
-    grid-column: 1;
-    grid-row: auto;
     order: 2;
+
+    overflow: visible;
+  }
+
+  .analyses-layout-side .analyses-overview-scroll {
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+/* Os novos controles internos da Visão Geral quebram linha
+   antes de ficarem apertados. */
+@media (max-width: 900px) {
+  .analyses-overview-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .analyses-overview-sort {
+    justify-content: space-between;
   }
 }
 
 @media (max-width: 700px) {
+  /* Controles da nova Visão Geral em telas pequenas. */
+  .analyses-overview-view-options {
+    width: 100%;
+  }
+
+  .analyses-overview-view-button {
+    flex: 1;
+  }
+
+  .analyses-overview-sort {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .analyses-overview-sort select {
+    width: 100%;
+  }
+
   .analyses-page {
     padding: 36px 20px 148px;
   }
+
   .analyses-waves {
     height: 132px;
+
     background-position:
       center 70px,
       center 48px,
       center 24px,
       center 0;
+
     background-size: 160% 190px;
   }
+
   .analyses-coming-soon {
     padding: 32px 0;
   }
+
   .analyses-description {
     font-size: var(--font-size-small);
+
     line-height: 1.5;
+
     font-weight: 500;
   }
+
   .analyses-link {
     width: 100%;
+
     font-size: var(--font-size-small);
+
     line-height: 1.5;
+
     font-weight: 500;
+
     padding: 14px 16px;
   }
 
   .analyses-controls {
     align-items: stretch;
+
     flex-direction: column;
   }
 
@@ -1327,8 +2196,10 @@
   .analyses-history-summary > div:last-child {
     grid-column: 1 / -1;
   }
+
   .analyses-period-selector {
     align-items: flex-start;
+
     flex-direction: column;
   }
 
@@ -1342,15 +2213,19 @@
 
   .analyses-service-badge {
     width: 42px;
+
     height: 46px;
+
     font-size: 11px;
   }
 
   .analyses-history-identity {
     gap: 10px;
   }
+
   .analyses-history-navigation {
     width: 100%;
+
     gap: 8px;
   }
 
@@ -1360,28 +2235,37 @@
 
   .analyses-service-nav-button {
     width: 32px;
+
     height: 32px;
   }
+
   .analyses-history-corner-nav {
     top: 14px;
+
     left: 14px;
+
     right: 14px;
   }
 
   .analyses-service-corner-button {
     width: 34px;
+
     height: 34px;
   }
 
   .analyses-service-corner-button.is-previous span {
     border-top-width: 6px;
+
     border-bottom-width: 6px;
+
     border-right-width: 9px;
   }
 
   .analyses-service-corner-button.is-next span {
     border-top-width: 6px;
+
     border-bottom-width: 6px;
+
     border-left-width: 9px;
   }
 
@@ -1409,6 +2293,7 @@
     width: 100%;
 
     align-items: stretch;
+
     flex-direction: column;
 
     gap: 10px;
@@ -1429,10 +2314,12 @@
   .analyses-period-options {
     width: 100%;
   }
+
   .analyses-global-actions {
     width: 100%;
 
     flex-direction: column;
+
     align-items: stretch;
   }
 
@@ -1442,5 +2329,20 @@
 
   .analyses-layout-button {
     flex: 1;
+  }
+  .analyses-comparison-tray {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .analyses-comparison-tray-actions {
+    width: 100%;
+  }
+
+  .analyses-comparison-tray-clear,
+  .analyses-comparison-tray-open {
+    flex: 1;
+
+    justify-content: center;
   }
 }

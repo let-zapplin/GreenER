@@ -49,12 +49,49 @@ interface SampleCalculation {
   gapReason: CalculationGapReason | null;
 }
 
+interface EnergyBreakdown {
+  cpuKwh: number;
+  memoryKwh: number;
+  diskKwh: number;
+  networkKwh: number;
+}
+
+interface EnergyBreakdownSummary {
+  cpuKwh: number | null;
+  memoryKwh: number | null;
+  diskKwh: number | null;
+  networkKwh: number | null;
+}
+
 interface ServiceIndicators {
   serviceId: number;
   name: string;
   status: string;
   regionCode: string;
   latestSampleInPeriod: SampleCalculation | null;
+  resourceSummary: {
+    cpu: {
+      averagePercent: number | null;
+      peakPercent: number | null;
+    };
+    memory: {
+      averageGb: number | null;
+      peakGb: number | null;
+    };
+    disk: {
+      averageGb: number | null;
+      peakGb: number | null;
+    };
+    network: {
+      totalGb: number | null;
+    };
+  };
+  energyBreakdown: EnergyBreakdownSummary;
+  regionalContext: {
+    regionCode: string | null;
+    carbonIntensityGco2ePerKwh: number | null;
+    renewableSharePercent: number | null;
+  };
   periodTotals: {
     energyKwh: number;
     emissionsGco2e: number;
@@ -96,6 +133,34 @@ function finiteNumber(value: number | string | null): number | null {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function calculateEnergyBreakdown(
+  metrics: SampleMetrics,
+  collectionIntervalSeconds: number,
+): EnergyBreakdown {
+  const intervalToKwh = collectionIntervalSeconds / 3_600_000;
+
+  return {
+    cpuKwh:
+      (metrics.cpuPercent / 100) *
+      POWER_MODEL.cpuMaximumWatts *
+      intervalToKwh,
+    memoryKwh:
+      metrics.memoryGb * POWER_MODEL.memoryWattsPerGb * intervalToKwh,
+    diskKwh: metrics.diskGb * POWER_MODEL.diskWattsPerGb * intervalToKwh,
+    networkKwh:
+      metrics.networkGb * POWER_MODEL.networkWattsPerGb * intervalToKwh,
+  };
+}
+
+function sumEnergyBreakdown(breakdown: EnergyBreakdown): number {
+  return (
+    breakdown.cpuKwh +
+    breakdown.memoryKwh +
+    breakdown.diskKwh +
+    breakdown.networkKwh
+  );
 }
 
 function calculateSample(collection: IndicatorCollection): SampleCalculation {
@@ -163,18 +228,11 @@ function calculateSample(collection: IndicatorCollection): SampleCalculation {
     return gap("collection_interval_unavailable", metrics);
   }
 
-  // Potência estimada = CPU% da potência máxima + consumo estimado de memória, disco e rede.
-  const powerWatts =
-    // cpu_percent é uma porcentagem (0–100), convertida em fração antes de
-    // multiplicar pela potência máxima de CPU expressa em watts.
-    (cpuPercent / 100) * POWER_MODEL.cpuMaximumWatts +
-    memoryGb * POWER_MODEL.memoryWattsPerGb +
-    diskGb * POWER_MODEL.diskWattsPerGb +
-    networkGb * POWER_MODEL.networkWattsPerGb;
-  // W·s convertido em kWh: 3.600 s/h × 1.000 Wh/kWh = 3.600.000.
-  // Potência, energia, emissões e totais são mantidos como doubles crus.
-  // O intervalo usado é o registrado na própria amostra.
-  const energyKwh = (powerWatts * collectionIntervalSeconds) / 3_600_000;
+  // network_gb já representa o volume da janela; entra diretamente na parcela
+  // do modelo, e a energia é calculada separadamente para cada amostra.
+  const energyKwh = sumEnergyBreakdown(
+    calculateEnergyBreakdown(metrics, collectionIntervalSeconds),
+  );
 
   const carbonIntensity = collection.carbon_intensity_gco2e_per_kwh;
   // Uma intensidade ausente/inválida impede somente a emissão; a energia já
@@ -421,6 +479,96 @@ export class IndicadoresService {
     const validCarbonSamples = samples.filter(
       (sample) => sample.emissionsGco2e !== null,
     );
+    const resourceSamples = samples.filter((sample) => sample.metrics !== null);
+    const cpuSamples = resourceSamples.filter(
+      (sample) => sample.collectionIntervalSeconds !== null,
+    );
+    const cpuDurationSeconds = cpuSamples.reduce(
+      (total, sample) =>
+        total + (sample.collectionIntervalSeconds ?? 0),
+      0,
+    );
+    const cpuWeightedPercentSeconds = cpuSamples.reduce(
+      (total, sample) =>
+        total +
+        (sample.metrics?.cpuPercent ?? 0) *
+          (sample.collectionIntervalSeconds ?? 0),
+      0,
+    );
+    const memoryTotalGb = resourceSamples.reduce(
+      (total, sample) => total + (sample.metrics?.memoryGb ?? 0),
+      0,
+    );
+    const diskTotalGb = resourceSamples.reduce(
+      (total, sample) => total + (sample.metrics?.diskGb ?? 0),
+      0,
+    );
+    const networkTotalGb = resourceSamples.reduce(
+      (total, sample) => total + (sample.metrics?.networkGb ?? 0),
+      0,
+    );
+    const cpuPeakPercent = resourceSamples.reduce<number | null>(
+      (peak, sample) =>
+        sample.metrics === null
+          ? peak
+          : peak === null
+            ? sample.metrics.cpuPercent
+            : Math.max(peak, sample.metrics.cpuPercent),
+      null,
+    );
+    const memoryPeakGb = resourceSamples.reduce<number | null>(
+      (peak, sample) =>
+        sample.metrics === null
+          ? peak
+          : peak === null
+            ? sample.metrics.memoryGb
+            : Math.max(peak, sample.metrics.memoryGb),
+      null,
+    );
+    const diskPeakGb = resourceSamples.reduce<number | null>(
+      (peak, sample) =>
+        sample.metrics === null
+          ? peak
+          : peak === null
+            ? sample.metrics.diskGb
+            : Math.max(peak, sample.metrics.diskGb),
+      null,
+    );
+    const energyBreakdown = validMetricSamples.reduce<EnergyBreakdown>(
+      (total, sample) => {
+        if (
+          sample.metrics === null ||
+          sample.collectionIntervalSeconds === null
+        ) {
+          return total;
+        }
+
+        const sampleBreakdown = calculateEnergyBreakdown(
+          sample.metrics,
+          sample.collectionIntervalSeconds,
+        );
+        return {
+          cpuKwh: total.cpuKwh + sampleBreakdown.cpuKwh,
+          memoryKwh: total.memoryKwh + sampleBreakdown.memoryKwh,
+          diskKwh: total.diskKwh + sampleBreakdown.diskKwh,
+          networkKwh: total.networkKwh + sampleBreakdown.networkKwh,
+        };
+      },
+      { cpuKwh: 0, memoryKwh: 0, diskKwh: 0, networkKwh: 0 },
+    );
+    let regionalCollection: IndicatorCollection | null = null;
+    for (let index = service.collections.length - 1; index >= 0; index -= 1) {
+      const carbonIntensity =
+        service.collections[index].carbon_intensity_gco2e_per_kwh;
+      if (
+        carbonIntensity !== null &&
+        Number.isFinite(carbonIntensity) &&
+        carbonIntensity >= 0
+      ) {
+        regionalCollection = service.collections[index];
+        break;
+      }
+    }
     const gaps = samples.flatMap((sample) =>
       sample.gapReason === null
         ? []
@@ -439,6 +587,49 @@ export class IndicadoresService {
       status: service.status,
       regionCode: service.region_code,
       latestSampleInPeriod: samples.at(-1) ?? null,
+      resourceSummary: {
+        cpu: {
+          averagePercent:
+            cpuDurationSeconds === 0
+              ? null
+              : cpuWeightedPercentSeconds / cpuDurationSeconds,
+          peakPercent: cpuPeakPercent,
+        },
+        memory: {
+          averageGb:
+            resourceSamples.length === 0
+              ? null
+              : memoryTotalGb / resourceSamples.length,
+          peakGb: memoryPeakGb,
+        },
+        disk: {
+          averageGb:
+            resourceSamples.length === 0
+              ? null
+              : diskTotalGb / resourceSamples.length,
+          peakGb: diskPeakGb,
+        },
+        network: {
+          totalGb:
+            resourceSamples.length === 0 ? null : networkTotalGb,
+        },
+      },
+      energyBreakdown:
+        validMetricSamples.length === 0
+          ? {
+              cpuKwh: null,
+              memoryKwh: null,
+              diskKwh: null,
+              networkKwh: null,
+            }
+          : energyBreakdown,
+      regionalContext: {
+        regionCode: service.region_code,
+        carbonIntensityGco2ePerKwh:
+          regionalCollection?.carbon_intensity_gco2e_per_kwh ?? null,
+        renewableSharePercent:
+          regionalCollection?.renewable_share_percent ?? null,
+      },
       periodTotals: {
         energyKwh: validMetricSamples.reduce(
           (total, sample) => total + (sample.energyKwh ?? 0),

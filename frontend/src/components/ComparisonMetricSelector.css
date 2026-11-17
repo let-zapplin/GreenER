@@ -1,0 +1,103 @@
+.comparison-metric-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  padding: 22px;
+
+  background: #12383b;
+  border: 1px solid #315657;
+  border-radius: 18px;
+}
+
+.comparison-metric-selector h2 {
+  margin: 4px 0 6px;
+}
+
+.comparison-metric-selector p {
+  margin: 0;
+}
+
+.comparison-metric-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 10px;
+}
+
+.comparison-metric-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  min-height: 92px;
+
+  padding: 14px 16px;
+
+  background: transparent;
+  border: 1px solid #315657;
+  border-radius: 14px;
+
+  color: #f4f8f5;
+
+  cursor: pointer;
+
+  text-align: left;
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.comparison-metric-option strong {
+  color: inherit;
+
+  font-size: 0.96rem;
+}
+
+.comparison-metric-option span {
+  color: #8ea9a1;
+
+  font-size: 0.75rem;
+}
+
+.comparison-metric-option:hover {
+  border-color: #58cbb7;
+}
+
+.comparison-metric-option.is-active {
+  background: rgba(88, 203, 183, 0.12);
+
+  border-color: #58cbb7;
+
+  color: #f4f8f5;
+
+  box-shadow:
+    0 0 0 1px rgba(88, 203, 183, 0.08);
+}
+
+.comparison-metric-option.is-active strong {
+  color: #f4f8f5;
+}
+
+.comparison-metric-option.is-active span {
+  color: #b9ccc6;
+}
+
+.comparison-metric-option.is-active {
+  background: rgba(88, 203, 183, 0.1);
+  border-color: #58cbb7;
+}
+
+.comparison-metric-option span {
+  font-size: 0.76rem;
+  opacity: 0.65;
+}
+
+@media (max-width: 520px) {
+  .comparison-metric-options {
+    grid-template-columns: 1fr;
+  }
+}
