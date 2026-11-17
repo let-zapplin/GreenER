@@ -495,5 +495,116 @@ describe("HTTP da projeção ambiental por localização", () => {
       response.body.scenarios[0]
         .regionCode,
     ).toBe("BR-SP");
+    });
+
+    it("retorna as regiões disponíveis para projeção", async () => {
+  const consultarRegioes = vi
+    .spyOn(
+      ProjecoesRepository.prototype,
+      "listAvailableRegions",
+    )
+    .mockResolvedValue([
+      {
+        regionCode: "BR-SP",
+
+        country: "Brasil",
+        region: "São Paulo",
+        city: null,
+
+        latitude: -23.55,
+        longitude: -46.63,
+
+        carbonIntensityGco2ePerKwh: 85,
+        renewableSharePercent: 83,
+
+        registeredAt: new Date(
+          "2026-11-17T12:00:00.000Z",
+        ),
+      },
+
+      {
+        regionCode: "CA-QC",
+
+        country: "Canadá",
+        region: "Quebec",
+        city: null,
+
+        latitude: 46.81,
+        longitude: -71.21,
+
+        carbonIntensityGco2ePerKwh: 25,
+        renewableSharePercent: 95,
+
+        registeredAt: new Date(
+          "2026-11-17T12:00:00.000Z",
+        ),
+      },
+    ]);
+
+  const token = createToken({
+    sub: "1",
   });
+
+  const response = await request(app)
+    .get("/api/projecoes/regioes")
+    .set(
+      "Authorization",
+      `Bearer ${token}`,
+    );
+
+  expect(response.status).toBe(200);
+
+  expect(response.body.message).toBe(
+    "2 regiões disponíveis para projeção",
+  );
+
+  expect(response.body.regions).toHaveLength(2);
+
+  expect(response.body.regions[0]).toMatchObject({
+    regionCode: "BR-SP",
+
+    country: "Brasil",
+    region: "São Paulo",
+
+    carbonIntensityGco2ePerKwh: 85,
+    renewableSharePercent: 83,
+
+    snapshotRegisteredAt:
+      "2026-11-17T12:00:00.000Z",
+  });
+
+  expect(response.body.regions[1]).toMatchObject({
+    regionCode: "CA-QC",
+
+    country: "Canadá",
+    region: "Quebec",
+
+    carbonIntensityGco2ePerKwh: 25,
+    renewableSharePercent: 95,
+  });
+
+  expect(
+    consultarRegioes,
+  ).toHaveBeenCalledTimes(1);
+});
+
+it("retorna 401 ao listar regiões sem token", async () => {
+  const consultarRegioes = vi
+    .spyOn(
+      ProjecoesRepository.prototype,
+      "listAvailableRegions",
+    )
+    .mockResolvedValue([]);
+
+  const response = await request(app)
+    .get("/api/projecoes/regioes");
+
+  expect(response.status).toBe(401);
+
+  expect(
+    consultarRegioes,
+  ).not.toHaveBeenCalled();
+});
+
+  
 });

@@ -84,4 +84,50 @@ export class ProjecoesRepository {
       registeredAt: row.registered_at,
     }));
   }
+
+  async listAvailableRegions(): Promise<
+  ProjectionRegionSnapshot[]
+> {
+  const result = await pool.query<ProjectionRegionRow>(
+    `
+    SELECT DISTINCT ON (l.region_code)
+      l.region_code,
+      l.country,
+      l.region,
+      l.city,
+      l.latitude,
+      l.longitude,
+      c.carbon_intensity_gco2e_per_kwh,
+      c.renewable_share_percent,
+      c.registered_at
+    FROM carbon_intensity c
+    INNER JOIN location l
+      ON l.id_location = c.location_id_location
+    ORDER BY
+      l.region_code,
+      c.registered_at DESC,
+      c.id_carbon_intensity DESC
+    `,
+  );
+
+  return result.rows.map((row) => ({
+    regionCode: row.region_code,
+    country: row.country,
+    region: row.region,
+    city: row.city,
+
+    latitude: row.latitude,
+    longitude: row.longitude,
+
+    carbonIntensityGco2ePerKwh: Number(
+      row.carbon_intensity_gco2e_per_kwh,
+    ),
+
+    renewableSharePercent: Number(
+      row.renewable_share_percent,
+    ),
+
+    registeredAt: row.registered_at,
+  }));
+}
 }

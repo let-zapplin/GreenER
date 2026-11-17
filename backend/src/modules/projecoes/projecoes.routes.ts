@@ -8,6 +8,17 @@ const router = Router();
 const controller =
   new ProjecoesController();
 
+router.get(
+  "/regioes",
+  authMiddleware,
+  (req, res, next) =>
+    controller.listRegions(
+      req,
+      res,
+      next,
+    ),
+);
+
 router.post(
   "/localizacao",
   authMiddleware,

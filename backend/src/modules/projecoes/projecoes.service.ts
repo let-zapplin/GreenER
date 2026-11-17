@@ -56,13 +56,13 @@ export interface LocationProjectionResult {
 export class ProjecoesService {
   constructor(
     private readonly indicadoresService: Pick<
-  IndicadoresService,
-  "getServiceHistory"
-> = new IndicadoresService(),
+      IndicadoresService,
+      "getServiceHistory"
+    > = new IndicadoresService(),
 
     private readonly repository: Pick<
       ProjecoesRepository,
-      "findLatestRegionalSnapshots"
+      "findLatestRegionalSnapshots" | "listAvailableRegions"
     > = new ProjecoesRepository(),
   ) {}
 
@@ -119,35 +119,22 @@ export class ProjecoesService {
      * Caso ela também tenha sido selecionada manualmente,
      * o Set impede duplicação.
      */
-    const allRegionCodes = [
-      currentRegionCode,
-      ...normalizedRegionCodes,
-    ];
+    const allRegionCodes = [currentRegionCode, ...normalizedRegionCodes];
 
     const uniqueRegionCodes = [...new Set(allRegionCodes)];
 
     const regionalSnapshots =
-      await this.repository.findLatestRegionalSnapshots(
-        uniqueRegionCodes,
-      );
+      await this.repository.findLatestRegionalSnapshots(uniqueRegionCodes);
 
     const snapshotsByRegion = new Map(
-      regionalSnapshots.map((snapshot) => [
-        snapshot.regionCode,
-        snapshot,
-      ]),
+      regionalSnapshots.map((snapshot) => [snapshot.regionCode, snapshot]),
     );
 
-    const currentSnapshot = snapshotsByRegion.get(
-      currentRegionCode,
-    );
+    const currentSnapshot = snapshotsByRegion.get(currentRegionCode);
 
     const currentProjectedEmissions =
       currentSnapshot && energyKwh !== null
-        ? this.calculateProjectedEmissions(
-            energyKwh,
-            currentSnapshot,
-          )
+        ? this.calculateProjectedEmissions(energyKwh, currentSnapshot)
         : null;
 
     const scenarios = uniqueRegionCodes.flatMap(
@@ -161,25 +148,18 @@ export class ProjecoesService {
         const projectedEmissionsGco2e =
           energyKwh === null
             ? null
-            : this.calculateProjectedEmissions(
-                energyKwh,
-                snapshot,
-              );
+            : this.calculateProjectedEmissions(energyKwh, snapshot);
 
         const differenceGco2e =
-          projectedEmissionsGco2e !== null &&
-          currentProjectedEmissions !== null
-            ? projectedEmissionsGco2e -
-              currentProjectedEmissions
+          projectedEmissionsGco2e !== null && currentProjectedEmissions !== null
+            ? projectedEmissionsGco2e - currentProjectedEmissions
             : null;
 
         const differencePercent =
           differenceGco2e !== null &&
           currentProjectedEmissions !== null &&
           currentProjectedEmissions > 0
-            ? (differenceGco2e /
-                currentProjectedEmissions) *
-              100
+            ? (differenceGco2e / currentProjectedEmissions) * 100
             : null;
 
         return [
@@ -192,22 +172,18 @@ export class ProjecoesService {
             latitude: snapshot.latitude,
             longitude: snapshot.longitude,
 
-            carbonIntensityGco2ePerKwh:
-              snapshot.carbonIntensityGco2ePerKwh,
+            carbonIntensityGco2ePerKwh: snapshot.carbonIntensityGco2ePerKwh,
 
-            renewableSharePercent:
-              snapshot.renewableSharePercent,
+            renewableSharePercent: snapshot.renewableSharePercent,
 
             projectedEmissionsGco2e,
 
             differenceGco2e,
             differencePercent,
 
-            isCurrent:
-              snapshot.regionCode === currentRegionCode,
+            isCurrent: snapshot.regionCode === currentRegionCode,
 
-            snapshotRegisteredAt:
-              snapshot.registeredAt,
+            snapshotRegisteredAt: snapshot.registeredAt,
           },
         ];
       },
@@ -234,8 +210,7 @@ export class ProjecoesService {
       validEnergySampleCount: validEnergySamples.length,
       totalSampleCount: history.samples.length,
 
-      isPartial:
-        validEnergySamples.length !== history.samples.length,
+      isPartial: validEnergySamples.length !== history.samples.length,
 
       scenarios,
 
@@ -243,9 +218,29 @@ export class ProjecoesService {
     };
   }
 
-  private normalizeRegionCodes(
-    regionCodes: string[],
-  ): string[] {
+  async listAvailableRegions() {
+    const regions =
+     await this.repository.listAvailableRegions();
+
+    return regions.map((region) => ({
+      regionCode: region.regionCode,
+
+      country: region.country,
+      region: region.region,
+      city: region.city,
+
+      latitude: region.latitude,
+      longitude: region.longitude,
+
+      carbonIntensityGco2ePerKwh: region.carbonIntensityGco2ePerKwh,
+
+      renewableSharePercent: region.renewableSharePercent,
+
+      snapshotRegisteredAt: region.registeredAt,
+    }));
+  }
+
+  private normalizeRegionCodes(regionCodes: string[]): string[] {
     if (!Array.isArray(regionCodes)) {
       throw new AppError(
         "Informe as regiões utilizadas na projeção",
@@ -289,9 +284,6 @@ export class ProjecoesService {
     energyKwh: number,
     snapshot: ProjectionRegionSnapshot,
   ): number {
-    return (
-      energyKwh *
-      snapshot.carbonIntensityGco2ePerKwh
-    );
+    return energyKwh * snapshot.carbonIntensityGco2ePerKwh;
   }
 }

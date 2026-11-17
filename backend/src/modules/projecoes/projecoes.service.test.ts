@@ -20,6 +20,7 @@ import { ProjecoesService } from "./projecoes.service.js";
 describe("ProjecoesService.projectLocation", () => {
   const getServiceHistory = vi.fn();
   const findLatestRegionalSnapshots = vi.fn();
+  const listAvailableRegions = vi.fn();
 
   const service = new ProjecoesService(
     {
@@ -27,6 +28,7 @@ describe("ProjecoesService.projectLocation", () => {
     },
     {
       findLatestRegionalSnapshots,
+        listAvailableRegions,
     },
   );
 
@@ -305,4 +307,93 @@ describe("ProjecoesService.projectLocation", () => {
       findLatestRegionalSnapshots,
     ).not.toHaveBeenCalled();
   });
+
+describe("ProjecoesService.listAvailableRegions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("retorna as regiões disponíveis com o snapshot mais recente", async () => {
+    listAvailableRegions.mockResolvedValue([
+      {
+        regionCode: "BR-SP",
+        country: "Brasil",
+        region: "São Paulo",
+        city: null,
+
+        latitude: -23.55,
+        longitude: -46.63,
+
+        carbonIntensityGco2ePerKwh: 85,
+        renewableSharePercent: 83,
+
+        registeredAt: new Date(
+          "2026-11-17T12:00:00.000Z",
+        ),
+      },
+
+      {
+        regionCode: "CA-QC",
+        country: "Canadá",
+        region: "Quebec",
+        city: null,
+
+        latitude: 46.81,
+        longitude: -71.21,
+
+        carbonIntensityGco2ePerKwh: 25,
+        renewableSharePercent: 95,
+
+        registeredAt: new Date(
+          "2026-11-17T12:00:00.000Z",
+        ),
+      },
+    ]);
+
+    const result =
+      await service.listAvailableRegions();
+
+    expect(result).toEqual([
+      {
+        regionCode: "BR-SP",
+        country: "Brasil",
+        region: "São Paulo",
+        city: null,
+
+        latitude: -23.55,
+        longitude: -46.63,
+
+        carbonIntensityGco2ePerKwh: 85,
+        renewableSharePercent: 83,
+
+        snapshotRegisteredAt: new Date(
+          "2026-11-17T12:00:00.000Z",
+        ),
+      },
+
+      {
+        regionCode: "CA-QC",
+        country: "Canadá",
+        region: "Quebec",
+        city: null,
+
+        latitude: 46.81,
+        longitude: -71.21,
+
+        carbonIntensityGco2ePerKwh: 25,
+        renewableSharePercent: 95,
+
+        snapshotRegisteredAt: new Date(
+          "2026-11-17T12:00:00.000Z",
+        ),
+      },
+    ]);
+
+    expect(
+      listAvailableRegions,
+    ).toHaveBeenCalledTimes(1);
+  });
 });
+}
+
+);

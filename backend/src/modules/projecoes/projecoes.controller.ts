@@ -87,4 +87,24 @@ export class ProjecoesController {
       next(error);
     }
   }
+
+  async listRegions(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const regions =
+      await this.service.listAvailableRegions();
+
+    res.status(200).json({
+      message:
+        `${regions.length} regiões disponíveis para projeção`,
+
+      regions,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 }
