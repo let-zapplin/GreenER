@@ -2,7 +2,13 @@ import type { MonitoredService, ServiceStatus } from "../types/service";
 import "./ServicesMap.css";
 
 export const statusPriority: ServiceStatus[] = [
-  "unavailable", "removed", "no_metrics", "new", "returned", "active",
+  "unavailable",
+  "error",
+  "removed",
+  "no_metrics",
+  "new",
+  "returned",
+  "active",
 ];
 
 export const statusLabels: Record<ServiceStatus, string> = {
@@ -11,6 +17,7 @@ export const statusLabels: Record<ServiceStatus, string> = {
   returned: "Retornou",
   no_metrics: "Sem métricas",
   unavailable: "Indisponível",
+  error: "Erro na coleta",
   removed: "Removido",
 };
 

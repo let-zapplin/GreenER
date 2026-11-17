@@ -20,6 +20,7 @@ const STATUS_LABELS: Record<
   returned: "Retornou",
   unavailable: "Indisponível",
   no_metrics: "Sem métricas",
+  error: "Erro na coleta",
   removed: "Removido",
 };
 
