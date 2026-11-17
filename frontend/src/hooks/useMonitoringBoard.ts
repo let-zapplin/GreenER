@@ -1,0 +1,203 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  GRID_COLS,
+  addWidget,
+  applyLayout,
+  collapseWidget,
+  defaultWidgets,
+  isDefaultLayout,
+  layoutFor,
+  loadBoard,
+  newPage,
+  resolveLayout,
+  saveBoard,
+  type Board,
+  type BoardPage,
+  type BoardWidget,
+  type Cols,
+  type MonitoringWidgetType,
+} from "../lib/monitoringBoard";
+
+/*
+ * Estado do painel do monitoramento: páginas, arranjo da largura
+ * atual, modo de edição e persistência local. As regras de grade
+ * ficam em lib/monitoringBoard.ts.
+ */
+export function useMonitoringBoard() {
+  const [board, setBoard] = useState<Board>(loadBoard);
+  const [editing, setEditing] = useState(false);
+  const [cols, setCols] = useState<Cols>(GRID_COLS);
+  const [announcement, setAnnouncement] = useState("");
+
+  useEffect(() => saveBoard(board), [board]);
+
+  const activePage =
+    board.pages.find(
+      (page) => page.id === board.activePageId,
+    ) ?? board.pages[0];
+
+  const widgets = useMemo(
+    () => layoutFor(activePage, cols),
+    [activePage, cols],
+  );
+
+  const isCustomized = useMemo(() => {
+    const hasNarrowLayout =
+      Object.keys(activePage.layouts ?? {}).length > 0;
+
+    return (
+      hasNarrowLayout || !isDefaultLayout(activePage.widgets)
+    );
+  }, [activePage]);
+
+  const changeWidgets = useCallback(
+    (next: BoardWidget[]) => {
+      setBoard((current) => ({
+        ...current,
+        pages: current.pages.map((page) =>
+          page.id === current.activePageId
+            ? applyLayout(page, cols, next)
+            : page,
+        ),
+      }));
+    },
+    [cols],
+  );
+
+  const selectPage = useCallback(
+    (id: string) => {
+      const page = board.pages.find((item) => item.id === id);
+
+      if (!page) return;
+
+      setBoard((current) => ({ ...current, activePageId: id }));
+      setAnnouncement(`${page.name} selecionada.`);
+    },
+    [board.pages],
+  );
+
+  const addPage = useCallback(() => {
+    const page = newPage(board.pages);
+
+    setBoard((current) => ({
+      pages: [...current.pages, page],
+      activePageId: page.id,
+    }));
+
+    setAnnouncement(
+      `${page.name} criada. Arraste blocos da paleta para montá-la.`,
+    );
+
+    // A página nova nasce vazia: abre a paleta para preenchê-la.
+    setEditing(true);
+  }, [board.pages]);
+
+  const renamePage = useCallback((id: string, name: string) => {
+    const trimmed = name.trim();
+
+    if (!trimmed) return;
+
+    setBoard((current) => ({
+      ...current,
+      pages: current.pages.map((page) =>
+        page.id === id ? { ...page, name: trimmed } : page,
+      ),
+    }));
+
+    setAnnouncement(`Página renomeada para ${trimmed}.`);
+  }, []);
+
+  const deletePage = useCallback(() => {
+    if (board.pages.length < 2) return;
+
+    const index = board.pages.findIndex(
+      (page) => page.id === board.activePageId,
+    );
+
+    const pages = board.pages.filter(
+      (page) => page.id !== board.activePageId,
+    );
+
+    setBoard({
+      pages,
+      activePageId: pages[Math.max(0, index - 1)].id,
+    });
+
+    setAnnouncement("Página excluída.");
+  }, [board.pages, board.activePageId]);
+
+  const resetPage = useCallback(() => {
+    setBoard((current) => ({
+      ...current,
+      pages: current.pages.map((page) =>
+        page.id === current.activePageId
+          ? {
+              id: page.id,
+              name: page.name,
+              widgets: defaultWidgets(),
+            }
+          : page,
+      ),
+    }));
+
+    setAnnouncement(
+      "Arranjo padrão restaurado nesta página.",
+    );
+  }, []);
+
+  const toggleCollapsed = useCallback(
+    (id: string) => {
+      changeWidgets(
+        collapseWidget(layoutFor(activePage, cols), id),
+      );
+    },
+    [activePage, cols, changeWidgets],
+  );
+
+  const removeBlock = useCallback(
+    (id: string) => {
+      changeWidgets(
+        resolveLayout(
+          layoutFor(activePage, cols).filter(
+            (widget) => widget.id !== id,
+          ),
+        ),
+      );
+    },
+    [activePage, cols, changeWidgets],
+  );
+
+  const addBlock = useCallback(
+    (type: MonitoringWidgetType) => {
+      changeWidgets(addWidget(widgets, type, undefined, cols));
+    },
+    [widgets, cols, changeWidgets],
+  );
+
+  return {
+    pages: board.pages,
+    activePage: activePage as BoardPage,
+    widgets,
+    cols,
+    editing,
+    isCustomized,
+    announcement,
+    setEditing,
+    setColumns: setCols,
+    changeWidgets,
+    selectPage,
+    addPage,
+    renamePage,
+    deletePage,
+    resetPage,
+    toggleCollapsed,
+    removeBlock,
+    addBlock,
+  };
+}

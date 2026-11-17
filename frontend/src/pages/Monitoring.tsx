@@ -19,11 +19,9 @@ import { MapServiceDetailsPanel } from "../components/MapServiceDetailsPanel";
 import { EnvironmentOverviewDock } from "../components/EnvironmentOverviewDock";
 import { RegionEnergyChart } from "../components/RegionEnergyChart";
 import { ServicesMapLegend } from "../components/ServicesMapLegend";
-import { DashboardGrid } from "../components/DashboardGrid";
-import {
-  useWidgetLayout,
-  type WidgetLayoutDefinition,
-} from "../hooks/useWidgetLayout";
+import { MonitoringBoard } from "../components/MonitoringBoard";
+import { useMonitoringBoard } from "../hooks/useMonitoringBoard";
+import type { MonitoringWidgetType } from "../lib/monitoringBoard";
 
 const ServicesMap = lazy(() =>
   import("../components/ServicesMap").then((module) => ({
@@ -31,24 +29,10 @@ const ServicesMap = lazy(() =>
   })),
 );
 
-type MonitoringWidgetId = "map" | "region" | "services";
-
-/*
- * Blocos reorganizáveis do monitoramento (TEC34). A ordem aqui é
- * o layout padrão e o tamanho preserva a hierarquia: o mapa é o
- * bloco principal, o gráfico é secundário e a lista de serviços
- * ocupa a linha inteira.
- */
-const MONITORING_WIDGETS: WidgetLayoutDefinition<MonitoringWidgetId>[] = [
-  { id: "map", title: "Mapa de serviços", size: "primary" },
-  { id: "region", title: "Energia por região", size: "secondary" },
-  { id: "services", title: "Serviços monitorados", size: "full" },
-];
-
 export function Monitoring() {
   const { snapshot, loading, error } = useMonitoring();
 
-  const widgetLayout = useWidgetLayout(MONITORING_WIDGETS);
+  const board = useMonitoringBoard();
 
   const {
     dashboard,
@@ -214,7 +198,7 @@ export function Monitoring() {
 
       if (
         target.closest(
-          ".service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell, .map-loading-overlay, .monitoring-visualization-toggle, .region-energy-chart, .dashboard-grid-toolbar, .dashboard-widget-bar",
+          ".service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell, .map-loading-overlay, .monitoring-visualization-toggle, .region-energy-chart, .monitoring-board-toolbar, .monitoring-board-widget-bar, .monitoring-board-palette",
         )
       ) {
         return;
@@ -351,7 +335,7 @@ export function Monitoring() {
     </>
   );
 
-  const widgetContent: Record<MonitoringWidgetId, ReactNode> = {
+  const widgetContent: Record<MonitoringWidgetType, ReactNode> = {
     map: mapWidget,
     region: (
       <div className="monitoring-chart-shell">
@@ -375,6 +359,23 @@ export function Monitoring() {
           onSelect={(serviceId) =>
             focusServiceOnMap(serviceId, { scroll: false })
           }
+        />
+      </div>
+    ),
+    summary: (
+      <div className="monitoring-summary-shell">
+        <EnvironmentOverviewDock
+          energyKwh={dashboard?.summary.energyKwh ?? null}
+          emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
+          activeServiceCount={dashboard?.summary.activeServiceCount ?? 0}
+          noMetricsServiceCount={dashboard?.summary.noMetricsServiceCount ?? 0}
+          unavailableServiceCount={
+            dashboard?.summary.unavailableServiceCount ?? 0
+          }
+          isPartial={dashboard?.summary.isPartial ?? false}
+          loading={dashboardLoading}
+          error={dashboardError}
+          initialCollapsed={false}
         />
       </div>
     ),
@@ -439,13 +440,7 @@ export function Monitoring() {
           <h1>
             Monitoramento de <span>serviços.</span>
           </h1>
-
-          <p className="monitoring-description">
-            Acompanhe os serviços descobertos, sua localização e as mudanças no
-            seu ambiente.
-          </p>
         </div>
-
 
       </section>
 
@@ -488,29 +483,11 @@ export function Monitoring() {
           className="services-map-section"
           aria-labelledby="services-map-title"
         >
-          <div className="services-map-heading">
-            <div>
-              <p className="monitoring-section-label">
-                LOCALIZAÇÃO DOS SERVIÇOS
-              </p>
-
-              <h2 id="services-map-title">Onde seus serviços estão</h2>
-            </div>
-
-
-          </div>
-
           <div className="monitoring-charts-layout">
-            <DashboardGrid
-              label="Blocos do monitoramento"
-              layout={widgetLayout}
+            <MonitoringBoard
+              state={board}
+              contents={widgetContent}
               toolbarExtra={syncStatus}
-              widgets={MONITORING_WIDGETS.map((definition) => ({
-                ...definition,
-                // Desmontar o MapLibre perderia câmera e tiles carregados.
-                keepMountedWhenCollapsed: definition.id === "map",
-                content: widgetContent[definition.id],
-              }))}
             />
           </div>
         </section>

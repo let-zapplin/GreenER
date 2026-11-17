@@ -2122,8 +2122,8 @@
 
 
 /*
- * As colunas agora são definidas pelo DashboardGrid (TEC34),
- * que organiza mapa, gráfico e lista como widgets.
+ * As colunas e as alturas são definidas pelo MonitoringBoard,
+ * que organiza mapa, gráfico e lista como blocos da grade.
  */
 .monitoring-charts-layout {
   min-width: 0;
@@ -2170,28 +2170,6 @@
     width: 100%;
   }
 }
-
-.monitoring-chart-column {
-  display: flex;
-  flex-direction: column;
-
-  min-width: 0;
-
-  gap: 8px;
-
-  align-self: start;
-}
-
-.monitoring-chart-column .monitoring-sync {
-  width: 100%;
-  margin: 0;
-}
-
-.monitoring-map-column {
-  min-width: 0;
-}
-
-
 
 .monitoring-map-shell,
 
@@ -2258,24 +2236,6 @@
 
 
 
-
-
-
-
-
-/* =========================================================
-
-   MAPA COMPACTO NA VISÃO NORMAL
-
-   ========================================================= */
-
-
-
-.monitoring-charts-layout .services-map-stage {
-
-  height: 380px;
-
-}
 
 
 
@@ -2633,14 +2593,6 @@
 
 
 
-  .monitoring-charts-layout .services-map-stage {
-
-    height: 420px;
-
-  }
-
-
-
   .monitoring-chart-shell {
 
     min-height: 400px;
@@ -2667,28 +2619,6 @@
 
   .refresh-item time {
     white-space: normal;
-  }
-
-
-
-  .monitoring-charts-layout .services-map-stage {
-
-    height: auto;
-
-  }
-
-
-
-  .monitoring-charts-layout
-
-    .services-map-stage
-
-    .services-map-shell {
-
-    height: 400px;
-
-    min-height: 400px;
-
   }
 
 

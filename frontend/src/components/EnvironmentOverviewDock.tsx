@@ -14,11 +14,13 @@ type EnvironmentOverviewDockProps = {
 
   loading: boolean;
   error: string | null;
+
+  initialCollapsed?: boolean;
 };
 
 function formatValue(
   value: number | null,
-  maximumFractionDigits = 6,
+  maximumFractionDigits = 3,
 ) {
   if (value === null) {
     return "—";
@@ -45,8 +47,9 @@ export function EnvironmentOverviewDock({
 
   loading,
   error,
+  initialCollapsed = true,
 }: EnvironmentOverviewDockProps) {
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
 
   const monitoredServiceCount =
     activeServiceCount +
