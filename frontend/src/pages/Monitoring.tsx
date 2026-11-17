@@ -81,23 +81,43 @@ export function Monitoring() {
 
   function focusServiceOnMap(id: string, options?: { scroll?: boolean }) {
     const service = services.find((item) => item.id === id);
+
     if (!service) return;
+
+    const { latitude, longitude, city, region, country } = service.location;
+
+    const hasValidLocation =
+      latitude !== null &&
+      longitude !== null &&
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude);
+
+    /*
+     * Se existe localização, a câmera vai se mover.
+     * Ativamos o loading ANTES de selecionar o serviço,
+     * evitando o painel aparecer por um frame.
+     */
+    if (hasValidLocation) {
+      setMapLoading(true);
+    }
 
     focusKeyRef.current += 1;
 
     const key = focusKeyRef.current;
+
     setSelectedServiceId(id);
     setSelectionKey(key);
+
     setScrollOnSelection(options?.scroll ?? true);
 
-    const { latitude, longitude, city, region, country } = service.location;
-    if (
-      latitude === null ||
-      longitude === null ||
-      !Number.isFinite(latitude) ||
-      !Number.isFinite(longitude)
-    ) {
+    /*
+     * Serviços sem localização continuam podendo
+     * ser selecionados, mas não iniciam animação.
+     */
+    if (!hasValidLocation) {
       setMapFocus(null);
+      setMapLoading(false);
+
       return;
     }
 
@@ -107,7 +127,9 @@ export function Monitoring() {
       longitude,
       label: service.name,
       city,
-      place: `${city ? `${city} · ` : ""}${region}, ${country}`,
+
+      place: `${city ? `${city} · ` : ""}` + `${region}, ${country}`,
+
       scrollToMap: options?.scroll === false,
     });
   }
@@ -354,13 +376,19 @@ export function Monitoring() {
                       role="status"
                       aria-label="Carregando mapa"
                     >
+                      <span className="map-luma-flare" aria-hidden="true" />
                       <img src={logoMin} alt="" className="map-loading-logo" />
                     </div>
                   )}
 
                   {selectedService && (
-                    <div className="services-map-overlay">
+                    <div
+                      className={`services-map-overlay ${
+                        mapLoading ? "is-map-moving" : "is-map-ready"
+                      }`}
+                    >
                       <MapServiceDetailsPanel
+                        key={selectedService.id}
                         service={selectedService}
                         indicator={selectedIndicator}
                         loading={indicatorsLoading}
