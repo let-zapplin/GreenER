@@ -1,5 +1,6 @@
 .comparison-summary {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 16px;
 
@@ -22,7 +23,7 @@
   display: grid;
 
   grid-template-columns:
-    repeat(auto-fit, minmax(240px, 1fr));
+    repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 
   gap: 12px;
 }
@@ -268,6 +269,8 @@
 
 .comparison-resource-matrix {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   flex-direction: column;
 
   overflow-x: auto;

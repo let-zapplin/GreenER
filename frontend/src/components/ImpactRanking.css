@@ -100,6 +100,10 @@
   min-width: 0;
 }
 
+.impact-ranking-service > div {
+  min-width: 0;
+}
+
 .impact-ranking-position {
   display: flex;
   align-items: center;
@@ -220,9 +224,24 @@
 
   .impact-ranking-item-header {
     align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .impact-ranking-service {
+    width: 100%;
+  }
+
+  .impact-ranking-service strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .impact-ranking-value {
-    align-items: flex-end;
+    align-items: flex-start;
+    min-width: 0;
+    max-width: 100%;
+    padding-left: 42px;
+    overflow-wrap: anywhere;
   }
 }
