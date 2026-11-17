@@ -47,9 +47,10 @@
 | US11 | usuário da plataforma | consultar o histórico das coletas | analisar evolução de métricas e impacto ao longo do tempo | RF10 | 🔴 Alta | S2 | ✅ Concluído |
 | US12 | usuário da plataforma | visualizar onde cada serviço está hospedado | relacionar localização e indicadores | RF12 | 🟡 Média | S2-S3 | 🔄 Parcial — localização real já persistida e utilizada; consolidação final permanece na S3 |
 | US13 | usuário da plataforma | visualizar geograficamente serviços com coordenadas | entender sua distribuição espacial | RF13 | 🟡 Média | **S2 → S3** | 🔄 Em revisão — implementação funcional antecipada da S3 para a S2; consolidação final na S3 |
-| US14 | usuário da plataforma | ordenar serviços pelo impacto ambiental | identificar maiores e menores impactos no período | RF14 | 🔴 Alta | S3 | ⏳ Planejado |
-| US15 | usuário da plataforma | comparar dois ou mais serviços | compreender diferenças de métricas e impacto no mesmo período | RF15 | 🔴 Alta | S3 | ⏳ Planejado |
+| US14 | usuário da plataforma | ordenar serviços pelo impacto ambiental | identificar maiores e menores impactos no período | RF14 | 🔴 Alta | S3 | ✅ Concluído |
+| US15 | usuário da plataforma | comparar dois ou mais serviços | compreender diferenças de métricas e impacto no mesmo período | RF15 | 🔴 Alta | S3 | ✅ Concluído |
 | US16 | usuário autorizado | me autenticar para acessar recursos protegidos | impedir acesso não autorizado | RP06 | 🔴 Alta | S2 | ✅ Concluído |
+| US17 | usuário da plataforma | projetar o impacto ambiental de um serviço em diferentes localidades | avaliar alternativas de hospedagem com menor emissão| RF16 | 🟡 Média | S3 | ⏳ Planejado |
 | TS01 | usuário | utilizar a plataforma em diferentes tamanhos de tela | acompanhar dados em desktop e mobile | RNF01 | 🔴 Alta | S1-S3 | 🔁 Contínuo — base responsiva e prototipação mobile existem; revisão final na S3 |
 | TS02 | usuário | que uma falha isolada não derrube o GreenER | continuar acompanhando os demais serviços | RNF04 | 🔴 Alta | S2-S3 | 🔁 Contínuo — tratamento principal validado na S2; revalidar regressões na S3 |
 | TS03 | usuário | que a interface responda em tempo adequado | acompanhar continuamente o ambiente | RNF03 | 🟡 Média | S3 | ⏳ Planejado — build atual possui aviso não bloqueante de chunk >500 kB |
@@ -225,7 +226,26 @@ Apresentar no Monitoramento:
 
 ---
 
-### Épico 8 - Autenticação e acesso protegido
+### Épico 8 - Projeção ambiental
+
+#### US17 - Projeção por localização
+
+- [ ] selecionar um serviço monitorado;
+- [ ] utilizar o consumo energético observado no período;
+- [ ] selecionar localidades alternativas;
+- [ ] manter energia constante entre os cenários;
+- [ ] recalcular CO₂e usando intensidade regional;
+- [ ] apresentar intensidade de carbono;
+- [ ] apresentar participação renovável quando disponível;
+- [ ] comparar cenário atual e cenários projetados;
+- [ ] sinalizar claramente que os valores são estimativas;
+- [ ] manter cálculo no backend.
+
+**RF:** RF16
+
+---
+
+### Épico 9 - Autenticação e acesso protegido
 
 #### US16 - Autenticação JWT
 - [x] autenticar credenciais no backend;
