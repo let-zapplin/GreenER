@@ -113,21 +113,6 @@ export function Header() {
 
         {isAuthenticated ? (
           <div className="header-user">
-            <div className="notification" role="img" aria-label="Notificações">
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
-                <path d="M10 21h4M12 2V1" />
-              </svg>
-            </div>
-
             <div
               className="header-account"
               ref={account}

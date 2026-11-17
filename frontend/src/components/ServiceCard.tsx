@@ -34,6 +34,9 @@ function getStatusLabel(status: MonitoredService["status"]) {
     case "unavailable":
       return "Indisponível";
 
+    case "error":
+      return "Erro na coleta";
+
     case "removed":
       return "Removido";
   }

@@ -105,6 +105,8 @@
 
   text-align: left;
   color: inherit;
+  font: inherit;
+  text-decoration: none;
 
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -126,6 +128,13 @@
   transform: translateY(-4px);
 
   border-color: var(--adaptive-color);
+}
+
+.analysis-option:focus-visible {
+  outline: 2px solid var(--adaptive-color);
+  outline-offset: 4px;
+  border-color: var(--adaptive-color);
+  transform: translateY(-4px);
 }
 
 .home[data-view="impacto"] .analysis-option[data-view="impacto"],
@@ -311,16 +320,6 @@
   left: 5%;
 
   transform: rotate(5deg);
-}
-
-.view-debug {
-  margin: 20px auto;
-  text-align: center;
-
-  color: var(--text-muted);
-  font-size: var(--font-size-small);
-  line-height: 1.5;
-  font-weight: 500;
 }
 
 /* transição */

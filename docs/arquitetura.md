@@ -696,7 +696,7 @@ Os hooks preservam os últimos dados válidos quando uma atualização falha e t
 
 ### Dados incompletos
 
-O backend utiliza `isPartial`, coberturas e lacunas para comunicar que um resultado não está completo, evitando apresentar ausência como valor zero.
+O backend utiliza `isPartial`, coberturas e lacunas para comunicar que um resultado não está completo. Por compatibilidade, os totais ambientais agregados existentes podem retornar `0` quando nenhuma amostra contribuiu para aquele indicador; esse valor deve ser interpretado junto às contagens e lacunas, não como confirmação de consumo ou emissão reais iguais a zero. Os novos campos que podem não ter amostras válidas, como `energyBreakdown`, representam essa ausência com `null`.
 
 ---
 

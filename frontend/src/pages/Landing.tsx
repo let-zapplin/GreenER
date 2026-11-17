@@ -388,13 +388,6 @@ export function Landing() {
               </span>
             </div>
           </div>
-          <footer className="landing-footer landing-container">
-            <Link to="/sobre">
-              <img src={logo} alt="GreenER" width="76" height="51" />
-            </Link>
-            <p>Mais tecnologia, menos impacto.</p>
-            <span>FATEC Jacareí × Unilaunch</span>
-          </footer>
         </section>
       </main>
     </div>
