@@ -1,3 +1,4 @@
+import { useChartTouch } from "../hooks/useChartTouch";
 import { useState } from "react";
 import {
   Bar,
@@ -52,6 +53,7 @@ export function ComparisonPeriodChart({
   focusServiceId,
   onFocusServiceChange,
 }: ComparisonPeriodChartProps) {
+  const isTouch = useChartTouch();
   const [isCompact, setIsCompact] = useState(false);
   const metricDefinition = getComparisonMetricDefinition(metric);
 
@@ -138,7 +140,7 @@ export function ComparisonPeriodChart({
               tickLine={false}
               axisLine={false}
               tick={isCompact
-                ? ({ y, payload }: { y?: number; payload?: { value?: string | number } }) => (
+                ? ({ y, payload }: { y?: string | number; payload?: { value?: string | number } }) => (
                     <Text
                       x={0}
                       y={y}
@@ -156,11 +158,15 @@ export function ComparisonPeriodChart({
             />
 
             <Tooltip
+              trigger={isTouch ? "click" : "hover"}
               formatter={(value) => [
                 `${formatComparisonValue(Number(value), metric)} ${metricDefinition.unit}`,
                 metricDefinition.label,
               ]}
               contentStyle={{
+                maxWidth: "100%",
+                whiteSpace: "normal",
+                overflowWrap: "anywhere",
                 background: "#0c2d30f2",
                 border: "1px solid #426c60",
                 borderRadius: "12px",
