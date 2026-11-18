@@ -245,3 +245,9 @@
     overflow-wrap: anywhere;
   }
 }
+
+@media (max-width: 720px) {
+  .impact-ranking-region {
+    overflow-wrap: anywhere;
+  }
+}

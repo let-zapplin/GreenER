@@ -733,6 +733,7 @@ const {
 
     {projectionService && (
       <div className="analyses-projection-current">
+        <strong>{projectionService.name}</strong>
         <span>Localização atual</span>
 
         <strong>

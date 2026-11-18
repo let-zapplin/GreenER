@@ -245,6 +245,11 @@ export function ComparisonSummary({
     0,
   );
 
+  const resourceGridStyle = {
+    gridTemplateColumns: `minmax(var(--comparison-resource-label-width, 130px), 0.8fr) repeat(${Math.max(1, services.length)}, minmax(140px, 1fr))`,
+    minWidth: `calc(var(--comparison-resource-label-width, 130px) + ${Math.max(1, services.length) * 140}px)`,
+  };
+
   return (
     <section
       className="comparison-summary"
@@ -335,8 +340,11 @@ export function ComparisonSummary({
           </div>
         </div>
 
-        <div className="comparison-resource-matrix">
-          <div className="comparison-resource-matrix-header">
+        <p className="comparison-resource-scroll-hint" id="comparison-resource-scroll-hint">
+          Deslize para os lados para consultar todos os serviços.
+        </p>
+        <div className="comparison-resource-matrix" tabIndex={0} role="region" aria-label="Comparativo de recursos por serviço" aria-describedby="comparison-resource-scroll-hint">
+          <div className="comparison-resource-matrix-header" style={resourceGridStyle}>
             <span />
 
             {services.map((service) => (
@@ -400,6 +408,7 @@ export function ComparisonSummary({
                 <div
                   key={resourceMetric.key}
                   className="comparison-resource-row"
+                  style={resourceGridStyle}
                 >
                   <div className="comparison-resource-label">
                     <strong>

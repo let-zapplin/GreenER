@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useChartTouch } from "../hooks/useChartTouch";
 import {
   Bar,
   BarChart,
@@ -5,6 +7,7 @@ import {
   Cell,
   ResponsiveContainer,
   Tooltip,
+  Text,
   XAxis,
   YAxis,
 } from "recharts";
@@ -39,6 +42,8 @@ function formatValue(
 export function LocationProjectionChart({
   scenarios,
 }: LocationProjectionChartProps) {
+  const [isCompact, setIsCompact] = useState(false);
+  const isTouch = useChartTouch();
   const chartData: ProjectionChartData[] =
     scenarios.map((scenario) => ({
       regionCode: scenario.regionCode,
@@ -72,19 +77,25 @@ export function LocationProjectionChart({
         <span>gCO₂e</span>
       </div>
 
-      <div className="location-projection-chart-canvas">
+      <div
+        className="location-projection-chart-canvas"
+        style={{ height: Math.max(isCompact ? 260 : 320, scenarios.length * 60 + 48) }}
+        role="img"
+        aria-label="Comparativo de emissões projetadas por região, em gramas de CO₂e"
+      >
         <ResponsiveContainer
           width="100%"
           height="100%"
+          onResize={(width: number) => setIsCompact(width < 420)}
         >
           <BarChart
             data={chartData}
             layout="vertical"
             margin={{
               top: 8,
-              right: 32,
+              right: isCompact ? 12 : 32,
               bottom: 8,
-              left: 16,
+              left: isCompact ? 0 : 16,
             }}
           >
             <CartesianGrid
@@ -95,8 +106,15 @@ export function LocationProjectionChart({
 
             <XAxis
               type="number"
+              tickCount={isCompact ? 3 : 5}
+              minTickGap={12}
               tickFormatter={(value) =>
-                formatValue(Number(value))
+                isCompact
+                  ? Number(value).toLocaleString("pt-BR", {
+                      maximumSignificantDigits: 3,
+                      notation: Number(value) !== 0 && Math.abs(Number(value)) < 0.001 ? "scientific" : "compact",
+                    })
+                  : formatValue(Number(value))
               }
               tickLine={false}
               axisLine={{
@@ -112,21 +130,29 @@ export function LocationProjectionChart({
             <YAxis
               type="category"
               dataKey="name"
-              width={150}
+              width={isCompact ? 88 : 150}
+              interval={0}
               tickLine={false}
               axisLine={false}
-              tick={{
-                fill: "#f4f8f5",
-                fontSize: 12,
-              }}
+              tick={isCompact
+                ? ({ y, payload }: { y?: string | number; payload?: { value?: string | number } }) => (
+                    <Text x={0} y={y} width={80} textAnchor="start" verticalAnchor="middle" fill="#f4f8f5" fontSize={11} breakAll>
+                      {String(payload?.value ?? "")}
+                    </Text>
+                  )
+                : { fill: "#f4f8f5", fontSize: 12 }}
             />
 
             <Tooltip
+              trigger={isTouch ? "click" : "hover"}
               formatter={(value) => [
                 `${formatValue(Number(value))} gCO₂e`,
                 "Emissão projetada",
               ]}
               contentStyle={{
+                maxWidth: "100%",
+                whiteSpace: "normal",
+                overflowWrap: "anywhere",
                 background: "#0c2d30f2",
                 border:
                   "1px solid #426c60",

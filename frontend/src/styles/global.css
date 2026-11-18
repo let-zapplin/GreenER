@@ -98,18 +98,18 @@ button:focus-visible {
 }
 
 /* Keep chart details inside their container, including on touch screens. */
-:is(.comparison-chart, .comparison-period-chart, .region-energy-chart) .recharts-tooltip-wrapper {
+:is(.comparison-chart, .comparison-period-chart, .region-energy-chart, .location-projection-chart) .recharts-tooltip-wrapper {
   max-width: 100%;
   pointer-events: none;
 }
 
-:is(.comparison-chart, .comparison-period-chart, .region-energy-chart) .recharts-tooltip-item {
+:is(.comparison-chart, .comparison-period-chart, .region-energy-chart, .location-projection-chart) .recharts-tooltip-item {
   white-space: normal !important;
   overflow-wrap: anywhere;
 }
 
 @media (pointer: coarse) {
-  :is(.comparison-chart-canvas, .comparison-period-chart-canvas, .region-energy-chart-plot) {
+  :is(.comparison-chart-canvas, .comparison-period-chart-canvas, .region-energy-chart-plot, .location-projection-chart-canvas) {
     touch-action: pan-y;
     cursor: default;
   }

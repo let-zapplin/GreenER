@@ -2231,6 +2231,8 @@ width: min(100%, 760px);
 
 .analyses-projection-service,
 .analyses-projection-regions {
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 20px;
 
   border: 1px solid #315657;
@@ -2278,6 +2280,9 @@ width: min(100%, 760px);
 }
 
 .analyses-projection-service select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 42px;
 
   padding: 0 12px;
@@ -2790,4 +2795,30 @@ width: min(100%, 760px);
   align-items: flex-start;
   flex-direction: column;
 }
+}
+
+.analyses-projection-region:has(input:focus-visible) {
+  outline: 2px solid #d9e43f;
+  outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .analyses-projection-intro h2 {
+    font-size: 1.15rem;
+    overflow-wrap: anywhere;
+  }
+
+  .analyses-projection-service,
+  .analyses-projection-regions {
+    padding: 16px;
+  }
+
+  .analyses-projection-regions-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .analyses-projection-region {
+    min-height: 44px;
+  }
 }

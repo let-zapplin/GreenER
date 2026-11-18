@@ -59,6 +59,7 @@
 
 .location-projection-chart-legend {
   display: flex;
+  flex-wrap: wrap;
 
   align-items: center;
 
@@ -100,11 +101,21 @@
 }
 
 @media (max-width: 700px) {
+  .location-projection-chart {
+    padding: 16px 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .location-projection-chart-header h2 {
+    font-size: 1.1rem;
+    line-height: 1.35;
+  }
+
   .location-projection-chart-header {
     flex-direction: column;
   }
 
   .location-projection-chart-canvas {
-    height: 280px;
+    min-height: 260px;
   }
 }
