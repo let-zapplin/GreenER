@@ -99,6 +99,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+.monitoring-board-tab-lock {
+  width: 13px;
+  height: 13px;
+
+  color: var(--board-accent);
+  opacity: 0.75;
+}
+
 .monitoring-board-tab-input {
   width: 160px;
   border-color: var(--board-accent);
@@ -214,6 +222,31 @@
 .monitoring-board-width-note svg {
   width: 15px;
   height: 15px;
+}
+
+.monitoring-board-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  height: 36px;
+  padding: 0 12px;
+
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+
+  color: var(--board-muted);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.monitoring-board-locked svg {
+  width: 14px;
+  height: 14px;
+
+  color: var(--board-accent);
+  opacity: 0.75;
 }
 
 .monitoring-board-action:focus-visible,
@@ -990,6 +1023,48 @@
   min-height: 0;
 
   overflow-y: auto;
+}
+
+/* Barras de rolagem discretas, no tom dos blocos. */
+.monitoring-board-widget .services-map-hud,
+.monitoring-board-widget .environment-overview-dock,
+.monitoring-board-widget .monitoring-summary-shell {
+  scrollbar-color: #58cbb766 transparent;
+  scrollbar-width: thin;
+
+  overscroll-behavior: contain;
+}
+
+.monitoring-board-widget .services-map-hud::-webkit-scrollbar,
+.monitoring-board-widget .environment-overview-dock::-webkit-scrollbar,
+.monitoring-board-widget .monitoring-summary-shell::-webkit-scrollbar {
+  display: block;
+
+  width: 6px;
+  height: 6px;
+}
+
+.monitoring-board-widget .services-map-hud::-webkit-scrollbar-track,
+.monitoring-board-widget
+  .environment-overview-dock::-webkit-scrollbar-track,
+.monitoring-board-widget .monitoring-summary-shell::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.monitoring-board-widget .services-map-hud::-webkit-scrollbar-thumb,
+.monitoring-board-widget
+  .environment-overview-dock::-webkit-scrollbar-thumb,
+.monitoring-board-widget .monitoring-summary-shell::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+
+  background: #58cbb766;
+}
+
+.monitoring-board-widget .services-map-hud::-webkit-scrollbar-thumb:hover,
+.monitoring-board-widget
+  .environment-overview-dock::-webkit-scrollbar-thumb:hover,
+.monitoring-board-widget .monitoring-summary-shell::-webkit-scrollbar-thumb:hover {
+  background: #87e46c88;
 }
 
 .monitoring-board-widget

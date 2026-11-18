@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  FIXED_PAGE_ANALISE,
+  FIXED_PAGE_MONITORAMENTO,
   GRID_COLS,
   addWidget,
   applyLayout,
@@ -10,9 +12,12 @@ import {
   defaultBoard,
   defaultWidgets,
   fitRect,
+  fixedPages,
   freeSpot,
   isDefaultLayout,
+  isFixedPage,
   layoutFor,
+  normalizeBoard,
   overlaps,
   parseBoard,
   placeWidget,
@@ -30,6 +35,13 @@ const widget = (
   w: number,
   h: number,
 ): BoardWidget => ({ id, type, x, y, w, h });
+
+/** Página comum (editável) para testar as regras da grade. */
+const pageWithDefaults = () => ({
+  id: "p",
+  name: "P",
+  widgets: defaultWidgets(),
+});
 
 test("a grade cai para 6 e 3 colunas conforme a janela encolhe", () => {
   assert.equal(columnsFor(1200), GRID_COLS);
@@ -189,7 +201,7 @@ test("adicionar no ponto escolhido mantém o bloco e empurra os demais", () => {
 });
 
 test("applyLayout em 12 colunas grava o arranjo principal", () => {
-  const page = defaultBoard().pages[0];
+  const page = pageWithDefaults();
 
   const next = placeWidget(
     page.widgets,
@@ -204,7 +216,7 @@ test("applyLayout em 12 colunas grava o arranjo principal", () => {
 });
 
 test("applyLayout estreito mantém o arranjo largo e guarda o da largura", () => {
-  const page = defaultBoard().pages[0];
+  const page = pageWithDefaults();
 
   const next = layoutFor(page, 6).map((item) =>
     item.id === "services" ? { ...item, h: 3 } : item,
@@ -218,7 +230,7 @@ test("applyLayout estreito mantém o arranjo largo e guarda o da largura", () =>
 });
 
 test("applyLayout estreito propaga bloco novo para o arranjo largo", () => {
-  const page = defaultBoard().pages[0];
+  const page = pageWithDefaults();
 
   const narrow = addWidget(
     layoutFor(page, 6),
@@ -240,7 +252,7 @@ test("applyLayout estreito propaga bloco novo para o arranjo largo", () => {
 });
 
 test("applyLayout estreito propaga bloco removido para todos os arranjos", () => {
-  const page = defaultBoard().pages[0];
+  const page = pageWithDefaults();
 
   const narrow = layoutFor(page, 6).filter((item) => item.id !== "region");
   const updated = applyLayout(page, 6, narrow);
@@ -250,7 +262,7 @@ test("applyLayout estreito propaga bloco removido para todos os arranjos", () =>
 });
 
 test("em 3 colunas nenhum bloco ultrapassa a grade", () => {
-  const page = defaultBoard().pages[0];
+  const page = pageWithDefaults();
 
   const next = addWidget(layoutFor(page, 3), "map", undefined, 3, "mapa-2");
 
@@ -322,4 +334,87 @@ test("isDefaultLayout reconhece o arranjo inicial e qualquer mudança", () => {
   moved[0] = { ...moved[0], y: 1 };
 
   assert.equal(isDefaultLayout(moved), false);
+});
+
+test("o painel nasce com Monitoramento e Análise fixas, nessa ordem", () => {
+  const board = defaultBoard();
+
+  assert.deepEqual(
+    board.pages.map((page) => page.name),
+    ["Monitoramento", "Análise"],
+  );
+
+  assert.equal(board.activePageId, FIXED_PAGE_MONITORAMENTO);
+  assert.equal(isFixedPage(FIXED_PAGE_MONITORAMENTO), true);
+  assert.equal(isFixedPage(FIXED_PAGE_ANALISE), true);
+  assert.equal(isFixedPage("page-visao-geral"), false);
+});
+
+test("as páginas fixas têm arranjo válido, sem sobreposição", () => {
+  const monitoramento = fixedPages()[0];
+  const analise = fixedPages()[1];
+
+  assert.deepEqual(
+    monitoramento.widgets.map((item) => item.type),
+    ["map", "region", "services", "summary"],
+  );
+
+  assert.deepEqual(
+    analise.widgets.map((item) => item.type),
+    ["ranking", "history", "comparison", "projection"],
+  );
+
+  for (const page of [monitoramento, analise]) {
+    for (const item of page.widgets) {
+      assert.equal(item.x + item.w <= GRID_COLS, true);
+    }
+
+    for (const a of page.widgets) {
+      for (const b of page.widgets) {
+        if (a !== b) assert.equal(overlaps(a, b), false);
+      }
+    }
+  }
+});
+
+test("normalizeBoard põe as fixas na frente e preserva páginas criadas", () => {
+  const stored = {
+    pages: [
+      {
+        id: "page-visao-geral",
+        name: "Visão geral",
+        widgets: defaultWidgets(),
+      },
+      {
+        id: FIXED_PAGE_ANALISE,
+        name: "Tentativa",
+        widgets: [],
+      },
+    ],
+    activePageId: "page-visao-geral",
+  };
+
+  const board = normalizeBoard(stored);
+
+  assert.deepEqual(
+    board.pages.map((page) => page.id),
+    [FIXED_PAGE_MONITORAMENTO, FIXED_PAGE_ANALISE, "page-visao-geral"],
+  );
+
+  assert.equal(board.activePageId, "page-visao-geral");
+  assert.equal(board.pages[1].name, "Análise");
+  assert.equal(board.pages[1].widgets.length, 4);
+  assert.equal(board.pages[2].widgets.length, 3);
+});
+
+test("normalizeBoard cai na primeira fixa quando a ativa não existe", () => {
+  const board = normalizeBoard({
+    pages: [
+      { id: "custom", name: "Minha página", widgets: [] },
+    ],
+    activePageId: "sumiu",
+  });
+
+  assert.equal(board.activePageId, FIXED_PAGE_MONITORAMENTO);
+  assert.equal(board.pages.length, 3);
 });

@@ -41,18 +41,53 @@
   width: auto;
   max-width: 100%;
   min-width: 0;
-  padding: 5px 8px;
+  min-height: 26px;
+  padding: 4px 26px 4px 9px;
 
   border: 1px solid #315657;
   border-radius: 8px;
 
-  background: #0b282c;
+  appearance: none;
+  -webkit-appearance: none;
+
+  /* Chromium 135+: o menu de opções passa a seguir o tema do bloco. */
+  appearance: base-select;
+
+  background-color: #0b282c;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2387e46c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 9px 6px;
   color: #dce8e2;
 
   font: inherit;
   font-size: 11px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.analysis-widget-select:hover:not(:disabled) {
+  border-color: #58cbb766;
+  background-color: #0e3135;
+}
+
+.analysis-widget-select:open {
+  border-color: #58cbb766;
+  background-color: #0e3135;
+}
+
+.analysis-widget-select:focus-visible {
+  border-color: #87e46c;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(135, 228, 108, 0.18);
 }
 
 .analysis-widget-select.is-grow {
@@ -62,6 +97,106 @@
 .analysis-widget-select:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* ---------- menu de opções ---------- */
+
+@supports (appearance: base-select) {
+  .analysis-widget-select::picker-icon {
+    display: none;
+  }
+
+  .analysis-widget-select::picker(select) {
+    max-height: 244px;
+    margin-top: 4px;
+    padding: 4px;
+
+    overflow-y: auto;
+
+    appearance: base-select;
+
+    border: 1px solid #3f6a6b;
+    border-radius: 10px;
+
+    background: #0b282c;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+
+    scrollbar-color: #58cbb766 transparent;
+    scrollbar-width: thin;
+  }
+
+  .analysis-widget-select option {
+    padding: 6px 10px;
+
+    border-radius: 6px;
+
+    background: transparent;
+    color: #cfe0d8;
+
+    font-size: 11px;
+    text-overflow: ellipsis;
+
+    cursor: pointer;
+  }
+
+  .analysis-widget-select option:hover,
+  .analysis-widget-select option:focus {
+    background: #173f42;
+    color: #ffffff;
+  }
+
+  .analysis-widget-select option:checked {
+    background: #2c5a57;
+    color: #ffffff;
+  }
+
+  .analysis-widget-select option:checked:hover {
+    background: #386d69;
+  }
+
+  .analysis-widget-select option::checkmark {
+    display: none;
+  }
+}
+
+/* ---------- barras de rolagem ---------- */
+
+.analysis-widget-scroll,
+.analysis-widget-regions {
+  scrollbar-color: #58cbb766 transparent;
+  scrollbar-width: thin;
+
+  overscroll-behavior: contain;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar,
+.analysis-widget-regions::-webkit-scrollbar {
+  display: block;
+
+  width: 6px;
+  height: 6px;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar-track,
+.analysis-widget-regions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar-thumb,
+.analysis-widget-regions::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+
+  background: #58cbb766;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar-thumb:hover,
+.analysis-widget-regions::-webkit-scrollbar-thumb:hover {
+  background: #87e46c88;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar-corner,
+.analysis-widget-regions::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .analysis-widget-scroll {
@@ -78,8 +213,6 @@
 
   overflow-x: hidden;
   overflow-y: auto;
-
-  scrollbar-width: thin;
 }
 
 .analysis-widget-state {
@@ -433,8 +566,6 @@
   padding-right: 2px;
 
   overflow-y: auto;
-
-  scrollbar-width: thin;
 }
 
 @container widget (max-width: 420px) {

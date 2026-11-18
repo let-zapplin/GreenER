@@ -503,10 +503,12 @@ export function Monitoring() {
     <main className="monitoring-page">
       <section className="monitoring-header">
         <div className="monitoring-intro">
-          <p className="monitoring-eyebrow">SEU AMBIENTE, EM UM SÓ LUGAR</p>
+          <p className="monitoring-eyebrow">
+            MONITORAMENTO E ANÁLISES, EM UM SÓ LUGAR
+          </p>
 
           <h1>
-            Monitoramento de <span>serviços.</span>
+            Seu <span>workspace.</span>
           </h1>
         </div>
       </section>

@@ -586,6 +586,43 @@ export function collapseWidget(
 
 // ---------- páginas e persistência ----------
 
+export const FIXED_PAGE_MONITORAMENTO = "page-monitoramento";
+export const FIXED_PAGE_ANALISE = "page-analise";
+
+/** Páginas fixas: sempre primeiro, com arranjo próprio e sem edição. */
+const FIXED_PAGES: readonly BoardPage[] = [
+  {
+    id: FIXED_PAGE_MONITORAMENTO,
+    name: "Monitoramento",
+    widgets: [
+      { id: "map", type: "map", x: 0, y: 0, w: 8, h: 5 },
+      { id: "region", type: "region", x: 8, y: 0, w: 4, h: 5 },
+      { id: "services", type: "services", x: 0, y: 5, w: 12, h: 2 },
+      { id: "summary", type: "summary", x: 0, y: 7, w: 12, h: 4 },
+    ],
+  },
+  {
+    id: FIXED_PAGE_ANALISE,
+    name: "Análise",
+    widgets: [
+      { id: "ranking", type: "ranking", x: 0, y: 0, w: 4, h: 6 },
+      { id: "history", type: "history", x: 4, y: 0, w: 8, h: 6 },
+      { id: "comparison", type: "comparison", x: 0, y: 6, w: 6, h: 7 },
+      { id: "projection", type: "projection", x: 6, y: 6, w: 6, h: 7 },
+    ],
+  },
+];
+
+export const isFixedPage = (id: string) =>
+  FIXED_PAGES.some((page) => page.id === id);
+
+export function fixedPages(): BoardPage[] {
+  return FIXED_PAGES.map((page) => ({
+    ...page,
+    widgets: page.widgets.map((widget) => ({ ...widget })),
+  }));
+}
+
 const DEFAULT_WIDGETS: readonly BoardWidget[] = [
   { id: "map", type: "map", x: 0, y: 0, w: 8, h: 5 },
   { id: "region", type: "region", x: 8, y: 0, w: 4, h: 5 },
@@ -596,14 +633,29 @@ export function defaultWidgets(): BoardWidget[] {
   return DEFAULT_WIDGETS.map((widget) => ({ ...widget }));
 }
 
-export function defaultBoard(): Board {
-  const page: BoardPage = {
-    id: "page-visao-geral",
-    name: "Visão geral",
-    widgets: defaultWidgets(),
-  };
+/**
+ * O painel com as páginas fixas na frente. As páginas criadas pelo
+ * usuário vêm depois; uma página fixa gravada por engano é
+ * substituída pelo arranjo oficial.
+ */
+export function normalizeBoard(board: Board | null): Board {
+  const pages = [
+    ...fixedPages(),
+    ...(board?.pages ?? []).filter(
+      (page) => !isFixedPage(page.id),
+    ),
+  ];
 
-  return { pages: [page], activePageId: page.id };
+  const activePageId =
+    board && pages.some((page) => page.id === board.activePageId)
+      ? board.activePageId
+      : pages[0].id;
+
+  return { pages, activePageId };
+}
+
+export function defaultBoard(): Board {
+  return normalizeBoard(null);
 }
 
 export function newPage(
@@ -776,9 +828,8 @@ export function parseBoard(raw: string | null): Board | null {
 
 export function loadBoard(): Board {
   try {
-    return (
-      parseBoard(localStorage.getItem(BOARD_STORAGE_KEY)) ??
-      defaultBoard()
+    return normalizeBoard(
+      parseBoard(localStorage.getItem(BOARD_STORAGE_KEY)),
     );
   } catch {
     return defaultBoard();

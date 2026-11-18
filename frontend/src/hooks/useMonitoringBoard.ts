@@ -12,6 +12,7 @@ import {
   collapseWidget,
   defaultWidgets,
   isDefaultLayout,
+  isFixedPage,
   layoutFor,
   loadBoard,
   newPage,
@@ -42,6 +43,13 @@ export function useMonitoringBoard() {
       (page) => page.id === board.activePageId,
     ) ?? board.pages[0];
 
+  const locked = isFixedPage(activePage.id);
+
+  // Página fixa não entra (nem permanece) em modo de edição.
+  useEffect(() => {
+    if (locked) setEditing(false);
+  }, [locked]);
+
   const widgets = useMemo(
     () => layoutFor(activePage, cols),
     [activePage, cols],
@@ -58,6 +66,8 @@ export function useMonitoringBoard() {
 
   const changeWidgets = useCallback(
     (next: BoardWidget[]) => {
+      if (locked) return;
+
       setBoard((current) => ({
         ...current,
         pages: current.pages.map((page) =>
@@ -67,7 +77,7 @@ export function useMonitoringBoard() {
         ),
       }));
     },
-    [cols],
+    [cols, locked],
   );
 
   const selectPage = useCallback(
@@ -101,7 +111,7 @@ export function useMonitoringBoard() {
   const renamePage = useCallback((id: string, name: string) => {
     const trimmed = name.trim();
 
-    if (!trimmed) return;
+    if (!trimmed || isFixedPage(id)) return;
 
     setBoard((current) => ({
       ...current,
@@ -114,7 +124,7 @@ export function useMonitoringBoard() {
   }, []);
 
   const deletePage = useCallback(() => {
-    if (board.pages.length < 2) return;
+    if (isFixedPage(board.activePageId)) return;
 
     const index = board.pages.findIndex(
       (page) => page.id === board.activePageId,
@@ -124,15 +134,19 @@ export function useMonitoringBoard() {
       (page) => page.id !== board.activePageId,
     );
 
+    const fallback = pages[Math.max(0, index - 1)] ?? pages[0];
+
     setBoard({
       pages,
-      activePageId: pages[Math.max(0, index - 1)].id,
+      activePageId: fallback.id,
     });
 
     setAnnouncement("Página excluída.");
   }, [board.pages, board.activePageId]);
 
   const resetPage = useCallback(() => {
+    if (isFixedPage(board.activePageId)) return;
+
     setBoard((current) => ({
       ...current,
       pages: current.pages.map((page) =>
@@ -149,7 +163,7 @@ export function useMonitoringBoard() {
     setAnnouncement(
       "Arranjo padrão restaurado nesta página.",
     );
-  }, []);
+  }, [board.activePageId]);
 
   const toggleCollapsed = useCallback(
     (id: string) => {
@@ -186,6 +200,7 @@ export function useMonitoringBoard() {
     widgets,
     cols,
     editing,
+    locked,
     isCustomized,
     announcement,
     setEditing,

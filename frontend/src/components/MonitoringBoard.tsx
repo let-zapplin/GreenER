@@ -21,6 +21,7 @@ import {
   GlobeHemisphereWestIcon,
   GridFourIcon,
   ListDashesIcon,
+  LockSimpleIcon,
   MapTrifoldIcon,
   MinusIcon,
   PencilSimpleIcon,
@@ -41,6 +42,7 @@ import {
   bottom,
   columnsFor,
   fitRect,
+  isFixedPage,
   newWidgetId,
   placeWidget,
   resizeRect,
@@ -127,6 +129,7 @@ export function MonitoringBoard({
     widgets,
     cols,
     editing,
+    locked,
     isCustomized,
     announcement,
     setEditing,
@@ -549,7 +552,7 @@ export function MonitoringBoard({
   }
 
   function handleDeletePage() {
-    if (pages.length < 2) return;
+    if (locked) return;
 
     if (!confirmDelete) {
       setConfirmDelete(true);
@@ -582,54 +585,33 @@ export function MonitoringBoard({
           role="tablist"
           aria-label="Páginas do painel"
         >
-          {pages.map((page) =>
-            renaming === page.id ? (
-              <input
-                key={page.id}
-                ref={renameRef}
-                className="monitoring-board-tab-input"
-                defaultValue={page.name}
-                maxLength={32}
-                aria-label="Nome da página"
-                onBlur={(event) =>
-                  commitRename(
-                    page.id,
-                    event.currentTarget.value,
-                  )
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    commitRename(
-                      page.id,
-                      event.currentTarget.value,
-                    );
-                  }
-
-                  if (event.key === "Escape") {
-                    setRenaming(null);
-                  }
-                }}
-              />
-            ) : (
+          {pages
+            .filter((page) => isFixedPage(page.id))
+            .map((page) => (
               <button
                 key={page.id}
                 type="button"
                 role="tab"
                 aria-selected={page.id === activePage.id}
-                className={`monitoring-board-tab${
+                className={`monitoring-board-tab is-fixed${
                   page.id === activePage.id ? " is-active" : ""
                 }`}
                 onClick={() => selectPage(page.id)}
-                onDoubleClick={() => setRenaming(page.id)}
-                title="Clique duas vezes para renomear"
+                title="Página fixa: o arranjo não pode ser alterado"
               >
+                <LockSimpleIcon
+                  className="monitoring-board-tab-lock"
+                  aria-hidden="true"
+                  weight="bold"
+                />
+
                 {page.name}
+
                 <span className="monitoring-board-tab-count">
                   {page.widgets.length}
                 </span>
               </button>
-            ),
-          )}
+            ))}
 
           <button
             type="button"
@@ -640,6 +622,57 @@ export function MonitoringBoard({
           >
             <PlusIcon aria-hidden="true" weight="bold" />
           </button>
+
+          {pages
+            .filter((page) => !isFixedPage(page.id))
+            .map((page) =>
+              renaming === page.id ? (
+                <input
+                  key={page.id}
+                  ref={renameRef}
+                  className="monitoring-board-tab-input"
+                  defaultValue={page.name}
+                  maxLength={32}
+                  aria-label="Nome da página"
+                  onBlur={(event) =>
+                    commitRename(
+                      page.id,
+                      event.currentTarget.value,
+                    )
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      commitRename(
+                        page.id,
+                        event.currentTarget.value,
+                      );
+                    }
+
+                    if (event.key === "Escape") {
+                      setRenaming(null);
+                    }
+                  }}
+                />
+              ) : (
+                <button
+                  key={page.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={page.id === activePage.id}
+                  className={`monitoring-board-tab${
+                    page.id === activePage.id ? " is-active" : ""
+                  }`}
+                  onClick={() => selectPage(page.id)}
+                  onDoubleClick={() => setRenaming(page.id)}
+                  title="Clique duas vezes para renomear"
+                >
+                  {page.name}
+                  <span className="monitoring-board-tab-count">
+                    {page.widgets.length}
+                  </span>
+                </button>
+              ),
+            )}
         </div>
 
         <div className="monitoring-board-actions">
@@ -701,13 +734,10 @@ export function MonitoringBoard({
                   confirmDelete ? " is-confirming" : ""
                 }`}
                 onClick={handleDeletePage}
-                disabled={pages.length < 2}
                 title={
-                  pages.length < 2
-                    ? "A única página não pode ser excluída"
-                    : confirmDelete
-                      ? "Clique de novo para excluir"
-                      : "Excluir esta página"
+                  confirmDelete
+                    ? "Clique de novo para excluir"
+                    : "Excluir esta página"
                 }
               >
                 <TrashIcon aria-hidden="true" weight="bold" />
@@ -720,35 +750,47 @@ export function MonitoringBoard({
             </>
           )}
 
-          <button
-            type="button"
-            className={`monitoring-board-action is-edit${
-              editing ? " is-active" : ""
-            }`}
-            aria-pressed={editing}
-            onClick={() => {
-              setEditing(!editing);
-              setConfirmDelete(false);
-              setConfirmReset(false);
-            }}
-            title={
-              editing
-                ? "Concluir a edição (Esc)"
-                : "Mover, redimensionar e adicionar blocos"
-            }
-          >
-            {editing ? (
-              <CheckIcon aria-hidden="true" weight="bold" />
-            ) : (
-              <SlidersHorizontalIcon
-                aria-hidden="true"
-                weight="bold"
-              />
-            )}
-            <span className="monitoring-board-label">
-              {editing ? "Concluir" : "Personalizar layout"}
+          {locked ? (
+            <span
+              className="monitoring-board-locked"
+              title="Páginas fixas têm arranjo próprio. Crie uma página para personalizar."
+            >
+              <LockSimpleIcon aria-hidden="true" weight="bold" />
+              <span className="monitoring-board-label">
+                Página fixa
+              </span>
             </span>
-          </button>
+          ) : (
+            <button
+              type="button"
+              className={`monitoring-board-action is-edit${
+                editing ? " is-active" : ""
+              }`}
+              aria-pressed={editing}
+              onClick={() => {
+                setEditing(!editing);
+                setConfirmDelete(false);
+                setConfirmReset(false);
+              }}
+              title={
+                editing
+                  ? "Concluir a edição (Esc)"
+                  : "Mover, redimensionar e adicionar blocos"
+              }
+            >
+              {editing ? (
+                <CheckIcon aria-hidden="true" weight="bold" />
+              ) : (
+                <SlidersHorizontalIcon
+                  aria-hidden="true"
+                  weight="bold"
+                />
+              )}
+              <span className="monitoring-board-label">
+                {editing ? "Concluir" : "Personalizar layout"}
+              </span>
+            </button>
+          )}
 
           {toolbarExtra}
         </div>
@@ -893,40 +935,42 @@ export function MonitoringBoard({
                           </button>
                         )}
 
-                        <button
-                          type="button"
-                          className="monitoring-board-widget-action"
-                          onPointerDown={(event) =>
-                            event.stopPropagation()
-                          }
-                          onClick={() =>
-                            toggleCollapsed(widget.id)
-                          }
-                          aria-expanded={!widget.collapsed}
-                          aria-controls={bodyId}
-                          aria-label={`${
-                            widget.collapsed
-                              ? "Expandir"
-                              : "Minimizar"
-                          } ${spec.label}`}
-                          title={
-                            widget.collapsed
-                              ? "Expandir"
-                              : "Minimizar"
-                          }
-                        >
-                          {widget.collapsed ? (
-                            <PlusIcon
-                              aria-hidden="true"
-                              weight="bold"
-                            />
-                          ) : (
-                            <MinusIcon
-                              aria-hidden="true"
-                              weight="bold"
-                            />
-                          )}
-                        </button>
+                        {!locked && (
+                          <button
+                            type="button"
+                            className="monitoring-board-widget-action"
+                            onPointerDown={(event) =>
+                              event.stopPropagation()
+                            }
+                            onClick={() =>
+                              toggleCollapsed(widget.id)
+                            }
+                            aria-expanded={!widget.collapsed}
+                            aria-controls={bodyId}
+                            aria-label={`${
+                              widget.collapsed
+                                ? "Expandir"
+                                : "Minimizar"
+                            } ${spec.label}`}
+                            title={
+                              widget.collapsed
+                                ? "Expandir"
+                                : "Minimizar"
+                            }
+                          >
+                            {widget.collapsed ? (
+                              <PlusIcon
+                                aria-hidden="true"
+                                weight="bold"
+                              />
+                            ) : (
+                              <MinusIcon
+                                aria-hidden="true"
+                                weight="bold"
+                              />
+                            )}
+                          </button>
+                        )}
                       </span>
                     </header>
 
