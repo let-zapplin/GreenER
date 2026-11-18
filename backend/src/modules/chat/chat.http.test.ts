@@ -126,4 +126,73 @@ describe("HTTP do assistente", () => {
       IndicadoresRepository.prototype.findCollectionsForPeriod,
     ).toHaveBeenCalledTimes(1);
   });
+
+  it("retorna 429 quando já existe uma pergunta em processamento", async () => {
+    const token = createToken({ sub: "1" });
+    type Collections = Awaited<
+      ReturnType<IndicadoresRepository["findCollectionsForPeriod"]>
+    >;
+    let signalQueryStarted!: () => void;
+    let resolveQuery!: (collections: Collections) => void;
+    const queryStarted = new Promise<void>((resolve) => {
+      signalQueryStarted = resolve;
+    });
+    const pendingQuery = new Promise<Collections>((resolve) => {
+      resolveQuery = resolve;
+    });
+
+    vi.spyOn(
+      IndicadoresRepository.prototype,
+      "findCollectionsForPeriod",
+    ).mockImplementation(async () => {
+      signalQueryStarted();
+      return pendingQuery;
+    });
+
+    const firstRequest = request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ message: "Qual serviço gasta mais energia?", period: "1h" })
+      .then((response) => response);
+
+    await queryStarted;
+
+    const secondResponse = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ message: "Qual serviço gasta mais energia?" });
+
+    expect(secondResponse.status).toBe(429);
+    expect(secondResponse.body).toEqual({
+      error:
+        "O assistente está processando outras perguntas. Tente novamente em instantes.",
+      code: "CHAT_BUSY",
+    });
+
+    resolveQuery([]);
+    expect((await firstRequest).status).toBe(200);
+  });
+
+  it("nega acesso à conversa quando o token pertence a outro usuário", async () => {
+    const ownerToken = createToken({ sub: "10" });
+    const otherUserToken = createToken({ sub: "20" });
+
+    const createdConversation = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ message: "O que é o GreenER?" });
+
+    expect(createdConversation.status).toBe(200);
+
+    const response = await request(app)
+      .post("/api/chat")
+      .set("Authorization", `Bearer ${otherUserToken}`)
+      .send({
+        message: "O que é o GreenER?",
+        conversationId: createdConversation.body.conversationId,
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body.code).toBe("FORBIDDEN");
+  });
 });
