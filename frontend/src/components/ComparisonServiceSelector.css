@@ -127,6 +127,7 @@
   margin-top: 2px;
 
   opacity: 0.65;
+  overflow-wrap: anywhere;
 }
 
 .comparison-service-feedback {

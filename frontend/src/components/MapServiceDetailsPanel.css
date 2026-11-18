@@ -220,6 +220,7 @@ backdrop-filter: blur(14px);
 
   font-size: 12px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .map-service-panel-impact {

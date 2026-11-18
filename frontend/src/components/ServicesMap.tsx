@@ -15,6 +15,7 @@ import {
   type ServicePointFeatureCollection,
 } from "../lib/serviceGeoJson";
 
+
 const WORLD_BOUNDS: [[number, number], [number, number]] = [
   [-180, -85],
   [180, 85],
@@ -27,6 +28,22 @@ const FOCUS_ZOOM_BY_CITY: Record<string, number> = {
 };
 
 const FOCUS_PITCH = 58;
+
+const FOCUS_RIGHT_PADDING = 50;
+
+const NO_CAMERA_PADDING = {
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+};
+
+const FOCUS_CAMERA_PADDING = {
+  top: 0,
+  right: FOCUS_RIGHT_PADDING,
+  bottom: 0,
+  left: 0,
+};
 
 // Etapa 1: a câmera sobe antes de viajar.
 const TRANSITION_OUT_ZOOM = 7;
@@ -435,10 +452,7 @@ function hideRoadNames(map: MapLibreMap) {
   }
 }
 
-function formatPlace(location: MonitoredService["location"]) {
-  const { city, region, country } = location;
-  return `${city ? `${city} · ` : ""}${region}, ${country}`;
-}
+
 
 function buildPopupContent(title: string, subtitle: string) {
   const content = document.createElement("div");
@@ -546,6 +560,7 @@ export function ServicesMap({
   const onSelectServiceRef = useRef(onSelectService);
   const servicesRef = useRef(services);
   const loadedRef = useRef(false);
+  const overviewRef = useRef(true);
   const orbitFrameRef = useRef<number | null>(null);
   const popupRef = useRef<Popup | null>(null);
   const groupPopupContentRef = useRef<HTMLDivElement | null>(null);
@@ -554,9 +569,10 @@ export function ServicesMap({
     handler: () => void;
   } | null>(null);
   const pendingIdleRef = useRef<{
-    map: MapLibreMap;
-    handler: () => void;
-  } | null>(null);
+  map: MapLibreMap;
+  handler: () => void;
+} | null>(null);
+
   const pendingFocusRef = useRef<MapFocusRequest | null>(null);
   const activeTargetRef = useRef<MapCameraTarget | null>(null);
   const [ready, setReady] = useState(false);
@@ -687,22 +703,23 @@ export function ServicesMap({
       orbitFrameRef.current = null;
     }
 
-    const pending = pendingArrivalRef.current;
-    if (pending) {
-      pending.map.off("moveend", pending.handler);
-      pendingArrivalRef.current = null;
-    }
+const pending = pendingArrivalRef.current;
 
-    // Cancela também a espera pelos detalhes do destino anterior.
-    const pendingIdle = pendingIdleRef.current;
-    if (pendingIdle) {
-      pendingIdle.map.off("idle", pendingIdle.handler);
-      pendingIdleRef.current = null;
-    }
+if (pending) {
+  pending.map.off("moveend", pending.handler);
+  pendingArrivalRef.current = null;
+}
 
-    if (pending || pendingIdle) {
-      onLoadingChange?.(false);
-    }
+const pendingIdle = pendingIdleRef.current;
+
+if (pendingIdle) {
+  pendingIdle.map.off("idle", pendingIdle.handler);
+  pendingIdleRef.current = null;
+}
+
+if (pending || pendingIdle) {
+  onLoadingChange?.(false);
+}
   };
 
   const flyToPoint = (
@@ -711,6 +728,7 @@ export function ServicesMap({
     latitude: number,
     city?: string | null,
   ) => {
+    overviewRef.current = false;
     const target: MapCameraTarget = {
       longitude,
       latitude,
@@ -803,40 +821,34 @@ export function ServicesMap({
       map.once("moveend", handler);
     };
 
-    /**
-     * FINAL
-     *
-     * Esperamos os tiles terminarem de
-     * carregar antes de desligar o loading.
-     */
-    const finishTransition = () => {
-      const finishLoading = () => {
-        if (pendingIdleRef.current?.handler !== finishLoading) {
-          return;
-        }
+const finishTransition = () => {
+  const finishLoading = () => {
+    if (pendingIdleRef.current?.handler !== finishLoading) {
+      return;
+    }
 
-        pendingIdleRef.current = null;
+    pendingIdleRef.current = null;
+    activeTargetRef.current = null;
 
-        activeTargetRef.current = null;
+    onLoadingChange?.(false);
 
-        onLoadingChange?.(false);
+    startOrbit(map, longitude, latitude);
+  };
 
-        startOrbit(map, longitude, latitude);
-      };
+  pendingIdleRef.current = {
+    map,
+    handler: finishLoading,
+  };
 
-      pendingIdleRef.current = {
-        map,
-        handler: finishLoading,
-      };
-
-      if (map.loaded()) {
-        finishLoading();
-      } else {
-        map.once("idle", finishLoading);
-      }
-    };
+  if (map.loaded()) {
+    finishLoading();
+  } else {
+    map.once("idle", finishLoading);
+  }
+};
 
     /**
+     * 
      * ETAPA 3
      *
      * Mergulho final.
@@ -857,6 +869,9 @@ export function ServicesMap({
         pitch: target.pitch,
 
         bearing: 0,
+
+        padding: window.matchMedia("(max-width: 900px)").matches
+          ? NO_CAMERA_PADDING : FOCUS_CAMERA_PADDING,
 
         duration: TRANSITION_IN_DURATION,
 
@@ -966,7 +981,7 @@ export function ServicesMap({
     orbitFrameRef.current = requestAnimationFrame(step);
   };
 
-  const createPopup = (closeOnClick: boolean, maxWidth: string) => {
+  const createPopup = (closeOnClick: boolean, maxWidth: string, isGroup = false) => {
     popupRef.current?.remove();
 
     const popup = new maplibregl.Popup({
@@ -975,7 +990,7 @@ export function ServicesMap({
       focusAfterOpen: false,
       offset: 18,
       maxWidth,
-      className: "services-map-popup",
+      className: isGroup ? "services-map-popup services-map-group-popup" : "services-map-popup",
     });
 
     popupRef.current = popup;
@@ -1004,7 +1019,7 @@ export function ServicesMap({
     latitude: number,
     groupedServices: MonitoredService[],
   ) => {
-    const popup = createPopup(false, "320px");
+    const popup = createPopup(false, "320px", true);
 
     const content = buildGroupPopupContent(groupedServices, (serviceId) => {
       popup.remove();
@@ -1078,6 +1093,7 @@ export function ServicesMap({
      * pula toda a animação.
      */
     if (reducedMotion) {
+      overviewRef.current = true;
       map.fitBounds(WORLD_BOUNDS, {
         animate: false,
         bearing: 0,
@@ -1097,6 +1113,7 @@ export function ServicesMap({
      * antes de remover o efeito de transição.
      */
     const finishOverview = () => {
+      overviewRef.current = true;
       activeTargetRef.current = null;
 
       const finishLoading = () => {
@@ -1211,7 +1228,7 @@ export function ServicesMap({
         zoom: 1.2,
         bearing: 0,
         pitch: 0,
-        minZoom: 0.5,
+        minZoom: -2,
         maxZoom: 19,
 
         scrollZoom: false,
@@ -1392,11 +1409,35 @@ export function ServicesMap({
     map.on("style.load", onStyleLoad);
     map.on("load", onLoad);
 
-    const resize = new ResizeObserver(() => map.resize());
+    let resizeFrame: number | null = null;
+    let needsOverviewFit = false;
+    const fitOverviewAfterResize = () => {
+      if (!needsOverviewFit || !overviewRef.current || map.isMoving()) return;
+      needsOverviewFit = false;
+      map.fitBounds(WORLD_BOUNDS, {
+        animate: false,
+        bearing: 0,
+        pitch: 0,
+        padding: 8,
+      });
+    };
+    map.on("moveend", fitOverviewAfterResize);
+    const resize = new ResizeObserver(() => {
+      if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = null;
+        if (container.clientWidth === 0 || container.clientHeight === 0) return;
+        map.resize();
+        needsOverviewFit = true;
+        fitOverviewAfterResize();
+      });
+    });
     resize.observe(container);
 
     return () => {
       resize.disconnect();
+      if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+      map.off("moveend", fitOverviewAfterResize);
       cancelOrbit();
       popupRef.current?.remove();
       popupRef.current = null;
@@ -1463,7 +1504,10 @@ export function ServicesMap({
     const container = containerRef.current;
     if (!container) return;
 
-    const stopOrbit = () => cancelOrbit();
+    const stopOrbit = () => {
+      overviewRef.current = false;
+      cancelOrbit();
+    };
 
     container.addEventListener("pointerdown", stopOrbit, true);
     container.addEventListener("wheel", stopOrbit, {

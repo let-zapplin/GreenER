@@ -11,8 +11,9 @@ export interface Location {
   country: string;
   region: string;
   city: string | null;
-  latitude: number;
-  longitude: number;
+  // Coordenadas são opcionais: sem elas o serviço continua no catálogo.
+  latitude: number | null;
+  longitude: number | null;
 }
 
 /** Serviço como retornado por `GET /services`. */

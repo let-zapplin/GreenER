@@ -529,6 +529,7 @@
   font-size: 14px;
 
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .analyses-history-unit {
@@ -1722,9 +1723,9 @@
 
 .analyses-mode-switch {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+grid-template-columns: repeat(3, minmax(0, 1fr));
 
-  width: min(100%, 560px);
+width: min(100%, 760px);
 
   margin-top: 8px;
   margin-bottom: 18px;
@@ -2086,6 +2087,385 @@
 
 
 /* =========================================================
+   PROJEÇÃO REGIONAL
+   ---------------------------------------------------------
+   Workspace dedicado à simulação do impacto ambiental de
+   um serviço em diferentes localidades.
+   ========================================================= */
+
+.analyses-projection-workspace {
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+
+  min-width: 0;
+}
+
+.analyses-projection-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 28px;
+
+  padding: 22px;
+
+  border: 1px solid #315657;
+  border-radius: 16px;
+
+  background: #0c2d30;
+}
+
+.analyses-projection-intro > div:first-child {
+  max-width: 680px;
+}
+
+.analyses-projection-intro h2 {
+  margin: 4px 0 8px;
+
+  color: #f4f8f5;
+
+  font-size: 1.15rem;
+}
+
+.analyses-projection-intro p {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.analyses-projection-notice {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  max-width: 310px;
+
+  padding: 12px 14px;
+
+  border: 1px solid rgba(139, 255, 93, 0.22);
+  border-radius: 11px;
+
+  background: rgba(139, 255, 93, 0.06);
+}
+
+.analyses-projection-notice strong {
+  color: #8bff5d;
+
+  font-size: 0.72rem;
+}
+
+.analyses-projection-notice span {
+  color: #b9ccc6;
+
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.analyses-projection-placeholder {
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  min-height: 150px;
+
+  padding: 22px;
+
+  border: 1px dashed #426c60;
+  border-radius: 16px;
+
+  background: rgba(12, 45, 48, 0.42);
+}
+
+.analyses-projection-placeholder > span {
+  display: grid;
+  place-items: center;
+
+  width: 44px;
+  height: 44px;
+
+  flex-shrink: 0;
+
+  border: 1px solid rgba(88, 203, 183, 0.35);
+  border-radius: 50%;
+
+  color: #58cbb7;
+
+  font-size: 1.4rem;
+}
+
+.analyses-projection-placeholder strong {
+  color: #f4f8f5;
+
+  font-size: 0.86rem;
+}
+
+.analyses-projection-placeholder p {
+  margin: 5px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   CONTROLES DA PROJEÇÃO REGIONAL
+   ========================================================= */
+
+.analyses-projection-controls {
+  display: grid;
+
+  grid-template-columns:
+    minmax(260px, 0.7fr)
+    minmax(0, 1.5fr);
+
+  gap: 16px;
+}
+
+.analyses-projection-service,
+.analyses-projection-regions {
+  padding: 20px;
+
+  border: 1px solid #315657;
+  border-radius: 16px;
+
+  background: #0c2d30;
+}
+
+.analyses-projection-service h3,
+.analyses-projection-regions h3 {
+  margin: 4px 0 6px;
+
+  color: #f4f8f5;
+}
+
+.analyses-projection-service > p,
+.analyses-projection-regions-header p {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------
+   Serviço usado na projeção
+   --------------------------------------------------------- */
+
+.analyses-projection-service label {
+  display: grid;
+
+  gap: 6px;
+
+  margin-top: 18px;
+}
+
+.analyses-projection-service label > span {
+  color: var(--text-muted);
+
+  font-size: 0.68rem;
+  font-weight: 700;
+
+  text-transform: uppercase;
+}
+
+.analyses-projection-service select {
+  min-height: 42px;
+
+  padding: 0 12px;
+
+  border: 1px solid #426c60;
+  border-radius: 9px;
+
+  outline: none;
+
+  background: #082627;
+  color: #f4f8f5;
+
+  font: inherit;
+}
+
+.analyses-projection-service select:focus {
+  border-color: #87e46c;
+}
+
+.analyses-projection-current {
+  display: grid;
+
+  gap: 3px;
+
+  margin-top: 14px;
+
+  padding: 12px;
+
+  border-radius: 10px;
+
+  background: rgba(88, 203, 183, 0.08);
+}
+
+.analyses-projection-current span,
+.analyses-projection-current small {
+  color: var(--text-muted);
+
+  font-size: 0.66rem;
+}
+
+.analyses-projection-current strong {
+  color: #58cbb7;
+
+  font-size: 0.8rem;
+}
+
+/* ---------------------------------------------------------
+   Regiões alternativas
+   --------------------------------------------------------- */
+
+.analyses-projection-regions-header {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  margin-bottom: 16px;
+}
+
+.analyses-projection-regions-header > span {
+  flex-shrink: 0;
+
+  padding: 6px 9px;
+
+  border: 1px solid #426c60;
+  border-radius: 999px;
+
+  color: #8bff5d;
+
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.analyses-projection-region-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 10px;
+}
+
+.analyses-projection-region {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  min-width: 0;
+
+  padding: 11px;
+
+  border: 1px solid #315657;
+  border-radius: 11px;
+
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.analyses-projection-region:hover {
+  border-color: #58cbb7;
+}
+
+.analyses-projection-region.is-selected {
+  border-color: rgba(139, 255, 93, 0.55);
+
+  background: rgba(139, 255, 93, 0.06);
+}
+
+.analyses-projection-region input {
+  position: absolute;
+
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+.analyses-projection-region-check {
+  display: grid;
+
+  place-items: center;
+
+  width: 22px;
+  height: 22px;
+
+  flex-shrink: 0;
+
+  border: 1px solid #426c60;
+  border-radius: 6px;
+
+  color: #082627;
+
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.analyses-projection-region.is-selected
+  .analyses-projection-region-check {
+  border-color: #8bff5d;
+
+  background: #8bff5d;
+}
+
+.analyses-projection-region-info {
+  display: grid;
+
+  min-width: 0;
+}
+
+.analyses-projection-region-info strong {
+  color: #f4f8f5;
+
+  font-size: 0.76rem;
+}
+
+.analyses-projection-region-info small {
+  color: var(--text-muted);
+
+  font-size: 0.66rem;
+}
+
+.analyses-projection-region-info > span {
+  margin-top: 4px;
+
+  color: #58cbb7;
+
+  font-size: 0.67rem;
+}
+
+.analyses-projection-region:has(input:disabled) {
+  cursor: not-allowed;
+
+  opacity: 0.38;
+}
+
+.analyses-projection-results {
+  display: grid;
+
+  gap: 16px;
+}
+
+/* =========================================================
    RESPONSIVIDADE DOS LAYOUTS
    ---------------------------------------------------------
    Abaixo de 1050px o modo lateral deixa de usar duas colunas.
@@ -2140,6 +2520,10 @@
   .analyses-overview-sort {
     justify-content: space-between;
   }
+
+  .analyses-projection-controls {
+  grid-template-columns: 1fr;
+}
 }
 
 @media (max-width: 700px) {
@@ -2379,4 +2763,31 @@
 
     justify-content: center;
   }
+
+  .analyses-mode-switch {
+  grid-template-columns: 1fr;
+  width: 100%;
+}
+
+.analyses-projection-intro {
+  flex-direction: column;
+}
+
+.analyses-projection-notice {
+  max-width: none;
+  width: 100%;
+}
+
+.analyses-projection-placeholder {
+  align-items: flex-start;
+}
+
+.analyses-projection-region-grid {
+  grid-template-columns: 1fr;
+}
+
+.analyses-projection-result-debug {
+  align-items: flex-start;
+  flex-direction: column;
+}
 }

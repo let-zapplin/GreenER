@@ -1,4 +1,5 @@
 import type { MonitoredService } from "../types/service";
+import { formatServicePlace } from "../lib/serviceLocation";
 import "./ComparisonServiceSelector.css";
 
 type ComparisonServiceSelectorProps = {
@@ -81,7 +82,7 @@ export function ComparisonServiceSelector({
                 <strong>{service.name}</strong>
 
                 <small>
-                  {service.location.region_code}
+                  {formatServicePlace(service.location)}
                 </small>
               </span>
             </label>
