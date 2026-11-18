@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import { env } from "../../config/env.js";
 import {
   ANSWER_SYSTEM_PROMPT,
@@ -93,6 +94,7 @@ export class OllamaClient implements ChatLlm {
     }
 
     const content = await this.chat({
+      operation: "classification",
       system: CLASSIFIER_SYSTEM_PROMPT,
       history: history.slice(-6),
       user: buildClassifierUserPrompt(message, serviceNames),
@@ -101,7 +103,18 @@ export class OllamaClient implements ChatLlm {
       format: "json",
     });
 
-    return content === null ? null : parseClassification(content);
+    if (content === null) {
+      return null;
+    }
+
+    const classification = parseClassification(content);
+    if (classification === null) {
+      console.warn(
+        "⚠️ Ollama retornou uma classificação inválida; usando modo regras.",
+      );
+    }
+
+    return classification;
   }
 
   async answer(
@@ -114,6 +127,7 @@ export class OllamaClient implements ChatLlm {
     }
 
     return this.chat({
+      operation: "answer",
       system: ANSWER_SYSTEM_PROMPT,
       history: history.slice(-4),
       user: buildAnswerUserPrompt(question, context),
@@ -130,6 +144,7 @@ export class OllamaClient implements ChatLlm {
     }
 
     const content = await this.chat({
+      operation: "warmup",
       system: "Responda apenas com ok.",
       history: [],
       user: "ok",
@@ -141,6 +156,7 @@ export class OllamaClient implements ChatLlm {
   }
 
   private async chat({
+    operation,
     system,
     history,
     user,
@@ -148,6 +164,7 @@ export class OllamaClient implements ChatLlm {
     numPredict,
     format,
   }: {
+    operation: "classification" | "answer" | "warmup";
     system: string;
     history: ChatHistoryMessage[];
     user: string;
@@ -155,6 +172,14 @@ export class OllamaClient implements ChatLlm {
     numPredict: number;
     format?: "json";
   }): Promise<string | null> {
+    const startedAt = performance.now();
+    let outcome:
+      | "success"
+      | "http_error"
+      | "invalid_response"
+      | "timeout"
+      | "request_error" = "request_error";
+
     try {
       const response = await fetch(`${this.baseUrl}/api/chat`, {
         method: "POST",
@@ -184,22 +209,39 @@ export class OllamaClient implements ChatLlm {
       });
 
       if (!response.ok) {
+        outcome = "http_error";
         console.warn(
-          `⚠️ Ollama respondeu ${response.status}; usando resposta determinística.`,
+          `⚠️ Ollama ${operation} respondeu HTTP ${response.status}; usando modo regras.`,
         );
         return null;
       }
 
       const data = (await response.json()) as OllamaResponse;
-      return typeof data.message?.content === "string"
-        ? data.message.content
-        : null;
+      const content = data.message?.content;
+      if (typeof content !== "string" || content.trim() === "") {
+        outcome = "invalid_response";
+        console.warn(
+          `⚠️ Ollama ${operation} retornou conteúdo inválido; usando modo regras.`,
+        );
+        return null;
+      }
+
+      outcome = "success";
+      return content;
     } catch (error) {
+      const timedOut =
+        error instanceof Error &&
+        (error.name === "AbortError" || error.name === "TimeoutError");
+      outcome = timedOut ? "timeout" : "request_error";
       console.warn(
-        "⚠️ Ollama indisponível; usando resposta determinística.",
-        error instanceof Error ? error.message : error,
+        `⚠️ Ollama ${operation} ${timedOut ? "atingiu o timeout" : "falhou"}; usando modo regras.`,
       );
       return null;
+    } finally {
+      const latencyMs = Math.round(performance.now() - startedAt);
+      console.log(
+        `Ollama ${operation} latency_ms=${latencyMs} outcome=${outcome}`,
+      );
     }
   }
 }

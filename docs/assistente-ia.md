@@ -255,21 +255,22 @@ Todos os arquivos novos ficam em `backend/src/modules/chat/`.
 | Arquivo | Responsabilidade |
 | --- | --- |
 | `chat.types.ts` | Contrato completo: `ChatIntent`, `ChatReply`, `ChatContext`, `ChatHistoryMessage`, `ChatClarification`, `ChatSuggestion` e `ChatLlm`. |
-| `chat.state.ts` | Memória em processo por `conversationId`, com TTL de 30 min e limite de 500 conversas. |
+| `chat.state.ts` | Memória em processo por `conversationId`, vinculada ao `userId`, com TTL de 30 min e limite de 500 conversas. |
 | `chat.cache.ts` | Cache TTL/LRU genérico e `SingleFlight` para juntar execuções simultâneas iguais. |
 | `chat.period.ts` | Períodos permitidos, validação, cálculo de início/fim e frases em português. |
 | `chat.prompt.ts` | Prompts do classificador e do redator, além do extrator de JSON. |
 | `chat.knowledge.ts` | Base curada do README e de `docs/calculos.md`, normalização, recuperação lexical, classificação por pistas e renderização com os valores atuais do modelo de potência. |
-| `ollama.client.ts` | Cliente HTTP de `/api/chat` do Ollama, com histórico, `num_ctx`, timeout, fallback para `null` e `warmup()`. |
+| `ollama.client.ts` | Cliente HTTP de `/api/chat` do Ollama, com histórico, `num_ctx`, timeout, fallback para `null`, `warmup()` e logs de latência sem conteúdo de prompts. |
 | `chat.service.ts` | Orquestra validação, contexto, resolução de serviço, clarificação, classificação regras-primeiro, caches, ferramentas, conhecimento, gráficos, sugestões, estado e resposta final. |
 | `chat.factory.ts` | Monta o `ChatService` com as dependências reais e o estado compartilhado. |
-| `chat.controller.ts` | Lê `message`, `period`, `conversationId`, `context` e `history` do corpo. |
+| `chat.controller.ts` | Lê a mensagem, valida a titularidade da conversa pelo JWT e limita requisições simultâneas. |
 | `chat.routes.ts` | Rota `POST /api/chat` protegida por JWT. |
 | `chat.knowledge.test.ts` | Recuperação das seções, dica de continuação, guarda de perguntas de dados, fallback e substituição de placeholders. |
 | `chat.cache.test.ts` | Expiração, descarte LRU e reutilização de execuções simultâneas. |
 | `chat.service.test.ts` | Testes unitários das intenções, gráficos, fallback, regras-primeiro e caches. |
 | `chat.conversation.test.ts` | Memória, contexto, clarificação, histórico, período, conhecimento e avaliação determinística. |
-| `chat.http.test.ts` | Testes HTTP de autenticação, validação e resposta. |
+| `chat.http.test.ts` | Testes HTTP de autenticação, validação, titularidade da conversa, limite de concorrência e resposta. |
+| `ollama.client.test.ts` | Testa logs de latência e fallback sem expor o conteúdo da pergunta. |
 
 Integrações alteradas:
 
@@ -549,7 +550,7 @@ com base em `chart.type`. O modelo **não gera código de gráfico**.
 | Variável | Padrão do código | No Compose | Uso |
 | --- | --- | --- | --- |
 | `OLLAMA_URL` | `http://localhost:11434` | `http://ollama:11434` | Endereço da API do Ollama. |
-| `OLLAMA_MODEL` | `qwen2.5:3b` | `${OLLAMA_MODEL:-qwen2.5:3b}` | Modelo usado para desambiguar intenção e redigir respostas de conhecimento. |
+| `OLLAMA_MODEL` | `qwen2.5:3b` | `${OLLAMA_MODEL:-qwen2.5:3b}` | Tag padrão fixada; pode ser substituída explicitamente pela variável de ambiente. |
 | `OLLAMA_TIMEOUT_MS` | `60000` | `${OLLAMA_TIMEOUT_MS:-60000}` | Timeout de cada chamada ao Ollama. |
 | `OLLAMA_NUM_CTX` | `4096` | `${OLLAMA_NUM_CTX:-4096}` | Janela total de contexto: prompt + histórico + resposta. |
 | `OLLAMA_ENABLED` | `true` | `${OLLAMA_ENABLED:-true}` | `false` força o modo regras. |
@@ -575,14 +576,15 @@ Os “tokens” continuam existindo tecnicamente e são limitados assim:
 
 Se o histórico crescer além da janela, o backend trunca o que envia. Aumentar
 `OLLAMA_NUM_CTX` permite conversas mais longas, mas consome mais RAM e pode deixar a
-resposta mais lenta. Não há rate limiting nem fila por usuário no protótipo; com o
-modelo local, o limite prático é a capacidade da máquina.
+resposta mais lenta. O endpoint aceita uma requisição de chat em processamento por
+processo; chamadas simultâneas adicionais recebem HTTP `429` para evitar fila no modelo.
 
 ### Serviços no Docker Compose
 
 ```yaml
 ollama:
-  image: ollama/ollama:latest
+  image: ollama/ollama:0.5.7
+  profiles: ["ai"]
   ports: ["11434:11434"]
   volumes: [ollama_data:/root/.ollama]
   environment:
@@ -590,7 +592,8 @@ ollama:
     OLLAMA_NUM_PARALLEL: "1"
 
 ollama-init:
-  image: ollama/ollama:latest
+  image: ollama/ollama:0.5.7
+  profiles: ["ai"]
   depends_on:
     ollama: { condition: service_healthy }
   environment:
@@ -601,11 +604,12 @@ ollama-init:
 ```
 
 - `ollama`: servidor HTTP e volume persistente dos modelos.
-- `ollama-init`: baixa o modelo uma única vez e já o carrega na memória com
+- Os serviços `ollama` e `ollama-init` só iniciam com `--profile ai`.
+- `ollama-init`: baixa a tag configurada (`qwen2.5:3b` por padrão) uma única vez e já o carrega na memória com
   `keep_alive` de 30 min, encerrando em seguida. Se o modelo já estiver no volume, a
   operação termina rapidamente.
 - `backend`: recebe `OLLAMA_URL=http://ollama:11434` e chama `warmup()` ao iniciar.
-- O volume `ollama_data` evita baixar o modelo a cada `docker compose up`.
+- O volume `ollama_data` preserva o modelo entre execuções.
 
 O backend **não usa `depends_on: ollama`**. Assim ele sempre sobe, e o assistente cai
 no modo regras enquanto o Ollama/modelo não estiverem prontos.
@@ -786,7 +790,14 @@ Na raiz:
 docker compose up --build
 ```
 
-O `ollama-init` baixa `qwen2.5:3b` no primeiro uso. A Home fica em
+Esse comando sobe o sistema sem iniciar o Ollama. Para habilitar o assistente com
+modelo local, use:
+
+```bash
+docker compose --profile ai up --build
+```
+
+O `ollama-init` baixa `qwen2.5:3b` no primeiro uso do profile. A Home fica em
 `http://localhost:5173/home`, o backend em `http://localhost:3000` e o Ollama em
 `http://localhost:11434`.
 
@@ -840,7 +851,8 @@ recebidas.
 - **Validação de entrada**: mensagem não vazia, até 500 caracteres; período em lista
   fechada; `conversationId`, contexto e histórico com formato e tamanho limitados.
 - **Memória isolada por conversa**: o estado só é recuperado pelo `conversationId`
-  enviado pelo próprio cliente e expira em 30 minutos.
+  enviado pelo próprio cliente, é vinculado ao `userId` extraído do JWT e expira em
+  30 minutos. Tentativas de outro usuário recebem `403`.
 - **Sem geração de SQL ou código** pelo modelo.
 - **Gráfico declarativo**: o modelo não envia HTML, JavaScript ou código Recharts.
 - **Prompt injection**: o texto do usuário e o contexto são enviados como dados
@@ -849,6 +861,9 @@ recebidas.
 - **Dados compactos**: o modelo recebe apenas o necessário (top 5, totais, flags), não
   o banco inteiro.
 - **Timeout e fallback**: falhas do Ollama não derrubam a Home.
+- **Observabilidade sem conteúdo sensível**: cada chamada ao Ollama registra sua
+  latência e resultado (`outcome`), e falhas que acionam o modo regras geram aviso sem
+  registrar a pergunta ou a resposta.
 - **Erros internos**: o middleware global devolve mensagem genérica, sem stack trace.
 
 ### Limitações do protótipo
@@ -872,7 +887,8 @@ recebidas.
 - Respostas de conhecimento podem variar entre execuções; as respostas de dados são
   determinísticas para a mesma consulta.
 - Não há streaming token a token (`stream: false`).
-- Não há rate limiting nem fila por usuário.
+- O limite de concorrência é uma requisição de chat por processo; chamadas adicionais
+  recebem HTTP `429` e devem ser tentadas novamente pelo cliente.
 - Não há GPU configurada por padrão.
 - A suíte de avaliação cobre **intenções e clarificações determinísticas**, não a
   qualidade textual do LLM.
@@ -987,20 +1003,27 @@ npm test
 - continuação de conhecimento (“E a energia?”) e preservação do serviço ativo;
 - **suíte de avaliação** com 29 perguntas e intenções esperadas, sem Ollama.
 
-`chat.http.test.ts` (6 testes):
+`chat.http.test.ts` (8 testes):
 
 - `401` sem token;
 - `401` com token inválido;
 - `400` para mensagem vazia;
 - `400` para mensagem não textual;
 - `400` para período inválido;
-- `200` com resposta determinística quando não há dados.
+- `200` com resposta determinística quando não há dados;
+- `429` quando já existe uma requisição em processamento;
+- `403` quando outro usuário tenta usar a conversa.
 
-Na implementação, os **94 testes do módulo de chat** passaram (23 de conhecimento, 14 de
-serviço, 46 de conversa, 5 de cache e 6 HTTP). A suíte completa do backend terminou com
-**250 testes passando e 7 ignorados** (integração com banco real). PostgreSQL e Ollama
-são substituídos por mocks; `vitest.setup.ts` fornece URLs fictícias das APIs externas
-para que o app carregue sem o `.env` real.
+`ollama.client.test.ts` (3 testes):
+
+- latência e resultado registrados sem logar a pergunta;
+- aviso e latência registrados quando a chamada falha e o modo regras é usado.
+- timeout identificado e registrado sem incluir dados da pergunta.
+
+Na validação desta alteração, os **110 testes do módulo de chat** passaram e o
+typecheck do backend foi aprovado. PostgreSQL e Ollama são substituídos por mocks;
+`vitest.setup.ts` fornece URLs fictícias das APIs externas para que o app carregue sem
+o `.env` real.
 
 ---
 
@@ -1027,6 +1050,7 @@ backend/
     ├── chat.routes.ts
     ├── chat.knowledge.test.ts
     ├── chat.cache.test.ts
+    ├── ollama.client.test.ts
     ├── chat.service.test.ts
     ├── chat.conversation.test.ts
     └── chat.http.test.ts
