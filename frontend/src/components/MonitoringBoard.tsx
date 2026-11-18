@@ -11,17 +11,21 @@ import {
   type ReactNode,
 } from "react";
 import {
+  ArrowsLeftRightIcon,
   ArrowCounterClockwiseIcon,
   ChartBarIcon,
   CheckIcon,
+  ClockCounterClockwiseIcon,
   DotsSixVerticalIcon,
   GaugeIcon,
+  GlobeHemisphereWestIcon,
   GridFourIcon,
   ListDashesIcon,
   MapTrifoldIcon,
   MinusIcon,
   PencilSimpleIcon,
   PlusIcon,
+  RankingIcon,
   SlidersHorizontalIcon,
   TrashIcon,
   XIcon,
@@ -65,6 +69,16 @@ const WIDGET_ICONS: Record<MonitoringWidgetType, ReactNode> = {
   region: <ChartBarIcon aria-hidden="true" weight="bold" />,
   services: <ListDashesIcon aria-hidden="true" weight="bold" />,
   summary: <GaugeIcon aria-hidden="true" weight="bold" />,
+  ranking: <RankingIcon aria-hidden="true" weight="bold" />,
+  history: (
+    <ClockCounterClockwiseIcon aria-hidden="true" weight="bold" />
+  ),
+  comparison: (
+    <ArrowsLeftRightIcon aria-hidden="true" weight="bold" />
+  ),
+  projection: (
+    <GlobeHemisphereWestIcon aria-hidden="true" weight="bold" />
+  ),
 };
 
 const PALETTE_GROUPS = [

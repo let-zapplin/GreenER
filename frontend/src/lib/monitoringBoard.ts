@@ -15,7 +15,15 @@ export const MIN_CELL_PX = 56;
 /** Linhas vazias mostradas durante a edição, como área de descarte. */
 export const EDIT_SPARE_ROWS = 2;
 
-export type MonitoringWidgetType = "map" | "region" | "services" | "summary";
+export type MonitoringWidgetType =
+  | "map"
+  | "region"
+  | "services"
+  | "summary"
+  | "ranking"
+  | "history"
+  | "comparison"
+  | "projection";
 
 export type MonitoringWidgetKind = "visualizacao" | "indicador";
 
@@ -66,6 +74,42 @@ export const MONITORING_WIDGETS: readonly MonitoringWidgetSpec[] = [
     h: 3,
     minW: 3,
     minH: 2,
+  },
+  {
+    type: "ranking",
+    kind: "indicador",
+    label: "Ranking de impacto",
+    w: 4,
+    h: 6,
+    minW: 3,
+    minH: 4,
+  },
+  {
+    type: "history",
+    kind: "visualizacao",
+    label: "Histórico do serviço",
+    w: 6,
+    h: 5,
+    minW: 4,
+    minH: 3,
+  },
+  {
+    type: "comparison",
+    kind: "visualizacao",
+    label: "Comparação de serviços",
+    w: 6,
+    h: 5,
+    minW: 4,
+    minH: 3,
+  },
+  {
+    type: "projection",
+    kind: "visualizacao",
+    label: "Projeção de localização",
+    w: 6,
+    h: 5,
+    minW: 4,
+    minH: 3,
   },
 ];
 

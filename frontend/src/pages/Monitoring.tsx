@@ -15,6 +15,14 @@ import logoMin from "../../assets/logo_min.png";
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useDashboardSummary } from "../hooks/useDashboardSummary";
 import { useServiceIndicators } from "../hooks/useServiceIndicators";
+import { useAnalysisPeriod } from "../hooks/useAnalysisPeriod";
+import {
+  AnalysisComparisonWidget,
+  AnalysisHistoryWidget,
+  AnalysisProjectionWidget,
+  AnalysisRankingWidget,
+  type AnalysisPeriodControl,
+} from "../components/AnalysisBoardWidgets";
 import { MapServiceDetailsPanel } from "../components/MapServiceDetailsPanel";
 import { EnvironmentOverviewDock } from "../components/EnvironmentOverviewDock";
 import { RegionEnergyChart } from "../components/RegionEnergyChart";
@@ -46,10 +54,34 @@ export function Monitoring() {
   } = useDashboardSummary();
 
   const {
+    periods: analysisPeriods,
+    durationMs: analysisPeriodMs,
+    period: analysisPeriod,
+    selectPeriod,
+  } = useAnalysisPeriod();
+
+  const {
     indicators: serviceIndicators,
     loading: indicatorsLoading,
     error: indicatorsError,
   } = useServiceIndicators();
+
+  const {
+    indicators: analysisIndicators,
+    loading: analysisIndicatorsLoading,
+    error: analysisIndicatorsError,
+  } = useServiceIndicators(analysisPeriod);
+
+  const analysisPeriodLabel =
+    analysisPeriods.find(
+      (period) => period.value === analysisPeriodMs,
+    )?.label ?? "Período atual";
+
+  const periodControl: AnalysisPeriodControl = {
+    periods: analysisPeriods,
+    durationMs: analysisPeriodMs,
+    onSelectPeriod: selectPeriod,
+  };
 
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     null,
@@ -381,6 +413,39 @@ export function Monitoring() {
           initialCollapsed={false}
         />
       </div>
+    ),
+    ranking: (
+      <AnalysisRankingWidget
+        services={services}
+        indicators={analysisIndicators}
+        loading={analysisIndicatorsLoading}
+        error={analysisIndicatorsError}
+        periodLabel={analysisPeriodLabel}
+        periodControl={periodControl}
+      />
+    ),
+    history: (
+      <AnalysisHistoryWidget
+        services={services}
+        period={analysisPeriod}
+        periodControl={periodControl}
+      />
+    ),
+    comparison: (
+      <AnalysisComparisonWidget
+        services={services}
+        indicators={analysisIndicators}
+        indicatorsLoading={analysisIndicatorsLoading}
+        period={analysisPeriod}
+        periodControl={periodControl}
+      />
+    ),
+    projection: (
+      <AnalysisProjectionWidget
+        services={services}
+        period={analysisPeriod}
+        periodControl={periodControl}
+      />
     ),
   };
 
