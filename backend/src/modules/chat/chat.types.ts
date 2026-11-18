@@ -76,6 +76,7 @@ export type ChatSuggestion = {
 
 export type ChatRequestOptions = {
   conversationId?: unknown;
+  userId?: string;
   context?: unknown;
   history?: unknown;
 };

@@ -16,6 +16,7 @@ export type ChatPendingClarification = {
 
 export type ChatConversationState = {
   conversationId: string;
+  userId: string;
   lastIntent: ChatIntent | null;
   activeService: ChatServiceReference | null;
   activePeriod: ChatPeriod | null;
@@ -90,3 +91,5 @@ export class InMemoryChatStateStore implements ChatStateStore {
     }
   }
 }
+
+export const chatStateStore = new InMemoryChatStateStore();

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { AppError } from "../../shared/errors/AppError.js";
+import { AppError, ForbiddenError } from "../../shared/errors/AppError.js";
 import { SingleFlight, TtlCache } from "./chat.cache.js";
 import { DashboardService } from "../dashboard/dashboard.service.js";
 import { IndicadoresService } from "../indicadores/indicadores.service.js";
@@ -1413,8 +1413,15 @@ export class ChatService {
       parseChatHistory(options.history),
       message,
     );
+    const userId = options.userId ?? "anonymous";
 
     const conversation = this.states.get(conversationId);
+    if (conversation !== null && conversation.userId !== userId) {
+      throw new ForbiddenError(
+        "Você não tem permissão para acessar esta conversa",
+      );
+    }
+
     const period = detectPeriodInMessage(message) ?? requestedPeriod;
     const cacheKey = this.replyCacheKey(
       message,
@@ -1429,6 +1436,7 @@ export class ChatService {
 
       if (cached !== null) {
         this.saveState(
+          userId,
           conversationId,
           conversation,
           message,
@@ -1453,6 +1461,7 @@ export class ChatService {
           });
 
     this.saveState(
+      userId,
       conversationId,
       conversation,
       message,
@@ -3018,6 +3027,7 @@ export class ChatService {
   }
 
   private saveState(
+    userId: string,
     conversationId: string,
     previous: ChatConversationState | null,
     message: string,
@@ -3054,6 +3064,7 @@ export class ChatService {
 
     this.states.set({
       conversationId,
+      userId,
       lastIntent: draft.intent,
       activeService,
       activePeriod: period,
