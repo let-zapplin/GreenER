@@ -26,7 +26,8 @@ services:
 
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.5.7
+    profiles: ["ai"]
 
     ports:
       - "11434:11434"
@@ -52,7 +53,8 @@ services:
 
   # Baixa o modelo uma única vez no volume e o deixa carregado.
   ollama-init:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.5.7
+    profiles: ["ai"]
 
     depends_on:
       ollama:
