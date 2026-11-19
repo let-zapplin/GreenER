@@ -1,3 +1,4 @@
+import { useChartTouch } from "../hooks/useChartTouch";
 import {
   Bar,
   BarChart,
@@ -25,6 +26,7 @@ export function RegionEnergyChart({
   loading,
   error,
 }: RegionEnergyChartProps) {
+  const isTouch = useChartTouch();
   const data = groupEnergyByRegion(indicators, services);
 
   return (
@@ -89,6 +91,7 @@ export function RegionEnergyChart({
                   }
                 />
                 <Tooltip
+              trigger={isTouch ? "click" : "hover"}
                   cursor={{ fill: "rgba(135, 228, 108, 0.08)" }}
                   formatter={(value) => [
                     `${Number(value).toLocaleString("pt-BR", {
@@ -108,6 +111,9 @@ export function RegionEnergyChart({
                       : "";
                   }}
                   contentStyle={{
+                maxWidth: "100%",
+                whiteSpace: "normal",
+                overflowWrap: "anywhere",
                     border: "1px solid #426c60",
                     borderRadius: 10,
                     background: "#0c282bf2",

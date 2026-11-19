@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   Bar,
   BarChart,
@@ -9,6 +11,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+import { useChartTouch } from "../hooks/useChartTouch";
 
 import type {
   LocationProjectionScenario,
@@ -30,6 +34,7 @@ type ProjectionChartData = {
   regionCode: string;
 
   name: string;
+
   country: string;
 
   value: number | null;
@@ -41,6 +46,7 @@ type ProjectionChartData = {
 
 type AxisTickProps = {
   x?: number | string;
+
   y?: number | string;
 
   payload?: {
@@ -56,6 +62,23 @@ function formatValue(
   }
 
   return value.toFixed(2);
+}
+
+function formatCompactValue(
+  value: number,
+): string {
+  return value.toLocaleString(
+    "pt-BR",
+    {
+      maximumSignificantDigits: 3,
+
+      notation:
+        value !== 0 &&
+        Math.abs(value) < 0.001
+          ? "scientific"
+          : "compact",
+    },
+  );
 }
 
 function getBarColor(
@@ -97,19 +120,26 @@ function getScenarioLabel(
 export function LocationProjectionChart({
   scenarios,
 }: LocationProjectionChartProps) {
+  const [isCompact, setIsCompact] =
+    useState(false);
+
+  const isTouch =
+    useChartTouch();
+
   /*
-   * Consideramos melhor/pior apenas entre as
-   * LOCALIDADES PROJETADAS.
+   * Consideramos melhor/pior apenas entre
+   * as localidades projetadas.
    *
-   * A localização atual continua funcionando
-   * separadamente como referência.
+   * A localização atual continua separada
+   * como referência da projeção.
    */
   const projectedScenarios =
     scenarios
       .filter(
         (scenario) =>
           !scenario.isCurrent &&
-          scenario.projectedEmissionsGco2e !== null,
+          scenario.projectedEmissionsGco2e !==
+            null,
       )
       .sort(
         (first, second) =>
@@ -133,15 +163,17 @@ export function LocationProjectionChart({
     scenarios.find(
       (scenario) =>
         scenario.isCurrent &&
-        scenario.projectedEmissionsGco2e !== null,
+        scenario.projectedEmissionsGco2e !==
+          null,
     ) ?? null;
 
   const currentEmission =
-    currentScenario?.projectedEmissionsGco2e ??
+    currentScenario
+      ?.projectedEmissionsGco2e ??
     null;
 
   /*
-   * Monta os dados do gráfico e já identifica
+   * Monta os dados do gráfico e identifica
    * o papel visual de cada cenário.
    */
   const chartData: ProjectionChartData[] =
@@ -183,24 +215,36 @@ export function LocationProjectionChart({
           kind,
         };
       })
-      .sort((first, second) => {
-        if (
-          first.value === null &&
-          second.value === null
-        ) {
-          return 0;
-        }
+      .sort(
+        (
+          first,
+          second,
+        ) => {
+          if (
+            first.value === null &&
+            second.value === null
+          ) {
+            return 0;
+          }
 
-        if (first.value === null) {
-          return 1;
-        }
+          if (
+            first.value === null
+          ) {
+            return 1;
+          }
 
-        if (second.value === null) {
-          return -1;
-        }
+          if (
+            second.value === null
+          ) {
+            return -1;
+          }
 
-        return first.value - second.value;
-      });
+          return (
+            first.value -
+            second.value
+          );
+        },
+      );
 
   /*
    * Tick customizado:
@@ -237,7 +281,9 @@ export function LocationProjectionChart({
 
     return (
       <g
-        transform={`translate(${Number(x)}, ${Number(y)})`}
+        transform={`translate(${Number(
+          x,
+        )}, ${Number(y)})`}
       >
         <text
           x={0}
@@ -245,7 +291,11 @@ export function LocationProjectionChart({
           dy={14}
           textAnchor="middle"
           fill="#dce9e4"
-          fontSize={11}
+          fontSize={
+            isCompact
+              ? 9
+              : 11
+          }
           fontWeight={700}
         >
           {entry.regionCode}
@@ -259,7 +309,11 @@ export function LocationProjectionChart({
           fill={getBarColor(
             entry.kind,
           )}
-          fontSize={9}
+          fontSize={
+            isCompact
+              ? 8
+              : 9
+          }
           fontWeight={700}
         >
           {label}
@@ -286,21 +340,43 @@ export function LocationProjectionChart({
           </p>
         </div>
 
-        <span>gCO₂e</span>
+        <span>
+          gCO₂e
+        </span>
       </div>
 
-      <div className="location-projection-chart-canvas">
+      <div
+        className="location-projection-chart-canvas"
+        role="img"
+        aria-label="Comparativo de emissões projetadas por região, em gramas de CO₂e"
+      >
         <ResponsiveContainer
           width="100%"
           height="100%"
+          onResize={(
+            width: number,
+          ) =>
+            setIsCompact(
+              width < 420,
+            )
+          }
         >
           <BarChart
             data={chartData}
             margin={{
               top: 26,
-              right: 20,
+
+              right:
+                isCompact
+                  ? 8
+                  : 20,
+
               bottom: 34,
-              left: 4,
+
+              left:
+                isCompact
+                  ? 0
+                  : 4,
             }}
             barCategoryGap="24%"
           >
@@ -313,7 +389,9 @@ export function LocationProjectionChart({
             <XAxis
               type="category"
               dataKey="regionCode"
-              tick={renderXAxisTick}
+              tick={
+                renderXAxisTick
+              }
               tickLine={false}
               axisLine={{
                 stroke:
@@ -325,38 +403,74 @@ export function LocationProjectionChart({
 
             <YAxis
               type="number"
-              tickFormatter={(value) =>
-                formatValue(
-                  Number(value),
-                )
+              tickFormatter={(
+                value,
+              ) =>
+                isCompact
+                  ? formatCompactValue(
+                      Number(
+                        value,
+                      ),
+                    )
+                  : formatValue(
+                      Number(
+                        value,
+                      ),
+                    )
               }
               tickLine={false}
               axisLine={false}
-              width={58}
+              width={
+                isCompact
+                  ? 48
+                  : 58
+              }
               tick={{
-                fill: "#9fb6ad",
-                fontSize: 10,
+                fill:
+                  "#9fb6ad",
+
+                fontSize:
+                  isCompact
+                    ? 9
+                    : 10,
               }}
             />
 
-            {currentEmission !== null && (
+            {currentEmission !==
+              null && (
               <ReferenceLine
-                y={currentEmission}
+                y={
+                  currentEmission
+                }
                 stroke="#58cbb7"
-                strokeWidth={1.5}
+                strokeWidth={
+                  1.5
+                }
                 strokeDasharray="5 5"
                 label={{
                   value:
                     "Impacto atual",
+
                   position:
                     "insideTopRight",
-                  fill: "#58cbb7",
-                  fontSize: 10,
+
+                  fill:
+                    "#58cbb7",
+
+                  fontSize:
+                    isCompact
+                      ? 9
+                      : 10,
                 }}
               />
             )}
 
             <Tooltip
+              trigger={
+                isTouch
+                  ? "click"
+                  : "hover"
+              }
               labelFormatter={(
                 regionCode,
               ) => {
@@ -373,11 +487,25 @@ export function LocationProjectionChart({
 
                 return `${entry.name} · ${entry.country}`;
               }}
-              formatter={(value) => [
-                `${formatValue(Number(value))} gCO₂e`,
+              formatter={(
+                value,
+              ) => [
+                `${formatValue(
+                  Number(value),
+                )} gCO₂e`,
+
                 "Emissão projetada",
               ]}
               contentStyle={{
+                maxWidth:
+                  "100%",
+
+                whiteSpace:
+                  "normal",
+
+                overflowWrap:
+                  "anywhere",
+
                 background:
                   "#0c2d30f2",
 
@@ -418,9 +546,15 @@ export function LocationProjectionChart({
                 2,
                 2,
               ]}
-              maxBarSize={44}
+              maxBarSize={
+                isCompact
+                  ? 36
+                  : 44
+              }
               isAnimationActive
-              animationDuration={380}
+              animationDuration={
+                380
+              }
               animationEasing="ease-out"
             >
               {chartData.map(
@@ -449,21 +583,25 @@ export function LocationProjectionChart({
       <div className="location-projection-chart-legend">
         <span>
           <i className="is-best" />
+
           Melhor projeção
         </span>
 
         <span>
           <i className="is-current" />
+
           Localização atual
         </span>
 
         <span>
           <i className="is-projected" />
+
           Outras projeções
         </span>
 
         <span>
           <i className="is-worst" />
+
           Maior impacto
         </span>
       </div>

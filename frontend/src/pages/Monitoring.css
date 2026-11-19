@@ -1811,7 +1811,7 @@
 
   width: 100%;
 
-  height: clamp(520px, 64vh, 680px);
+  height: auto;
 
 
 
@@ -1827,7 +1827,7 @@
 
 
 
-.services-map-stage .services-map-shell {
+.services-map-viewport .services-map-shell {
 
   width: 100%;
 
@@ -2220,11 +2220,7 @@
 
 
 
-.monitoring-charts-layout .services-map-stage {
 
-  height: 380px;
-
-}
 
 /* =========================================================
    ATRIBUIÇÃO DO MAPLIBRE
@@ -2538,127 +2534,27 @@
 
 
 
-.monitoring-map-shell:fullscreen {
 
-  display: flex;
 
-  flex-direction: column;
 
 
 
-  width: 100%;
 
-  max-width: none;
 
 
 
-  height: 100%;
 
 
 
-  margin: 0;
 
 
 
-  border: 0;
 
-  border-radius: 0;
 
 
 
-  background: #0c282b;
 
-}
 
-
-
-.monitoring-map-shell:fullscreen .services-map-workspace {
-
-  flex: 1;
-
-
-
-  min-height: 0;
-
-}
-
-
-
-.monitoring-map-shell:fullscreen .services-map-stage {
-
-  flex: 1;
-
-
-
-  height: 100%;
-
-  min-height: 0;
-
-
-
-  overflow: hidden;
-
-}
-
-
-
-.monitoring-map-shell:fullscreen
-
-  .services-map-stage
-
-  .services-map-shell {
-
-  height: 100%;
-
-  min-height: 0;
-
-}
-
-
-
-.monitoring-map-shell:fullscreen .services-map-overlay {
-
-  position: absolute;
-
-
-
-  inset:
-
-    60px
-
-    18px
-
-    46px
-
-    auto;
-
-
-
-  width: min(
-
-    420px,
-
-    42%
-
-  );
-
-
-
-  margin: 0;
-
-}
-
-
-
-.monitoring-map-shell:fullscreen
-
-  .map-service-panel {
-
-  height: 100%;
-
-  max-height: 100%;
-
-}
 
 
 
@@ -2666,27 +2562,7 @@
 
 /* Legenda passa a fazer parte da área fullscreen */
 
-.monitoring-map-shell:fullscreen
 
-  .services-map-footer {
-
-  flex-shrink: 0;
-
-
-
-  margin-top: 0;
-
-  padding: 12px 18px;
-
-
-
-  background: #0c282b;
-
-
-
-  border-top: 1px solid rgba(88, 154, 144, 0.18);
-
-}
 
 
 
@@ -2722,7 +2598,7 @@
    RODAPÉ OPERACIONAL — FULLSCREEN
    ========================================================= */
 
-.monitoring-map-shell:fullscreen
+.monitoring-map-shell.is-fullscreen
   .services-map-fullscreen-footer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -2739,7 +2615,7 @@
   border-top: 1px solid rgba(88, 154, 144, 0.18);
 }
 
-.monitoring-map-shell:fullscreen
+.monitoring-map-shell.is-fullscreen
   .services-map-hud-fullscreen {
   display: flex;
   align-items: center;
@@ -2749,13 +2625,13 @@
   gap: 14px;
 }
 
-.monitoring-map-shell:fullscreen
+.monitoring-map-shell.is-fullscreen
   .services-map-hud-fullscreen
   .services-map-count {
   flex-shrink: 0;
 }
 
-.monitoring-map-shell:fullscreen
+.monitoring-map-shell.is-fullscreen
   .services-map-hud-fullscreen
   .service-hud {
   flex: 1;
@@ -2767,7 +2643,7 @@
   padding: 4px 2px;
 }
 
-.monitoring-map-shell:fullscreen
+.monitoring-map-shell.is-fullscreen
   .services-map-fullscreen-footer
   .services-map-footer {
   flex-shrink: 0;
@@ -2798,11 +2674,7 @@
 
 
 
-  .monitoring-charts-layout .services-map-stage {
 
-    height: 420px;
-
-  }
 
 
 
@@ -2836,47 +2708,15 @@
 
 
 
-  .monitoring-charts-layout .services-map-stage {
-
-    height: auto;
-
-  }
 
 
 
-  .monitoring-charts-layout
-
-    .services-map-stage
-
-    .services-map-shell {
-
-    height: 400px;
-
-    min-height: 400px;
-
-  }
 
 
 
-  .monitoring-map-shell:fullscreen
-
-    .services-map-overlay {
-
-    inset: auto;
 
 
 
-    position: relative;
-
-
-
-    width: calc(100% - 24px);
-
-
-
-    margin: 12px;
-
-  }
 
 }
 
@@ -2889,60 +2729,6 @@
     transform: translateY(-2px);
 
     box-shadow: 0 6px 14px #0003;
-
-  }
-
-}
-
-
-
-@media (max-width: 900px) {
-
-  .services-map-stage {
-
-    height: auto;
-
-    overflow: visible;
-
-  }
-
-
-
-  .services-map-stage .services-map-shell {
-
-    height: 480px;
-
-    min-height: 480px;
-
-  }
-
-
-
-  .services-map-overlay {
-
-    position: relative;
-
-
-
-    inset: auto;
-
-
-
-    width: 100%;
-
-
-
-    margin-top: 12px;
-
-  }
-
-
-
-  .services-map-overlay .map-service-panel {
-
-    height: auto;
-
-    max-height: none;
 
   }
 
@@ -3102,4 +2888,163 @@
 
   }
 
+}
+
+/* Shared map sizing: the panel never determines the canvas height. */
+.services-map-viewport {
+  position: relative;
+  min-width: 0;
+  height: 380px;
+  overflow: hidden;
+}
+
+.monitoring-map-shell > .service-hud {
+  flex-shrink: 0;
+  justify-content: flex-start;
+  padding: 12px;
+}
+
+.monitoring-map-fullscreen-button {
+  min-height: 44px;
+}
+
+.monitoring-map-shell.is-fullscreen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: #0c282b;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.monitoring-map-shell.is-fullscreen-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.monitoring-map-shell.is-fullscreen > .environment-overview-dock,
+.monitoring-map-shell.is-fullscreen > .services-map-footer {
+  flex-shrink: 0;
+}
+
+.monitoring-map-shell.is-fullscreen .services-map-workspace {
+  flex: 1 0 300px;
+  min-height: 300px;
+}
+
+.monitoring-map-shell.is-fullscreen .services-map-stage,
+.monitoring-map-shell.is-fullscreen .services-map-viewport {
+  height: 100%;
+}
+
+.monitoring-map-shell.is-fullscreen .services-map-overlay {
+  inset: 18px 18px 18px auto;
+  width: min(420px, 42%);
+  margin: 0;
+}
+
+.monitoring-map-shell.is-fullscreen .services-map-footer {
+  margin: 0;
+  padding: 12px 18px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 1050px) {
+  .services-map-viewport {
+    height: 420px;
+  }
+}
+
+@media (max-width: 900px) {
+  .services-map-stage {
+    overflow: visible;
+  }
+
+  .services-map-overlay,
+  .monitoring-map-shell.is-fullscreen .services-map-overlay {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    margin: 0;
+  }
+
+  .services-map-overlay.is-map-moving {
+    opacity: 1;
+    transform: none;
+  }
+
+  .services-map-overlay .map-service-panel {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .monitoring-map-shell.is-fullscreen .services-map-workspace {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
+  .monitoring-map-shell.is-fullscreen .services-map-stage {
+    height: auto;
+  }
+
+  .monitoring-map-shell.is-fullscreen .services-map-viewport {
+    height: clamp(240px, 55vh, 480px);
+    height: clamp(240px, 55dvh, 480px);
+  }
+}
+
+@media (max-width: 700px) {
+  .services-map-viewport {
+    height: clamp(260px, 60vh, 400px);
+    height: clamp(260px, 60dvh, 400px);
+  }
+
+  .monitoring-map-shell {
+    --map-control-height: clamp(32px, 6vw, 40px);
+    --map-control-inset: clamp(8px, 2vw, 14px);
+  }
+
+  .monitoring-map-shell :is(.services-map-overview-button, .monitoring-map-fullscreen-button) {
+    min-height: var(--map-control-height);
+    max-width: calc(100% - 2 * var(--map-control-inset));
+    padding: clamp(4px, 1vw, 7px) clamp(8px, 2vw, 12px);
+    font-size: clamp(11px, 2.5vw, 12px);
+    line-height: 1.3;
+    left: var(--map-control-inset);
+  }
+
+  .monitoring-map-shell .services-map-overview-button {
+    top: var(--map-control-inset);
+    gap: 4px;
+  }
+
+  .monitoring-map-shell .services-map-overview-button svg {
+    width: clamp(12px, 3vw, 15px);
+    height: clamp(12px, 3vw, 15px);
+  }
+
+  .monitoring-map-shell .monitoring-map-fullscreen-button {
+    top: calc(var(--map-control-inset) + var(--map-control-height) + 8px);
+  }
+}
+
+@media (max-width: 900px) {
+  .monitoring-map-shell.is-fullscreen .services-map-fullscreen-footer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .monitoring-map-shell.is-fullscreen .services-map-hud-fullscreen {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

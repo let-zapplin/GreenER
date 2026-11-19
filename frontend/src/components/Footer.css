@@ -53,6 +53,10 @@
   .app-footer-inner p {
     font-size: 0.875rem;
   }
+
+  .app-footer-inner p span {
+    display: block;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

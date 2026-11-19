@@ -44,8 +44,7 @@
   line-height: 1.5;
 }
 
-.location-projection-chart-header
-  > span {
+.location-projection-chart-header > span {
   flex-shrink: 0;
 
   padding: 5px 8px;
@@ -64,8 +63,9 @@
 /* =========================================================
    GRÁFICO
    ---------------------------------------------------------
-   Altura propositalmente compacta para seguir o padrão
-   visual dos cards do GreenER.
+   Mantém a visualização compacta no desktop.
+   O próprio componente reduz ticks e margens quando
+   identifica uma largura menor.
    ========================================================= */
 
 .location-projection-chart-canvas {
@@ -100,8 +100,7 @@
   font-size: 0.65rem;
 }
 
-.location-projection-chart-legend
-  span {
+.location-projection-chart-legend span {
   display: flex;
 
   align-items: center;
@@ -109,16 +108,14 @@
   gap: 6px;
 }
 
-.location-projection-chart-legend
-  i {
+.location-projection-chart-legend i {
   width: 8px;
   height: 8px;
 
   border-radius: 50%;
 }
 
-.location-projection-chart-legend
-  .is-best {
+.location-projection-chart-legend .is-best {
   background: #8bff5d;
 
   box-shadow:
@@ -126,18 +123,15 @@
       rgba(139, 255, 93, 0.35);
 }
 
-.location-projection-chart-legend
-  .is-current {
+.location-projection-chart-legend .is-current {
   background: #58cbb7;
 }
 
-.location-projection-chart-legend
-  .is-projected {
+.location-projection-chart-legend .is-projected {
   background: #87a8a1;
 }
 
-.location-projection-chart-legend
-  .is-worst {
+.location-projection-chart-legend .is-worst {
   background: #ff967d;
 }
 
@@ -147,16 +141,26 @@
 
 @media (max-width: 700px) {
   .location-projection-chart {
-    padding: 16px;
+    padding: 16px 12px;
+
+    overflow-wrap: anywhere;
   }
 
   .location-projection-chart-header {
     flex-direction: column;
+
+    gap: 12px;
+  }
+
+  .location-projection-chart-header h2 {
+    font-size: 1.1rem;
+    line-height: 1.35;
   }
 
   .location-projection-chart-canvas {
-    height: 230px;
-    min-height: 230px;
+    height: 240px;
+
+    min-height: 240px;
   }
 
   .location-projection-chart-legend {

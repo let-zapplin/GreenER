@@ -70,7 +70,7 @@
   grid-template-columns:
     repeat(
       auto-fit,
-      minmax(210px, 1fr)
+      minmax(min(100%, 210px), 1fr)
     );
 
   gap: 12px;
@@ -269,6 +269,36 @@
 }
 
 @media (max-width: 700px) {
+  .location-projection-summary {
+    padding: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .location-projection-summary-header h2 {
+    font-size: 1.1rem;
+    line-height: 1.35;
+  }
+
+  .location-projection-card {
+    padding: 12px;
+  }
+
+  .location-projection-card-header {
+    flex-wrap: wrap;
+  }
+
+  .location-projection-card-header > div {
+    flex: 1 1 120px;
+  }
+
+  .location-projection-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .location-projection-emissions strong {
+    font-size: 1.1rem;
+  }
+
   .location-projection-summary-header {
     flex-direction: column;
   }

@@ -560,6 +560,7 @@ export function ServicesMap({
   const onSelectServiceRef = useRef(onSelectService);
   const servicesRef = useRef(services);
   const loadedRef = useRef(false);
+  const overviewRef = useRef(true);
   const orbitFrameRef = useRef<number | null>(null);
   const popupRef = useRef<Popup | null>(null);
   const groupPopupContentRef = useRef<HTMLDivElement | null>(null);
@@ -727,6 +728,7 @@ if (pending || pendingIdle) {
     latitude: number,
     city?: string | null,
   ) => {
+    overviewRef.current = false;
     const target: MapCameraTarget = {
       longitude,
       latitude,
@@ -868,7 +870,8 @@ const finishTransition = () => {
 
         bearing: 0,
 
-        padding: FOCUS_CAMERA_PADDING,
+        padding: window.matchMedia("(max-width: 900px)").matches
+          ? NO_CAMERA_PADDING : FOCUS_CAMERA_PADDING,
 
         duration: TRANSITION_IN_DURATION,
 
@@ -978,7 +981,7 @@ const finishTransition = () => {
     orbitFrameRef.current = requestAnimationFrame(step);
   };
 
-  const createPopup = (closeOnClick: boolean, maxWidth: string) => {
+  const createPopup = (closeOnClick: boolean, maxWidth: string, isGroup = false) => {
     popupRef.current?.remove();
 
     const popup = new maplibregl.Popup({
@@ -987,7 +990,7 @@ const finishTransition = () => {
       focusAfterOpen: false,
       offset: 18,
       maxWidth,
-      className: "services-map-popup",
+      className: isGroup ? "services-map-popup services-map-group-popup" : "services-map-popup",
     });
 
     popupRef.current = popup;
@@ -1016,7 +1019,7 @@ const finishTransition = () => {
     latitude: number,
     groupedServices: MonitoredService[],
   ) => {
-    const popup = createPopup(false, "320px");
+    const popup = createPopup(false, "320px", true);
 
     const content = buildGroupPopupContent(groupedServices, (serviceId) => {
       popup.remove();
@@ -1090,6 +1093,7 @@ const finishTransition = () => {
      * pula toda a animação.
      */
     if (reducedMotion) {
+      overviewRef.current = true;
       map.fitBounds(WORLD_BOUNDS, {
         animate: false,
         bearing: 0,
@@ -1109,6 +1113,7 @@ const finishTransition = () => {
      * antes de remover o efeito de transição.
      */
     const finishOverview = () => {
+      overviewRef.current = true;
       activeTargetRef.current = null;
 
       const finishLoading = () => {
@@ -1223,7 +1228,7 @@ const finishTransition = () => {
         zoom: 1.2,
         bearing: 0,
         pitch: 0,
-        minZoom: 0.5,
+        minZoom: -2,
         maxZoom: 19,
 
         scrollZoom: false,
@@ -1404,11 +1409,35 @@ const finishTransition = () => {
     map.on("style.load", onStyleLoad);
     map.on("load", onLoad);
 
-    const resize = new ResizeObserver(() => map.resize());
+    let resizeFrame: number | null = null;
+    let needsOverviewFit = false;
+    const fitOverviewAfterResize = () => {
+      if (!needsOverviewFit || !overviewRef.current || map.isMoving()) return;
+      needsOverviewFit = false;
+      map.fitBounds(WORLD_BOUNDS, {
+        animate: false,
+        bearing: 0,
+        pitch: 0,
+        padding: 8,
+      });
+    };
+    map.on("moveend", fitOverviewAfterResize);
+    const resize = new ResizeObserver(() => {
+      if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = null;
+        if (container.clientWidth === 0 || container.clientHeight === 0) return;
+        map.resize();
+        needsOverviewFit = true;
+        fitOverviewAfterResize();
+      });
+    });
     resize.observe(container);
 
     return () => {
       resize.disconnect();
+      if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+      map.off("moveend", fitOverviewAfterResize);
       cancelOrbit();
       popupRef.current?.remove();
       popupRef.current = null;
@@ -1475,7 +1504,10 @@ const finishTransition = () => {
     const container = containerRef.current;
     if (!container) return;
 
-    const stopOrbit = () => cancelOrbit();
+    const stopOrbit = () => {
+      overviewRef.current = false;
+      cancelOrbit();
+    };
 
     container.addEventListener("pointerdown", stopOrbit, true);
     container.addEventListener("wheel", stopOrbit, {

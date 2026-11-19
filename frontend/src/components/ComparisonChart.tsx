@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useChartTouch } from "../hooks/useChartTouch";
 import {
   CartesianGrid,
   Line,
@@ -62,6 +64,8 @@ export function ComparisonChart({
   focusServiceId,
   onFocusServiceChange,
 }: ComparisonChartProps) {
+  const [isCompact, setIsCompact] = useState(false);
+  const isTouch = useChartTouch();
   const metricDefinition = getComparisonMetricDefinition(metric);
 
   const startTimestamp = new Date(periodStart).getTime();
@@ -156,13 +160,13 @@ export function ComparisonChart({
         role="img"
         aria-label={`Comparação de ${metricDefinition.label} entre os serviços selecionados`}
       >
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" onResize={(width: number) => setIsCompact(width < 420)}>
           <LineChart
             margin={{
               top: 16,
-              right: 20,
+              right: isCompact ? 8 : 20,
               bottom: 8,
-              left: 8,
+              left: isCompact ? 0 : 8,
             }}
           >
             <CartesianGrid
@@ -178,8 +182,8 @@ export function ComparisonChart({
               domain={[startTimestamp, endTimestamp]}
               allowDataOverflow
               tickFormatter={(value) => formatTime(Number(value))}
-              tickCount={7}
-              minTickGap={40}
+              tickCount={isCompact ? 3 : 7}
+              minTickGap={isCompact ? 16 : 40}
               tickLine={false}
               axisLine={{
                 stroke: "rgba(255, 255, 255, 0.16)",
@@ -191,9 +195,11 @@ export function ComparisonChart({
             />
 
             <YAxis
-              width={78}
+              width={isCompact ? 56 : 78}
               tickFormatter={(value: number) =>
-                formatComparisonValue(value, metric)
+                isCompact
+                  ? value.toLocaleString("pt-BR", { maximumSignificantDigits: 3, notation: value !== 0 && Math.abs(value) < 0.001 ? "scientific" : "compact" })
+                  : formatComparisonValue(value, metric)
               }
               tickLine={false}
               axisLine={false}
@@ -204,6 +210,7 @@ export function ComparisonChart({
             />
 
             <Tooltip
+              trigger={isTouch ? "click" : "hover"}
               filterNull={false}
               labelFormatter={(value) => formatDateTime(Number(value))}
               formatter={(value, name) => [
@@ -214,6 +221,9 @@ export function ComparisonChart({
                 String(name),
               ]}
               contentStyle={{
+                maxWidth: "100%",
+                whiteSpace: "normal",
+                overflowWrap: "anywhere",
                 background: "#0c2d30f2",
                 border: "1px solid #426c60",
                 borderRadius: "12px",

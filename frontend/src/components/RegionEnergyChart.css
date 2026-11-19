@@ -8,6 +8,8 @@
 
 .region-energy-chart-header {
   display: flex;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;

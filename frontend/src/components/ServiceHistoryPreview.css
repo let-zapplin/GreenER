@@ -242,3 +242,13 @@
   font: inherit;
   text-align: left;
 }
+@media (max-width: 700px) {
+  .service-history-preview-header {
+    flex-wrap: wrap;
+  }
+
+  .service-history-preview-header strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
