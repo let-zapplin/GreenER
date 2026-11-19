@@ -159,3 +159,13 @@
     grid-template-columns: 1fr;
   }
 }
+@media (max-width: 700px) {
+  .comparison-service-info strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+.comparison-service-option:has(input:focus-visible) {
+  outline: 2px solid #d9e43f;
+  outline-offset: 3px;
+}

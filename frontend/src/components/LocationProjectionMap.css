@@ -1,0 +1,337 @@
+.location-projection-map-card {
+  display: flex;
+  flex-direction: column;
+
+  gap: 14px;
+
+  min-width: 0;
+  height: 100%;
+
+  padding: 20px;
+
+  border: 1px solid #315657;
+  border-radius: 16px;
+
+  background: #0c2d30;
+}
+
+/* =========================================================
+   CABEÇALHO
+   ========================================================= */
+
+.location-projection-map-header {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 18px;
+
+  margin-bottom: 14px;
+}
+
+.location-projection-map-header h3 {
+  margin: 4px 0 6px;
+
+  color: #f4f8f5;
+}
+
+.location-projection-map-header p {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.location-projection-map-header > span {
+  flex-shrink: 0;
+
+  padding: 6px 9px;
+
+  border: 1px solid #426c60;
+  border-radius: 999px;
+
+  color: #8bff5d;
+
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+/* =========================================================
+   MAPA
+   ========================================================= */
+
+.location-projection-map-frame {
+  position: relative;
+
+  flex: 1;
+
+  min-height: 420px;
+
+  overflow: hidden;
+
+  border-radius: 12px;
+}
+
+.location-projection-map-canvas {
+  width: 100%;
+  height: 100%;
+
+  min-height: 420px;
+}
+
+.location-projection-map-canvas
+  .maplibregl-canvas {
+  outline: none;
+}
+
+.location-projection-map-canvas
+  .maplibregl-ctrl-attrib {
+  background: #0c282bcc;
+
+  color: #91aaa5;
+
+  font-size: 9px;
+}
+
+.location-projection-map-loading {
+  position: absolute;
+
+  inset: 0;
+
+  display: grid;
+
+  place-items: center;
+
+  background: rgba(
+    8,
+    38,
+    40,
+    0.72
+  );
+
+  color: #b9ccc6;
+
+  font-size: 0.72rem;
+}
+
+/* =========================================================
+   AVISO DA LOCALIZAÇÃO DE ORIGEM
+   ---------------------------------------------------------
+   Surge quando o usuário tenta selecionar o marcador
+   utilizado como referência da projeção.
+   ========================================================= */
+
+.location-projection-map-notice {
+  position: absolute;
+
+  bottom: 16px;
+  left: 50%;
+
+  z-index: 8;
+
+  width: max-content;
+  max-width: calc(100% - 32px);
+
+  padding: 8px 12px;
+
+  border: 1px solid
+    rgba(88, 203, 183, 0.32);
+
+  border-radius: 9px;
+
+  background:
+    rgba(8, 38, 40, 0.94);
+
+  color: #dce9e4;
+
+  font-size: 0.65rem;
+  line-height: 1.45;
+
+  text-align: center;
+
+  opacity: 0;
+
+  pointer-events: none;
+
+  transform:
+    translate(-50%, 8px);
+
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+
+  backdrop-filter: blur(8px);
+
+  box-shadow:
+    0 8px 22px
+      rgba(0, 0, 0, 0.24);
+}
+
+.location-projection-map-notice.is-visible {
+  opacity: 1;
+
+  transform:
+    translate(-50%, 0);
+}
+
+/* =========================================================
+   MARCADORES
+   ========================================================= */
+
+.location-projection-map-marker {
+  display: block;
+
+  padding: 0;
+
+  border-radius: 50%;
+
+  cursor: pointer;
+
+  transition:
+    width 160ms ease,
+    height 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.location-projection-map-marker:hover {
+  transform: scale(1.22);
+}
+
+/* Localização real do serviço */
+
+.location-projection-map-marker.is-origin {
+  width: 19px;
+  height: 19px;
+
+  border: 3px solid #f4f8f5;
+
+  background: #58cbb7;
+
+  box-shadow:
+    0 0 0 5px
+      rgba(88, 203, 183, 0.16),
+    0 0 18px
+      rgba(88, 203, 183, 0.6);
+
+  cursor: default;
+}
+
+/* Região selecionada para projeção */
+
+.location-projection-map-marker.is-projected {
+  width: 17px;
+  height: 17px;
+
+  border: 2px solid #eaffdf;
+
+  background: #8bff5d;
+
+  box-shadow:
+    0 0 0 5px
+      rgba(139, 255, 93, 0.14),
+    0 0 16px
+      rgba(139, 255, 93, 0.55);
+}
+
+/* Região disponível */
+
+.location-projection-map-marker.is-available {
+  width: 11px;
+  height: 11px;
+
+  border: 2px solid #78938d;
+
+  background: #23484a;
+
+  box-shadow:
+    0 0 0 3px
+      rgba(88, 203, 183, 0.06);
+}
+
+.location-projection-map-marker:focus-visible {
+  outline: 2px solid #ffffff;
+
+  outline-offset: 3px;
+}
+
+/* =========================================================
+   LEGENDA
+   ========================================================= */
+
+.location-projection-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 12px 18px;
+
+  margin-top: 12px;
+
+  color: var(--text-muted);
+
+  font-size: 0.66rem;
+}
+
+.location-projection-map-legend span {
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
+}
+
+.location-projection-map-legend i {
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+}
+
+.location-projection-map-legend
+  .is-origin {
+  background: #58cbb7;
+}
+
+.location-projection-map-legend
+  .is-projected {
+  background: #8bff5d;
+}
+
+.location-projection-map-legend
+  .is-available {
+  border: 1px solid #78938d;
+
+  background: #23484a;
+}
+
+/* =========================================================
+   ERRO
+   ========================================================= */
+
+.location-projection-map-error {
+  display: grid;
+
+  place-content: center;
+
+  gap: 5px;
+
+  height: 100%;
+  min-height: 280px;
+
+  text-align: center;
+}
+
+.location-projection-map-error strong {
+  color: #f4f8f5;
+}
+
+.location-projection-map-error span {
+  color: var(--text-muted);
+
+  font-size: 0.72rem;
+}

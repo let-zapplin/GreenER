@@ -535,3 +535,80 @@
     transform: translateY(0);
   }
 }
+
+/* A grouped list stays inside the map instead of extending past its marker. */
+@media (max-width: 700px) {
+  .services-map-group-popup {
+    top: auto;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: calc(100% - 16px) !important;
+    max-height: calc(100% - 16px);
+    transform: none !important;
+  }
+
+  .services-map-group-popup .maplibregl-popup-tip {
+    display: none;
+  }
+
+  .services-map-group-popup .maplibregl-popup-content {
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .services-map-group-popup .services-map-popup-content {
+    min-height: 0;
+    max-height: min(240px, 45vh);
+    max-height: min(240px, 45dvh);
+    padding: clamp(8px, 2.5vw, 12px);
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .services-map-group-popup .services-map-popup-content > strong {
+    flex-shrink: 0;
+    padding-right: 36px;
+    font-size: clamp(11px, 3vw, 13px);
+    overflow-wrap: anywhere;
+  }
+
+  .services-map-group-popup .services-map-popup-service-list {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    scrollbar-width: thin;
+  }
+
+  .services-map-group-popup .services-map-popup-service {
+    flex-shrink: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 40px;
+    padding: 7px 8px;
+    gap: 6px;
+  }
+
+  .services-map-group-popup .services-map-popup-service > span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+  }
+
+  .services-map-group-popup .services-map-popup-service small {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 10px;
+  }
+
+  .services-map-group-popup .maplibregl-popup-close-button {
+    top: 2px;
+    right: 2px;
+    width: 32px;
+    height: 32px;
+  }
+}

@@ -92,11 +92,15 @@ export function Monitoring() {
   const mapShellRef = useRef<HTMLDivElement>(null);
 
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  const [isFullscreenFallback, setIsFullscreenFallback] = useState(false);
+  const fullscreenButtonRef = useRef<HTMLButtonElement>(null);
   const [fullscreenError, setFullscreenError] = useState<string | null>(null);
 
   useEffect(() => {
     function syncFullscreen() {
-      setIsMapFullscreen(document.fullscreenElement === mapShellRef.current);
+      const active = document.fullscreenElement === mapShellRef.current;
+      setIsMapFullscreen(active);
+      if (!active) fullscreenButtonRef.current?.focus();
     }
 
     document.addEventListener("fullscreenchange", syncFullscreen);
@@ -106,6 +110,41 @@ export function Monitoring() {
     };
   }, []);
 
+  const isFullscreen = isMapFullscreen || isFullscreenFallback;
+
+  useEffect(() => {
+    if (!isFullscreenFallback) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    fullscreenButtonRef.current?.focus();
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsFullscreenFallback(false);
+        fullscreenButtonRef.current?.focus();
+      }
+      if (event.key === "Tab") {
+        const controls = Array.from(mapShellRef.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], input:not(:disabled), [tabindex="0"]',
+        ) ?? []).filter((element) => element.getClientRects().length > 0);
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [isFullscreenFallback]);
+
   async function toggleMapFullscreen() {
     const shell = mapShellRef.current;
 
@@ -114,12 +153,22 @@ export function Monitoring() {
     setFullscreenError(null);
 
     try {
-      if (document.fullscreenElement === shell) {
+      if (isFullscreenFallback) {
+        setIsFullscreenFallback(false);
+      } else if (document.fullscreenElement === shell) {
         await document.exitFullscreen();
       } else {
-        await shell.requestFullscreen();
+        if (document.fullscreenEnabled && shell.requestFullscreen) {
+          await shell.requestFullscreen();
+        } else {
+          setIsFullscreenFallback(true);
+        }
       }
     } catch {
+      if (document.fullscreenElement !== shell) {
+        setIsFullscreenFallback(true);
+        return;
+      }
       setFullscreenError(
         "Não foi possível alterar a tela cheia neste navegador.",
       );
@@ -226,7 +275,7 @@ export function Monitoring() {
 
       if (
         target.closest(
-          ".service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell, .map-loading-overlay, .monitoring-visualization-toggle, .region-energy-chart, .monitoring-board-toolbar, .monitoring-board-widget-bar, .monitoring-board-palette",
+          ".monitoring-map-shell, .service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell, .map-loading-overlay, .monitoring-visualization-toggle, .region-energy-chart, .monitoring-board-toolbar, .monitoring-board-widget-bar, .monitoring-board-palette",
         )
       ) {
         return;
@@ -236,7 +285,7 @@ export function Monitoring() {
     }
 
     function deselectOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !isFullscreen) {
         setSelectedServiceId(null);
       }
     }
@@ -250,11 +299,17 @@ export function Monitoring() {
 
       document.removeEventListener("keydown", deselectOnEscape);
     };
-  }, [selectedServiceId]);
+  }, [selectedServiceId, isFullscreen]);
 
   const mapWidget = (
     <>
-      <div className="monitoring-map-shell" ref={mapShellRef}>
+      <div
+        className={`monitoring-map-shell${isFullscreen ? " is-fullscreen" : ""}${isFullscreenFallback ? " is-fullscreen-fallback" : ""}`}
+        role={isFullscreenFallback ? "dialog" : undefined}
+        aria-modal={isFullscreenFallback ? true : undefined}
+        aria-label={isFullscreenFallback ? "Mapa em tela cheia" : undefined}
+        ref={mapShellRef}
+      >
         <EnvironmentOverviewDock
           energyKwh={dashboard?.summary.energyKwh ?? null}
           emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
@@ -274,17 +329,19 @@ export function Monitoring() {
           }`}
         >
           <div className="services-map-stage">
+            <div className="services-map-viewport">
             {/* Tela cheia */}
             <button
               type="button"
+              ref={fullscreenButtonRef}
               className="monitoring-map-fullscreen-button"
               onClick={toggleMapFullscreen}
-              aria-pressed={isMapFullscreen}
+              aria-pressed={isFullscreen}
               title={
-                isMapFullscreen ? "Sair da tela cheia (Esc)" : "Maximizar mapa"
+                isFullscreen ? "Sair da tela cheia (Esc)" : "Maximizar mapa"
               }
             >
-              {isMapFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+              {isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
             </button>
 
             {fullscreenError && (
@@ -320,6 +377,7 @@ export function Monitoring() {
                 <img src={logoMin} alt="" className="map-loading-logo" />
               </div>
             )}
+            </div>
 
             {/* Detalhes do serviço */}
             {selectedService && (
@@ -342,7 +400,7 @@ export function Monitoring() {
         </div>
 
         {/* Rodapé operacional dentro do mapa em tela cheia */}
-        {isMapFullscreen && (
+        {isFullscreen && (
           <div className="services-map-fullscreen-footer">
             <div className="services-map-hud services-map-hud-fullscreen">
               <span className="services-map-count">
@@ -366,7 +424,7 @@ export function Monitoring() {
       </div>
 
       {/* Legenda abaixo do mapa na visualização normal */}
-      {!isMapFullscreen && <ServicesMapLegend services={services} />}
+      {!isFullscreen && <ServicesMapLegend services={services} />}
     </>
   );
 

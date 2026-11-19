@@ -110,6 +110,9 @@
 
 .comparison-chart-legend-item {
   display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   align-items: center;
   gap: 8px;
 
@@ -166,6 +169,9 @@
 
 .comparison-chart-header-meta {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
   align-items: flex-start;
   gap: 10px;
 
@@ -174,6 +180,8 @@
 
 .comparison-chart-focus {
   display: flex;
+  min-width: 0;
+  overflow-wrap: anywhere;
   flex-direction: column;
   gap: 1px;
 
