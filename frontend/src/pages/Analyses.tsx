@@ -25,7 +25,8 @@ import { useProjectionRegions } from "../hooks/useProjectionRegions";
 import { useLocationProjection } from "../hooks/useLocationProjection";
 import { LocationProjectionSummary } from "../components/LocationProjectionSummary";
 import { LocationProjectionChart } from "../components/LocationProjectionChart";
-
+import { LocationProjectionMap } from "../components/LocationProjectionMap";
+import { ProjectionServiceCard } from "../components/ProjectionServiceCard";
 
 type AnalysisLayout = "focus" | "overview" | "side";
 type OverviewView = "charts" | "ranking";
@@ -34,7 +35,6 @@ type AnalysisMode = "explore" | "compare" | "project";
 const MIN_COMPARISON_SERVICES = 2;
 const MAX_COMPARISON_SERVICES = 4;
 
-const MAX_PROJECTION_REGIONS = 4;
 
 const ANALYSES_LAYOUT_STORAGE_KEY = "greener:analyses:layout";
 
@@ -379,14 +379,7 @@ function toggleProjectionRegion(
       );
     }
 
-    if (
-      currentCodes.length >=
-      MAX_PROJECTION_REGIONS
-    ) {
-      return currentCodes;
-    }
-
-    return [
+      return [
       ...currentCodes,
       regionCode,
     ];
@@ -692,184 +685,44 @@ const {
               </div>
             </div>
 
-<div className="analyses-projection-controls">
-  {/* =====================================================
-      SERVIÇO USADO COMO BASE DA PROJEÇÃO
-      ===================================================== */}
-  <section className="analyses-projection-service">
-    <p className="analyses-section-label">
-      SERVIÇO PROJETADO
-    </p>
+<div className="analyses-projection-primary">
+<ProjectionServiceCard
+  service={projectionService}
+  services={services}
+  selectedServiceId={projectionServiceId}
+  energyKwh={
+    projection?.energyKwh ??
+    null
+  }
+  isPartial={
+    projection?.isPartial ??
+    false
+  }
+  regions={projectionRegions}
+  selectedRegionCodes={
+    projectionRegionCodes
+  }
+  currentRegionCode={
+    currentProjectionRegionCode
+  }
+  onChangeService={
+    changeProjectionService
+  }
+  onToggleRegion={
+    toggleProjectionRegion
+  }
+/>
 
-    <h3>Escolha o serviço</h3>
+<LocationProjectionMap
+  service={projectionService}
+  regions={projectionRegions}
+  selectedRegionCodes={projectionRegionCodes}
+  onToggleRegion={toggleProjectionRegion}
+/>
 
-    <p>
-      O consumo energético observado deste serviço será
-      mantido como referência em todos os cenários.
-    </p>
 
-    <label>
-      <span>Serviço</span>
-
-      <select
-        value={projectionServiceId ?? ""}
-        onChange={(event) =>
-          changeProjectionService(
-            Number(event.target.value),
-          )
-        }
-      >
-        {services.map((service) => (
-          <option
-            key={service.serviceId}
-            value={service.serviceId}
-          >
-            {service.name} ·{" "}
-            {formatServicePlace(service.location)}
-          </option>
-        ))}
-      </select>
-    </label>
-
-    {projectionService && (
-      <div className="analyses-projection-current">
-        <strong>{projectionService.name}</strong>
-        <span>Localização atual</span>
-
-        <strong>
-          {formatServicePlace(
-            projectionService.location,
-          )}
-        </strong>
-
-        <small>
-          {projectionService.location.region_code}
-        </small>
-      </div>
-    )}
-  </section>
-
-  {/* =====================================================
-      REGIÕES ALTERNATIVAS
-      ===================================================== */}
-  <section className="analyses-projection-regions">
-    <div className="analyses-projection-regions-header">
-      <div>
-        <p className="analyses-section-label">
-          LOCALIDADES ALTERNATIVAS
-        </p>
-
-        <h3>Onde deseja projetar?</h3>
-
-        <p>
-          Selecione até {MAX_PROJECTION_REGIONS} regiões
-          para comparar com a localização atual.
-        </p>
-      </div>
-
-      <span>
-        {projectionRegionCodes.length}/
-        {MAX_PROJECTION_REGIONS}
-      </span>
-    </div>
-
-    {/* CARREGAMENTO DAS REGIÕES */}
-    {projectionRegionsLoading && (
-      <div
-        className="analyses-history-state"
-        role="status"
-      >
-        <h3>Carregando localidades</h3>
-
-        <p>
-          Consultando as regiões disponíveis para
-          projeção ambiental.
-        </p>
-      </div>
-    )}
-
-    {/* ERRO DAS REGIÕES */}
-    {projectionRegionsError && (
-      <div
-        className="analyses-history-state analyses-state-error"
-        role="alert"
-      >
-        <h3>
-          Não foi possível carregar as localidades
-        </h3>
-
-        <p>{projectionRegionsError}</p>
-      </div>
-    )}
-
-    {/* LISTA DE REGIÕES */}
-    {!projectionRegionsLoading &&
-      !projectionRegionsError && (
-        <div className="analyses-projection-region-grid">
-          {projectionRegions
-            .filter(
-              (region) =>
-                region.regionCode !==
-                currentProjectionRegionCode,
-            )
-            .map((region) => {
-              const isSelected =
-                projectionRegionCodes.includes(
-                  region.regionCode,
-                );
-
-              const isDisabled =
-                projectionRegionCodes.length >=
-                  MAX_PROJECTION_REGIONS &&
-                !isSelected;
-
-              return (
-                <label
-                  key={region.regionCode}
-                  className={
-                    isSelected
-                      ? "analyses-projection-region is-selected"
-                      : "analyses-projection-region"
-                  }
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    disabled={isDisabled}
-                    onChange={() =>
-                      toggleProjectionRegion(
-                        region.regionCode,
-                      )
-                    }
-                  />
-
-                  <span className="analyses-projection-region-check">
-                    {isSelected ? "✓" : ""}
-                  </span>
-
-                  <span className="analyses-projection-region-info">
-                    <strong>
-                      {region.region}
-                    </strong>
-
-                    <small>
-                      {region.country}
-                    </small>
-
-                    <span>
-                      {
-                        region.carbonIntensityGco2ePerKwh
-                      }{" "}
-                      gCO₂e/kWh
-                    </span>
-                  </span>
-                </label>
-              );
-            })}
-        </div>
-      )}
-  </section>
 </div>
+
 
 {/* =====================================================
     ESTADO INICIAL
@@ -934,15 +787,17 @@ const {
   !projectionLoading &&
   !projectionError && (
     <div className="analyses-projection-results">
-      <LocationProjectionSummary
-        projection={projection}
-      />
-
-      <LocationProjectionChart
+      
+       <LocationProjectionChart
         scenarios={
           projection.scenarios
         }
       />
+
+      <LocationProjectionSummary
+        projection={projection}
+      />
+     
     </div>
   )}
           </section>
