@@ -62,7 +62,9 @@ function buildHistory(entries: ChatEntry[]): ChatHistoryMessage[] {
       }
 
       if ("reply" in entry) {
-        return [{ role: "assistant", content: entry.reply.answer.slice(0, 500) }];
+        return [
+          { role: "assistant", content: entry.reply.answer.slice(0, 500) },
+        ];
       }
 
       return [];
@@ -199,11 +201,7 @@ function ChatChartView({ chart }: { chart: ChatChart }) {
   );
 }
 
-function AssistantMessage({
-  reply,
-  disabled,
-  onAsk,
-}: AssistantMessageProps) {
+function AssistantMessage({ reply, disabled, onAsk }: AssistantMessageProps) {
   return (
     <article className="assistant-chat-message assistant-chat-message-assistant">
       <p>{reply.answer}</p>
@@ -263,7 +261,15 @@ function AssistantMessage({
   );
 }
 
-export function AssistantChat() {
+type AssistantChatProps = {
+  autoFocus?: boolean;
+  onLoadingChange?: (loading: boolean) => void;
+};
+
+export function AssistantChat({
+  autoFocus = false,
+  onLoadingChange,
+}: AssistantChatProps) {
   const { token, logout } = useAuth();
   const { pathname } = useLocation();
 
@@ -276,6 +282,7 @@ export function AssistantChat() {
   const logRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const conversationIdRef = useRef<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -289,6 +296,24 @@ export function AssistantChat() {
       log.scrollTo({ top: log.scrollHeight, behavior: "smooth" });
     }
   }, [entries, loading]);
+
+  useEffect(() => {
+    onLoadingChange?.(loading);
+  }, [loading, onLoadingChange]);
+
+  useEffect(() => {
+    if (!autoFocus) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [autoFocus]);
 
   async function submit(value: string, nextPeriod?: ChatPeriod) {
     const question = value.trim();
@@ -350,12 +375,11 @@ export function AssistantChat() {
         return;
       }
 
-      const message =
-        timedOut
-          ? "O assistente demorou demais para responder. Tente novamente."
-          : cause instanceof ApiError
-            ? cause.message
-            : "Não foi possível falar com o assistente agora. Tente novamente.";
+      const message = timedOut
+        ? "O assistente demorou demais para responder. Tente novamente."
+        : cause instanceof ApiError
+          ? cause.message
+          : "Não foi possível falar com o assistente agora. Tente novamente.";
 
       setEntries((previous) => [
         ...previous,
@@ -483,10 +507,14 @@ export function AssistantChat() {
       )}
 
       <form className="assistant-chat-form" onSubmit={handleSubmit}>
-        <label className="assistant-chat-sr-only" htmlFor="assistant-chat-input">
+        <label
+          className="assistant-chat-sr-only"
+          htmlFor="assistant-chat-input"
+        >
           Sua pergunta
         </label>
         <input
+          ref={inputRef}
           id="assistant-chat-input"
           value={input}
           onChange={(event) => setInput(event.target.value)}

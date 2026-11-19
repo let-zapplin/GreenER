@@ -207,6 +207,19 @@
   border-radius: 999px;
 }
 
+.assistant-chat-log::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.assistant-chat-log:hover::-webkit-scrollbar-thumb {
+  background:
+    color-mix(
+      in srgb,
+      var(--adaptive-color, #87e46c) 35%,
+      transparent
+    );
+}
+
 .assistant-chat-message {
   max-width: 86%;
   padding: 14px 16px;
