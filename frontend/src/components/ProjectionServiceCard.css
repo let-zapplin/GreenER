@@ -1,0 +1,639 @@
+.projection-service-card {
+  display: flex;
+  flex-direction: column;
+
+  gap: 19px;
+
+  min-width: 0;
+  height: 100%;
+
+  padding: 22px;
+
+  border: 1px solid #315657;
+  border-radius: 16px;
+
+  background: #0c2d30;
+}
+
+/* =========================================================
+   CABEÇALHO
+   ========================================================= */
+
+.projection-service-card-header {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 16px;
+}
+
+.projection-service-card-header h3 {
+  margin: 4px 0 0;
+
+  color: #f4f8f5;
+
+  font-size: 1,08rem;
+}
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.projection-service-status {
+  flex-shrink: 0;
+
+  padding: 5px 9px;
+
+  border: 1px solid
+    var(--projection-service-status);
+
+  border-radius: 999px;
+
+  color:
+    var(--projection-service-status);
+
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.projection-service-status.active {
+  --projection-service-status: #87e46c;
+}
+
+.projection-service-status.new {
+  --projection-service-status: #e5e65d;
+}
+
+.projection-service-status.returned {
+  --projection-service-status: #7dd3fc;
+}
+
+.projection-service-status.no_metrics {
+  --projection-service-status: #facc15;
+}
+
+.projection-service-status.unavailable {
+  --projection-service-status: #ee1e41;
+}
+
+.projection-service-status.error {
+  --projection-service-status: #e879f9;
+}
+
+.projection-service-status.removed {
+  --projection-service-status: #8b7fd6;
+}
+
+/* =========================================================
+   SELETOR VISUAL DO SERVIÇO
+   ---------------------------------------------------------
+   O próprio card de identidade funciona como botão para
+   trocar o serviço analisado.
+   ========================================================= */
+
+.projection-service-selector-wrapper {
+  position: relative;
+
+  z-index: 10;
+}
+
+.projection-service-identity {
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+
+  width: 100%;
+
+  padding: 16px;
+
+  border: 1px solid #294d4f;
+  border-radius: 12px;
+
+  background: #082627;
+
+  color: inherit;
+
+  cursor: pointer;
+
+  text-align: left;
+
+  font: inherit;
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.projection-service-identity:hover {
+  border-color: #58cbb7;
+
+  background: #0a3032;
+}
+
+.projection-service-identity.is-open {
+  border-color: #87e46c;
+
+  box-shadow:
+    0 0 0 2px
+      rgba(135, 228, 108, 0.08);
+}
+.projection-service-icon {
+  display: grid;
+
+  place-items: center;
+
+  width: 40px;
+  height: 40px;
+
+  flex-shrink: 0;
+
+  border: 1px solid
+    rgba(135, 228, 108, 0.32);
+
+  border-radius: 10px;
+
+  background:
+    rgba(135, 228, 108, 0.08);
+
+  color: #87e46c;
+}
+
+.projection-service-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.projection-service-identity-info {
+  display: grid;
+
+  gap: 2px;
+
+  min-width: 0;
+
+  flex: 1;
+}
+
+.projection-service-identity-info strong {
+  overflow: hidden;
+
+  color: #f4f8f5;
+
+  font-size: 0.96rem;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projection-service-identity-info small {
+  color: #58cbb7;
+
+  font-family:
+    "IBM Plex Mono",
+    monospace;
+
+  font-size: 0.7rem;
+}
+
+.projection-service-selector-arrow {
+  display: grid;
+
+  place-items: center;
+
+  width: 28px;
+  height: 28px;
+
+  flex-shrink: 0;
+
+  border-radius: 8px;
+
+  color: #87e46c;
+
+  font-size: 0.65rem;
+
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.projection-service-identity:hover
+  .projection-service-selector-arrow {
+  background:
+    rgba(135, 228, 108, 0.08);
+}
+
+/* =========================================================
+   MENU DE SERVIÇOS
+   ========================================================= */
+
+.projection-service-menu {
+  position: absolute;
+
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+
+  z-index: 20;
+
+  display: grid;
+
+  gap: 6px;
+
+  max-height: 260px;
+
+  padding: 6px;
+
+  overflow-y: auto;
+
+  border: 1px solid #315657;
+  border-radius: 12px;
+
+  background: #082627;
+
+  box-shadow:
+    0 14px 32px
+      rgba(0, 0, 0, 0.32);
+}
+
+.projection-service-menu-option {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 14px;
+
+  width: 100%;
+
+  padding: 10px 12px;
+
+  border: 1px solid transparent;
+  border-radius: 9px;
+
+  background: transparent;
+
+  color: #dce9e4;
+
+  cursor: pointer;
+
+  font: inherit;
+
+  text-align: left;
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.projection-service-menu-option:hover {
+  border-color:
+    rgba(88, 203, 183, 0.28);
+
+  background:
+    rgba(88, 203, 183, 0.06);
+}
+
+.projection-service-menu-option.is-selected {
+  border-color:
+    rgba(139, 255, 93, 0.32);
+
+  background:
+    rgba(139, 255, 93, 0.08);
+}
+
+.projection-service-menu-option
+  > span:first-child {
+  display: grid;
+
+  gap: 3px;
+
+  min-width: 0;
+}
+
+.projection-service-menu-option strong {
+  overflow: hidden;
+
+  color: #f4f8f5;
+
+  font-size: 0.72rem;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projection-service-menu-option small {
+  overflow: hidden;
+
+  color: var(--text-muted);
+
+  font-size: 0.61rem;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projection-service-menu-region {
+  flex-shrink: 0;
+
+  color: #58cbb7;
+
+  font-family:
+    "IBM Plex Mono",
+    monospace;
+
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+/* =========================================================
+   LOCALIZAÇÃO
+   ========================================================= */
+
+.projection-service-location {
+  display: grid;
+
+  gap: 6px;
+
+  padding-bottom: 14px;
+
+  border-bottom:
+    1px solid #ffffff10;
+}
+
+.projection-service-location span,
+.projection-service-energy
+  > div
+  > span {
+  color: var(--text-muted);
+
+  font-size: 0.62rem;
+  font-weight: 700;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.04em;
+}
+
+.projection-service-location strong {
+  color: #dce9e4;
+
+  font-size: 0.82rem;
+}
+
+/* =========================================================
+   DIVISORES INTERNOS
+   ========================================================= */
+
+.projection-service-divider {
+  width: 100%;
+  height: 1px;
+
+  background: #ffffff10;
+}
+
+/* =========================================================
+   LOCALIDADES DISPONÍVEIS
+   ========================================================= */
+
+.projection-service-regions {
+  display: grid;
+
+  gap: 12px;
+
+  min-width: 0;
+}
+
+.projection-service-regions-header {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+.projection-service-regions-header > div {
+  display: grid;
+
+  gap: 3px;
+}
+
+.projection-service-regions-label {
+  color: #87e46c;
+
+  font-size: 0.61rem;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+}
+
+.projection-service-regions-header strong {
+  color: #f4f8f5;
+
+  font-size: 0.86rem;
+}
+
+.projection-service-regions-count {
+  flex-shrink: 0;
+
+  padding: 4px 7px;
+
+  border: 1px solid #426c60;
+  border-radius: 999px;
+
+  color: #8bff5d;
+
+  font-size: 0.56rem;
+  font-weight: 800;
+}
+
+.projection-service-regions-description {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.projection-service-region {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  min-width: 0;
+  min-height: 46px;
+
+  padding: 9px 10px;
+
+  border: 1px solid #315657;
+  border-radius: 9px;
+
+  background: #082627;
+
+  color: #dce9e4;
+
+  cursor: pointer;
+
+  font: inherit;
+
+  text-align: left;
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.projection-service-region:hover {
+  border-color: #58cbb7;
+
+  transform: translateY(-1px);
+}
+
+.projection-service-region.is-selected {
+  border-color:
+    rgba(139, 255, 93, 0.5);
+
+  background:
+    rgba(139, 255, 93, 0.08);
+}
+
+
+.projection-service-region-check {
+  display: grid;
+
+  place-items: center;
+
+  width: 21px;
+  height: 21px;
+
+  flex-shrink: 0;
+
+  border: 1px solid #426c60;
+  border-radius: 6px;
+
+  color: #58cbb7;
+
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.projection-service-region.is-selected
+  .projection-service-region-check {
+  border-color: #8bff5d;
+
+  background: #8bff5d;
+
+  color: #082627;
+}
+
+.projection-service-region-info {
+  display: grid;
+
+  gap: 1px;
+
+  min-width: 0;
+
+  flex: 1;
+}
+
+.projection-service-region-info strong {
+  overflow: hidden;
+
+  color: #f4f8f5;
+
+  font-size: 0.72rem;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projection-service-region-info small {
+  color: var(--text-muted);
+
+  font-size: 0.59rem;
+}
+
+.projection-service-region-impact {
+  flex-shrink: 0;
+
+  color: #58cbb7;
+
+  font-size: 0.57rem;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+/* =========================================================
+   GRID DAS REGIÕES
+   ========================================================= */
+
+.projection-service-region-list {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 7px;
+}
+
+/* =========================================================
+   ENERGIA DE REFERÊNCIA
+   ========================================================= */
+
+.projection-service-energy {
+  display: flex;
+
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+.projection-service-energy
+  > div {
+  display: grid;
+
+  gap: 4px;
+}
+
+.projection-service-energy strong {
+  color: #8bff5d;
+
+  font-family:
+    "IBM Plex Mono",
+    monospace;
+
+  font-size: 1.08rem;
+}
+
+.projection-service-partial {
+  padding: 4px 7px;
+
+  border: 1px solid
+    rgba(250, 204, 21, 0.35);
+
+  border-radius: 7px;
+
+  color: #facc15;
+
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+@media (max-width: 520px) {
+  .projection-service-region-list {
+    grid-template-columns: 1fr;
+  }
+
+  .projection-service-regions-header {
+    flex-direction: column;
+  }
+}

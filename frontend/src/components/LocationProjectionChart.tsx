@@ -3,6 +3,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -19,11 +20,32 @@ type LocationProjectionChartProps = {
   scenarios: LocationProjectionScenario[];
 };
 
+type ProjectionScenarioKind =
+  | "current"
+  | "best"
+  | "worst"
+  | "projected";
+
 type ProjectionChartData = {
   regionCode: string;
+
   name: string;
+  country: string;
+
   value: number | null;
-  isCurrent: boolean;
+
+  differencePercent: number | null;
+
+  kind: ProjectionScenarioKind;
+};
+
+type AxisTickProps = {
+  x?: number | string;
+  y?: number | string;
+
+  payload?: {
+    value?: string;
+  };
 };
 
 function formatValue(
@@ -36,27 +58,222 @@ function formatValue(
   return value.toFixed(2);
 }
 
+function getBarColor(
+  kind: ProjectionScenarioKind,
+): string {
+  switch (kind) {
+    case "current":
+      return "#58cbb7";
+
+    case "best":
+      return "#8bff5d";
+
+    case "worst":
+      return "#ff967d";
+
+    default:
+      return "#87a8a1";
+  }
+}
+
+function getScenarioLabel(
+  kind: ProjectionScenarioKind,
+): string {
+  switch (kind) {
+    case "current":
+      return "Atual";
+
+    case "best":
+      return "★ Melhor";
+
+    case "worst":
+      return "↑ Maior impacto";
+
+    default:
+      return "Projeção";
+  }
+}
+
 export function LocationProjectionChart({
   scenarios,
 }: LocationProjectionChartProps) {
+  /*
+   * Consideramos melhor/pior apenas entre as
+   * LOCALIDADES PROJETADAS.
+   *
+   * A localização atual continua funcionando
+   * separadamente como referência.
+   */
+  const projectedScenarios =
+    scenarios
+      .filter(
+        (scenario) =>
+          !scenario.isCurrent &&
+          scenario.projectedEmissionsGco2e !== null,
+      )
+      .sort(
+        (first, second) =>
+          first.projectedEmissionsGco2e! -
+          second.projectedEmissionsGco2e!,
+      );
+
+  const bestScenario =
+    projectedScenarios.length >= 2
+      ? projectedScenarios[0]
+      : null;
+
+  const worstScenario =
+    projectedScenarios.length >= 2
+      ? projectedScenarios[
+          projectedScenarios.length - 1
+        ]
+      : null;
+
+  const currentScenario =
+    scenarios.find(
+      (scenario) =>
+        scenario.isCurrent &&
+        scenario.projectedEmissionsGco2e !== null,
+    ) ?? null;
+
+  const currentEmission =
+    currentScenario?.projectedEmissionsGco2e ??
+    null;
+
+  /*
+   * Monta os dados do gráfico e já identifica
+   * o papel visual de cada cenário.
+   */
   const chartData: ProjectionChartData[] =
-    scenarios.map((scenario) => ({
-      regionCode: scenario.regionCode,
+    scenarios
+      .map((scenario) => {
+        let kind: ProjectionScenarioKind =
+          "projected";
 
-      name: scenario.region,
+        if (scenario.isCurrent) {
+          kind = "current";
+        } else if (
+          scenario.regionCode ===
+          bestScenario?.regionCode
+        ) {
+          kind = "best";
+        } else if (
+          scenario.regionCode ===
+          worstScenario?.regionCode
+        ) {
+          kind = "worst";
+        }
 
-      value:
-        scenario.projectedEmissionsGco2e,
+        return {
+          regionCode:
+            scenario.regionCode,
 
-      isCurrent: scenario.isCurrent,
-    }));
+          name:
+            scenario.region,
+
+          country:
+            scenario.country,
+
+          value:
+            scenario.projectedEmissionsGco2e,
+
+          differencePercent:
+            scenario.differencePercent,
+
+          kind,
+        };
+      })
+      .sort((first, second) => {
+        if (
+          first.value === null &&
+          second.value === null
+        ) {
+          return 0;
+        }
+
+        if (first.value === null) {
+          return 1;
+        }
+
+        if (second.value === null) {
+          return -1;
+        }
+
+        return first.value - second.value;
+      });
+
+  /*
+   * Tick customizado:
+   *
+   * BR-SP
+   * Atual
+   *
+   * CA-QC
+   * ★ Melhor
+   */
+  function renderXAxisTick({
+    x = 0,
+    y = 0,
+    payload,
+  }: AxisTickProps) {
+    const regionCode =
+      payload?.value;
+
+    const entry =
+      chartData.find(
+        (item) =>
+          item.regionCode ===
+          regionCode,
+      );
+
+    if (!entry) {
+      return null;
+    }
+
+    const label =
+      getScenarioLabel(
+        entry.kind,
+      );
+
+    return (
+      <g
+        transform={`translate(${Number(x)}, ${Number(y)})`}
+      >
+        <text
+          x={0}
+          y={0}
+          dy={14}
+          textAnchor="middle"
+          fill="#dce9e4"
+          fontSize={11}
+          fontWeight={700}
+        >
+          {entry.regionCode}
+        </text>
+
+        <text
+          x={0}
+          y={0}
+          dy={30}
+          textAnchor="middle"
+          fill={getBarColor(
+            entry.kind,
+          )}
+          fontSize={9}
+          fontWeight={700}
+        >
+          {label}
+        </text>
+      </g>
+    );
+  }
 
   return (
     <section className="location-projection-chart">
       <div className="location-projection-chart-header">
         <div>
           <p className="analyses-section-label">
-            COMPARAÇÃO VISUAL
+            COMPARAÇÃO DE IMPACTO
           </p>
 
           <h2>
@@ -64,8 +281,8 @@ export function LocationProjectionChart({
           </h2>
 
           <p>
-            Quanto menor a barra, menor a emissão
-            estimada para o mesmo consumo energético.
+            Os cenários estão ordenados do menor
+            para o maior impacto ambiental estimado.
           </p>
         </div>
 
@@ -79,80 +296,131 @@ export function LocationProjectionChart({
         >
           <BarChart
             data={chartData}
-            layout="vertical"
             margin={{
-              top: 8,
-              right: 32,
-              bottom: 8,
-              left: 16,
+              top: 26,
+              right: 20,
+              bottom: 34,
+              left: 4,
             }}
+            barCategoryGap="24%"
           >
             <CartesianGrid
-              stroke="rgba(255,255,255,0.08)"
+              stroke="rgba(255,255,255,0.07)"
               strokeDasharray="4 4"
-              horizontal={false}
+              vertical={false}
             />
 
             <XAxis
-              type="number"
-              tickFormatter={(value) =>
-                formatValue(Number(value))
-              }
+              type="category"
+              dataKey="regionCode"
+              tick={renderXAxisTick}
               tickLine={false}
               axisLine={{
                 stroke:
-                  "rgba(255,255,255,0.16)",
+                  "rgba(255,255,255,0.14)",
               }}
-              tick={{
-                fill: "#9fb6ad",
-                fontSize: 12,
-              }}
+              interval={0}
+              height={46}
             />
 
             <YAxis
-              type="category"
-              dataKey="name"
-              width={150}
+              type="number"
+              tickFormatter={(value) =>
+                formatValue(
+                  Number(value),
+                )
+              }
               tickLine={false}
               axisLine={false}
+              width={58}
               tick={{
-                fill: "#f4f8f5",
-                fontSize: 12,
+                fill: "#9fb6ad",
+                fontSize: 10,
               }}
             />
 
+            {currentEmission !== null && (
+              <ReferenceLine
+                y={currentEmission}
+                stroke="#58cbb7"
+                strokeWidth={1.5}
+                strokeDasharray="5 5"
+                label={{
+                  value:
+                    "Impacto atual",
+                  position:
+                    "insideTopRight",
+                  fill: "#58cbb7",
+                  fontSize: 10,
+                }}
+              />
+            )}
+
             <Tooltip
+              labelFormatter={(
+                regionCode,
+              ) => {
+                const entry =
+                  chartData.find(
+                    (item) =>
+                      item.regionCode ===
+                      regionCode,
+                  );
+
+                if (!entry) {
+                  return regionCode;
+                }
+
+                return `${entry.name} · ${entry.country}`;
+              }}
               formatter={(value) => [
                 `${formatValue(Number(value))} gCO₂e`,
                 "Emissão projetada",
               ]}
               contentStyle={{
-                background: "#0c2d30f2",
+                background:
+                  "#0c2d30f2",
+
                 border:
                   "1px solid #426c60",
-                borderRadius: "12px",
-                color: "#f4f8f5",
+
+                borderRadius:
+                  "12px",
+
+                color:
+                  "#f4f8f5",
               }}
               labelStyle={{
-                color: "#f4f8f5",
-                fontWeight: 700,
+                color:
+                  "#f4f8f5",
+
+                fontWeight:
+                  700,
               }}
               itemStyle={{
-                color: "#d8ece5",
-                fontWeight: 600,
+                color:
+                  "#d8ece5",
+
+                fontWeight:
+                  600,
               }}
               cursor={{
                 fill:
-                  "rgba(255,255,255,0.06)",
+                  "rgba(255,255,255,0.05)",
               }}
             />
 
             <Bar
               dataKey="value"
-              radius={[0, 8, 8, 0]}
-              maxBarSize={36}
+              radius={[
+                7,
+                7,
+                2,
+                2,
+              ]}
+              maxBarSize={44}
               isAnimationActive
-              animationDuration={350}
+              animationDuration={380}
               animationEasing="ease-out"
             >
               {chartData.map(
@@ -161,15 +429,14 @@ export function LocationProjectionChart({
                     key={
                       entry.regionCode
                     }
-                    fill={
-                      entry.isCurrent
-                        ? "#58cbb7"
-                        : "#8bff5d"
-                    }
+                    fill={getBarColor(
+                      entry.kind,
+                    )}
                     fillOpacity={
-                      entry.isCurrent
-                        ? 0.72
-                        : 0.9
+                      entry.kind ===
+                      "projected"
+                        ? 0.68
+                        : 0.92
                     }
                   />
                 ),
@@ -181,13 +448,23 @@ export function LocationProjectionChart({
 
       <div className="location-projection-chart-legend">
         <span>
+          <i className="is-best" />
+          Melhor projeção
+        </span>
+
+        <span>
           <i className="is-current" />
           Localização atual
         </span>
 
         <span>
           <i className="is-projected" />
-          Localidades projetadas
+          Outras projeções
+        </span>
+
+        <span>
+          <i className="is-worst" />
+          Maior impacto
         </span>
       </div>
     </section>
