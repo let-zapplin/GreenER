@@ -841,7 +841,9 @@ JSON malformado e valores primitivos de nível superior, como `null`, são rejei
 
 Calcula uma distribuição hipotética de serviços ativos entre as regiões com snapshots de intensidade de carbono atualizados. A energia de cada serviço é agregada sobre todas as coletas do intervalo informado, antes de qualquer redução visual do histórico. A otimização minimiza a soma de `energia observada × intensidade de carbono`; não executa migrações nem considera capacidade, custo ou desempenho operacional.
 
-Snapshots mais antigos que `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão) são excluídos das regiões elegíveis. Se não houver nenhuma região elegível, a requisição retorna `503`. Somente serviços com status `active` participam. Energia parcial é considerada com base nas amostras válidas e marcada com `isPartial: true`; sem nenhuma amostra de energia válida, o serviço permanece na região atual, com energia e emissões projetadas como `null`.
+A busca de alocações com restrições é atualmente recursiva, decisão tomada considerando o volume atual esperado de serviços e regiões. O custo pode crescer rapidamente se esse volume aumentar; antes de expandir o uso, reavalie a abordagem e considere um algoritmo de atribuição com melhor escalabilidade.
+
+Snapshots mais antigos que `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão) são excluídos das regiões elegíveis. Se não houver nenhuma região elegível, a requisição retorna `503`. Somente serviços com status `active` participam. Sem nenhuma amostra de energia válida, o serviço permanece na região atual, com energia e emissões projetadas como `null`. `allocations[].isPartial` indica cobertura incompleta de energia; o `isPartial` geral também fica `true` quando há cobertura incompleta das emissões observadas.
 
 **Corpo da requisição:**
 
@@ -849,11 +851,17 @@ Snapshots mais antigos que `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão
 {
   "start": "2026-11-16T00:00:00.000Z",
   "end": "2026-11-17T00:00:00.000Z",
-  "requireServicePerRegion": true
+  "occupancyPolicy": "balanced"
 }
 ```
 
-`requireServicePerRegion` controla se cada região elegível precisa receber ao menos um serviço. Quando `true`, o resultado é inviável (`422`) se não for possível ocupar todas as regiões respeitando os serviços sem energia, que permanecem fixos na localização atual.
+`occupancyPolicy` define a regra de ocupação aplicada durante a otimização:
+
+- `preserve_current_counts`: mantém exatamente a quantidade atual de serviços ativos em cada região. Retorna `422` se alguma região atual não for elegível por falta de snapshot atualizado.
+- `balanced`: distribui os serviços ativos entre as regiões elegíveis com contagens que diferem no máximo em um. Se houver menos serviços que regiões, algumas regiões podem ficar vazias. Serviços sem energia calculável permanecem fixos na região atual e contam para a ocupação; a política retorna `422` se não puder ser cumprida.
+- `unconstrained`: não impõe limites de ocupação; cada serviço com energia calculável pode ser atribuído à região de menor emissão projetada. Serviços sem energia calculável permanecem fixos na região atual.
+
+Durante a transição dos consumidores da API, `requireServicePerRegion` ainda pode ser enviado no lugar de `occupancyPolicy`: `true` equivale a `balanced` e `false` a `unconstrained`. A resposta também mantém esse campo booleano como metadado de compatibilidade. Essa compatibilidade é temporária: após confirmar que os consumidores migraram para `occupancyPolicy`, remova `requireServicePerRegion` da requisição e da resposta antes da entrega final. Enviar os dois campos, ou um valor diferente dos três identificadores aceitos, retorna `400`.
 
 **Resposta `200 OK` (estrutura resumida):**
 
@@ -864,6 +872,7 @@ Snapshots mais antigos que `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão
     "start": "2026-11-16T00:00:00.000Z",
     "end": "2026-11-17T00:00:00.000Z"
   },
+  "occupancyPolicy": "balanced",
   "requireServicePerRegion": true,
   "allocations": [
     {
@@ -873,6 +882,8 @@ Snapshots mais antigos que `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão
       "assignedRegionCode": "CA-QC",
       "energyKwh": 1,
       "validEnergySampleCount": 2,
+      "observedEmissionsGco2e": 100,
+      "validObservedEmissionSampleCount": 2,
       "totalSampleCount": 2,
       "isPartial": false,
       "projectedEmissionsGco2e": 25
@@ -893,7 +904,11 @@ Snapshots mais antigos que `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão
 }
 ```
 
-`knownProjectedEmissionsGco2e` soma as emissões projetadas dos serviços com energia calculável; serviços sem energia válida não são tratados como consumo zero. `unavailableRegionCodes` lista regiões cujos snapshots existem, mas estão vencidos ou são inválidos. Os resultados são cenários estimados com dados observados e podem ser parciais.
+`observedEmissionsGco2e` soma as emissões calculadas a partir das coletas do período e das intensidades de carbono registradas nelas; é uma estimativa baseada nos dados coletados, não uma medição direta de CO₂. O campo é `null` quando nenhuma coleta tem intensidade válida. `validObservedEmissionSampleCount` informa quantas coletas contribuíram para esse total, enquanto `totalSampleCount` informa o total de coletas no período. Quando a cobertura é parcial, a emissão observada inclui somente as coletas válidas.
+
+`projectedEmissionsGco2e` usa a energia calculável do serviço e a intensidade da região sugerida. `knownProjectedEmissionsGco2e` soma as emissões projetadas dos serviços com energia calculável; serviços sem energia válida não são tratados como consumo zero. Na interface, o percentual e o subtotal comparativo só incluem serviços cuja `validObservedEmissionSampleCount` seja igual a `validEnergySampleCount`, para comparar emissões calculadas sobre a mesma quantidade de coletas. Se as contagens diferirem, o percentual é indicado como não comparável e o serviço fica fora do subtotal. A comparação ainda pode ser parcial quando as duas contagens coincidem, mas são menores que `totalSampleCount`.
+
+`requireServicePerRegion` é mantido na resposta como metadado de compatibilidade e indica se todas as regiões elegíveis receberam algum serviço. `unavailableRegionCodes` lista regiões cujos snapshots existem, mas estão vencidos ou são inválidos. Os resultados são cenários estimados com dados observados e podem ser parciais.
 
 **Erros possíveis em `POST /api/projecoes/redistribuicao`:**
 
@@ -901,9 +916,9 @@ Snapshots mais antigos que `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão
 |---|---|---|
 | `400` | `INVALID_JSON_BODY` | O JSON está malformado ou o valor de nível superior é primitivo, como `null`. |
 | `400` | `INVALID_REDISTRIBUTION_REQUEST` | O corpo não é um objeto JSON ou `start`/`end` estão ausentes ou vazios. |
-| `400` | `INVALID_REDISTRIBUTION_CONSTRAINT` | `requireServicePerRegion` não é booleano. |
+| `400` | `INVALID_REDISTRIBUTION_CONSTRAINT` | `occupancyPolicy` é inválida, `requireServicePerRegion` não é booleano ou os dois campos foram enviados juntos. |
 | `400` | `INVALID_INDICATOR_PERIOD` | Uma data é inválida ou `end` não é posterior a `start`. |
-| `422` | `REDISTRIBUTION_INFEASIBLE` | Não é possível manter ao menos um serviço em cada região elegível. |
+| `422` | `REDISTRIBUTION_INFEASIBLE` | Não é possível cumprir a política de ocupação escolhida com as regiões elegíveis e os serviços sem energia, que permanecem fixos. |
 | `503` | `NO_FRESH_REDISTRIBUTION_REGIONS` | Nenhuma região possui snapshot atual e válido. |
 | `401` | — | JWT ausente, inválido ou expirado. |
 
