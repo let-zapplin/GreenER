@@ -33,12 +33,9 @@ app.use("/api/metricas", metricasRoutes);
 app.use("/api/intensidades", intensidadesRoutes);
 app.use("/api/indicadores", indicadoresRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-<<<<<<< HEAD
 app.use("/api/chat", chatRoutes);
-=======
 app.use("/api/projecoes", projecoesRoutes);
 
->>>>>>> origin/develop
 app.use(errorMiddleware);
 
 export default app;
