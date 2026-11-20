@@ -27,10 +27,12 @@ import { LocationProjectionSummary } from "../components/LocationProjectionSumma
 import { LocationProjectionChart } from "../components/LocationProjectionChart";
 import { LocationProjectionMap } from "../components/LocationProjectionMap";
 import { ProjectionServiceCard } from "../components/ProjectionServiceCard";
+import { ServiceRedistributionPanel } from "../components/ServiceRedistributionPanel";
 
 type AnalysisLayout = "focus" | "overview" | "side";
 type OverviewView = "charts" | "ranking";
 type AnalysisMode = "explore" | "compare" | "project";
+type ProjectionView = "location" | "redistribution";
 
 const MIN_COMPARISON_SERVICES = 2;
 const MAX_COMPARISON_SERVICES = 4;
@@ -100,6 +102,8 @@ export function Analyses() {
       : null;
 
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("explore");
+  const [projectionView, setProjectionView] =
+    useState<ProjectionView>("location");
 
   const [projectionServiceId, setProjectionServiceId] = useState<number | null>(
     null,
@@ -114,7 +118,7 @@ export function Analyses() {
   loading: projectionRegionsLoading,
   error: projectionRegionsError,
 } = useProjectionRegions(
-  analysisMode === "project",
+  analysisMode === "project" && projectionView === "location",
 );
 
   const [overviewView, setOverviewView] = useState<OverviewView>("charts");
@@ -401,7 +405,7 @@ const {
   projectionServiceId,
   analysisPeriod,
   projectionRegionCodes,
-  analysisMode === "project",
+  analysisMode === "project" && projectionView === "location",
 );
 
   useEffect(() => {
@@ -666,25 +670,67 @@ const {
               <div>
                 <p className="analyses-section-label">PROJEÇÃO REGIONAL</p>
 
-                <h2 id="projection-title">Projetar impacto por localização</h2>
+                <h2 id="projection-title">
+                  {projectionView === "location"
+                    ? "Projetar impacto por localização"
+                    : "Redistribuir serviços entre regiões"}
+                </h2>
 
                 <p>
-                  Compare como o mesmo perfil de consumo energético poderia
-                  resultar em diferentes emissões de CO₂e quando associado a
-                  outras matrizes energéticas regionais.
+                  {projectionView === "location"
+                    ? "Compare como o mesmo perfil de consumo energético poderia resultar em diferentes emissões de CO₂e quando associado a outras matrizes energéticas regionais."
+                    : "Encontre uma distribuição estimada dos serviços ativos que minimize emissões, usando os dados observados na janela selecionada."}
                 </p>
               </div>
 
               <div className="analyses-projection-notice">
-                <strong>Simulação ambiental</strong>
+                <strong>
+                  {projectionView === "location"
+                    ? "Simulação ambiental"
+                    : "Cenário de redistribuição"}
+                </strong>
 
                 <span>
-                  A projeção mantém o consumo energético do serviço constante e
-                  altera apenas o fator ambiental da localização.
+                  {projectionView === "location"
+                    ? "A projeção mantém o consumo energético do serviço constante e altera apenas o fator ambiental da localização."
+                    : "A sugestão não executa migrações. Dados parciais são sinalizados; serviços sem energia calculável permanecem na região atual."}
                 </span>
               </div>
             </div>
 
+            <div
+              className="comparison-visualization-switch"
+              role="group"
+              aria-label="Visualização da projeção regional"
+            >
+              <button
+                type="button"
+                className={
+                  projectionView === "location"
+                    ? "comparison-visualization-button is-active"
+                    : "comparison-visualization-button"
+                }
+                aria-pressed={projectionView === "location"}
+                onClick={() => setProjectionView("location")}
+              >
+                Projetar localização
+              </button>
+              <button
+                type="button"
+                className={
+                  projectionView === "redistribution"
+                    ? "comparison-visualization-button is-active"
+                    : "comparison-visualization-button"
+                }
+                aria-pressed={projectionView === "redistribution"}
+                onClick={() => setProjectionView("redistribution")}
+              >
+                Redistribuir serviços
+              </button>
+            </div>
+
+            {projectionView === "location" ? (
+              <>
 <div className="analyses-projection-primary">
 <ProjectionServiceCard
   service={projectionService}
@@ -800,6 +846,10 @@ const {
      
     </div>
   )}
+            </>
+          ) : (
+            <ServiceRedistributionPanel period={analysisPeriod} />
+          )}
           </section>
         )}
 
