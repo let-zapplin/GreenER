@@ -104,6 +104,11 @@
   background: #fb923c16;
 }
 
+.service-popover-status.error {
+  color: #e879f9;
+  background: #e879f916;
+}
+
 .service-popover-status.removed {
   color: #fca5a5;
   background: #fca5a516;
@@ -131,6 +136,7 @@
   font-size: var(--font-size-small);
   line-height: 1.5;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .service-popover-location span:first-child {

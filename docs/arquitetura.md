@@ -568,6 +568,21 @@ A ausência de coordenadas não remove o serviço do Monitoramento. O mapa é um
 
 No fechamento documental da Sprint 2, a US13 permanece em revisão antes de ser considerada definitivamente integrada.
 
+### Localização consolidada — US12
+
+O texto de localização segue um único formatador (`frontend/src/lib/serviceLocation.ts`),
+que combina cidade, região e país apenas quando existem e usa o fallback “Localização
+não informada”. O mesmo texto aparece no Monitoramento (cards, popover, HUD, painel de
+detalhes e popups do mapa) e nas Análises (destaque do serviço, seletor de comparação,
+previews, ranking e resumo comparativo).
+
+- `city` é opcional no contrato; cidade, região e país aparecem na ordem em que existirem.
+- `latitude`/`longitude` são opcionais e controlam apenas a presença no mapa; o serviço
+  continua listado, selecionável e analisável fora dele.
+- Campos nulos ou vazios são descartados antes da exibição, sem separadores sobrando.
+- Rótulos de localização usam `overflow-wrap` para não romper cards e painéis em telas
+  estreitas.
+
 ---
 
 ## 12. Histórico visual — TEC23
@@ -681,7 +696,7 @@ Os hooks preservam os últimos dados válidos quando uma atualização falha e t
 
 ### Dados incompletos
 
-O backend utiliza `isPartial`, coberturas e lacunas para comunicar que um resultado não está completo, evitando apresentar ausência como valor zero.
+O backend utiliza `isPartial`, coberturas e lacunas para comunicar que um resultado não está completo. Por compatibilidade, os totais ambientais agregados existentes podem retornar `0` quando nenhuma amostra contribuiu para aquele indicador; esse valor deve ser interpretado junto às contagens e lacunas, não como confirmação de consumo ou emissão reais iguais a zero. Os novos campos que podem não ter amostras válidas, como `energyBreakdown`, representam essa ausência com `null`.
 
 ---
 

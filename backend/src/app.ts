@@ -8,6 +8,7 @@ import indicadoresRoutes from "./modules/indicadores/indicadores.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import chatRoutes from "./modules/chat/chat.routes.js";
 import { errorMiddleware } from "./shared/middlewares/error.middleware.js";
+import projecoesRoutes from "./modules/projecoes/projecoes.routes.js";
 
 const app = express();
 
@@ -32,7 +33,12 @@ app.use("/api/metricas", metricasRoutes);
 app.use("/api/intensidades", intensidadesRoutes);
 app.use("/api/indicadores", indicadoresRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+<<<<<<< HEAD
 app.use("/api/chat", chatRoutes);
+=======
+app.use("/api/projecoes", projecoesRoutes);
+
+>>>>>>> origin/develop
 app.use(errorMiddleware);
 
 export default app;

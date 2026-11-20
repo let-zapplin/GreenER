@@ -1,5 +1,6 @@
 .comparison-summary {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 16px;
 
@@ -22,7 +23,7 @@
   display: grid;
 
   grid-template-columns:
-    repeat(auto-fit, minmax(240px, 1fr));
+    repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 
   gap: 12px;
 }
@@ -68,6 +69,7 @@
   font-size: 0.78rem;
 
   opacity: 0.65;
+  overflow-wrap: anywhere;
 }
 
 .comparison-summary-partial {
@@ -268,6 +270,8 @@
 
 .comparison-resource-matrix {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   flex-direction: column;
 
   overflow-x: auto;
@@ -449,7 +453,68 @@
 }
 
 @media (max-width: 700px) {
+  .comparison-summary-header h2 {
+    font-size: 1.1rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
   .comparison-summary-values {
     grid-template-columns: 1fr;
+  }
+}
+
+.comparison-resource-scroll-hint {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .comparison-resource-scroll-hint {
+    display: block;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+  }
+
+  .comparison-resource-matrix {
+    --comparison-resource-label-width: 88px;
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+  }
+
+  .comparison-resource-matrix::-webkit-scrollbar {
+    display: block;
+    height: 6px;
+  }
+
+  .comparison-resource-matrix::-webkit-scrollbar-thumb {
+    background: #527170;
+    border-radius: 6px;
+  }
+
+  .comparison-resource-label,
+  .comparison-resource-matrix-header > span:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #0c2d30;
+  }
+
+  .comparison-resource-service {
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+
+  .comparison-summary-card-header {
+    flex-wrap: wrap;
+  }
+
+  .comparison-summary-card-header strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .comparison-summary-values dd {
+    overflow-wrap: anywhere;
   }
 }

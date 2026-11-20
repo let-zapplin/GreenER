@@ -15,7 +15,7 @@ import "./ServiceHistoryPreview.css";
 type ServiceHistoryPreviewProps = {
   serviceId: number;
   name: string;
-  regionCode: string;
+  place: string;
 
   period: AnalysisPeriodWindow;
 
@@ -41,7 +41,7 @@ function formatEnergy(
 export function ServiceHistoryPreview({
   serviceId,
   name,
-  regionCode,
+  place,
   period,
   isSelected,
   onSelect,
@@ -105,7 +105,7 @@ export function ServiceHistoryPreview({
             <strong>{name}</strong>
 
             <span>
-              {regionCode}
+              {place}
             </span>
           </div>
 

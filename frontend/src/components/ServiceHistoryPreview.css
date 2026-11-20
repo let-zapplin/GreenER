@@ -79,6 +79,7 @@
 .service-history-preview-header span {
   color: var(--text-muted);
   font-size: 10px;
+  overflow-wrap: anywhere;
 }
 
 .service-history-preview-value {
@@ -240,4 +241,14 @@
 
   font: inherit;
   text-align: left;
+}
+@media (max-width: 700px) {
+  .service-history-preview-header {
+    flex-wrap: wrap;
+  }
+
+  .service-history-preview-header strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }

@@ -782,12 +782,13 @@
 .landing-number {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 62px;
+  height: 56px;
   margin-bottom: 16px;
   font-family: "IBM Plex Mono", monospace;
   font-weight: 700;
-  border-radius: 50%;
+  font-size: 20px;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   color: #0c282b;
   background: var(--ui-accent);
 }
@@ -904,27 +905,6 @@
   font-weight: 500;
   margin-top: 18px;
 }
-.landing-footer {
-  padding-block: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  color: var(--text-muted);
-  font-size: var(--font-size-small);
-  line-height: 1.5;
-  font-weight: 500;
-}
-.landing-footer img {
-  display: block;
-  width: 76px;
-  height: auto;
-}
-.landing-footer span {
-  font-size: var(--font-size-small);
-  line-height: 1.5;
-  font-weight: 500;
-}
 .landing-screen section[id] {
   scroll-margin-top: 28px;
 }
@@ -960,6 +940,28 @@
   }
 }
 @media (max-width: 700px) {
+  .landing-demo-popup {
+    max-width: min(210px, calc(100% - 24px)) !important;
+  }
+
+  .landing-demo-popup .maplibregl-popup-content {
+    padding: 24px 10px 10px;
+    overflow-wrap: anywhere;
+  }
+
+  .landing-demo-popup :is(.landing-demo-badge, h3, p, strong) {
+    font-size: clamp(11px, 3vw, 13px);
+    line-height: 1.35;
+  }
+
+  .landing-demo-popup h3 {
+    margin-top: 6px !important;
+  }
+
+  .landing-demo-popup p {
+    margin-block: 6px !important;
+  }
+
   .landing-container {
     width: calc(100% - 40px);
   }
@@ -1085,15 +1087,6 @@
   .landing-cta-note svg {
     flex-shrink: 0;
     margin-top: 2px;
-  }
-  .landing-footer {
-    flex-wrap: wrap;
-    justify-content: center;
-    text-align: center;
-    gap: 16px;
-  }
-  .landing-footer span {
-    width: 100%;
   }
   .landing-eyebrow {
     font-size: var(--font-size-small);

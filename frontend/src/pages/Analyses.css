@@ -348,6 +348,8 @@
 }
 
 .analyses-history-header {
+  flex-wrap: wrap;
+
   display: flex;
 
   align-items: flex-start;
@@ -509,6 +511,8 @@
   font-size: 14px;
 
   line-height: 1.4;
+
+  overflow-wrap: anywhere;
 }
 
 .analyses-history-unit {
@@ -538,7 +542,7 @@
   display: grid;
 
   grid-template-columns:
-    repeat(2, minmax(120px, 180px))
+    repeat(2, minmax(0, 180px))
     minmax(220px, 1fr);
 
   gap: 12px;
@@ -575,6 +579,8 @@
 }
 
 .analyses-history-actions {
+  flex-wrap: wrap;
+
   display: flex;
 
   align-items: flex-end;
@@ -585,6 +591,8 @@
 }
 
 .analyses-history-service-select {
+  min-width: 0;
+
   display: grid;
 
   gap: 5px;
@@ -1128,6 +1136,8 @@
 }
 
 .analyses-overview-header {
+  flex-wrap: wrap;
+
   display: flex;
 
   align-items: flex-start;
@@ -1259,45 +1269,67 @@
 
 .analyses-overview-ranking {
   min-width: 0;
+
   min-height: 0;
 }
 
 /* =========================================================
+
    LAYOUT PRINCIPAL DA ÁREA DE ANÁLISES
+
    ---------------------------------------------------------
+
    A página usa apenas dois cards:
+
    1) .analyses-history  -> histórico do serviço selecionado
+
    2) .analyses-overview -> visão geral dos serviços
 
+
    O ranking deixa de ser uma terceira área da página.
+
    Na próxima etapa ele será uma visualização interna do
+
    próprio card de Visão Geral.
+
    ========================================================= */
 
 .analyses-layout {
   display: grid;
+
   gap: 24px;
+
   align-items: start;
 }
 
 /* Impede que conteúdos internos forcem o grid a ficar maior
+
    que a largura disponível. */
+
 .analyses-layout > * {
   min-width: 0;
 }
 
 /* O espaçamento entre os cards é controlado pelo gap do grid. */
+
 .analyses-layout .analyses-overview {
   margin-bottom: 0;
 }
 
 /* =========================================================
+
    MODO FOCO
+
    ---------------------------------------------------------
+
    Prioriza o histórico do serviço selecionado.
+
    Ordem:
+
    1) Histórico principal
+
    2) Visão geral
+
    ========================================================= */
 
 .analyses-layout-focus .analyses-history {
@@ -1309,12 +1341,19 @@
 }
 
 /* =========================================================
+
    MODO GERAL
+
    ---------------------------------------------------------
+
    Prioriza a visão macro dos serviços.
+
    Ordem:
+
    1) Visão geral
+
    2) Histórico principal
+
    ========================================================= */
 
 .analyses-layout-overview .analyses-overview {
@@ -1326,13 +1365,20 @@
 }
 
 /* =========================================================
+
    MODO LATERAL
+
    ---------------------------------------------------------
+
    Histórico à esquerda e Visão Geral à direita.
 
+
    Os dois cards recebem a mesma altura no desktop.
+
    O conteúdo da Visão Geral rola internamente quando houver
+
    muitos serviços, sem empurrar o restante da página.
+
    ========================================================= */
 
 .analyses-layout-side {
@@ -1345,9 +1391,11 @@
 
 .analyses-layout-side .analyses-history {
   grid-column: 1;
+
   grid-row: 1;
 
   display: flex;
+
   flex-direction: column;
 
   height: clamp(620px, 72vh, 760px);
@@ -1357,44 +1405,61 @@
 
 .analyses-layout-side .analyses-overview {
   grid-column: 2;
+
   grid-row: 1;
 
   display: flex;
+
   flex-direction: column;
 
   height: clamp(620px, 72vh, 760px);
 
   min-height: 0;
+
   overflow: hidden;
 }
 
 /* Ao minimizar a Visão Geral no modo lateral, ela deixa de
+
    ocupar toda a altura e volta ao tamanho natural do conteúdo. */
+
 .analyses-layout-side .analyses-overview:has(.analyses-overview-collapsed) {
   height: auto;
+
   min-height: 0;
+
   align-self: start;
 }
 
 /* =========================================================
+
    HISTÓRICO NO MODO LATERAL
+
    ---------------------------------------------------------
+
    Faz o gráfico principal aproveitar corretamente a altura
+
    disponível sem cortar legenda ou rodapé.
+
    ========================================================= */
 
 .analyses-layout-side .analyses-history-content {
   display: flex;
+
   flex: 1;
+
   flex-direction: column;
 
   min-height: 0;
+
   height: auto;
 }
 
 .analyses-layout-side .history-chart {
   display: flex;
+
   flex: 1 1 0;
+
   flex-direction: column;
 
   min-height: 0;
@@ -1404,6 +1469,7 @@
   flex: 1 1 0;
 
   min-height: 300px;
+
   height: auto;
 }
 
@@ -1433,10 +1499,15 @@
 }
 
 /* =========================================================
+
    VISÃO GERAL NO MODO LATERAL
+
    ---------------------------------------------------------
+
    No painel lateral os previews ficam em uma única coluna.
+
    O cabeçalho permanece no topo e a lista usa scroll interno.
+
    ========================================================= */
 
 .analyses-overview-scroll {
@@ -1454,6 +1525,7 @@
   min-height: 0;
 
   overflow-y: auto;
+
   overflow-x: hidden;
 
   padding-right: 8px;
@@ -1466,9 +1538,11 @@
 }
 
 /* Scrollbar discreta para o painel lateral. */
+
 .analyses-layout-side .analyses-overview-scroll,
 .analyses-layout-side .analyses-overview-ranking {
   scrollbar-width: thin;
+
   scrollbar-color: #58cbb755 transparent;
 }
 
@@ -1483,6 +1557,7 @@
 
 .analyses-layout-side .analyses-overview-scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
+
   background: #58cbb755;
 }
 
@@ -1491,19 +1566,29 @@
 }
 
 /* =========================================================
+
    CONTROLES DA NOVA VISÃO GERAL
+
    ---------------------------------------------------------
+
    Estas classes ficam prontas para a próxima etapa:
+
    - [Gráficos | Ranking]
+
    - seletor de ordenação dos serviços
 
+
    Enquanto o JSX ainda não usar essas classes, elas não
+
    alteram o visual atual.
+
    ========================================================= */
 
 .analyses-overview-toolbar {
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
 
   gap: 12px;
@@ -1517,6 +1602,7 @@
   padding: 3px;
 
   border: 1px solid #315657;
+
   border-radius: 10px;
 
   background: #0c2d30;
@@ -1526,13 +1612,17 @@
   padding: 7px 11px;
 
   border: 0;
+
   border-radius: 7px;
 
   background: transparent;
+
   color: var(--text-muted);
 
   font: inherit;
+
   font-size: 10px;
+
   font-weight: 600;
 
   cursor: pointer;
@@ -1548,11 +1638,13 @@
 
 .analyses-overview-view-button.is-active {
   background: #58cbb7;
+
   color: #062f32;
 }
 
 .analyses-overview-sort {
   display: flex;
+
   align-items: center;
 
   gap: 8px;
@@ -1562,9 +1654,11 @@
   color: var(--text-muted);
 
   font-size: 9px;
+
   font-weight: 600;
 
   letter-spacing: 0.08em;
+
   text-transform: uppercase;
 }
 
@@ -1574,14 +1668,17 @@
   padding: 0 30px 0 10px;
 
   border: 1px solid #315657;
+
   border-radius: 8px;
 
   outline: none;
 
   background: #0c2d30;
+
   color: #e8f1eb;
 
   font: inherit;
+
   font-size: 10px;
 
   cursor: pointer;
@@ -1668,19 +1765,26 @@
 }
 
 /* =========================================================
+
    MODOS DA PÁGINA DE ANÁLISES
+
    ---------------------------------------------------------
+
    Alterna entre a exploração individual dos dados e
+
    o workspace dedicado à comparação entre serviços.
+
    ========================================================= */
 
 .analyses-mode-switch {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 
-  width: min(100%, 560px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  width: min(100%, 760px);
 
   margin-top: 8px;
+
   margin-bottom: 18px;
 
   padding: 5px;
@@ -1688,6 +1792,7 @@
   background: #0c2d30;
 
   border: 1px solid #426c60;
+
   border-radius: 13px;
 }
 
@@ -1697,7 +1802,9 @@
   padding: 10px 18px;
 
   background: transparent;
+
   border: 1px solid transparent;
+
   border-radius: 9px;
 
   color: #b9ccc6;
@@ -1705,7 +1812,9 @@
   cursor: pointer;
 
   font: inherit;
+
   font-size: 0.86rem;
+
   font-weight: 700;
 
   opacity: 0.76;
@@ -1726,6 +1835,7 @@
 
 .analyses-mode-button.is-active {
   background: #58cbb7;
+
   border-color: #87e46c;
 
   color: #082627;
@@ -1737,7 +1847,9 @@
 
 .analyses-comparison-workspace {
   display: flex;
+
   flex-direction: column;
+
   gap: 16px;
 
   min-width: 0;
@@ -1757,11 +1869,13 @@
 
 .analyses-comparison-controls > * {
   min-width: 0;
+
   height: 100%;
 }
 
 .comparison-visualization-switch {
   display: inline-flex;
+
   align-self: flex-start;
 
   padding: 4px;
@@ -1769,6 +1883,7 @@
   background: #0c2d30;
 
   border: 1px solid #426c60;
+
   border-radius: 11px;
 }
 
@@ -1776,7 +1891,9 @@
   padding: 8px 14px;
 
   background: transparent;
+
   border: 0;
+
   border-radius: 8px;
 
   color: #b9ccc6;
@@ -1784,7 +1901,9 @@
   cursor: pointer;
 
   font: inherit;
+
   font-size: 0.78rem;
+
   font-weight: 700;
 
   opacity: 0.72;
@@ -1803,8 +1922,10 @@
 }
 
 /* ----------------------------------
+
    SELEÇÃO PARA COMPARAÇÃO
----------------------------------- */
+
+\---------------------------------- */
 
 .analyses-preview-wrapper {
   position: relative;
@@ -1820,16 +1941,17 @@
 
 .analyses-preview-wrapper.is-comparison-selected {
   outline: 2px solid rgba(139, 255, 93, 0.4);
+
   outline-offset: 3px;
 
-  box-shadow:
-    0 0 22px rgba(139, 255, 93, 0.06);
+  box-shadow: 0 0 22px rgba(139, 255, 93, 0.06);
 }
 
-
 /* ----------------------------------
+
    ATALHO PARA COMPARAÇÃO
----------------------------------- */
+
+\---------------------------------- */
 
 .analyses-comparison-tray {
   position: sticky;
@@ -1839,8 +1961,11 @@
   z-index: 20;
 
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
+
   gap: 20px;
 
   width: min(100%, 760px);
@@ -1849,21 +1974,22 @@
 
   padding: 12px 14px;
 
-  background:
-    rgba(8, 38, 40, 0.94);
+  background: rgba(8, 38, 40, 0.94);
 
   border: 1px solid #426c60;
+
   border-radius: 16px;
 
-  box-shadow:
-    0 16px 40px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
 
   backdrop-filter: blur(12px);
 }
 
 .analyses-comparison-tray-info {
   display: flex;
+
   align-items: center;
+
   gap: 10px;
 
   min-width: 0;
@@ -1871,9 +1997,11 @@
 
 .analyses-comparison-tray-count {
   display: grid;
+
   place-items: center;
 
   width: 34px;
+
   height: 34px;
 
   flex-shrink: 0;
@@ -1881,6 +2009,7 @@
   background: rgba(139, 255, 93, 0.12);
 
   border: 1px solid rgba(139, 255, 93, 0.38);
+
   border-radius: 50%;
 
   color: #8bff5d;
@@ -1890,7 +2019,9 @@
 
 .analyses-comparison-tray-info > div {
   display: flex;
+
   flex-direction: column;
+
   gap: 2px;
 
   min-width: 0;
@@ -1908,7 +2039,9 @@
 
 .analyses-comparison-tray-actions {
   display: flex;
+
   align-items: center;
+
   gap: 8px;
 
   flex-shrink: 0;
@@ -1925,7 +2058,9 @@
   cursor: pointer;
 
   font: inherit;
+
   font-size: 0.72rem;
+
   font-weight: 800;
 }
 
@@ -1939,7 +2074,9 @@
 
 .analyses-comparison-tray-open {
   display: flex;
+
   align-items: center;
+
   gap: 8px;
 
   background: #8bff5d;
@@ -1956,9 +2093,12 @@
 }
 
 /* =========================================================
+
   Animação transição carregamento automatico
 
+
    ========================================================= */
+
 .comparison-visualization-frame {
   position: relative;
 
@@ -1969,11 +2109,15 @@
 
 .comparison-refresh-overlay {
   position: absolute;
+
   top: 14px;
+
   right: 14px;
 
   display: inline-flex;
+
   align-items: center;
+
   gap: 8px;
 
   padding: 7px 10px;
@@ -1981,17 +2125,18 @@
   background: rgba(8, 38, 40, 0.88);
 
   border: 1px solid rgba(88, 203, 183, 0.22);
+
   border-radius: 999px;
 
   color: #b9ccc6;
 
   font-size: 0.72rem;
+
   font-weight: 700;
 
   backdrop-filter: blur(10px);
 
-  box-shadow:
-    0 8px 20px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
 }
 
 .comparison-visualization-frame.is-refreshing {
@@ -2002,6 +2147,7 @@
   content: "";
 
   width: 7px;
+
   height: 7px;
 
   border-radius: 50%;
@@ -2027,13 +2173,461 @@
   }
 }
 
+/* =========================================================
+
+   PROJEÇÃO REGIONAL
+
+   ---------------------------------------------------------
+
+   Workspace dedicado à simulação do impacto ambiental de
+
+   um serviço em diferentes localidades.
+
+   ========================================================= */
+
+.analyses-projection-workspace {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 18px;
+
+  min-width: 0;
+}
+
+.analyses-projection-intro {
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: space-between;
+
+  gap: 28px;
+
+  padding: 22px;
+
+  border: 1px solid #315657;
+
+  border-radius: 16px;
+
+  background: #0c2d30;
+}
+
+.analyses-projection-intro > div:first-child {
+  max-width: 680px;
+}
+
+.analyses-projection-intro h2 {
+  margin: 4px 0 8px;
+
+  color: #f4f8f5;
+
+  font-size: 1.15rem;
+}
+
+.analyses-projection-intro p {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.82rem;
+
+  line-height: 1.6;
+}
+
+.analyses-projection-notice {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+
+  max-width: 310px;
+
+  padding: 12px 14px;
+
+  border: 1px solid rgba(139, 255, 93, 0.22);
+
+  border-radius: 11px;
+
+  background: rgba(139, 255, 93, 0.06);
+}
+
+.analyses-projection-notice strong {
+  color: #8bff5d;
+
+  font-size: 0.72rem;
+}
+
+.analyses-projection-notice span {
+  color: #b9ccc6;
+
+  font-size: 0.7rem;
+
+  line-height: 1.5;
+}
+
+.analyses-projection-placeholder {
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+
+  min-height: 150px;
+
+  padding: 22px;
+
+  border: 1px dashed #426c60;
+
+  border-radius: 16px;
+
+  background: rgba(12, 45, 48, 0.42);
+}
+
+.analyses-projection-placeholder > span {
+  display: grid;
+
+  place-items: center;
+
+  width: 44px;
+
+  height: 44px;
+
+  flex-shrink: 0;
+
+  border: 1px solid rgba(88, 203, 183, 0.35);
+
+  border-radius: 50%;
+
+  color: #58cbb7;
+
+  font-size: 1.4rem;
+}
+
+.analyses-projection-placeholder strong {
+  color: #f4f8f5;
+
+  font-size: 0.86rem;
+}
+
+.analyses-projection-placeholder p {
+  margin: 5px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.75rem;
+
+  line-height: 1.5;
+}
 
 /* =========================================================
-   RESPONSIVIDADE DOS LAYOUTS
+
+   BLOCO PRINCIPAL DA PROJEÇÃO
+
    ---------------------------------------------------------
+
+   Origem e mapa dividem a primeira linha da experiência.
+
+   ========================================================= */
+
+.analyses-projection-primary {
+  display: grid;
+
+  grid-template-columns:
+    minmax(280px, 0.78fr)
+    minmax(0, 1.22fr);
+
+  gap: 16px;
+
+  align-items: stretch;
+}
+
+.analyses-projection-primary > * {
+  min-width: 0;
+
+  height: 100%;
+}
+
+.analyses-projection-regions {
+  padding: 20px;
+
+  border: 1px solid #315657;
+
+  border-radius: 16px;
+
+  background: #0c2d30;
+}
+
+.analyses-projection-regions h3 {
+  margin: 4px 0 6px;
+
+  color: #f4f8f5;
+}
+
+.analyses-projection-regions-header p {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.75rem;
+
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------
+
+   Regiões alternativas
+
+   --------------------------------------------------------- */
+
+.analyses-projection-regions-header {
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: space-between;
+
+  gap: 16px;
+
+  margin-bottom: 16px;
+}
+
+.analyses-projection-regions-header > span {
+  flex-shrink: 0;
+
+  padding: 6px 9px;
+
+  border: 1px solid #426c60;
+
+  border-radius: 999px;
+
+  color: #8bff5d;
+
+  font-size: 0.68rem;
+
+  font-weight: 800;
+}
+
+.analyses-projection-results {
+  display: grid;
+
+  gap: 16px;
+}
+
+/* =========================================================
+
+   LISTA COMPACTA DE LOCALIDADES
+
+   ---------------------------------------------------------
+
+   O mapa é a visualização principal.
+
+   Esta lista funciona como seleção auxiliar.
+
+   ========================================================= */
+
+.analyses-projection-region-list {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+}
+
+.analyses-projection-region-chip {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 9px;
+
+  min-height: 42px;
+
+  padding: 7px 10px;
+
+  border: 1px solid #315657;
+
+  border-radius: 10px;
+
+  background: #082627;
+
+  color: #dce9e4;
+
+  cursor: pointer;
+
+  font: inherit;
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.analyses-projection-region-chip:hover {
+  border-color: #58cbb7;
+
+  transform: translateY(-1px);
+}
+
+.analyses-projection-region-chip.is-selected {
+  border-color: rgba(139, 255, 93, 0.5);
+
+  background: rgba(139, 255, 93, 0.08);
+
+  box-shadow: 0 0 0 1px rgba(139, 255, 93, 0.05);
+}
+
+.analyses-projection-region-chip-check {
+  display: grid;
+
+  place-items: center;
+
+  width: 22px;
+
+  height: 22px;
+
+  flex-shrink: 0;
+
+  border: 1px solid #426c60;
+
+  border-radius: 6px;
+
+  color: #58cbb7;
+
+  font-size: 0.7rem;
+
+  font-weight: 900;
+}
+
+.analyses-projection-region-chip.is-selected
+  .analyses-projection-region-chip-check {
+  border-color: #8bff5d;
+
+  background: #8bff5d;
+
+  color: #082627;
+}
+
+.analyses-projection-region-chip-main {
+  display: grid;
+
+  min-width: 0;
+
+  text-align: left;
+}
+
+.analyses-projection-region-chip-main strong {
+  color: #f4f8f5;
+
+  font-size: 0.7rem;
+}
+
+.analyses-projection-region-chip-main small {
+  color: var(--text-muted);
+
+  font-size: 0.58rem;
+}
+
+.analyses-projection-region-chip-impact {
+  padding-left: 8px;
+
+  border-left: 1px solid #ffffff12;
+
+  color: #58cbb7;
+
+  font-size: 0.62rem;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+.analyses-projection-region-chip:focus-visible {
+  outline: 2px solid #87e46c;
+
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   RESPONSIVIDADE — integração PR #180
+   ---------------------------------------------------------
+   Ajustes gerais para telas estreitas preservando a nova
+   estrutura da projeção regional.
+   ========================================================= */
+
+.analyses-controls {
+  flex-wrap: wrap;
+}
+
+.analyses-period-options {
+  flex-wrap: wrap;
+
+  max-width: 100%;
+}
+
+.analyses-global-actions {
+  flex-wrap: wrap;
+
+  min-width: 0;
+  max-width: 100%;
+}
+
+.analyses-control-group {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.analyses-layout-options {
+  flex-wrap: wrap;
+
+  max-width: 100%;
+}
+
+.analyses-mode-button {
+  min-width: 0;
+
+  overflow-wrap: anywhere;
+}
+
+.comparison-visualization-switch {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  max-width: 100%;
+}
+
+.comparison-visualization-button {
+  min-width: 0;
+  min-height: 44px;
+
+  white-space: normal;
+
+  overflow-wrap: anywhere;
+}
+
+.analyses-comparison-tray-actions {
+  flex-wrap: wrap;
+
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* =========================================================
+
+   RESPONSIVIDADE DOS LAYOUTS
+
+   ---------------------------------------------------------
+
    Abaixo de 1050px o modo lateral deixa de usar duas colunas.
+
    Os cards voltam a fluir verticalmente e deixam de usar as
+
    alturas fixas aplicadas no desktop.
+
    ========================================================= */
 
 @media (max-width: 1100px) {
@@ -2050,9 +2644,11 @@
   .analyses-layout-side .analyses-history,
   .analyses-layout-side .analyses-overview {
     grid-column: 1;
+
     grid-row: auto;
 
     height: auto;
+
     min-height: 0;
   }
 
@@ -2068,25 +2664,42 @@
 
   .analyses-layout-side .analyses-overview-scroll {
     overflow: visible;
+
     padding-right: 0;
   }
 }
 
 /* Os novos controles internos da Visão Geral quebram linha
+
    antes de ficarem apertados. */
+
 @media (max-width: 900px) {
   .analyses-overview-toolbar {
     align-items: stretch;
+
     flex-direction: column;
   }
 
   .analyses-overview-sort {
     justify-content: space-between;
   }
+
+  .analyses-projection-primary {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 700px) {
   /* Controles da nova Visão Geral em telas pequenas. */
+
+  .analyses-global-actions {
+    margin-left: 0;
+  }
+
+  .analyses-projection-intro h2 {
+    overflow-wrap: anywhere;
+  }
+ 
   .analyses-overview-view-options {
     width: 100%;
   }
@@ -2097,7 +2710,9 @@
 
   .analyses-overview-sort {
     width: 100%;
+
     align-items: stretch;
+
     flex-direction: column;
   }
 
@@ -2172,8 +2787,9 @@
   }
 
   .analyses-period-selector {
-    align-items: flex-start;
+    width: 100%;
 
+    align-items: flex-start;
     flex-direction: column;
   }
 
@@ -2194,6 +2810,7 @@
   }
 
   .analyses-history-identity {
+    flex: 1;
     gap: 10px;
   }
 
@@ -2201,10 +2818,6 @@
     width: 100%;
 
     gap: 8px;
-  }
-
-  .analyses-history-identity {
-    flex: 1;
   }
 
   .analyses-service-nav-button {
@@ -2237,14 +2850,11 @@
 
   .analyses-service-corner-button.is-next span {
     border-top-width: 6px;
-
     border-bottom-width: 6px;
-
     border-left-width: 9px;
   }
-
   .analyses-history-header {
-    padding: 0 40px;
+    padding: 44px 0 0;
   }
 
   .analyses-history-content {
@@ -2265,11 +2875,8 @@
 
   .analyses-history-actions {
     width: 100%;
-
     align-items: stretch;
-
     flex-direction: column;
-
     gap: 10px;
   }
 
@@ -2281,19 +2888,13 @@
     justify-items: start;
   }
 
-  .analyses-period-selector {
-    width: 100%;
-  }
-
   .analyses-period-options {
     width: 100%;
   }
 
   .analyses-global-actions {
     width: 100%;
-
     flex-direction: column;
-
     align-items: stretch;
   }
 
@@ -2304,6 +2905,7 @@
   .analyses-layout-button {
     flex: 1;
   }
+
   .analyses-comparison-tray {
     flex-direction: column;
     align-items: stretch;
@@ -2316,7 +2918,37 @@
   .analyses-comparison-tray-clear,
   .analyses-comparison-tray-open {
     flex: 1;
-
     justify-content: center;
+  }
+
+  .analyses-mode-switch {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .analyses-projection-intro {
+    flex-direction: column;
+  }
+
+  .analyses-projection-notice {
+    max-width: none;
+    width: 100%;
+  }
+
+  .analyses-projection-placeholder {
+    align-items: flex-start;
+  }
+
+  .analyses-projection-region-list {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .analyses-projection-region-chip {
+    width: 100%;
+  }
+
+  .analyses-projection-region-chip-impact {
+    margin-left: auto;
   }
 }

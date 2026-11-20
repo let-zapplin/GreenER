@@ -192,6 +192,48 @@ describe("ServicosService.saveServices", () => {
     });
   });
 
+  // Coordenadas opcionais: a localização é criada mesmo sem latitude/longitude.
+  it("persiste a localização mesmo quando o serviço não tem coordenadas", async () => {
+    const services: ExternalService[] = [
+      {
+        id: "servico-sem-mapa",
+        name: "API sem mapa",
+        location: {
+          region_code: "BR-SP",
+          country: "Brasil",
+          region: "São Paulo",
+          city: null,
+          latitude: null,
+          longitude: null,
+        },
+        metrics_path: "/services/servico-sem-mapa/metrics",
+      },
+    ];
+    const service = new ServicosService();
+    vi.spyOn(service, "discoverServices").mockResolvedValue(services);
+    findLocationByRegionMock.mockResolvedValue(null);
+    createLocationMock.mockResolvedValue({ id_location: 2 });
+    findByExternalIdMock.mockResolvedValue(null);
+    markRemovedExceptMock.mockResolvedValue(0);
+
+    await service.saveServices();
+
+    expect(createLocationMock).toHaveBeenCalledWith({
+      regionCode: "BR-SP",
+      country: "Brasil",
+      region: "São Paulo",
+      city: null,
+      latitude: null,
+      longitude: null,
+    });
+
+    expect(createServiceMock).toHaveBeenCalledWith({
+      id: "servico-sem-mapa",
+      name: "API sem mapa",
+      locationId: 2,
+    });
+  });
+
   // Um registro existente deve ser atualizado, enquanto a lista de IDs presentes orienta as remoções.
   it("mantém serviço existente ativo e marca como removidos apenas os ausentes", async () => {
     const services: ExternalService[] = [

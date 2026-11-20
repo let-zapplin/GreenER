@@ -47,6 +47,10 @@
 }
 
 @media (max-width: 700px) {
+  .comparison-period-chart {
+    padding: 16px 12px;
+  }
+
   .comparison-period-chart-header {
     flex-direction: column;
   }

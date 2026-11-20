@@ -3,6 +3,7 @@ import "./ImpactRanking.css";
 
 type ImpactRankingProps = {
   services: IndicatorsResponse["services"];
+  places?: Record<number, string>;
   periodLabel: string;
   metric: RankingMetric;
   onMetricChange: (metric: RankingMetric) => void;
@@ -48,6 +49,7 @@ function formatServiceStatus(status: string): string {
 
 export function ImpactRanking({
   services,
+  places,
   periodLabel,
    metric,
   onMetricChange,
@@ -141,7 +143,8 @@ export function ImpactRanking({
                     <strong>{service.name}</strong>
 
                     <span className="impact-ranking-region">
-                      {service.regionCode}
+                      {places?.[service.serviceId] ??
+                        service.regionCode}
                     </span>
 
                     <span className="impact-ranking-status">
