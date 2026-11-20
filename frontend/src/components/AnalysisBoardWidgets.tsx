@@ -11,7 +11,9 @@ import { ComparisonPeriodChart } from "./ComparisonPeriodChart";
 import { HistoryChart } from "./HistoryChart";
 import { ImpactRanking, type RankingMetric } from "./ImpactRanking";
 import { LocationProjectionChart } from "./LocationProjectionChart";
+import { LocationProjectionMap } from "./LocationProjectionMap";
 import { LocationProjectionSummary } from "./LocationProjectionSummary";
+import { ProjectionServiceCard } from "./ProjectionServiceCard";
 
 import { useComparisonHistories } from "../hooks/useComparisonHistories";
 import { useLocationProjection } from "../hooks/useLocationProjection";
@@ -566,12 +568,6 @@ export function AnalysisProjectionWidget({
     regionCodes.length > 0,
   );
 
-  const limitReached = regionCodes.length >= MAX_PROJECTION_REGIONS;
-
-  const options = regions.filter(
-    (region) => region.regionCode !== currentRegionCode,
-  );
-
   function changeService(nextId: number) {
     setServiceId(nextId);
     setRegionCodes([]);
@@ -592,35 +588,12 @@ export function AnalysisProjectionWidget({
   }
 
   return (
-    <div className="analysis-widget">
+    <div className="analysis-widget analysis-projection-widget">
       <div className="analysis-widget-bar">
-        <select
-          className="analysis-widget-select is-grow"
-          aria-label="Serviço projetado"
-          value={activeServiceId ?? ""}
-          disabled={services.length === 0}
-          onChange={(event) =>
-            changeService(Number(event.target.value))
-          }
-        >
-          {services.map((service) => (
-            <option key={service.serviceId} value={service.serviceId}>
-              {service.name}
-            </option>
-          ))}
-        </select>
-
         <PeriodSelect control={periodControl} />
       </div>
 
       <div className="analysis-widget-scroll">
-        <div className="analysis-widget-region-header">
-          <span>Localidades alternativas</span>
-          <small>
-            {regionCodes.length}/{MAX_PROJECTION_REGIONS}
-          </small>
-        </div>
-
         {regionsError ? (
           <p className="analysis-widget-note is-error">
             {regionsError}
@@ -629,37 +602,29 @@ export function AnalysisProjectionWidget({
           <p className="analysis-widget-note">
             Carregando localidades…
           </p>
-        ) : (
-          <div
-            className="analysis-widget-chips analysis-widget-regions"
-            role="group"
-            aria-label="Localidades da projeção"
-          >
-            {options.map((region) => {
-              const isActive = regionCodes.includes(
-                region.regionCode,
-              );
+        ) : null}
 
-              return (
-                <button
-                  key={region.regionCode}
-                  type="button"
-                  className={
-                    isActive
-                      ? "analysis-widget-chip is-active"
-                      : "analysis-widget-chip"
-                  }
-                  aria-pressed={isActive}
-                  disabled={!isActive && limitReached}
-                  title={`${region.country} · ${region.carbonIntensityGco2ePerKwh} gCO₂e/kWh`}
-                  onClick={() => toggleRegion(region.regionCode)}
-                >
-                  {region.region}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <div className="analysis-widget-projection-primary">
+          <ProjectionServiceCard
+            service={activeService}
+            services={services}
+            selectedServiceId={activeServiceId}
+            energyKwh={projection?.energyKwh ?? null}
+            isPartial={projection?.isPartial ?? false}
+            regions={regions}
+            selectedRegionCodes={regionCodes}
+            currentRegionCode={currentRegionCode}
+            onChangeService={changeService}
+            onToggleRegion={toggleRegion}
+          />
+
+          <LocationProjectionMap
+            service={activeService}
+            regions={regions}
+            selectedRegionCodes={regionCodes}
+            onToggleRegion={toggleRegion}
+          />
+        </div>
 
         {regionCodes.length === 0 ? (
           <WidgetState title="Selecione uma localidade">

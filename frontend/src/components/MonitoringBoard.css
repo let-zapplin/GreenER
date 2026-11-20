@@ -360,6 +360,17 @@
   border-color: var(--board-border-strong);
 }
 
+/* Foco vindo do mouse não desenha contorno; teclado mantém o anel. */
+.monitoring-board-body[data-focus-input="pointer"]
+  .monitoring-board-widget :focus {
+  outline: none;
+}
+
+/* Bloco ativo: é ele que recebe a rolagem depois do clique. */
+.monitoring-board-widget.is-scroll-active {
+  border-color: var(--board-accent);
+}
+
 .monitoring-board-widget.is-held {
   z-index: 5;
 
@@ -1274,6 +1285,214 @@
 
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+}
+
+/* ---------- Páginas fixas: página natural, sem rolagem em blocos ---------- */
+
+/*
+ * Monitoramento e Análise não são personalizáveis, então não seguem a
+ * grade de células: cada bloco ocupa a largura que precisa e cresce até
+ * a altura do próprio conteúdo. Nada rola dentro de um bloco; quem rola
+ * é a página. Só o mapa e os gráficos têm altura definida, porque
+ * precisam dela para desenhar.
+ */
+
+.monitoring-board-grid.is-fixed {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 16px;
+
+  height: auto;
+}
+
+.monitoring-board-widget.is-flow {
+  position: static;
+
+  width: auto;
+  height: auto;
+  min-height: 0;
+
+  overflow: visible;
+
+  /* Só a largura é medida (cqw). A altura é a do conteúdo. */
+  container-type: inline-size;
+  container-name: widget;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.monitoring-board-widget.is-flow.is-scroll-active {
+  border-color: var(--board-border);
+}
+
+.monitoring-board-widget.is-flow .monitoring-board-widget-body {
+  flex: 1 1 auto;
+
+  min-height: 0;
+
+  overflow: visible;
+}
+
+/* Arranjo em colunas: dois blocos lado a lado, o resto em faixa. */
+
+.monitoring-board-grid.is-monitoramento .monitoring-board-widget.is-flow {
+  grid-column: 1 / -1;
+}
+
+.monitoring-board-grid.is-monitoramento .monitoring-board-widget.is-map {
+  grid-column: span 8;
+}
+
+.monitoring-board-grid.is-monitoramento .monitoring-board-widget.is-region {
+  grid-column: span 4;
+}
+
+.monitoring-board-grid.is-analise .monitoring-board-widget.is-flow {
+  grid-column: 1 / -1;
+}
+
+.monitoring-board-grid.is-analise .monitoring-board-widget.is-ranking {
+  grid-column: span 4;
+}
+
+.monitoring-board-grid.is-analise .monitoring-board-widget.is-history {
+  grid-column: span 8;
+}
+
+/* ---- Nada rola dentro dos blocos ---- */
+
+.monitoring-board-widget.is-flow .services-map-hud,
+.monitoring-board-widget.is-flow .environment-overview-dock,
+.monitoring-board-widget.is-flow .monitoring-summary-shell {
+  flex: 0 0 auto;
+
+  height: auto;
+  max-height: none;
+
+  overflow: visible;
+}
+
+.monitoring-board-widget.is-flow .service-hud {
+  overflow: visible;
+}
+
+/* Sem cqh: a altura do bloco não é mais um dado de entrada. */
+
+.monitoring-board-widget.is-flow .service-hud-hexagon {
+  width: clamp(46px, 6.5cqw, 96px);
+  height: clamp(42px, 6cqw, 88px);
+}
+
+@container widget (max-width: 620px) {
+  .monitoring-board-widget.is-flow[data-widget-type="services"]
+    .service-hud-hexagon {
+    width: 46px;
+    height: 42px;
+  }
+}
+
+/* ---- Mapa: altura definida para a vista, o restante flui ---- */
+
+.monitoring-board-widget.is-flow.is-map {
+  overflow: hidden;
+}
+
+.monitoring-board-widget.is-flow.is-map
+  .monitoring-map-shell:not(.is-fullscreen)
+  .services-map-stage {
+  flex: 0 0 auto;
+
+  height: clamp(440px, 62vh, 680px);
+}
+
+/* Monitoring.css fixa a vista do mapa em 380px; aqui ela preenche o palco. */
+.monitoring-board-widget.is-flow.is-map
+  .monitoring-map-shell:not(.is-fullscreen)
+  .services-map-viewport {
+  height: 100%;
+}
+
+/* ---- Energia por região: acompanha a altura do mapa ao lado ---- */
+
+.monitoring-board-widget.is-flow.is-region .monitoring-chart-shell {
+  flex: 1 1 auto;
+}
+
+.monitoring-board-widget.is-flow.is-region .region-energy-chart {
+  height: auto;
+  min-height: 360px;
+}
+
+.monitoring-board-widget.is-flow.is-region .region-energy-chart-plot {
+  min-height: 260px;
+}
+
+/* ---- Análises: conteúdo inteiro visível, gráficos com altura própria ---- */
+
+.monitoring-board-widget.is-flow .analysis-widget {
+  flex: 1 1 auto;
+
+  height: auto;
+}
+
+.monitoring-board-widget.is-flow .analysis-widget-scroll,
+.monitoring-board-widget.is-flow .analysis-widget-regions,
+.monitoring-board-widget.is-flow .impact-ranking-list,
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .projection-service-region-list {
+  flex: 0 0 auto;
+
+  max-height: none;
+
+  overflow: visible;
+}
+
+.monitoring-board-widget.is-flow .analysis-widget .history-chart-canvas {
+  height: 300px;
+}
+
+.monitoring-board-widget.is-flow .analysis-widget .comparison-chart-canvas {
+  height: 320px;
+}
+
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .comparison-period-chart-canvas {
+  height: 280px;
+}
+
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .location-projection-chart-canvas {
+  height: 260px;
+}
+
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .location-projection-map-frame,
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .location-projection-map-canvas {
+  min-height: 340px;
+}
+
+/* Estreito: tudo em uma coluna, na ordem de leitura. */
+
+@media (max-width: 1180px) {
+  .monitoring-board-grid.is-monitoramento .monitoring-board-widget.is-flow,
+  .monitoring-board-grid.is-analise .monitoring-board-widget.is-flow {
+    grid-column: 1 / -1;
+  }
+
+  .monitoring-board-widget.is-flow.is-map
+    .monitoring-map-shell:not(.is-fullscreen)
+    .services-map-stage {
+    height: clamp(360px, 56vh, 520px);
   }
 }
 

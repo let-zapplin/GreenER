@@ -34,6 +34,7 @@ import {
 
 import {
   EDIT_SPARE_ROWS,
+  FIXED_PAGE_ANALISE,
   GRID_COLS,
   GRID_GAP,
   MONITORING_WIDGETS,
@@ -199,6 +200,93 @@ export function MonitoringBoard({
       setColumns(columnsFor(gridWidth, GRID_GAP));
     }
   }, [gridWidth, setColumns]);
+
+  /*
+   * A rolagem interna de um bloco só vale depois de um clique nele.
+   *
+   * Sem isso, passar a roda sobre um bloco rolável "prende" a
+   * rolagem e a página para de responder. O primeiro clique ativa
+   * o bloco; clicar fora devolve a roda para a página.
+   */
+  useEffect(() => {
+    const board = boardRef.current;
+
+    if (!board) return;
+
+    let activeWidget: Element | null = null;
+
+    const widgetOf = (target: EventTarget | null) =>
+      target instanceof Element
+        ? target.closest(".monitoring-board-widget")
+        : null;
+
+    const activate = (event: PointerEvent) => {
+      const widget = widgetOf(event.target);
+      const next = widget && board.contains(widget) ? widget : null;
+
+      if (next !== activeWidget) {
+        activeWidget?.classList.remove("is-scroll-active");
+        next?.classList.add("is-scroll-active");
+
+        activeWidget = next;
+      }
+
+      // Clique com o mouse não deixa contorno de foco no conteúdo.
+      board.dataset.focusInput = "pointer";
+    };
+
+    const markKeyboardInput = () => {
+      board.dataset.focusInput = "keyboard";
+    };
+
+    const scrollPage = (delta: number) => {
+      let node = board.parentElement;
+
+      while (node) {
+        const { overflowY } = getComputedStyle(node);
+
+        if (
+          /(auto|scroll)/.test(overflowY) &&
+          node.scrollHeight > node.clientHeight
+        ) {
+          node.scrollBy(0, delta);
+          return;
+        }
+
+        node = node.parentElement;
+      }
+
+      window.scrollBy(0, delta);
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      const widget = widgetOf(event.target);
+
+      // Fora de um bloco, ou no bloco já ativado: rolagem normal.
+      if (!widget || widget === activeWidget) return;
+
+      event.preventDefault();
+
+      const delta =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? event.deltaY * 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? event.deltaY * window.innerHeight
+            : event.deltaY;
+
+      scrollPage(delta);
+    };
+
+    document.addEventListener("pointerdown", activate);
+    window.addEventListener("keydown", markKeyboardInput);
+    board.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      document.removeEventListener("pointerdown", activate);
+      window.removeEventListener("keydown", markKeyboardInput);
+      board.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
 
   // Ao entrar em edição a paleta aparece.
   useEffect(() => {
@@ -540,6 +628,13 @@ export function MonitoringBoard({
 
   const gridBox = gridRef.current?.getBoundingClientRect();
 
+  // Página fixa: o arranjo é desenhado em CSS, não em células.
+  const fixedLayout = locked
+    ? activePage.id === FIXED_PAGE_ANALISE
+      ? "analise"
+      : "monitoramento"
+    : "";
+
   // A marca mostra onde o bloco preso vai cair, que pode ser acima do ponteiro.
   const landing =
     drag?.moved && drag.rect
@@ -816,18 +911,51 @@ export function MonitoringBoard({
         <div className="monitoring-board-scroller">
           <div
             ref={gridRef}
-            className="monitoring-board-grid"
+            className={`monitoring-board-grid${
+              locked ? ` is-fixed is-${fixedLayout}` : ""
+            }`}
             style={
-              {
-                height:
-                  rows * pitch - GRID_GAP,
-                "--board-pitch": `${pitch}px`,
-              } as CSSProperties
+              locked
+                ? undefined
+                : ({
+                    height:
+                      rows * pitch - GRID_GAP,
+                    "--board-pitch": `${pitch}px`,
+                  } as CSSProperties)
             }
             role="list"
             aria-label="Blocos do monitoramento"
           >
-            {cell > 0 && landing && (
+            {/* Página fixa: fluxo natural, cada bloco com a altura do próprio conteúdo. */}
+            {locked &&
+              [...widgets]
+                .sort((a, b) => a.y - b.y || a.x - b.x)
+                .map((widget) => {
+                  const spec = widgetSpec(widget.type);
+
+                  return (
+                    <section
+                      key={widget.id}
+                      role="listitem"
+                      aria-label={spec.label}
+                      data-widget-id={widget.id}
+                      data-widget-type={widget.type}
+                      className={`monitoring-board-widget is-flow is-${widget.type}`}
+                    >
+                      <header className="monitoring-board-widget-bar">
+                        <span className="monitoring-board-widget-title">
+                          {spec.label}
+                        </span>
+                      </header>
+
+                      <div className="monitoring-board-widget-body">
+                        {contents[widget.type]}
+                      </div>
+                    </section>
+                  );
+                })}
+
+            {!locked && cell > 0 && landing && (
               <div
                 className="monitoring-board-placeholder"
                 style={place(landing)}
@@ -835,16 +963,18 @@ export function MonitoringBoard({
               />
             )}
 
-            {cell > 0 &&
+            {!locked &&
+              cell > 0 &&
               shown.map((widget) => {
                 const held =
                   drag?.moved && drag.id === widget.id;
 
                 // O bloco movido segue o ponteiro; o destino é a marca.
-                const style =
-                  held &&
-                  drag.mode === "move" &&
-                  gridBox
+                const style: CSSProperties | undefined = locked
+                  ? undefined
+                  : held &&
+                    drag.mode === "move" &&
+                    gridBox
                     ? {
                         ...place(widget),
                         transform: `translate(${

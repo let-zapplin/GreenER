@@ -539,33 +539,116 @@
   font-size: 13px;
 }
 
-/* ---------- regiões da projeção ---------- */
+/* ---------- projeção: serviço + mapa ---------- */
 
-.analysis-widget-region-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.analysis-widget-projection-primary {
+  display: grid;
   gap: 10px;
 
-  color: var(--text-muted);
-
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  min-width: 0;
 }
 
-.analysis-widget-region-header small {
-  font-size: 10px;
-  font-weight: 700;
+@container widget (min-width: 640px) {
+  .analysis-widget-projection-primary {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+
+    align-items: stretch;
+  }
 }
 
-.analysis-widget-regions {
-  max-height: 96px;
+.analysis-widget .projection-service-card,
+.analysis-widget .location-projection-map-card {
+  height: auto;
+  gap: 12px;
+
+  padding: 14px;
+
+  border-radius: 12px;
+}
+
+.analysis-widget .projection-service-card-header h3,
+.analysis-widget .location-projection-map-header h3 {
+  margin: 2px 0 4px;
+
+  font-size: 13px;
+}
+
+.analysis-widget .projection-service-identity {
+  gap: 10px;
+
+  padding: 10px 12px;
+
+  border-radius: 10px;
+}
+
+.analysis-widget .projection-service-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.analysis-widget .projection-service-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.analysis-widget .projection-service-identity-info strong {
+  font-size: 12px;
+}
+
+.analysis-widget .projection-service-location strong {
+  font-size: 11px;
+}
+
+.analysis-widget .projection-service-regions-description {
+  display: none;
+}
+
+.analysis-widget .projection-service-region {
+  min-height: 38px;
+
+  padding: 6px 8px;
+}
+
+.analysis-widget .projection-service-region-info strong {
+  font-size: 11px;
+}
+
+.analysis-widget .projection-service-region-list {
+  max-height: 172px;
 
   padding-right: 2px;
 
   overflow-y: auto;
+
+  scrollbar-color: #58cbb766 transparent;
+  scrollbar-width: thin;
+}
+
+.analysis-widget .projection-service-energy strong {
+  font-size: 13px;
+}
+
+.analysis-widget .location-projection-map-header {
+  margin-bottom: 4px;
+}
+
+.analysis-widget .location-projection-map-header p {
+  display: none;
+}
+
+.analysis-widget .location-projection-map-frame,
+.analysis-widget .location-projection-map-canvas {
+  min-height: 220px;
+}
+
+.analysis-widget .location-projection-map-legend {
+  margin-top: 0;
+
+  font-size: 9px;
+}
+
+.analysis-widget .location-projection-map-error {
+  min-height: 180px;
 }
 
 @container widget (max-width: 420px) {
