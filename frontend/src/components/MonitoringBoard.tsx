@@ -204,9 +204,10 @@ export function MonitoringBoard({
   /*
    * A rolagem interna de um bloco só vale depois de um clique nele.
    *
-   * Sem isso, passar a roda sobre um bloco rolável "prende" a
-   * rolagem e a página para de responder. O primeiro clique ativa
-   * o bloco; clicar fora devolve a roda para a página.
+   * Quem desliga a rolagem própria é o CSS (bloco sem .is-scroll-active),
+   * então a roda chega à página pelo caminho nativo, sem interpolação
+   * manual. Clicar fora devolve a roda para a página; focar por teclado
+   * dentro do bloco também libera a rolagem dele.
    */
   useEffect(() => {
     const board = boardRef.current;
@@ -215,76 +216,45 @@ export function MonitoringBoard({
 
     let activeWidget: Element | null = null;
 
-    const widgetOf = (target: EventTarget | null) =>
-      target instanceof Element
-        ? target.closest(".monitoring-board-widget")
-        : null;
+    const setActive = (target: EventTarget | null) => {
+      const widget =
+        target instanceof Element
+          ? target.closest(".monitoring-board-widget")
+          : null;
 
-    const activate = (event: PointerEvent) => {
-      const widget = widgetOf(event.target);
       const next = widget && board.contains(widget) ? widget : null;
 
-      if (next !== activeWidget) {
-        activeWidget?.classList.remove("is-scroll-active");
-        next?.classList.add("is-scroll-active");
+      if (next === activeWidget) return;
 
-        activeWidget = next;
-      }
+      activeWidget?.classList.remove("is-scroll-active");
+      next?.classList.add("is-scroll-active");
+
+      activeWidget = next;
+    };
+
+    const activate = (event: PointerEvent) => {
+      setActive(event.target);
 
       // Clique com o mouse não deixa contorno de foco no conteúdo.
       board.dataset.focusInput = "pointer";
+    };
+
+    const activateOnFocus = (event: FocusEvent) => {
+      setActive(event.target);
     };
 
     const markKeyboardInput = () => {
       board.dataset.focusInput = "keyboard";
     };
 
-    const scrollPage = (delta: number) => {
-      let node = board.parentElement;
-
-      while (node) {
-        const { overflowY } = getComputedStyle(node);
-
-        if (
-          /(auto|scroll)/.test(overflowY) &&
-          node.scrollHeight > node.clientHeight
-        ) {
-          node.scrollBy(0, delta);
-          return;
-        }
-
-        node = node.parentElement;
-      }
-
-      window.scrollBy(0, delta);
-    };
-
-    const handleWheel = (event: WheelEvent) => {
-      const widget = widgetOf(event.target);
-
-      // Fora de um bloco, ou no bloco já ativado: rolagem normal.
-      if (!widget || widget === activeWidget) return;
-
-      event.preventDefault();
-
-      const delta =
-        event.deltaMode === WheelEvent.DOM_DELTA_LINE
-          ? event.deltaY * 16
-          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
-            ? event.deltaY * window.innerHeight
-            : event.deltaY;
-
-      scrollPage(delta);
-    };
-
     document.addEventListener("pointerdown", activate);
+    document.addEventListener("focusin", activateOnFocus);
     window.addEventListener("keydown", markKeyboardInput);
-    board.addEventListener("wheel", handleWheel, { passive: false });
 
     return () => {
       document.removeEventListener("pointerdown", activate);
+      document.removeEventListener("focusin", activateOnFocus);
       window.removeEventListener("keydown", markKeyboardInput);
-      board.removeEventListener("wheel", handleWheel);
     };
   }, []);
 

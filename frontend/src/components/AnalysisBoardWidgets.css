@@ -166,7 +166,8 @@
   scrollbar-color: #58cbb766 transparent;
   scrollbar-width: thin;
 
-  overscroll-behavior: contain;
+  /* Passado o fim do bloco, a página continua rolando. */
+  overscroll-behavior: auto;
 }
 
 .analysis-widget-scroll::-webkit-scrollbar,

@@ -371,6 +371,26 @@
   border-color: var(--board-accent);
 }
 
+/*
+ * Bloco inativo não tem rolagem própria: `overflow-y: clip` tira a caixa
+ * da cadeia de rolagem, então a roda sobe direto para a página e o
+ * navegador rola com suavidade nativa. Novos containers roláveis de
+ * bloco entram nesta lista.
+ */
+.monitoring-board-widget:not(.is-scroll-active)
+  :is(
+    .services-map-hud,
+    .environment-overview-dock,
+    .monitoring-summary-shell,
+    .analysis-widget-scroll,
+    .analysis-widget-regions,
+    .projection-service-region-list,
+    .map-service-panel,
+    .services-map-popup-service-list
+  ) {
+  overflow-y: clip;
+}
+
 .monitoring-board-widget.is-held {
   z-index: 5;
 
@@ -1043,7 +1063,8 @@
   scrollbar-color: #58cbb766 transparent;
   scrollbar-width: thin;
 
-  overscroll-behavior: contain;
+  /* No fim do bloco a página continua; travar aqui seria rolagem morta. */
+  overscroll-behavior: auto;
 }
 
 .monitoring-board-widget .services-map-hud::-webkit-scrollbar,
