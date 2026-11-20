@@ -404,12 +404,66 @@ export class IndicadoresService {
       services: indicators,
     };
   }
-  //o método abaixo recebe serviço e período
+  async getServicePeriodIndicators(
+    serviceId: number,
+    startValue: string,
+    endValue: string,
+  ) {
+    const { service } = await this.findServiceDataForPeriod(
+      serviceId,
+      startValue,
+      endValue,
+    );
+
+    return this.calculateServiceIndicators(service);
+  }
+
   async getServiceHistory(
     serviceId: number,
     startValue: string,
     endValue: string,
   ) {
+    const { start, end, service } = await this.findServiceDataForPeriod(
+      serviceId,
+      startValue,
+      endValue,
+    );
+
+    const calculatedSamples = service.collections.map((collection) =>
+      calculateSample(collection),
+    );
+
+    const { samples, stride } = downsampleHistory(calculatedSamples);
+
+    return {
+      period: {
+        start,
+        end,
+        collectionIntervalMs: env.metricsCollectionIntervalMs,
+
+        displayIntervalMs: env.metricsCollectionIntervalMs * stride,
+      },
+
+      service: {
+        serviceId: service.id_service,
+        name: service.name,
+        status: service.status,
+        regionCode: service.region_code,
+      },
+
+      samples,
+    };
+  }
+
+  private async findServiceDataForPeriod(
+    serviceId: number,
+    startValue: string,
+    endValue: string,
+  ): Promise<{
+    start: Date;
+    end: Date;
+    service: ServiceIndicatorData;
+  }> {
     if (!Number.isInteger(serviceId) || serviceId <= 0) {
       throw new AppError(
         "O identificador do serviço deve ser um número inteiro positivo",
@@ -440,29 +494,10 @@ export class IndicadoresService {
     if (!service) {
       throw new AppError("Serviço não encontrado", 404, "SERVICE_NOT_FOUND");
     }
-    const calculatedSamples = service.collections.map((collection) =>
-      calculateSample(collection),
-    );
-
-    const { samples, stride } = downsampleHistory(calculatedSamples);
-
     return {
-      period: {
-        start,
-        end,
-        collectionIntervalMs: env.metricsCollectionIntervalMs,
-
-        displayIntervalMs: env.metricsCollectionIntervalMs * stride,
-      },
-
-      service: {
-        serviceId: service.id_service,
-        name: service.name,
-        status: service.status,
-        regionCode: service.region_code,
-      },
-
-      samples,
+      start,
+      end,
+      service,
     };
   }
 

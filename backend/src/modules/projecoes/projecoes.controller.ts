@@ -7,11 +7,15 @@ import {
 import { AppError } from "../../shared/errors/AppError.js";
 import { ProjecoesService } from "./projecoes.service.js";
 
-interface LocationProjectionBody {
-  serviceId?: unknown;
-  start?: unknown;
-  end?: unknown;
-  regionCodes?: unknown;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every((item) => typeof item === "string")
+  );
 }
 
 function readRequiredString(
@@ -45,8 +49,15 @@ export class ProjecoesController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const body =
-        req.body as LocationProjectionBody;
+      const body: unknown = req.body;
+
+      if (!isRecord(body)) {
+        throw new AppError(
+          "O corpo da requisição deve ser um objeto JSON",
+          400,
+          "INVALID_PROJECTION_REQUEST",
+        );
+      }
 
       const serviceId = Number(
         body.serviceId,
@@ -62,9 +73,9 @@ export class ProjecoesController {
         "end",
       );
 
-      if (!Array.isArray(body.regionCodes)) {
+      if (!isStringArray(body.regionCodes)) {
         throw new AppError(
-          "Informe regionCodes como uma lista de regiões",
+          "Informe regionCodes como uma lista de códigos de região",
           400,
           "INVALID_PROJECTION_REGIONS",
         );
@@ -81,6 +92,48 @@ export class ProjecoesController {
       res.status(200).json({
         message:
           "Projeção ambiental calculada",
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async redistributeServices(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const body: unknown = req.body;
+
+      if (!isRecord(body)) {
+        throw new AppError(
+          "O corpo da requisição deve ser um objeto JSON",
+          400,
+          "INVALID_REDISTRIBUTION_REQUEST",
+        );
+      }
+
+      const start = readRequiredString(body.start, "start");
+      const end = readRequiredString(body.end, "end");
+
+      if (typeof body.requireServicePerRegion !== "boolean") {
+        throw new AppError(
+          "Informe requireServicePerRegion como true ou false",
+          400,
+          "INVALID_REDISTRIBUTION_CONSTRAINT",
+        );
+      }
+
+      const result = await this.service.redistributeServices(
+        start,
+        end,
+        body.requireServicePerRegion,
+      );
+
+      res.status(200).json({
+        message: "Redistribuição de serviços calculada",
         ...result,
       });
     } catch (error) {

@@ -148,6 +148,116 @@ describe("HTTP da projeção ambiental por localização", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("retorna 400 quando o corpo JSON é null", async () => {
+    const consultarHistorico = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([]);
+
+    const consultarRegioes = vi
+      .spyOn(
+        ProjecoesRepository.prototype,
+        "findLatestRegionalSnapshots",
+      )
+      .mockResolvedValue([]);
+
+    const token = createToken({
+      sub: "1",
+    });
+
+    const response = await request(app)
+      .post("/api/projecoes/localizacao")
+      .set(
+        "Authorization",
+        `Bearer ${token}`,
+      )
+      .set("Content-Type", "application/json")
+      .send("null");
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe(
+      "INVALID_JSON_BODY",
+    );
+    expect(consultarHistorico).not.toHaveBeenCalled();
+    expect(consultarRegioes).not.toHaveBeenCalled();
+  });
+
+  it("retorna 400 quando a requisição não tem corpo", async () => {
+    const consultarHistorico = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([]);
+
+    const consultarRegioes = vi
+      .spyOn(
+        ProjecoesRepository.prototype,
+        "findLatestRegionalSnapshots",
+      )
+      .mockResolvedValue([]);
+
+    const token = createToken({
+      sub: "1",
+    });
+
+    const response = await request(app)
+      .post("/api/projecoes/localizacao")
+      .set(
+        "Authorization",
+        `Bearer ${token}`,
+      );
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe(
+      "INVALID_PROJECTION_REQUEST",
+    );
+    expect(consultarHistorico).not.toHaveBeenCalled();
+    expect(consultarRegioes).not.toHaveBeenCalled();
+  });
+
+  it("retorna 400 quando regionCodes contém um valor que não é texto", async () => {
+    const consultarHistorico = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([]);
+
+    const consultarRegioes = vi
+      .spyOn(
+        ProjecoesRepository.prototype,
+        "findLatestRegionalSnapshots",
+      )
+      .mockResolvedValue([]);
+
+    const token = createToken({
+      sub: "1",
+    });
+
+    const response = await request(app)
+      .post("/api/projecoes/localizacao")
+      .set(
+        "Authorization",
+        `Bearer ${token}`,
+      )
+      .send({
+        serviceId: 7,
+        start: "2026-11-16T00:00:00.000Z",
+        end: "2026-11-17T00:00:00.000Z",
+        regionCodes: ["CA-QC", 42],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe(
+      "INVALID_PROJECTION_REGIONS",
+    );
+    expect(consultarHistorico).not.toHaveBeenCalled();
+    expect(consultarRegioes).not.toHaveBeenCalled();
+  });
+
   it("projeta o impacto do serviço em outra região", async () => {
     const consultarHistorico = vi
       .spyOn(
@@ -607,4 +717,148 @@ it("retorna 401 ao listar regiões sem token", async () => {
 });
 
   
+});
+
+describe("HTTP da redistribuição de serviços", () => {
+  const start = "2026-11-16T00:00:00.000Z";
+  const end = "2026-11-17T00:00:00.000Z";
+
+  it("retorna 401 sem token e não consulta os dados", async () => {
+    const consultarIndicadores = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([]);
+    const consultarRegioes = vi
+      .spyOn(
+        ProjecoesRepository.prototype,
+        "listAvailableRegions",
+      )
+      .mockResolvedValue([]);
+
+    const response = await request(app)
+      .post("/api/projecoes/redistribuicao")
+      .send({
+        start,
+        end,
+        requireServicePerRegion: false,
+      });
+
+    expect(response.status).toBe(401);
+    expect(consultarIndicadores).not.toHaveBeenCalled();
+    expect(consultarRegioes).not.toHaveBeenCalled();
+  });
+
+  it("retorna 400 quando a restrição de ocupação não é booleana", async () => {
+    const consultarIndicadores = vi
+      .spyOn(
+        IndicadoresRepository.prototype,
+        "findCollectionsForPeriod",
+      )
+      .mockResolvedValue([]);
+    const consultarRegioes = vi
+      .spyOn(
+        ProjecoesRepository.prototype,
+        "listAvailableRegions",
+      )
+      .mockResolvedValue([]);
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .post("/api/projecoes/redistribuicao")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        start,
+        end,
+        requireServicePerRegion: "true",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe(
+      "INVALID_REDISTRIBUTION_CONSTRAINT",
+    );
+    expect(consultarIndicadores).not.toHaveBeenCalled();
+    expect(consultarRegioes).not.toHaveBeenCalled();
+  });
+
+  it("retorna a redistribuição calculada para o período", async () => {
+    vi.spyOn(
+      IndicadoresRepository.prototype,
+      "findCollectionsForPeriod",
+    ).mockResolvedValue([
+      {
+        id_service: 7,
+        name: "Billing API",
+        status: "active",
+        region_code: "BR-SP",
+        collections: [
+          {
+            id_collection: "101",
+            status: "success",
+            attempted_at: new Date("2026-11-16T12:00:00.000Z"),
+            id_metrics: "201",
+            recorded_at: new Date("2026-11-16T12:00:00.000Z"),
+            cpu_percent: 50,
+            memory_gb: 2,
+            disk_gb: 10,
+            network_gb: 5,
+            collection_interval_seconds: 45,
+            carbon_intensity_id: 301,
+            carbon_intensity_gco2e_per_kwh: 100,
+          },
+        ],
+      },
+    ]);
+    vi.spyOn(
+      ProjecoesRepository.prototype,
+      "listAvailableRegions",
+    ).mockResolvedValue([
+      {
+        regionCode: "BR-SP",
+        country: "Brasil",
+        region: "São Paulo",
+        city: null,
+        latitude: -23.55,
+        longitude: -46.63,
+        carbonIntensityGco2ePerKwh: 100,
+        renewableSharePercent: 80,
+        registeredAt: new Date(),
+      },
+    ]);
+    const token = createToken({ sub: "1" });
+
+    const response = await request(app)
+      .post("/api/projecoes/redistribuicao")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        start,
+        end,
+        requireServicePerRegion: true,
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe(
+      "Redistribuição de serviços calculada",
+    );
+    expect(response.body.requireServicePerRegion).toBe(true);
+    expect(response.body.allocations).toMatchObject([
+      {
+        serviceId: 7,
+        currentRegionCode: "BR-SP",
+        assignedRegionCode: "BR-SP",
+        validEnergySampleCount: 1,
+        totalSampleCount: 1,
+        isPartial: false,
+      },
+    ]);
+    expect(response.body.allocations[0].energyKwh).toBeGreaterThan(0);
+    expect(response.body.regions).toMatchObject([
+      {
+        regionCode: "BR-SP",
+        serviceCount: 1,
+        carbonIntensityGco2ePerKwh: 100,
+      },
+    ]);
+  });
 });

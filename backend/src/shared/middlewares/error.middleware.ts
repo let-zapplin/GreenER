@@ -21,6 +21,20 @@ export function errorMiddleware(
     return;
   }
 
+  if (
+    error instanceof SyntaxError &&
+    "status" in error &&
+    error.status === 400 &&
+    "type" in error &&
+    error.type === "entity.parse.failed"
+  ) {
+    res.status(400).json({
+      error: "O corpo da requisição contém JSON inválido",
+      code: "INVALID_JSON_BODY",
+    });
+    return;
+  }
+
   // Erro inesperado (bug, falha de conexão, etc.)
   console.error("❌ Erro inesperado:", error);
   res.status(500).json({

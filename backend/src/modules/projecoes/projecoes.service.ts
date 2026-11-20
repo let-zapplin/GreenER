@@ -1,3 +1,4 @@
+import { env } from "../../config/env.js";
 import { AppError } from "../../shared/errors/AppError.js";
 import { IndicadoresService } from "../indicadores/indicadores.service.js";
 import {
@@ -53,17 +54,60 @@ export interface LocationProjectionResult {
   unavailableRegionCodes: string[];
 }
 
+export interface ServiceRedistributionAllocation {
+  serviceId: number;
+  name: string;
+  currentRegionCode: string;
+  assignedRegionCode: string;
+  energyKwh: number | null;
+  validEnergySampleCount: number;
+  totalSampleCount: number;
+  isPartial: boolean;
+  projectedEmissionsGco2e: number | null;
+}
+
+export interface ServiceRedistributionRegion {
+  regionCode: string;
+  serviceCount: number;
+  carbonIntensityGco2ePerKwh: number;
+  renewableSharePercent: number;
+  snapshotRegisteredAt: Date;
+}
+
+export interface ServiceRedistributionResult {
+  period: {
+    start: string;
+    end: string;
+  };
+  requireServicePerRegion: boolean;
+  allocations: ServiceRedistributionAllocation[];
+  regions: ServiceRedistributionRegion[];
+  knownProjectedEmissionsGco2e: number;
+  isPartial: boolean;
+  unavailableRegionCodes: string[];
+}
+
+interface EnergyBearingService {
+  serviceId: number;
+  energyKwh: number;
+}
+
+type ProjectionIndicatorsService = Pick<
+  IndicadoresService,
+  "getServiceHistory"
+> &
+  Partial<Pick<IndicadoresService, "getIndicators">>;
+
 export class ProjecoesService {
   constructor(
-    private readonly indicadoresService: Pick<
-      IndicadoresService,
-      "getServiceHistory"
-    > = new IndicadoresService(),
+    private readonly indicadoresService: ProjectionIndicatorsService =
+      new IndicadoresService(),
 
     private readonly repository: Pick<
       ProjecoesRepository,
       "findLatestRegionalSnapshots" | "listAvailableRegions"
     > = new ProjecoesRepository(),
+    private readonly carbonIntensityMaxAgeMs = env.carbonIntensityMaxAgeMs,
   ) {}
 
   async projectLocation(
@@ -218,6 +262,206 @@ export class ProjecoesService {
     };
   }
 
+  async redistributeServices(
+    start: string,
+    end: string,
+    requireServicePerRegion: boolean,
+  ): Promise<ServiceRedistributionResult> {
+    if (typeof requireServicePerRegion !== "boolean") {
+      throw new AppError(
+        "Informe se cada região deve conter ao menos um serviço",
+        400,
+        "INVALID_REDISTRIBUTION_CONSTRAINT",
+      );
+    }
+
+    const getIndicators = this.indicadoresService.getIndicators;
+    if (!getIndicators) {
+      throw new AppError(
+        "A agregação de indicadores não está disponível",
+        500,
+        "REDISTRIBUTION_DATA_UNAVAILABLE",
+      );
+    }
+
+    const [indicators, regionalSnapshots] = await Promise.all([
+      getIndicators.call(this.indicadoresService, start, end),
+      this.repository.listAvailableRegions(),
+    ]);
+
+    const now = Date.now();
+    const freshRegions = regionalSnapshots
+      .filter((snapshot) => {
+        const ageMs = now - snapshot.registeredAt.getTime();
+        return (
+          ageMs >= 0 &&
+          ageMs <= this.carbonIntensityMaxAgeMs &&
+          Number.isFinite(snapshot.carbonIntensityGco2ePerKwh) &&
+          snapshot.carbonIntensityGco2ePerKwh >= 0
+        );
+      })
+      .sort((left, right) => left.regionCode.localeCompare(right.regionCode));
+
+    if (freshRegions.length === 0) {
+      throw new AppError(
+        "Não há regiões com intensidade de carbono atualizada disponível",
+        503,
+        "NO_FRESH_REDISTRIBUTION_REGIONS",
+      );
+    }
+
+    const freshRegionCodes = new Set(
+      freshRegions.map((region) => region.regionCode),
+    );
+    const unavailableRegionCodes = regionalSnapshots
+      .filter((snapshot) => !freshRegionCodes.has(snapshot.regionCode))
+      .map((snapshot) => snapshot.regionCode)
+      .sort((left, right) => left.localeCompare(right));
+
+    const activeServices = indicators.services
+      .filter((service) => service.status === "active")
+      .sort((left, right) => left.serviceId - right.serviceId);
+
+    const fixedAllocations: ServiceRedistributionAllocation[] = [];
+    const fixedRegionCounts = new Map(
+      freshRegions.map((region) => [region.regionCode, 0]),
+    );
+    const energyBearingServices: EnergyBearingService[] = [];
+    const serviceById = new Map<
+      number,
+      (typeof activeServices)[number]
+    >();
+
+    for (const service of activeServices) {
+      serviceById.set(service.serviceId, service);
+      const { energyKwh, validMetricCount, collectionCount } =
+        service.periodTotals;
+
+      if (validMetricCount === 0) {
+        fixedAllocations.push({
+          serviceId: service.serviceId,
+          name: service.name,
+          currentRegionCode: service.regionCode,
+          assignedRegionCode: service.regionCode,
+          energyKwh: null,
+          validEnergySampleCount: 0,
+          totalSampleCount: collectionCount,
+          isPartial: true,
+          projectedEmissionsGco2e: null,
+        });
+
+        if (freshRegionCodes.has(service.regionCode)) {
+          fixedRegionCounts.set(
+            service.regionCode,
+            (fixedRegionCounts.get(service.regionCode) ?? 0) + 1,
+          );
+        }
+
+        continue;
+      }
+
+      if (!Number.isFinite(energyKwh) || energyKwh < 0) {
+        throw new AppError(
+          "O agregado de energia contém um valor inválido",
+          500,
+          "INVALID_REDISTRIBUTION_ENERGY",
+        );
+      }
+
+      energyBearingServices.push({
+        serviceId: service.serviceId,
+        energyKwh,
+      });
+    }
+
+    const assignedRegionByService = this.findOptimalAssignments(
+      energyBearingServices,
+      freshRegions,
+      fixedRegionCounts,
+      requireServicePerRegion,
+    );
+
+    if (!assignedRegionByService) {
+      throw new AppError(
+        "Não é possível garantir ao menos um serviço em cada região elegível",
+        422,
+        "REDISTRIBUTION_INFEASIBLE",
+      );
+    }
+
+    const regionByCode = new Map(
+      freshRegions.map((region) => [region.regionCode, region]),
+    );
+    const movableAllocations = energyBearingServices.map((service) => {
+      const indicator = serviceById.get(service.serviceId);
+      const assignedRegionCode = assignedRegionByService.get(service.serviceId);
+      const region = assignedRegionCode
+        ? regionByCode.get(assignedRegionCode)
+        : undefined;
+
+      if (!indicator || !assignedRegionCode || !region) {
+        throw new AppError(
+          "A otimização não produziu uma alocação completa",
+          500,
+          "REDISTRIBUTION_ASSIGNMENT_INCOMPLETE",
+        );
+      }
+
+      const { validMetricCount, collectionCount } = indicator.periodTotals;
+      return {
+        serviceId: indicator.serviceId,
+        name: indicator.name,
+        currentRegionCode: indicator.regionCode,
+        assignedRegionCode,
+        energyKwh: service.energyKwh,
+        validEnergySampleCount: validMetricCount,
+        totalSampleCount: collectionCount,
+        isPartial: validMetricCount < collectionCount,
+        projectedEmissionsGco2e:
+          service.energyKwh * region.carbonIntensityGco2ePerKwh,
+      };
+    });
+
+    const allocations = [...fixedAllocations, ...movableAllocations].sort(
+      (left, right) => left.serviceId - right.serviceId,
+    );
+    const finalRegionCounts = new Map(
+      freshRegions.map((region) => [region.regionCode, 0]),
+    );
+    for (const allocation of allocations) {
+      if (freshRegionCodes.has(allocation.assignedRegionCode)) {
+        finalRegionCounts.set(
+          allocation.assignedRegionCode,
+          (finalRegionCounts.get(allocation.assignedRegionCode) ?? 0) + 1,
+        );
+      }
+    }
+
+    return {
+      period: {
+        start: indicators.period.start.toISOString(),
+        end: indicators.period.end.toISOString(),
+      },
+      requireServicePerRegion,
+      allocations,
+      regions: freshRegions.map((region) => ({
+        regionCode: region.regionCode,
+        serviceCount: finalRegionCounts.get(region.regionCode) ?? 0,
+        carbonIntensityGco2ePerKwh:
+          region.carbonIntensityGco2ePerKwh,
+        renewableSharePercent: region.renewableSharePercent,
+        snapshotRegisteredAt: region.registeredAt,
+      })),
+      knownProjectedEmissionsGco2e: allocations.reduce(
+        (total, allocation) =>
+          total + (allocation.projectedEmissionsGco2e ?? 0),
+        0,
+      ),
+      isPartial: allocations.some((allocation) => allocation.isPartial),
+      unavailableRegionCodes,
+    };
+  }
+
   async listAvailableRegions() {
     const regions =
      await this.repository.listAvailableRegions();
@@ -278,6 +522,78 @@ export class ProjecoesService {
     }
 
     return normalized;
+  }
+
+  private findOptimalAssignments(
+    services: EnergyBearingService[],
+    regions: ProjectionRegionSnapshot[],
+    initialRegionCounts: Map<string, number>,
+    requireServicePerRegion: boolean,
+  ): Map<number, string> | null {
+    const assignments = new Map<number, string>();
+
+    if (!requireServicePerRegion) {
+      for (const service of services) {
+        const bestRegion = regions.reduce((best, region) =>
+          region.carbonIntensityGco2ePerKwh <
+          best.carbonIntensityGco2ePerKwh
+            ? region
+            : best,
+        );
+        assignments.set(service.serviceId, bestRegion.regionCode);
+      }
+
+      return assignments;
+    }
+
+    const regionCounts = new Map(initialRegionCounts);
+    const bestAssignments = new Map<number, string>();
+    let bestEmissions = Number.POSITIVE_INFINITY;
+
+    const search = (serviceIndex: number, projectedEmissions: number) => {
+      if (projectedEmissions >= bestEmissions) {
+        return;
+      }
+
+      const remainingServices = services.length - serviceIndex;
+      const unoccupiedRegions = [...regionCounts.values()].filter(
+        (count) => count === 0,
+      ).length;
+      if (unoccupiedRegions > remainingServices) {
+        return;
+      }
+
+      if (serviceIndex === services.length) {
+        bestEmissions = projectedEmissions;
+        bestAssignments.clear();
+        for (const [serviceId, regionCode] of assignments) {
+          bestAssignments.set(serviceId, regionCode);
+        }
+        return;
+      }
+
+      const service = services[serviceIndex];
+      for (const region of regions) {
+        regionCounts.set(
+          region.regionCode,
+          (regionCounts.get(region.regionCode) ?? 0) + 1,
+        );
+        assignments.set(service.serviceId, region.regionCode);
+        search(
+          serviceIndex + 1,
+          projectedEmissions +
+            service.energyKwh * region.carbonIntensityGco2ePerKwh,
+        );
+        assignments.delete(service.serviceId);
+        regionCounts.set(
+          region.regionCode,
+          (regionCounts.get(region.regionCode) ?? 1) - 1,
+        );
+      }
+    };
+
+    search(0, 0);
+    return Number.isFinite(bestEmissions) ? bestAssignments : null;
   }
 
   private calculateProjectedEmissions(

@@ -275,6 +275,80 @@ describe("IndicadoresService.getIndicators", () => {
   });
 });
 
+describe("IndicadoresService.getServicePeriodIndicators", () => {
+  const findCollectionsForPeriod = vi.fn();
+  const service = new IndicadoresService(
+    { findCollectionsForPeriod },
+    300_000,
+  );
+
+  const serviceId = 7;
+  const start = "2026-10-30T00:00:00.000Z";
+  const end = "2026-10-31T00:00:00.000Z";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("soma todas as coletas mesmo quando o histórico gráfico é reduzido", async () => {
+    const collections = Array.from({ length: 520 }, (_, index) => {
+      const attemptedAt = new Date(
+        new Date(start).getTime() + index * 60_000,
+      );
+      return createCollection({
+        id_collection: String(index + 1),
+        attempted_at: attemptedAt,
+        recorded_at: attemptedAt,
+      });
+    });
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData(collections),
+    ]);
+
+    const result = await service.getServicePeriodIndicators(
+      serviceId,
+      start,
+      end,
+    );
+    const history = await service.getServiceHistory(serviceId, start, end);
+
+    expect(result.periodTotals.collectionCount).toBe(520);
+    expect(result.periodTotals.validMetricCount).toBe(520);
+    expect(result.periodTotals.energyKwh).toBeCloseTo(
+      ((50.95 * 45) / 3_600_000) * 520,
+    );
+    expect(history.samples.length).toBeLessThan(520);
+  });
+
+  it("mantém explícita a ausência de energia válida no período", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([
+        createCollection({
+          status: "unavailable",
+          id_metrics: null,
+          cpu_percent: null,
+          memory_gb: null,
+          disk_gb: null,
+          network_gb: null,
+          collection_interval_seconds: null,
+          carbon_intensity_id: null,
+          carbon_intensity_gco2e_per_kwh: null,
+        }),
+      ]),
+    ]);
+
+    const result = await service.getServicePeriodIndicators(
+      serviceId,
+      start,
+      end,
+    );
+
+    expect(result.periodTotals.energyKwh).toBe(0);
+    expect(result.periodTotals.validMetricCount).toBe(0);
+    expect(result.periodTotals.isPartial).toBe(true);
+  });
+});
+
 // Testa o cálculo das amostras históricas com dados controlados, sem acessar PostgreSQL.
 describe("IndicadoresService.getServiceHistory", () => {
   const findCollectionsForPeriod = vi.fn();
