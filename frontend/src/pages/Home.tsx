@@ -94,7 +94,7 @@ export function Home() {
 
       <section className="analysis-selector">
         <Link
-          to="/analises"
+          to="/monitoramento?pagina=analise"
           className="analysis-option"
           data-view="impacto"
           onPointerEnter={(event) => {
@@ -143,7 +143,7 @@ export function Home() {
         </Link>
 
         <Link
-          to="/analises"
+          to="/monitoramento?pagina=analise"
           className="analysis-option"
           data-view="evolucao"
           onPointerEnter={(event) => {

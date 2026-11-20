@@ -196,7 +196,7 @@ export function MapServiceDetailsPanel({
 
       <Link
         className="map-service-panel-analysis"
-        to={`/analises?serviceId=${service.serviceId}`}
+        to="/monitoramento?pagina=analise"
       >
         Ver análise
         <span aria-hidden="true">→</span>

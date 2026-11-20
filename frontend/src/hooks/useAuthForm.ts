@@ -38,7 +38,7 @@ export function useAuthForm() {
         const from: unknown = location.state?.from;
         const destination =
           typeof from === "string" &&
-          /^\/(home|monitoramento|analises)(?:[?#].*)?$/.test(from)
+          /^\/(home|monitoramento)(?:[?#].*)?$/.test(from)
             ? from
             : "/home";
         navigate(destination, { replace: true });

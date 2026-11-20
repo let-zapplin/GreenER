@@ -104,8 +104,6 @@ export function Header() {
             WORKSPACE
           </NavLink>
 
-          <NavLink to="/analises">ANÁLISES</NavLink>
-          
           <NavLink to="/funcionamento">FUNCIONAMENTO</NavLink>
 
           <NavLink to="/sobre">SOBRE</NavLink>
