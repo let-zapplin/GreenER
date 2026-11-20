@@ -61,6 +61,8 @@ export interface ServiceRedistributionAllocation {
   assignedRegionCode: string;
   energyKwh: number | null;
   validEnergySampleCount: number;
+  observedEmissionsGco2e: number | null;
+  validObservedEmissionSampleCount: number;
   totalSampleCount: number;
   isPartial: boolean;
   projectedEmissionsGco2e: number | null;
@@ -74,17 +76,33 @@ export interface ServiceRedistributionRegion {
   snapshotRegisteredAt: Date;
 }
 
+export type ServiceRedistributionPolicy =
+  | "preserve_current_counts"
+  | "balanced"
+  | "unconstrained";
+
 export interface ServiceRedistributionResult {
   period: {
     start: string;
     end: string;
   };
+  occupancyPolicy: ServiceRedistributionPolicy;
   requireServicePerRegion: boolean;
   allocations: ServiceRedistributionAllocation[];
   regions: ServiceRedistributionRegion[];
   knownProjectedEmissionsGco2e: number;
   isPartial: boolean;
   unavailableRegionCodes: string[];
+}
+
+function isServiceRedistributionPolicy(
+  value: unknown,
+): value is ServiceRedistributionPolicy {
+  return (
+    value === "preserve_current_counts" ||
+    value === "balanced" ||
+    value === "unconstrained"
+  );
 }
 
 interface EnergyBearingService {
@@ -265,11 +283,18 @@ export class ProjecoesService {
   async redistributeServices(
     start: string,
     end: string,
-    requireServicePerRegion: boolean,
+    policyValue: ServiceRedistributionPolicy | boolean,
   ): Promise<ServiceRedistributionResult> {
-    if (typeof requireServicePerRegion !== "boolean") {
+    const occupancyPolicy =
+      typeof policyValue === "boolean"
+        ? policyValue
+          ? "balanced"
+          : "unconstrained"
+        : policyValue;
+
+    if (!isServiceRedistributionPolicy(occupancyPolicy)) {
       throw new AppError(
-        "Informe se cada região deve conter ao menos um serviço",
+        "Informe uma política válida de ocupação regional",
         400,
         "INVALID_REDISTRIBUTION_CONSTRAINT",
       );
@@ -326,6 +351,7 @@ export class ProjecoesService {
     const fixedRegionCounts = new Map(
       freshRegions.map((region) => [region.regionCode, 0]),
     );
+    const currentRegionCounts = new Map<string, number>();
     const energyBearingServices: EnergyBearingService[] = [];
     const serviceById = new Map<
       number,
@@ -334,6 +360,10 @@ export class ProjecoesService {
 
     for (const service of activeServices) {
       serviceById.set(service.serviceId, service);
+      currentRegionCounts.set(
+        service.regionCode,
+        (currentRegionCounts.get(service.regionCode) ?? 0) + 1,
+      );
       const { energyKwh, validMetricCount, collectionCount } =
         service.periodTotals;
 
@@ -345,6 +375,8 @@ export class ProjecoesService {
           assignedRegionCode: service.regionCode,
           energyKwh: null,
           validEnergySampleCount: 0,
+          observedEmissionsGco2e: null,
+          validObservedEmissionSampleCount: 0,
           totalSampleCount: collectionCount,
           isPartial: true,
           projectedEmissionsGco2e: null,
@@ -374,16 +406,48 @@ export class ProjecoesService {
       });
     }
 
+    const hasCurrentServicesInUnavailableRegions = [
+      ...currentRegionCounts.keys(),
+    ].some((regionCode) => !freshRegionCodes.has(regionCode));
+    const hasFixedServicesInUnavailableRegions = fixedAllocations.some(
+      (allocation) => !freshRegionCodes.has(allocation.currentRegionCode),
+    );
+
+    if (
+      (occupancyPolicy === "preserve_current_counts" &&
+        hasCurrentServicesInUnavailableRegions) ||
+      (occupancyPolicy === "balanced" &&
+        hasFixedServicesInUnavailableRegions)
+    ) {
+      throw new AppError(
+        "Não é possível cumprir a política de ocupação com as regiões elegíveis e os serviços fixos",
+        422,
+        "REDISTRIBUTION_INFEASIBLE",
+      );
+    }
+
+    const targetRegionCounts =
+      occupancyPolicy === "preserve_current_counts"
+        ? new Map(
+            freshRegions.map((region) => [
+              region.regionCode,
+              currentRegionCounts.get(region.regionCode) ?? 0,
+            ]),
+          )
+        : null;
+
     const assignedRegionByService = this.findOptimalAssignments(
       energyBearingServices,
       freshRegions,
       fixedRegionCounts,
-      requireServicePerRegion,
+      occupancyPolicy,
+      targetRegionCounts,
+      activeServices.length,
     );
 
     if (!assignedRegionByService) {
       throw new AppError(
-        "Não é possível garantir ao menos um serviço em cada região elegível",
+        "Não é possível cumprir a política de ocupação escolhida",
         422,
         "REDISTRIBUTION_INFEASIBLE",
       );
@@ -408,6 +472,8 @@ export class ProjecoesService {
       }
 
       const { validMetricCount, collectionCount } = indicator.periodTotals;
+      const validObservedEmissionSampleCount =
+        indicator.periodTotals.validCarbonIntensityCount;
       return {
         serviceId: indicator.serviceId,
         name: indicator.name,
@@ -415,6 +481,11 @@ export class ProjecoesService {
         assignedRegionCode,
         energyKwh: service.energyKwh,
         validEnergySampleCount: validMetricCount,
+        observedEmissionsGco2e:
+          validObservedEmissionSampleCount === 0
+            ? null
+            : indicator.periodTotals.emissionsGco2e,
+        validObservedEmissionSampleCount,
         totalSampleCount: collectionCount,
         isPartial: validMetricCount < collectionCount,
         projectedEmissionsGco2e:
@@ -442,7 +513,10 @@ export class ProjecoesService {
         start: indicators.period.start.toISOString(),
         end: indicators.period.end.toISOString(),
       },
-      requireServicePerRegion,
+      occupancyPolicy,
+      requireServicePerRegion: freshRegions.every(
+        (region) => (finalRegionCounts.get(region.regionCode) ?? 0) > 0,
+      ),
       allocations,
       regions: freshRegions.map((region) => ({
         regionCode: region.regionCode,
@@ -457,7 +531,12 @@ export class ProjecoesService {
           total + (allocation.projectedEmissionsGco2e ?? 0),
         0,
       ),
-      isPartial: allocations.some((allocation) => allocation.isPartial),
+      isPartial: allocations.some(
+        (allocation) =>
+          allocation.isPartial ||
+          allocation.validObservedEmissionSampleCount <
+            allocation.totalSampleCount,
+      ),
       unavailableRegionCodes,
     };
   }
@@ -528,11 +607,13 @@ export class ProjecoesService {
     services: EnergyBearingService[],
     regions: ProjectionRegionSnapshot[],
     initialRegionCounts: Map<string, number>,
-    requireServicePerRegion: boolean,
+    policy: ServiceRedistributionPolicy,
+    targetRegionCounts: Map<string, number> | null,
+    totalActiveServiceCount: number,
   ): Map<number, string> | null {
     const assignments = new Map<number, string>();
 
-    if (!requireServicePerRegion) {
+    if (policy === "unconstrained") {
       for (const service of services) {
         const bestRegion = regions.reduce((best, region) =>
           region.carbonIntensityGco2ePerKwh <
@@ -546,24 +627,93 @@ export class ProjecoesService {
       return assignments;
     }
 
+    const minimumServicesPerRegion =
+      policy === "balanced"
+        ? Math.floor(totalActiveServiceCount / regions.length)
+        : 0;
+    const maximumServicesPerRegion =
+      policy === "balanced"
+        ? Math.ceil(totalActiveServiceCount / regions.length)
+        : Number.POSITIVE_INFINITY;
+    if (
+      policy === "preserve_current_counts" &&
+      (!targetRegionCounts ||
+        [...targetRegionCounts.values()].reduce(
+          (total, count) => total + count,
+          0,
+        ) !== totalActiveServiceCount)
+    ) {
+      return null;
+    }
+
     const regionCounts = new Map(initialRegionCounts);
     const bestAssignments = new Map<number, string>();
     let bestEmissions = Number.POSITIVE_INFINITY;
 
+    // Keep the recursive search while the expected service and region counts stay small.
+    // Revisit this approach if the redistribution workload grows.
     const search = (serviceIndex: number, projectedEmissions: number) => {
       if (projectedEmissions >= bestEmissions) {
         return;
       }
 
       const remainingServices = services.length - serviceIndex;
-      const unoccupiedRegions = [...regionCounts.values()].filter(
-        (count) => count === 0,
-      ).length;
-      if (unoccupiedRegions > remainingServices) {
-        return;
+      if (policy === "preserve_current_counts") {
+        let requiredAssignments = 0;
+        for (const region of regions) {
+          const targetCount = targetRegionCounts?.get(region.regionCode) ?? 0;
+          const assignedCount = regionCounts.get(region.regionCode) ?? 0;
+          if (assignedCount > targetCount) {
+            return;
+          }
+          requiredAssignments += targetCount - assignedCount;
+        }
+        if (requiredAssignments !== remainingServices) {
+          return;
+        }
+      } else {
+        let minimumAssignments = 0;
+        let remainingCapacity = 0;
+        for (const region of regions) {
+          const assignedCount = regionCounts.get(region.regionCode) ?? 0;
+          minimumAssignments += Math.max(
+            0,
+            minimumServicesPerRegion - assignedCount,
+          );
+          remainingCapacity += maximumServicesPerRegion - assignedCount;
+        }
+        if (
+          minimumAssignments > remainingServices ||
+          remainingCapacity < remainingServices
+        ) {
+          return;
+        }
       }
 
       if (serviceIndex === services.length) {
+        if (
+          policy === "preserve_current_counts" &&
+          regions.some(
+            (region) =>
+              regionCounts.get(region.regionCode) !==
+              targetRegionCounts?.get(region.regionCode),
+          )
+        ) {
+          return;
+        }
+        if (
+          policy === "balanced" &&
+          regions.some((region) => {
+            const count = regionCounts.get(region.regionCode) ?? 0;
+            return (
+              count < minimumServicesPerRegion ||
+              count > maximumServicesPerRegion
+            );
+          })
+        ) {
+          return;
+        }
+
         bestEmissions = projectedEmissions;
         bestAssignments.clear();
         for (const [serviceId, regionCode] of assignments) {
@@ -574,9 +724,18 @@ export class ProjecoesService {
 
       const service = services[serviceIndex];
       for (const region of regions) {
+        const assignedCount = regionCounts.get(region.regionCode) ?? 0;
+        const regionCapacity =
+          policy === "preserve_current_counts"
+            ? targetRegionCounts?.get(region.regionCode) ?? 0
+            : maximumServicesPerRegion;
+        if (assignedCount >= regionCapacity) {
+          continue;
+        }
+
         regionCounts.set(
           region.regionCode,
-          (regionCounts.get(region.regionCode) ?? 0) + 1,
+          assignedCount + 1,
         );
         assignments.set(service.serviceId, region.regionCode);
         search(

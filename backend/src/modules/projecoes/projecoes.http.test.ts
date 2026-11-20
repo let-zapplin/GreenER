@@ -750,7 +750,7 @@ describe("HTTP da redistribuição de serviços", () => {
     expect(consultarRegioes).not.toHaveBeenCalled();
   });
 
-  it("retorna 400 quando a restrição de ocupação não é booleana", async () => {
+  it("retorna 400 para política inválida ou campos conflitantes", async () => {
     const consultarIndicadores = vi
       .spyOn(
         IndicadoresRepository.prototype,
@@ -771,11 +771,26 @@ describe("HTTP da redistribuição de serviços", () => {
       .send({
         start,
         end,
-        requireServicePerRegion: "true",
+        occupancyPolicy: "maximum_two",
       });
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe(
+      "INVALID_REDISTRIBUTION_CONSTRAINT",
+    );
+
+    const conflictingResponse = await request(app)
+      .post("/api/projecoes/redistribuicao")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        start,
+        end,
+        occupancyPolicy: "balanced",
+        requireServicePerRegion: true,
+      });
+
+    expect(conflictingResponse.status).toBe(400);
+    expect(conflictingResponse.body.code).toBe(
       "INVALID_REDISTRIBUTION_CONSTRAINT",
     );
     expect(consultarIndicadores).not.toHaveBeenCalled();
@@ -834,13 +849,14 @@ describe("HTTP da redistribuição de serviços", () => {
       .send({
         start,
         end,
-        requireServicePerRegion: true,
+        occupancyPolicy: "balanced",
       });
 
     expect(response.status).toBe(200);
     expect(response.body.message).toBe(
       "Redistribuição de serviços calculada",
     );
+    expect(response.body.occupancyPolicy).toBe("balanced");
     expect(response.body.requireServicePerRegion).toBe(true);
     expect(response.body.allocations).toMatchObject([
       {
@@ -853,6 +869,12 @@ describe("HTTP da redistribuição de serviços", () => {
       },
     ]);
     expect(response.body.allocations[0].energyKwh).toBeGreaterThan(0);
+    expect(
+      response.body.allocations[0].observedEmissionsGco2e,
+    ).toBeGreaterThan(0);
+    expect(
+      response.body.allocations[0].validObservedEmissionSampleCount,
+    ).toBe(1);
     expect(response.body.regions).toMatchObject([
       {
         regionCode: "BR-SP",
@@ -860,5 +882,34 @@ describe("HTTP da redistribuição de serviços", () => {
         carbonIntensityGco2ePerKwh: 100,
       },
     ]);
+
+    for (const occupancyPolicy of [
+      "preserve_current_counts",
+      "unconstrained",
+    ] as const) {
+      const policyResponse = await request(app)
+        .post("/api/projecoes/redistribuicao")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          start,
+          end,
+          occupancyPolicy,
+        });
+
+      expect(policyResponse.status).toBe(200);
+      expect(policyResponse.body.occupancyPolicy).toBe(occupancyPolicy);
+    }
+
+    const legacyResponse = await request(app)
+      .post("/api/projecoes/redistribuicao")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        start,
+        end,
+        requireServicePerRegion: true,
+      });
+
+    expect(legacyResponse.status).toBe(200);
+    expect(legacyResponse.body.occupancyPolicy).toBe("balanced");
   });
 });

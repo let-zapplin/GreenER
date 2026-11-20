@@ -362,6 +362,8 @@ describe("ProjecoesService.redistributeServices", () => {
     regionCode,
     energyKwh,
     validMetricCount,
+    observedEmissionsGco2e = energyKwh * 10,
+    validObservedEmissionSampleCount = validMetricCount,
     collectionCount,
   }: {
     serviceId: number;
@@ -369,6 +371,8 @@ describe("ProjecoesService.redistributeServices", () => {
     regionCode: string;
     energyKwh: number;
     validMetricCount: number;
+    observedEmissionsGco2e?: number;
+    validObservedEmissionSampleCount?: number;
     collectionCount: number;
   }) {
     return {
@@ -378,7 +382,9 @@ describe("ProjecoesService.redistributeServices", () => {
       regionCode,
       periodTotals: {
         energyKwh,
+        emissionsGco2e: observedEmissionsGco2e,
         validMetricCount,
+        validCarbonIntensityCount: validObservedEmissionSampleCount,
         collectionCount,
       },
     };
@@ -451,6 +457,8 @@ describe("ProjecoesService.redistributeServices", () => {
         assignedRegionCode: "CA-QC",
         energyKwh: 10,
         validEnergySampleCount: 2,
+        observedEmissionsGco2e: 100,
+        validObservedEmissionSampleCount: 2,
         totalSampleCount: 4,
         isPartial: true,
         projectedEmissionsGco2e: 200,
@@ -458,12 +466,16 @@ describe("ProjecoesService.redistributeServices", () => {
       {
         serviceId: 8,
         assignedRegionCode: "DE-BE",
+        observedEmissionsGco2e: 50,
+        validObservedEmissionSampleCount: 5,
         projectedEmissionsGco2e: 400,
       },
       {
         serviceId: 9,
         assignedRegionCode: "BR-SP",
         energyKwh: null,
+        observedEmissionsGco2e: null,
+        validObservedEmissionSampleCount: 0,
         projectedEmissionsGco2e: null,
         isPartial: true,
       },
@@ -478,6 +490,61 @@ describe("ProjecoesService.redistributeServices", () => {
     expect(result.isPartial).toBe(true);
     expect(result.unavailableRegionCodes).toEqual(["AU-SYD"]);
     expect(getIndicators).toHaveBeenCalledWith(start, end);
+  });
+
+  it("não trata a ausência de intensidade válida como emissão observada zero", async () => {
+    mockRedistributionData(
+      [
+        createServiceIndicator({
+          serviceId: 7,
+          regionCode: "BR-SP",
+          energyKwh: 10,
+          validMetricCount: 2,
+          observedEmissionsGco2e: 0,
+          validObservedEmissionSampleCount: 0,
+          collectionCount: 2,
+        }),
+      ],
+      [createRegion("BR-SP", 100)],
+    );
+
+    const result = await service.redistributeServices(
+      start,
+      end,
+      "unconstrained",
+    );
+
+    expect(result.allocations[0]).toMatchObject({
+      observedEmissionsGco2e: null,
+      validObservedEmissionSampleCount: 0,
+      projectedEmissionsGco2e: 1000,
+    });
+  });
+
+  it("marca o resultado parcial quando a cobertura de emissão observada é menor", async () => {
+    mockRedistributionData(
+      [
+        createServiceIndicator({
+          serviceId: 7,
+          regionCode: "BR-SP",
+          energyKwh: 10,
+          validMetricCount: 2,
+          observedEmissionsGco2e: 500,
+          validObservedEmissionSampleCount: 1,
+          collectionCount: 2,
+        }),
+      ],
+      [createRegion("BR-SP", 100)],
+    );
+
+    const result = await service.redistributeServices(
+      start,
+      end,
+      "unconstrained",
+    );
+
+    expect(result.allocations[0].isPartial).toBe(false);
+    expect(result.isPartial).toBe(true);
   });
 
   it("usa a região de menor intensidade sem exigir ocupação mínima", async () => {
@@ -530,7 +597,136 @@ describe("ProjecoesService.redistributeServices", () => {
     expect(result.isPartial).toBe(true);
   });
 
-  it("retorna inviabilidade quando não há serviços suficientes para ocupar todas as regiões", async () => {
+  it("preserva exatamente as contagens atuais por região", async () => {
+    mockRedistributionData(
+      [
+        createServiceIndicator({
+          serviceId: 7,
+          regionCode: "BR-SP",
+          energyKwh: 10,
+          validMetricCount: 1,
+          collectionCount: 1,
+        }),
+        createServiceIndicator({
+          serviceId: 8,
+          regionCode: "BR-SP",
+          energyKwh: 1,
+          validMetricCount: 1,
+          collectionCount: 1,
+        }),
+        createServiceIndicator({
+          serviceId: 9,
+          regionCode: "CA-QC",
+          energyKwh: 4,
+          validMetricCount: 1,
+          collectionCount: 1,
+        }),
+        createServiceIndicator({
+          serviceId: 10,
+          regionCode: "DE-BE",
+          energyKwh: 2,
+          validMetricCount: 1,
+          collectionCount: 1,
+        }),
+      ],
+      [
+        createRegion("BR-SP", 100),
+        createRegion("CA-QC", 20),
+        createRegion("DE-BE", 50),
+      ],
+    );
+
+    const result = await service.redistributeServices(
+      start,
+      end,
+      "preserve_current_counts",
+    );
+
+    expect(
+      Object.fromEntries(
+        result.regions.map(({ regionCode, serviceCount }) => [
+          regionCode,
+          serviceCount,
+        ]),
+      ),
+    ).toEqual({
+      "BR-SP": 2,
+      "CA-QC": 1,
+      "DE-BE": 1,
+    });
+    expect(result.occupancyPolicy).toBe("preserve_current_counts");
+  });
+
+  it("distribui oito serviços de forma equilibrada entre cinco regiões", async () => {
+    const services = [8, 7, 6, 5, 4, 3, 2, 1].map(
+      (energyKwh, index) =>
+        createServiceIndicator({
+          serviceId: index + 1,
+          regionCode: "BR-SP",
+          energyKwh,
+          validMetricCount: 1,
+          collectionCount: 1,
+        }),
+    );
+    mockRedistributionData(services, [
+      createRegion("BR-SP", 100),
+      createRegion("CA-QC", 20),
+      createRegion("DE-BE", 50),
+      createRegion("AU-SYD", 80),
+      createRegion("JP-TK", 40),
+    ]);
+
+    const result = await service.redistributeServices(start, end, "balanced");
+    const serviceCounts = result.regions
+      .map(({ serviceCount }) => serviceCount)
+      .sort((left, right) => left - right);
+
+    expect(serviceCounts).toEqual([1, 1, 2, 2, 2]);
+    expect(result.occupancyPolicy).toBe("balanced");
+    expect(result.allocations).toHaveLength(8);
+  });
+
+  it("retorna inviabilidade quando serviços sem energia impedem o balanceamento", async () => {
+    mockRedistributionData(
+      [
+        createServiceIndicator({
+          serviceId: 7,
+          regionCode: "BR-SP",
+          energyKwh: 0,
+          validMetricCount: 0,
+          collectionCount: 1,
+        }),
+        createServiceIndicator({
+          serviceId: 8,
+          regionCode: "BR-SP",
+          energyKwh: 0,
+          validMetricCount: 0,
+          collectionCount: 1,
+        }),
+        createServiceIndicator({
+          serviceId: 9,
+          regionCode: "BR-SP",
+          energyKwh: 5,
+          validMetricCount: 1,
+          collectionCount: 1,
+        }),
+      ],
+      [
+        createRegion("BR-SP", 100),
+        createRegion("CA-QC", 20),
+        createRegion("DE-BE", 80),
+      ],
+    );
+
+    await expect(
+      service.redistributeServices(start, end, "balanced"),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      code: "REDISTRIBUTION_INFEASIBLE",
+    });
+  });
+
+  it("considera viável uma distribuição balanceada quando há menos serviços que regiões", async () => {
     mockRedistributionData(
       [
         createServiceIndicator({
@@ -555,8 +751,41 @@ describe("ProjecoesService.redistributeServices", () => {
       ],
     );
 
+    const result = await service.redistributeServices(start, end, "balanced");
+    const serviceCounts = result.regions
+      .map(({ serviceCount }) => serviceCount)
+      .sort((left, right) => left - right);
+
+    expect(serviceCounts).toEqual([0, 1, 1]);
+  });
+
+  it("não preserva a ocupação atual se uma das regiões não está elegível", async () => {
+    mockRedistributionData(
+      [
+        createServiceIndicator({
+          serviceId: 7,
+          regionCode: "BR-SP",
+          energyKwh: 10,
+          validMetricCount: 1,
+          collectionCount: 1,
+        }),
+        createServiceIndicator({
+          serviceId: 8,
+          regionCode: "CA-QC",
+          energyKwh: 5,
+          validMetricCount: 1,
+          collectionCount: 1,
+        }),
+      ],
+      [createRegion("BR-SP", 100)],
+    );
+
     await expect(
-      service.redistributeServices(start, end, true),
+      service.redistributeServices(
+        start,
+        end,
+        "preserve_current_counts",
+      ),
     ).rejects.toMatchObject({
       statusCode: 422,
       code: "REDISTRIBUTION_INFEASIBLE",
