@@ -37,3 +37,20 @@ test("ignora serviços sem coordenadas ou com coordenadas fora dos limites", () 
 
   assert.equal(result.features.length, 0);
 });
+
+test("mantém o ponto válido quando outro serviço está sem coordenadas", () => {
+  // O serviço incompleto vem primeiro para verificar que ele não impede o processamento do próximo.
+  const incompleteService: MonitoredService = {
+    ...service,
+    id: "missing",
+    serviceId: 2,
+    location: { ...service.location, latitude: null, longitude: null },
+  };
+
+  const result = buildServiceFeatureCollection([incompleteService, service]);
+
+  // Apenas o serviço com localização válida deve permanecer entre os pontos do mapa.
+  assert.equal(result.features.length, 1);
+  assert.equal(result.features[0].properties.serviceId, service.id);
+  assert.deepEqual(result.features[0].geometry.coordinates, [-46.63, -23.55]);
+});
