@@ -2108,39 +2108,55 @@
 
 
 
+/*
+ * As colunas e as alturas são definidas pelo MonitoringBoard,
+ * que organiza mapa, gráfico e lista como blocos da grade.
+ */
 .monitoring-charts-layout {
-  display: grid;
-
-  grid-template-columns:
-    minmax(0, 65fr)
-    minmax(280px, 35fr);
-
-  gap: 20px;
-
-  align-items: start;
-}
-
-.monitoring-chart-column {
-  display: flex;
-  flex-direction: column;
-
   min-width: 0;
-
-  gap: 8px;
-
-  align-self: start;
 }
 
-.monitoring-chart-column .monitoring-sync {
-  width: 100%;
+/* Status de atualização compacto na barra de personalização. */
+.monitoring-charts-layout .monitoring-sync {
+  width: auto;
+  min-width: 240px;
   margin: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
 }
 
-.monitoring-map-column {
-  min-width: 0;
+.monitoring-charts-layout .monitoring-sync[open] {
+  padding-bottom: 7px;
 }
 
+.monitoring-charts-layout .monitoring-sync > .refresh-note {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
 
+  width: max(100%, 320px);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 12px 16px;
+
+  border: 1px solid var(--monitoring-border);
+  border-radius: 14px;
+
+  background: #103335;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 700px) {
+  .monitoring-charts-layout .monitoring-sync {
+    width: 100%;
+  }
+
+  .monitoring-charts-layout .monitoring-sync > .refresh-note {
+    left: 0;
+    width: 100%;
+  }
+}
 
 .monitoring-map-shell,
 
@@ -2207,16 +2223,6 @@
 
 
 
-
-
-
-
-
-/* =========================================================
-
-   MAPA COMPACTO NA VISÃO NORMAL
-
-   ========================================================= */
 
 
 
@@ -2557,9 +2563,6 @@
 
 
 
-
-
-
 /* Legenda passa a fazer parte da área fullscreen */
 
 
@@ -2595,52 +2598,131 @@
 }
 
 /* =========================================================
-   RODAPÉ OPERACIONAL — FULLSCREEN
+   NOTCH OPERACIONAL — FULLSCREEN
    ========================================================= */
 
 .monitoring-map-shell.is-fullscreen
   .services-map-fullscreen-footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  position: absolute;
+
+  left: 50%;
+  bottom: 20px;
+
+  z-index: 30;
+
+  display: flex;
   align-items: center;
 
-  gap: 20px;
+  width: auto;
+  max-width: calc(100vw - 40px);
 
-  flex-shrink: 0;
+  box-sizing: border-box;
 
-  padding: 10px 18px;
+  gap: 12px;
 
-  background: #0c282b;
+  padding: 6px 14px 6px 16px;
 
-  border-top: 1px solid rgba(88, 154, 144, 0.18);
+  border: 1px solid rgba(88, 154, 144, 0.32);
+  border-radius: 999px;
+
+  background: rgba(7, 34, 36, 0.86);
+
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
+
+  transform: translateX(-50%);
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .monitoring-map-shell.is-fullscreen
   .services-map-hud-fullscreen {
   display: flex;
+  flex-direction: row;
   align-items: center;
 
-  min-width: 0;
+  flex: 0 1 auto;
 
-  gap: 14px;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+
+  gap: 10px;
+
+  padding: 0;
+
+  overflow: visible;
 }
 
 .monitoring-map-shell.is-fullscreen
   .services-map-hud-fullscreen
   .services-map-count {
   flex-shrink: 0;
+
+  font-size: 11px;
+  letter-spacing: 0.08em;
+
+  white-space: nowrap;
 }
 
 .monitoring-map-shell.is-fullscreen
   .services-map-hud-fullscreen
   .service-hud {
-  flex: 1;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
 
+  flex: 0 1 auto;
+
+  width: auto;
   min-width: 0;
+  max-width: 100%;
 
-  justify-content: flex-start;
+  gap: 6px;
 
-  padding: 4px 2px;
+  padding: 7px 2px;
+
+  overflow-x: auto;
+  overflow-y: visible;
+
+  scrollbar-width: none;
+}
+
+.monitoring-map-shell:fullscreen
+  .services-map-hud-fullscreen
+  .service-hud::-webkit-scrollbar {
+  display: none;
+}
+
+.monitoring-map-shell:fullscreen
+  .services-map-hud-fullscreen
+  .service-hud-item {
+  width: auto;
+  max-width: none;
+}
+
+.monitoring-map-shell:fullscreen
+  .services-map-hud-fullscreen
+  .service-hud-hexagon {
+  width: 36px;
+  height: 33px;
+}
+
+.monitoring-map-shell:fullscreen
+  .services-map-hud-fullscreen
+  .service-hud-hexagon::after {
+  width: 5px;
+  height: 5px;
+
+  right: 4px;
+  top: 4px;
+}
+
+.monitoring-map-shell:fullscreen
+  .services-map-hud-fullscreen
+  .service-hud-hexagon span {
+  font-size: 10px;
 }
 
 .monitoring-map-shell.is-fullscreen
@@ -2649,11 +2731,14 @@
   flex-shrink: 0;
 
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 12px;
 
   border: 0;
+  border-left: 1px solid rgba(88, 154, 144, 0.24);
 
   background: transparent;
+
+  font-size: 10px;
 }
 
 /* =========================================================
@@ -2671,10 +2756,6 @@
     grid-template-columns: minmax(0, 1fr);
 
   }
-
-
-
-
 
 
 
@@ -2705,19 +2786,6 @@
   .refresh-item time {
     white-space: normal;
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 

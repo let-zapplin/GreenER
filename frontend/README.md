@@ -212,13 +212,13 @@ O gráfico utiliza **Recharts**.
 
 Amostras sem energia calculável permanecem como lacunas. O frontend não converte ausência de dado em consumo zero.
 
-A seleção também pode ser recebida pela URL:
+A página do painel também pode ser escolhida pela URL:
 
 ```text
-/analises?serviceId=<id>
+/monitoramento?pagina=analise
 ```
 
-permitindo abrir Análises já focada em um serviço escolhido no Monitoramento.
+abrindo o workspace direto na aba fixa de análise. `/analises` continua funcionando apenas como redirecionamento para esse endereço.
 
 ---
 
@@ -239,7 +239,6 @@ Principais rotas autenticadas da interface:
 ```text
 /home
 /monitoramento
-/analises
 ```
 
 A proteção do frontend melhora a navegação, mas **não substitui a autorização do backend**.
@@ -345,8 +344,8 @@ Principais caminhos:
 ```text
 /               → landing/login
 /home           → home autenticada
-/monitoramento  → dashboard operacional
-/analises       → histórico e análises
+/monitoramento  → workspace (Monitoramento, Análise e páginas próprias)
+/analises       → redireciona para /monitoramento?pagina=analise
 ```
 
 ---

@@ -29,6 +29,15 @@ export function RegionEnergyChart({
   const isTouch = useChartTouch();
   const data = groupEnergyByRegion(indicators, services);
 
+  const longestRegion = data.reduce(
+    (longest, item) => Math.max(longest, item.region.length),
+    5,
+  );
+
+  const yAxisWidth = Math.round(
+    Math.min(120, Math.max(64, longestRegion * 7.5 + 10)),
+  );
+
   return (
     <section
       className="region-energy-chart"
@@ -66,7 +75,7 @@ export function RegionEnergyChart({
               <BarChart
                 data={data}
                 layout="vertical"
-                margin={{ top: 4, right: 24, bottom: 4, left: 8 }}
+                margin={{ top: 4, right: 20, bottom: 4, left: 0 }}
               >
                 <CartesianGrid
                   horizontal={false}
@@ -81,7 +90,7 @@ export function RegionEnergyChart({
                 <YAxis
                   type="category"
                   dataKey="regionCode"
-                  width={112}
+                  width={yAxisWidth}
                   tick={{ fill: "#e2ece6", fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}

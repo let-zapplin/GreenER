@@ -1,0 +1,667 @@
+/* Blocos de análise dentro da grade de monitoramento. */
+
+.analysis-widget {
+  display: flex;
+  flex-direction: column;
+
+  flex: 1;
+
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  color: #e0e3de;
+}
+
+.analysis-widget-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  flex: 0 0 auto;
+
+  padding: 9px 12px;
+
+  border-bottom: 1px solid rgba(88, 154, 144, 0.18);
+}
+
+.analysis-widget-eyebrow {
+  margin-right: auto;
+
+  color: #a7c993;
+
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.analysis-widget-select {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 26px;
+  padding: 4px 26px 4px 9px;
+
+  border: 1px solid #315657;
+  border-radius: 8px;
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  /* Chromium 135+: o menu de opções passa a seguir o tema do bloco. */
+  appearance: base-select;
+
+  background-color: #0b282c;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2387e46c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 9px 6px;
+  color: #dce8e2;
+
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.analysis-widget-select:hover:not(:disabled) {
+  border-color: #58cbb766;
+  background-color: #0e3135;
+}
+
+.analysis-widget-select:open {
+  border-color: #58cbb766;
+  background-color: #0e3135;
+}
+
+.analysis-widget-select:focus-visible {
+  border-color: #87e46c;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(135, 228, 108, 0.18);
+}
+
+.analysis-widget-select.is-grow {
+  flex: 1 1 120px;
+}
+
+.analysis-widget-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------- menu de opções ---------- */
+
+@supports (appearance: base-select) {
+  .analysis-widget-select::picker-icon {
+    display: none;
+  }
+
+  .analysis-widget-select::picker(select) {
+    max-height: 244px;
+    margin-top: 4px;
+    padding: 4px;
+
+    overflow-y: auto;
+
+    appearance: base-select;
+
+    border: 1px solid #3f6a6b;
+    border-radius: 10px;
+
+    background: #0b282c;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+
+    scrollbar-color: #58cbb766 transparent;
+    scrollbar-width: thin;
+  }
+
+  .analysis-widget-select option {
+    padding: 6px 10px;
+
+    border-radius: 6px;
+
+    background: transparent;
+    color: #cfe0d8;
+
+    font-size: 11px;
+    text-overflow: ellipsis;
+
+    cursor: pointer;
+  }
+
+  .analysis-widget-select option:hover,
+  .analysis-widget-select option:focus {
+    background: #173f42;
+    color: #ffffff;
+  }
+
+  .analysis-widget-select option:checked {
+    background: #2c5a57;
+    color: #ffffff;
+  }
+
+  .analysis-widget-select option:checked:hover {
+    background: #386d69;
+  }
+
+  .analysis-widget-select option::checkmark {
+    display: none;
+  }
+}
+
+/* ---------- barras de rolagem ---------- */
+
+.analysis-widget-scroll,
+.analysis-widget-regions {
+  scrollbar-color: #58cbb766 transparent;
+  scrollbar-width: thin;
+
+  /* Passado o fim do bloco, a página continua rolando. */
+  overscroll-behavior: auto;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar,
+.analysis-widget-regions::-webkit-scrollbar {
+  display: block;
+
+  width: 6px;
+  height: 6px;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar-track,
+.analysis-widget-regions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar-thumb,
+.analysis-widget-regions::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+
+  background: #58cbb766;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar-thumb:hover,
+.analysis-widget-regions::-webkit-scrollbar-thumb:hover {
+  background: #87e46c88;
+}
+
+.analysis-widget-scroll::-webkit-scrollbar-corner,
+.analysis-widget-regions::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.analysis-widget-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  flex: 1;
+
+  min-width: 0;
+  min-height: 0;
+
+  padding: 12px 12px 14px;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.analysis-widget-state {
+  padding: 14px 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+
+  background: rgba(12, 45, 48, 0.4);
+
+  text-align: center;
+}
+
+.analysis-widget-state strong {
+  display: block;
+
+  margin-bottom: 4px;
+
+  font-size: 12px;
+}
+
+.analysis-widget-state p {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.analysis-widget-state.is-error {
+  border-color: rgba(231, 108, 108, 0.35);
+}
+
+.analysis-widget-state.is-error strong {
+  color: #f0a3a3;
+}
+
+.analysis-widget-note {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.analysis-widget-note.is-error {
+  color: #f0a3a3;
+}
+
+.analysis-widget-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 8px;
+
+  margin: 0;
+}
+
+.analysis-widget .analysis-widget-summary > div {
+  padding: 8px 10px;
+
+  border-top: 1px solid #ffffff12;
+}
+
+/* ---------- seletores compactos ---------- */
+
+.analysis-widget-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  min-width: 0;
+}
+
+.analysis-widget-chip {
+  max-width: 100%;
+  padding: 4px 9px;
+
+  overflow: hidden;
+
+  border: 1px solid #315657;
+  border-radius: 999px;
+
+  background: #0b282c;
+  color: #a7c993;
+
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.analysis-widget-chip:hover:not(:disabled) {
+  border-color: #4f8f85;
+  color: #e0e3de;
+}
+
+.analysis-widget-chip.is-active {
+  border-color: #4f8f85;
+  background: #386d69;
+  color: #ffffff;
+}
+
+.analysis-widget-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.analysis-widget-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.analysis-widget-segment {
+  display: flex;
+  gap: 3px;
+
+  padding: 3px;
+
+  border: 1px solid #315657;
+  border-radius: 9px;
+
+  background: #0b282c;
+}
+
+.analysis-widget-segment button {
+  padding: 4px 9px;
+
+  border: 0;
+  border-radius: 6px;
+
+  background: transparent;
+  color: #a7c993;
+
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.analysis-widget-segment button:hover {
+  color: #e0e3de;
+}
+
+.analysis-widget-segment button.is-active {
+  background: #386d69;
+  color: #ffffff;
+}
+
+/* ---------- ranking ---------- */
+
+.analysis-widget .impact-ranking {
+  gap: 12px;
+}
+
+.analysis-widget .impact-ranking-eyebrow {
+  display: none;
+}
+
+.analysis-widget .impact-ranking-header {
+  gap: 10px;
+}
+
+.analysis-widget .impact-ranking-period {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 11px;
+}
+
+.analysis-widget .impact-ranking-metric-selector {
+  padding: 3px;
+
+  border-radius: 9px;
+}
+
+.analysis-widget .impact-ranking-metric-button {
+  padding: 5px 10px;
+
+  border-radius: 6px;
+
+  font-size: 10px;
+}
+
+.analysis-widget .impact-ranking-list {
+  gap: 10px;
+}
+
+.analysis-widget .impact-ranking-item-header {
+  gap: 10px;
+}
+
+.analysis-widget .impact-ranking-position {
+  width: 26px;
+  height: 26px;
+}
+
+.analysis-widget .impact-ranking-service {
+  gap: 10px;
+}
+
+.analysis-widget .impact-ranking-service > div {
+  min-width: 0;
+}
+
+.analysis-widget .impact-ranking-region,
+.analysis-widget .impact-ranking-status {
+  font-size: 10px;
+}
+
+.analysis-widget .impact-ranking-value strong {
+  font-size: 12px;
+}
+
+/* ---------- histórico ---------- */
+
+.analysis-widget .history-chart {
+  margin-top: 0;
+}
+
+.analysis-widget .history-chart-canvas {
+  height: clamp(150px, 34cqh, 250px);
+  min-height: 140px;
+}
+
+.analysis-widget .history-chart-toolbar {
+  margin: 0 4px;
+}
+
+.analysis-widget .history-chart-footer {
+  padding: 8px 4px 0;
+
+  font-size: 10px;
+}
+
+.analysis-widget .history-chart-legend {
+  gap: 12px;
+
+  font-size: 10px;
+}
+
+/* ---------- comparação e projeção ---------- */
+
+.analysis-widget .comparison-chart,
+.analysis-widget .comparison-period-chart,
+.analysis-widget .location-projection-chart,
+.analysis-widget .location-projection-summary {
+  gap: 10px;
+
+  padding: 12px 14px;
+
+  border-radius: 12px;
+}
+
+.analysis-widget .analyses-section-label {
+  font-size: 9px;
+}
+
+.analysis-widget .comparison-chart-header h2,
+.analysis-widget .comparison-period-chart-header h2,
+.analysis-widget .location-projection-chart-header h2,
+.analysis-widget .location-projection-summary-header h2 {
+  margin: 2px 0 4px;
+
+  font-size: 13px;
+}
+
+.analysis-widget .comparison-chart-header p,
+.analysis-widget .comparison-period-chart-header p,
+.analysis-widget .location-projection-chart-header p,
+.analysis-widget .location-projection-summary-header p {
+  font-size: 10px;
+}
+
+.analysis-widget .comparison-chart-canvas {
+  height: clamp(150px, 38cqh, 280px);
+  min-height: 140px;
+}
+
+.analysis-widget .comparison-period-chart-canvas {
+  height: clamp(140px, 34cqh, 240px);
+  min-height: 130px;
+}
+
+.analysis-widget .location-projection-chart-canvas {
+  height: clamp(130px, 32cqh, 220px);
+  min-height: 120px;
+}
+
+.analysis-widget .comparison-chart-footer {
+  gap: 8px;
+
+  font-size: 10px;
+}
+
+.analysis-widget .comparison-chart-legend {
+  gap: 8px;
+}
+
+.analysis-widget .location-projection-summary-header {
+  gap: 10px;
+}
+
+.analysis-widget .location-projection-energy strong {
+  font-size: 13px;
+}
+
+/* ---------- projeção: serviço + mapa ---------- */
+
+.analysis-widget-projection-primary {
+  display: grid;
+  gap: 10px;
+
+  min-width: 0;
+}
+
+@container widget (min-width: 640px) {
+  .analysis-widget-projection-primary {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+
+    align-items: stretch;
+  }
+}
+
+.analysis-widget .projection-service-card,
+.analysis-widget .location-projection-map-card {
+  height: auto;
+  gap: 12px;
+
+  padding: 14px;
+
+  border-radius: 12px;
+}
+
+.analysis-widget .projection-service-card-header h3,
+.analysis-widget .location-projection-map-header h3 {
+  margin: 2px 0 4px;
+
+  font-size: 13px;
+}
+
+.analysis-widget .projection-service-identity {
+  gap: 10px;
+
+  padding: 10px 12px;
+
+  border-radius: 10px;
+}
+
+.analysis-widget .projection-service-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.analysis-widget .projection-service-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.analysis-widget .projection-service-identity-info strong {
+  font-size: 12px;
+}
+
+.analysis-widget .projection-service-location strong {
+  font-size: 11px;
+}
+
+.analysis-widget .projection-service-regions-description {
+  display: none;
+}
+
+.analysis-widget .projection-service-region {
+  min-height: 38px;
+
+  padding: 6px 8px;
+}
+
+.analysis-widget .projection-service-region-info strong {
+  font-size: 11px;
+}
+
+.analysis-widget .projection-service-region-list {
+  max-height: 172px;
+
+  padding-right: 2px;
+
+  overflow-y: auto;
+
+  scrollbar-color: #58cbb766 transparent;
+  scrollbar-width: thin;
+}
+
+.analysis-widget .projection-service-energy strong {
+  font-size: 13px;
+}
+
+.analysis-widget .location-projection-map-header {
+  margin-bottom: 4px;
+}
+
+.analysis-widget .location-projection-map-header p {
+  display: none;
+}
+
+.analysis-widget .location-projection-map-frame,
+.analysis-widget .location-projection-map-canvas {
+  min-height: 220px;
+}
+
+.analysis-widget .location-projection-map-legend {
+  margin-top: 0;
+
+  font-size: 9px;
+}
+
+.analysis-widget .location-projection-map-error {
+  min-height: 180px;
+}
+
+@container widget (max-width: 420px) {
+  .analysis-widget-eyebrow {
+    display: none;
+  }
+
+  .analysis-widget .comparison-chart-header,
+  .analysis-widget .comparison-period-chart-header,
+  .analysis-widget .location-projection-chart-header,
+  .analysis-widget .location-projection-summary-header {
+    flex-direction: column;
+    gap: 6px;
+  }
+}

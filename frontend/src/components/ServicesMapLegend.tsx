@@ -22,12 +22,19 @@ export const statusLabels: Record<ServiceStatus, string> = {
 };
 
 export function ServicesMapLegend({ services }: { services: MonitoredService[] }) {
-  const statuses = statusPriority.filter((status) =>
-    services.some((service) => service.status === status),
+  // "Ativo" é o estado padrão dos serviços; a legenda só destaca anomalias.
+  const statuses = statusPriority.filter(
+    (status) =>
+      status !== "active" &&
+      services.some((service) => service.status === status),
   );
   const withoutLocation = services.filter((service) =>
     service.location.latitude === null || service.location.longitude === null,
   ).length;
+
+  if (statuses.length === 0 && withoutLocation === 0) {
+    return null;
+  }
 
   return (
     <div className="services-map-footer">
