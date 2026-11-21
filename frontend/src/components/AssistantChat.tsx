@@ -264,11 +264,13 @@ function AssistantMessage({ reply, disabled, onAsk }: AssistantMessageProps) {
 type AssistantChatProps = {
   autoFocus?: boolean;
   onLoadingChange?: (loading: boolean) => void;
+  onBack?: () => void;
 };
 
 export function AssistantChat({
   autoFocus = false,
   onLoadingChange,
+  onBack,
 }: AssistantChatProps) {
   const { token, logout } = useAuth();
   const { pathname } = useLocation();
@@ -415,6 +417,43 @@ export function AssistantChat({
     setLoading(false);
   }
 
+  function cancelRequest() {
+    if (!loading) {
+      return;
+    }
+
+    const controller = abortRef.current;
+
+    if (controller === null) {
+      return;
+    }
+
+    controller.abort();
+
+    abortRef.current = null;
+
+    setLoading(false);
+  }
+
+  function resetChat() {
+    abortRef.current?.abort();
+
+    abortRef.current = null;
+    conversationIdRef.current = null;
+
+    nextId.current = 1;
+
+    setEntries([]);
+    setInput("");
+    setPeriod("24h");
+    setLoading(false);
+  }
+
+  function handleBack() {
+    resetChat();
+    onBack?.();
+  }
+
   return (
     <section className="assistant-chat" aria-labelledby="assistant-chat-title">
       <header className="assistant-chat-header">
@@ -427,23 +466,36 @@ export function AssistantChat({
           </p>
         </div>
 
-        <div
-          className="assistant-chat-period"
-          role="group"
-          aria-label="Período da análise"
-        >
-          {CHAT_PERIODS.map((option) => (
+        <div className="assistant-chat-controls">
+          {onBack && (
             <button
-              key={option}
               type="button"
-              className={option === period ? "active" : undefined}
-              onClick={() => setPeriod(option)}
-              disabled={loading}
-              aria-pressed={option === period}
+              className="assistant-chat-back"
+              onClick={handleBack}
             >
-              {PERIOD_LABELS[option]}
+              <span aria-hidden="true">←</span>
+              Voltar
             </button>
-          ))}
+          )}
+
+          <div
+            className="assistant-chat-period"
+            role="group"
+            aria-label="Período da análise"
+          >
+            {CHAT_PERIODS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={option === period ? "active" : undefined}
+                onClick={() => setPeriod(option)}
+                disabled={loading}
+                aria-pressed={option === period}
+              >
+                {PERIOD_LABELS[option]}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -523,12 +575,22 @@ export function AssistantChat({
           disabled={loading}
           autoComplete="off"
         />
-        <button
-          type="submit"
-          disabled={loading || input.trim() === "" || token === null}
-        >
-          {loading ? "Analisando..." : "Perguntar"}
-        </button>
+        {loading ? (
+          <button
+            type="button"
+            className="assistant-chat-cancel"
+            onClick={cancelRequest}
+          >
+            Cancelar
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={input.trim() === "" || token === null}
+          >
+            Perguntar
+          </button>
+        )}
       </form>
 
       <footer className="assistant-chat-footer">

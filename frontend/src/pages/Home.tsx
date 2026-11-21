@@ -137,6 +137,17 @@ export function Home() {
     }, 950);
   }
 
+  function returnToIntro() {
+    window.clearTimeout(waveTimer.current);
+    window.clearTimeout(stageTimer.current);
+
+    setIsTransitioning(false);
+    setIsKarmaThinking(false);
+
+    setView(null);
+    setStage("intro");
+  }
+
   function changeKarmaAvatar() {
     if (isKarmaThinking || isKarmaAvatarChanging) {
       return;
@@ -308,6 +319,7 @@ export function Home() {
           <AssistantChat
             autoFocus={stage === "conversation"}
             onLoadingChange={setIsKarmaThinking}
+            onBack={returnToIntro}
           />
         </div>
       </section>
