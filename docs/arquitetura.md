@@ -519,7 +519,7 @@ A página de **Análises** concentra exploração temporal:
 - lacunas no histórico;
 - navegação entre serviços.
 
-Ranking e comparação permanecem planejados para a Sprint 3.
+Ranking e comparação estão implementados na página de Análises. O ranking ordena os serviços por energia ou CO₂e no período selecionado, e a comparação permite analisar dois ou mais serviços no mesmo período; ambos usam os indicadores e históricos existentes, sem endpoints exclusivos. A interface sinaliza dados parciais e mantém serviços removidos com dados no período; no ranking, eles aparecem como “Removido”.
 
 ### Atualização automática
 
