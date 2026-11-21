@@ -757,7 +757,7 @@ Nesta demonstração, apresentamos a evolução do produto a partir da base esta
 
 ## 10. Fechamento da Sprint e Sprint Review
 
-### Situação antes da Review
+### Situação e registro da Review
 
 O núcleo funcional da Sprint 2 foi tecnicamente validado em 09/11/2026:
 
@@ -774,9 +774,12 @@ No momento deste fechamento documental:
 | TEC37 — Reformulação do Monitoramento | 🔄 In review |
 | US13 — Visualização geográfica | 🔄 In review |
 | Documentação final da Sprint | 🔄 Em fechamento |
-| Sprint Review / feedback do cliente | ⏳ Pendente |
+| Sprint Review | ✅ Realizada |
+| Feedback do cliente | ⏳ Ainda não recebido |
 
-### Itens a apresentar na Sprint Review
+O repositório contém o [vídeo de demonstração da Sprint 2](https://youtu.be/qW38NnthF8Q) e a retrospectiva da equipe na seção seguinte. São registros relacionados à sprint, mas não foi localizada uma ata ou anotação explícita da Sprint Review com data, participantes e decisões. O feedback do cliente será registrado quando a informação for repassada ao time.
+
+### Itens previstos para apresentar na Sprint Review
 
 - coleta periódica e tolerância a falhas;
 - diferenciação entre `success`, `no_metrics` e `unavailable`;
@@ -787,29 +790,30 @@ No momento deste fechamento documental:
 - evolução visual do Monitoramento;
 - visualização geográfica antecipada da Sprint 3.
 
-### Feedback recebido
+### Feedback do cliente
 
-> **Preencher após a Sprint Review de 09/11/2026.**  
+> Ainda não recebido do professor em 21/11/2026.
 > Registrar somente feedback efetivamente recebido do cliente/professores.
 
 ### Decisões e adaptações para a Sprint 3
 
 Antes da Review, a única adaptação já registrada é a **antecipação da US13 para a Sprint 2**. Ranking, comparação e demais recursos analíticos continuam planejados para a Sprint 3.
 
-Após a Review, registrar aqui:
+Quando o feedback for recebido, registrar aqui:
 
 - mudanças de prioridade;
 - novas correções ou refinamentos;
 - itens que permanecem pendentes;
 - alterações no Product Backlog e no Sprint Backlog 3.
 
-### Pendências de fechamento
+### Fechamento e pendências remanescentes
 
 - concluir a revisão/integração da TEC37;
 - concluir a revisão/integração da US13;
 - finalizar os documentos técnicos ainda em revisão;
-- registrar o hash/PR final da branch de fechamento;
-- preencher o feedback e as decisões da Sprint Review.
+- hash final da branch `chore/sprint2-finalizacao` identificado como `b123a524def9203be7c714ddd65e90ba12c61f31` em 09/11/2026;
+- registrar a data e os elementos da Review que forem confirmados;
+- incorporar o feedback do cliente somente após seu recebimento.
 
 ## 11 · Retrospectiva da Sprint
 

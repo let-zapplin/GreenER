@@ -1343,8 +1343,8 @@ No fechamento da Sprint 2 estão implementados e integrados ao produto:
 
 A validação de 09/11/2026 confirmou o fluxo com dados persistidos e atualização automática. Os detalhes estão em [`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md).
 
-## 09. Recursos previstos para a Sprint 3
-Ranking de impacto e comparação entre serviços continuam no planejamento da Sprint 3. Os caminhos HTTP desses recursos só devem ser documentados quando seus contratos forem definidos no código.
+## 09. Recursos de análise disponíveis
+O ranking por energia ou CO₂e e a comparação entre serviços são apresentados na página de Análises usando os endpoints existentes `GET /api/indicadores?start=<ISO>&end=<ISO>` e `GET /api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>`. Não há endpoints exclusivos para ranking ou comparação. A interface sinaliza dados parciais; serviços removidos com dados no período permanecem disponíveis nas análises, e o ranking os identifica como “Removido”.
 
 A visualização geográfica (`US13`) foi antecipada para o frontend na Sprint 2 e utiliza os dados de localização já expostos por `GET /api/servicos`; ela não exige um novo endpoint específico de mapa.
 

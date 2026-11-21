@@ -55,8 +55,8 @@ emissão estimada de CO₂e
 | Sprint | Período | Registro | Demonstração | Situação |
 | --- | --- | --- | --- | --- |
 | **Sprint 1** | 28/09–19/10/2026 | [`sprint-1.md`](docs/sprints/sprint-1.md) | [▶ Vídeo](https://youtu.be/pGdiciJxTPw) | ✅ Finalizada |
-| **Sprint 2** | 20/10–09/11/2026 | [`sprint-2.md`](docs/sprints/sprint-2.md) | [▶ Vídeo](https://youtu.be/qW38NnthF8Q) | 🟡 Incremento tecnicamente validado; Sprint Review pendente |
-| **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | A definir | ⏳ Planejada |
+| **Sprint 2** | 20/10–09/11/2026 | [`sprint-2.md`](docs/sprints/sprint-2.md) | [▶ Vídeo](https://youtu.be/qW38NnthF8Q) | 🟡 Sprint Review realizada; feedback do cliente não recebido|
+| **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | A definir | 🔄 Em andamento; fechamento após entrega em 23/11|
 
 > A visualização geográfica começou antecipadamente no fim da Sprint 2 e será consolidada na Sprint 3.
 
@@ -89,7 +89,9 @@ emissão estimada de CO₂e
 - gráfico temporal;
 - identificação de lacunas;
 - navegação a partir do Monitoramento;
-- base preparada para ranking, comparação e filtros na Sprint 3.
+- ranking por energia ou CO₂e no período selecionado;
+- comparação de dois ou mais serviços no mesmo período;
+- sinalização de dados parciais e identificação de serviços removidos com histórico no período como “Removido” no ranking.
 
 </td>
 </tr>

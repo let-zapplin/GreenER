@@ -62,7 +62,7 @@ Consequências para este planejamento:
 | 10 | TEC26 | Técnico | Revisar desempenho da aplicação | RNF03 | DW03, DW05 | Geral | **P1** | **3** | **Igor** | Gustavo | Fluxo completo | ⬜ A fazer | Identificar polling/consultas redundantes e gargalos relevantes. |
 | 11 | TEC28 | Técnico / UI | Finalizar responsividade e experiência mobile | RNF01 | DW04 | Frontend / UX | **P1** | **5** | **Vitor** | Patricia | TEC27 | ⬜ A fazer | Fluxos principais utilizáveis em desktop e mobile sem cortes ou perda de informação. |
 | 12 | TEC30 | Técnico | Ampliar cobertura de testes automatizados | Qualidade | TP03, ES07 | Backend / Frontend | **P1** | **5** | **Patricia** | Todos | Durante toda a Sprint | ⬜ A fazer | Cobertura de ranking, comparação, filtros, regressões, mapa e autenticação. |
-| 13 | TEC31 | Técnico | Validar requisitos e fluxo completo do MVP | RF01-RF15, RP05 | ES03, ES04, ES07 | Geral | **P0** | **5** | **Gustavo** | Todos | Demais entregas | ⬜ A fazer | Checklist ponta a ponta `requisito → código → teste → evidência`. |
+| 13 | TEC31 | Técnico | Validar requisitos e fluxo completo do MVP | RF01-RF15, RP05 | ES03, ES04, ES07 | Geral | **P0** | **5** | **Gustavo** | Todos | Demais entregas | ✅ Concluído | Checklist ponta a ponta `requisito → código → teste → evidência`; pendências registradas no [manual de validação](../testes/manualdevalidacao.md). |
 | 14 | TEC32 | Técnico | Revisar documentação técnica final | RNF05 | ES08 | Geral | **P0** | **3** | **Gustavo** | Vitor + todos | TEC31 | ⬜ A fazer | README, arquitetura, banco, API, cálculos e registros coerentes com o MVP final. |
 | 15 | TEC33 | Técnico | Preparar ambiente e roteiro de demonstração final | RP04, RP05, Entrega | DW07, ES08 | Geral | **P0** | **3** | **Patricia** | Vitor + todos | TEC31 | ⬜ A fazer | Projeto inicializa por Docker e principais fluxos podem ser demonstrados sem preparação improvisada. |
 
@@ -161,9 +161,9 @@ Uma entrega só pode ser marcada como concluída quando:
 
 ## 7. Pendências de adaptação após a Sprint Review 2
 
-A Sprint Review 2 ainda não havia ocorrido no momento deste replanejamento.
+A Sprint Review 2 ainda não havia ocorrido no momento deste replanejamento. O responsável confirmou que ela ocorreu posteriormente; até 21/11/2026, o professor ainda não havia repassado o feedback do cliente. Os registros de fechamento da Sprint 3 serão realizados após a entrega final de 23/11/2026.
 
-Após a Review, registrar aqui somente decisões realmente tomadas, por exemplo:
+Quando houver feedback, registrar aqui somente decisões realmente tomadas, por exemplo:
 
 - alterações de prioridade;
 - refinamentos solicitados;
