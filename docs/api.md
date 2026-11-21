@@ -43,10 +43,11 @@ flowchart LR
 | `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Calcular indicadores ambientais no período | US07 / RF08 |
 | `GET` | `/api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>` | Consultar histórico ambiental calculado de um serviço | TEC23 / RF10 |
 | `GET` | `/api/dashboard` | Obter indicadores consolidados para o dashboard | TEC19 |
+| `POST` | `/api/chat` | Consultar o Assistente Karma com dados monitorados e conhecimento do GreenER | Assistente Karma |
 
 **Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
 
-O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me` e todas as rotas de intensidades. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
+O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me`, as rotas de intensidades e `POST /api/chat`. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
 
 ---
 
@@ -234,6 +235,40 @@ Sem o cabeçalho `Authorization: Bearer <token>`:
 **Status:** `401 Unauthorized`.
 
 Token inválido ou expirado também retorna `401`, com mensagem correspondente.
+
+### `POST /api/chat` — Assistente Karma
+Envia uma pergunta ao assistente. A rota exige JWT válido e aceita apenas consultas de
+leitura; o modelo local não acessa o banco de dados.
+
+**Corpo esperado:**
+
+```json
+{
+  "message": "Qual serviço gasta mais energia?",
+  "period": "24h",
+  "conversationId": "8f14e45f-ceea-4a67-9f0b-7d2c1a4e5b10",
+  "context": {
+    "page": "/home",
+    "serviceName": null
+  },
+  "history": []
+}
+```
+
+`message` é obrigatória e aceita até 500 caracteres. `period` é opcional e deve ser
+`1h`, `6h`, `24h` ou `7d` (padrão `24h`). `conversationId`, `context` e `history` são
+opcionais; o histórico recebido aceita até 12 mensagens. O backend aplica regras
+determinísticas primeiro e consulta o Ollama apenas quando necessário para classificar
+uma pergunta ambígua ou redigir uma resposta de conhecimento. Em caso de falha do
+Ollama, o assistente continua em modo regras.
+
+**Sucesso:** `200 OK`. A resposta contém `conversationId`, `answer`, `intent`, `period`,
+`chart`, `clarification`, `suggestions`, `partial`, `disclaimer`, `model` e `degraded`.
+
+**Erros principais:** `400` para entrada inválida, `401` para JWT ausente ou inválido,
+`403` ao tentar acessar uma conversa de outro usuário e `429` quando já existe uma
+pergunta em processamento no processo do backend. O contrato completo está em
+[`docs/assistente-ia.md`](assistente-ia.md).
 
 ---
 
@@ -1203,14 +1238,16 @@ backend/src/
 │   │   └── intensidades.repository.ts # Histórico e seleção temporal
 
 │   ├── dashboard/
-
 │   │   ├── dashboard.routes.ts      # GET / (protegido por JWT)
-
 │   │   ├── dashboard.controller.ts  # Validação do período e resposta HTTP
-
 │   │   ├── dashboard.service.ts     # Consolidação dos indicadores
-
 │   │   └── dashboard.repository.ts  # Contagem do estado dos serviços
+│   ├── chat/
+│   │   ├── chat.routes.ts           # POST /api/chat (protegido por JWT)
+│   │   ├── chat.controller.ts       # Validação HTTP e titularidade da conversa
+│   │   ├── chat.service.ts          # Regras, fatos, fallback e resposta
+│   │   ├── chat.prompt.ts           # Prompts de classificação e redação
+│   │   └── ollama.client.ts         # Cliente HTTP do Ollama local
 
 ├── integrations/
 

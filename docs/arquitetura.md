@@ -16,6 +16,8 @@ O GreenER utiliza uma arquitetura web cliente-servidor com:
 - **Banco de dados:** PostgreSQL;
 - **Execução:** Docker Compose;
 - **APIs auxiliares:** Metrics Aggregator API e Carbon Intensity API;
+- **Assistente:** Karma, com regras determinísticas e Ollama local para classificação e
+  redação de conhecimento;
 - **Visualizações:** Recharts para histórico e MapLibre GL com OpenFreeMap para o mapa do Monitoramento.
 
 A aplicação mantém as regras de negócio e os cálculos ambientais no backend. O frontend consome respostas estruturadas e não recalcula energia ou CO₂e.
@@ -29,6 +31,12 @@ flowchart LR
     F -->|HTTP / JSON + JWT| B[Backend Express :3000]
 
     B -->|SQL explícito e parametrizado| P[(PostgreSQL 17)]
+    B --> K[ChatController / ChatService]
+    K -->|Consulta de indicadores| I
+    K -->|Panorama ambiental| D[Dashboard]
+    K -->|Quando necessário: classificar ou redigir conhecimento| O[Ollama local]
+    O --> K
+    K -->|Resposta estruturada| F
 
     B -->|GET /services| M[Metrics Aggregator API]
     B -->|GET /metrics/:id| M
@@ -128,7 +136,8 @@ O mesmo princípio é utilizado nos módulos de:
 - coletas;
 - intensidades de carbono;
 - indicadores;
-- dashboard.
+- dashboard;
+- chat (Assistente Karma).
 
 Estrutura conceitual:
 
@@ -140,7 +149,8 @@ backend/src/
 │   ├── coletas/
 │   ├── intensidades/
 │   ├── indicadores/
-│   └── dashboard/
+│   ├── dashboard/
+│   └── chat/
 ├── integrations/
 ├── jobs/
 └── shared/
@@ -493,6 +503,15 @@ hooks / services
 API GreenER
 ```
 
+### Assistente Karma
+
+Na Home autenticada, `AssistantChat` envia perguntas a `POST /api/chat` com JWT. O
+backend aplica regras determinísticas, consulta indicadores/dashboard e monta fatos e
+gráficos. O Ollama local é acionado apenas quando a classificação precisa de ajuda ou
+para redigir respostas sobre o projeto e a metodologia; ele não acessa o PostgreSQL.
+Se o Ollama falhar, o backend responde pelo modo regras. O fluxo e o contrato estão em
+[`docs/assistente-ia.md`](assistente-ia.md).
+
 ### Monitoramento
 
 A página de **Monitoramento** concentra a leitura operacional do ambiente:
@@ -718,6 +737,7 @@ Principais fluxos:
 | `GET` | `/api/indicadores` | Indicadores ambientais por período |
 | `GET` | `/api/indicadores/:serviceId/historico` | Histórico ambiental |
 | `GET` | `/api/dashboard` | Resumo operacional |
+| `POST` | `/api/chat` | Assistente Karma, protegido por JWT |
 
 ---
 
