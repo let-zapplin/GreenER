@@ -32,7 +32,7 @@
 
   color: #a7c993;
 
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
 }
@@ -61,7 +61,7 @@
   color: #dce8e2;
 
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -133,7 +133,7 @@
     background: transparent;
     color: #cfe0d8;
 
-    font-size: 11px;
+    font-size: 13px;
     text-overflow: ellipsis;
 
     cursor: pointer;
@@ -232,7 +232,7 @@
 
   margin-bottom: 4px;
 
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .analysis-widget-state p {
@@ -240,7 +240,7 @@
 
   color: var(--text-muted);
 
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
@@ -257,7 +257,7 @@
 
   color: var(--text-muted);
 
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -302,7 +302,7 @@
   color: #a7c993;
 
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -362,7 +362,7 @@
   color: #a7c993;
 
   font: inherit;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 
   cursor: pointer;
@@ -400,7 +400,7 @@
 
   color: var(--text-muted);
 
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .analysis-widget .impact-ranking-metric-selector {
@@ -414,7 +414,7 @@
 
   border-radius: 6px;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .analysis-widget .impact-ranking-list {
@@ -440,11 +440,11 @@
 
 .analysis-widget .impact-ranking-region,
 .analysis-widget .impact-ranking-status {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .analysis-widget .impact-ranking-value strong {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 /* ---------- histórico ---------- */
@@ -465,13 +465,13 @@
 .analysis-widget .history-chart-footer {
   padding: 8px 4px 0;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .analysis-widget .history-chart-legend {
   gap: 12px;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* ---------- comparação e projeção ---------- */
@@ -488,7 +488,7 @@
 }
 
 .analysis-widget .analyses-section-label {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .analysis-widget .comparison-chart-header h2,
@@ -497,14 +497,14 @@
 .analysis-widget .location-projection-summary-header h2 {
   margin: 2px 0 4px;
 
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .analysis-widget .comparison-chart-header p,
 .analysis-widget .comparison-period-chart-header p,
 .analysis-widget .location-projection-chart-header p,
 .analysis-widget .location-projection-summary-header p {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .analysis-widget .comparison-chart-canvas {
@@ -525,7 +525,7 @@
 .analysis-widget .comparison-chart-footer {
   gap: 8px;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .analysis-widget .comparison-chart-legend {
@@ -537,7 +537,7 @@
 }
 
 .analysis-widget .location-projection-energy strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* ---------- projeção: serviço + mapa ---------- */
@@ -571,7 +571,7 @@
 .analysis-widget .location-projection-map-header h3 {
   margin: 2px 0 4px;
 
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .analysis-widget .projection-service-identity {
@@ -593,11 +593,11 @@
 }
 
 .analysis-widget .projection-service-identity-info strong {
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .analysis-widget .projection-service-location strong {
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .analysis-widget .projection-service-regions-description {
@@ -611,7 +611,7 @@
 }
 
 .analysis-widget .projection-service-region-info strong {
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .analysis-widget .projection-service-region-list {
@@ -626,7 +626,7 @@
 }
 
 .analysis-widget .projection-service-energy strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .analysis-widget .location-projection-map-header {
@@ -645,7 +645,7 @@
 .analysis-widget .location-projection-map-legend {
   margin-top: 0;
 
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .analysis-widget .location-projection-map-error {

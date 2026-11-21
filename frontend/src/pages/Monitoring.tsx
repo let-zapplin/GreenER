@@ -567,8 +567,13 @@ export function Monitoring() {
           </p>
 
           <h1>
-            Seu <span>workspace.</span>
+            O impacto do seu ambiente, <br /><span>em foco.</span>
           </h1>
+
+          <p className="monitoring-description">
+            Acompanhe consumo de energia, emissões e o status dos seus
+            serviços em um só painel.
+          </p>
         </div>
       </section>
 
