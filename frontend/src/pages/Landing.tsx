@@ -280,7 +280,7 @@ export function Landing() {
             </h2>
             <p>
               Estimamos a energia consumida a partir das métricas de CPU,
-              memória e disco. Depois, multiplicamos esse consumo pela
+              memória, disco e rede. Depois, multiplicamos esse consumo pela
               intensidade de carbono da região onde o serviço roda.
             </p>
             <div className="landing-calculation">

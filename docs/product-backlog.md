@@ -3,8 +3,10 @@
 ← [Voltar ao índice da documentação](../README.md)
 
 > Artefato mantido pelo **Product Owner** e refinado a cada Sprint.  
-> **Atualização de fechamento técnico da Sprint 2 — 09/11/2026.**  
-> A Sprint Review 2 ainda não ocorreu; portanto, este documento registra apenas o estado técnico comprovado e as adaptações de escopo já realizadas durante a execução.
+> **Atualização da validação técnica da Sprint 3 — 21/11/2026.**
+> Este registro consolida evidências técnicas e não substitui Sprint Review ou feedback do cliente.
+>
+> A matriz RF01–RF15, as referências de implementação/testes e as evidências de autenticação e Docker estão no [manual de validação final](testes/manualdevalidacao.md).
 
 ---
 
@@ -64,8 +66,7 @@
 
 #### US01 - Descobrir serviços disponíveis
 - [x] consultar o Agregador de Métricas;
-- [x] identificar os serviços retornados;
-- [x] reconhecer novos serviços durante a execução.
+- [x] identificar os serviços retornados.
 
 **RF:** RF01
 
@@ -159,8 +160,7 @@ Apresentar no Monitoramento:
 - [x] definir e documentar intervalo de sincronização do catálogo;
 - [x] definir e documentar intervalo de coleta de métricas;
 - [x] definir atualização do frontend coerente com o backend;
-- [x] informar data/hora da última atualização relevante ao usuário;
-- [x] preservar os últimos dados válidos diante de falha transitória.
+- [x] informar data/hora da última atualização relevante ao usuário.
 
 **RF:** RF11 | **RNF:** RNF02
 
@@ -186,14 +186,12 @@ Apresentar no Monitoramento:
 #### US12 - Localização do serviço
 - [x] persistir país e região recebidos da API;
 - [x] persistir/exibir cidade quando disponível;
-- [x] utilizar latitude/longitude quando disponíveis;
-- [x] manter serviços sem coordenadas acessíveis nas demais visualizações;
 - [ ] concluir a revisão final de contratos e responsividade na Sprint 3.
 
 **RF:** RF12
 
 #### US13 - Mapa dos serviços
-- [x] usar latitude/longitude reais dos serviços;
+- [x] usar latitude/longitude reais dos serviços fornecidas pela API;
 - [x] apresentar no mapa os serviços com coordenadas;
 - [x] manter serviços sem coordenadas disponíveis nas demais visualizações;
 - [x] integrar o mapa ao **Monitoramento** como recurso operacional complementar;
@@ -209,20 +207,30 @@ Apresentar no Monitoramento:
 ### Épico 7 - Ranking e comparação
 
 #### US14 - Ranking de impacto
-- [ ] ordenar por consumo energético estimado;
-- [ ] ordenar por emissão estimada de CO₂e;
-- [ ] utilizar dados agregados no período selecionado;
-- [ ] informar claramente o período considerado.
+- [x] ordenar por consumo energético estimado;
+- [x] ordenar por emissão estimada de CO₂e;
+- [x] utilizar dados agregados no período selecionado;
+- [x] informar claramente o período considerado.
 
 **RF:** RF14
 
+**Evidência:** ranking manual validado para energia e CO₂e no período de 24 horas; ordem, período e sinalização de dados parciais registrados no [manual de validação final](testes/manualdevalidacao.md).
+
+**Decisão de interpretação do Product Owner (21/11/2026):** serviços removidos com dados no período selecionado permanecem disponíveis para ranking e comparação histórica. No ranking, são identificados como “Removido”. A decisão interpreta conjuntamente RF05/RF06.
+
+**Ressalva de dados parciais (decisão do Product Owner, 21/11/2026):** o indicador atual no frontend é suficiente nesta etapa; a limitação será explicada ao cliente na apresentação final do MVP. Não declarar as amostras observadas como cobertura completa.
+
 #### US15 - Comparação entre serviços
-- [ ] selecionar dois ou mais serviços;
-- [ ] comparar todos usando o mesmo período;
-- [ ] apresentar métricas e indicadores ambientais relevantes;
-- [ ] manter leitura simples e útil para tomada de decisão.
+- [x] selecionar dois ou mais serviços;
+- [x] comparar todos usando o mesmo período;
+- [x] apresentar métricas e indicadores ambientais relevantes;
+- [x] manter leitura simples e útil para tomada de decisão.
 
 **RF:** RF15
+
+**Evidência:** comparação manual de Audit Stream e Checkout Worker em 24 horas, com série temporal, totais, indicadores e gráfico do período; detalhes no [manual de validação final](testes/manualdevalidacao.md).
+
+**Limite da validação manual:** a comparação com um serviço removido ainda não foi repetida manualmente; a decisão de mantê-lo disponível quando há dados no período está registrada acima.
 
 ---
 
@@ -297,7 +305,8 @@ Apresentar no Monitoramento:
 - [x] `docs/calculos.md` coerente com o modelo v1;
 - [x] README e registro da Sprint 2 atualizados no fechamento técnico;
 - [x] manual de validação atualizado;
-- [ ] incorporar feedback da Sprint Review 2 quando ela ocorrer;
+- [x] Sprint Review 2 realizada;
+- [ ] incorporar feedback da Sprint Review 2 quando o professor o repassar;
 - [ ] revisar novamente a documentação no fechamento da Sprint 3.
 
 **RNF:** RNF05
@@ -324,7 +333,7 @@ Antes da Sprint Review 2, já ocorreram duas adaptações de escopo verificávei
 1. **US13 antecipada da Sprint 3 para a Sprint 2**, com implementação funcional do mapa no Monitoramento;
 2. **TEC37 incorporada à Sprint 2** para reformular a apresentação dos indicadores do Monitoramento.
 
-Essas alterações não são atribuídas a feedback da Sprint Review 2, que ainda não ocorreu. Elas são registradas como decisões tomadas durante a execução.
+Na data em que essas adaptações foram registradas, a Sprint Review 2 ainda não havia ocorrido. Portanto, elas são registradas como decisões tomadas durante a execução, não como feedback do cliente.
 
 ---
 
@@ -336,6 +345,7 @@ Essas alterações não são atribuídas a feedback da Sprint Review 2, que aind
 | 18/10/2026 | Refinamento para fechamento da Sprint 1 | Gustavo (Product Owner) |
 | 20/10/2026 | Revisão pós-Review 1 e planejamento das Sprints 2 e 3 | Equipe GreenER |
 | 09/11/2026 | Atualização dos status após validação técnica da Sprint 2 e registro da antecipação da US13 | Equipe GreenER |
+| 21/11/2026 | Registro das evidências e da decisão de interpretação para RF14/RF15; validação final RF01–RF15 e pendências mantidas explicitamente | Equipe GreenER |
 
 ---
 
