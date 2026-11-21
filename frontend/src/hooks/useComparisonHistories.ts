@@ -22,6 +22,8 @@ export function useComparisonHistories(
   const [error, setError] =
     useState<string | null>(null);
 
+  const [failedServiceIds, setFailedServiceIds] = useState<number[]>([]);
+
   useEffect(() => {
     const authToken = token;
 
@@ -33,6 +35,7 @@ export function useComparisonHistories(
       setHistories([]);
       setLoading(false);
       setError(null);
+      setFailedServiceIds([]);
 
       return;
     }
@@ -46,6 +49,7 @@ export function useComparisonHistories(
     setHistories([]);
     setLoading(true);
     setError(null);
+    setFailedServiceIds([]);
 
     const requestTimeout = setTimeout(() => {
       didTimeout = true;
@@ -61,21 +65,67 @@ export function useComparisonHistories(
           end: period.end,
         };
 
-        const data = await Promise.all(
-          serviceIds.map((serviceId) =>
-            getServiceIndicatorHistory(
-              serviceId,
-              requestPeriod,
-              controller.signal,
-              authToken,
-            ),
-          ),
+        // Cada consulta é avaliada separadamente, preservando os sucessos.
+        const results = await Promise.allSettled(
+          serviceIds.map(async (serviceId) => {
+            try {
+              return await getServiceIndicatorHistory(
+                serviceId,
+                requestPeriod,
+                controller.signal,
+                authToken,
+              );
+            } catch (error) {
+              // Sessão expirada cancela as consultas restantes imediatamente.
+              if (error instanceof ApiError && error.status === 401) {
+                controller.abort();
+              }
+              throw error;
+            }
+          }),
         );
 
         if (disposed) return;
 
-        setHistories(data);
-        setError(null);
+        if (
+          results.some(
+            (result) => result.status === "rejected" &&
+              result.reason instanceof ApiError && result.reason.status === 401,
+          )
+        ) {
+          logout();
+          return;
+        }
+
+        const successfulHistories: ServiceIndicatorHistoryResponse[] = [];
+        const failedIds: number[] = [];
+
+        results.forEach((result, index) => {
+          if (result.status === "fulfilled") {
+            successfulHistories.push(result.value);
+          } else {
+            failedIds.push(serviceIds[index]);
+          }
+        });
+
+        setHistories(successfulHistories);
+        setFailedServiceIds(failedIds);
+
+        if (failedIds.length === 0) {
+          setError(null);
+        } else if (successfulHistories.length > 0) {
+          setError(
+            didTimeout
+              ? "Algumas consultas excederam o tempo de espera. Exibindo apenas os históricos recebidos."
+              : "Não foi possível carregar todos os serviços selecionados. Exibindo apenas os históricos recebidos.",
+          );
+        } else {
+          setError(
+            didTimeout
+              ? "A consulta da comparação excedeu o tempo de espera."
+              : "Não foi possível carregar os históricos da comparação.",
+          );
+        }
       } catch (error) {
         if (disposed) return;
 
@@ -129,5 +179,6 @@ export function useComparisonHistories(
     histories,
     loading,
     error,
+    failedServiceIds,
   };
 }
