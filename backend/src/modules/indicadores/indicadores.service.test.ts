@@ -126,18 +126,10 @@ describe("IndicadoresService.getIndicators", () => {
       disk: { averageGb: 20, peakGb: 30 },
       network: { totalGb: 4 },
     });
-    expect(indicator.energyBreakdown.cpuKwh).toBeCloseTo(
-      2600 / 3_600_000,
-    );
-    expect(indicator.energyBreakdown.memoryKwh).toBeCloseTo(
-      37.5 / 3_600_000,
-    );
-    expect(indicator.energyBreakdown.diskKwh).toBeCloseTo(
-      10 / 3_600_000,
-    );
-    expect(indicator.energyBreakdown.networkKwh).toBeCloseTo(
-      1.92 / 3_600_000,
-    );
+    expect(indicator.energyBreakdown.cpuKwh).toBeCloseTo(2600 / 3_600_000);
+    expect(indicator.energyBreakdown.memoryKwh).toBeCloseTo(37.5 / 3_600_000);
+    expect(indicator.energyBreakdown.diskKwh).toBeCloseTo(10 / 3_600_000);
+    expect(indicator.energyBreakdown.networkKwh).toBeCloseTo(1.92 / 3_600_000);
     expect(
       Object.values(indicator.energyBreakdown).reduce(
         (total, component) => total + component,
@@ -171,7 +163,6 @@ describe("IndicadoresService.getIndicators", () => {
       diskGb: 10,
       networkGb: 5,
     });
-
 
     expect(sample?.collectionIntervalSeconds).toBeNull();
     expect(sample?.energyKwh).toBeNull();
@@ -226,6 +217,39 @@ describe("IndicadoresService.getIndicators", () => {
     expect(result.summary.carbonIntensityCoveragePercent).toBe(0);
   });
 
+  it("separa a energia total da energia com cobertura de carbono", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([
+        createCollection({
+          id_collection: "101",
+          carbon_intensity_gco2e_per_kwh: 200,
+        }),
+
+        createCollection({
+          id_collection: "102",
+          carbon_intensity_id: null,
+          carbon_intensity_gco2e_per_kwh: null,
+        }),
+      ]),
+    ]);
+
+    const result = await service.getIndicators(start, end);
+
+    const totals = result.services[0].periodTotals;
+
+    expect(totals.validMetricCount).toBe(2);
+
+    expect(totals.validCarbonIntensityCount).toBe(1);
+
+    expect(totals.energyKwh).toBeGreaterThan(
+      totals.energyKwhWithCarbonIntensity,
+    );
+
+    expect(totals.energyKwhWithCarbonIntensity).toBeGreaterThan(0);
+
+    expect(totals.isPartial).toBe(true);
+  });
+
   // A tentativa unavailable mantém a lacuna; os totais zerados não representam uma amostra de consumo zero.
   it("registra coletas sem métricas como lacunas, sem calcular energia", async () => {
     findCollectionsForPeriod.mockResolvedValue([
@@ -275,14 +299,80 @@ describe("IndicadoresService.getIndicators", () => {
   });
 });
 
+describe("IndicadoresService.getServicePeriodIndicators", () => {
+  const findCollectionsForPeriod = vi.fn();
+  const service = new IndicadoresService({ findCollectionsForPeriod }, 300_000);
+
+  const serviceId = 7;
+  const start = "2026-10-30T00:00:00.000Z";
+  const end = "2026-10-31T00:00:00.000Z";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("soma todas as coletas mesmo quando o histórico gráfico é reduzido", async () => {
+    const collections = Array.from({ length: 520 }, (_, index) => {
+      const attemptedAt = new Date(new Date(start).getTime() + index * 60_000);
+      return createCollection({
+        id_collection: String(index + 1),
+        attempted_at: attemptedAt,
+        recorded_at: attemptedAt,
+      });
+    });
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData(collections),
+    ]);
+
+    const result = await service.getServicePeriodIndicators(
+      serviceId,
+      start,
+      end,
+    );
+    const history = await service.getServiceHistory(serviceId, start, end);
+
+    expect(result.periodTotals.collectionCount).toBe(520);
+    expect(result.periodTotals.validMetricCount).toBe(520);
+    expect(result.periodTotals.energyKwh).toBeCloseTo(
+      ((50.95 * 45) / 3_600_000) * 520,
+    );
+    expect(history.samples.length).toBeLessThan(520);
+  });
+
+  it("mantém explícita a ausência de energia válida no período", async () => {
+    findCollectionsForPeriod.mockResolvedValue([
+      createServiceData([
+        createCollection({
+          status: "unavailable",
+          id_metrics: null,
+          cpu_percent: null,
+          memory_gb: null,
+          disk_gb: null,
+          network_gb: null,
+          collection_interval_seconds: null,
+          carbon_intensity_id: null,
+          carbon_intensity_gco2e_per_kwh: null,
+        }),
+      ]),
+    ]);
+
+    const result = await service.getServicePeriodIndicators(
+      serviceId,
+      start,
+      end,
+    );
+
+    expect(result.periodTotals.energyKwh).toBe(0);
+    expect(result.periodTotals.validMetricCount).toBe(0);
+    expect(result.periodTotals.isPartial).toBe(true);
+  });
+});
+
 // Testa o cálculo das amostras históricas com dados controlados, sem acessar PostgreSQL.
 describe("IndicadoresService.getServiceHistory", () => {
   const findCollectionsForPeriod = vi.fn();
 
-  const service = new IndicadoresService(
-    { findCollectionsForPeriod },
-    300_000,
-  );
+  const service = new IndicadoresService({ findCollectionsForPeriod }, 300_000);
 
   const serviceId = 7;
   const start = "2026-10-30T00:00:00.000Z";
@@ -309,11 +399,7 @@ describe("IndicadoresService.getServiceHistory", () => {
       ]),
     ]);
 
-    const result = await service.getServiceHistory(
-      serviceId,
-      start,
-      end,
-    );
+    const result = await service.getServiceHistory(serviceId, start, end);
 
     expect(result.service).toEqual({
       serviceId: 7,
@@ -346,15 +432,9 @@ describe("IndicadoresService.getServiceHistory", () => {
 
   // O serviço existe na resposta do repository, porém sua lista de coletas está vazia.
   it("retorna lista vazia quando o serviço existe, mas não possui coletas no período", async () => {
-    findCollectionsForPeriod.mockResolvedValue([
-      createServiceData([]),
-    ]);
+    findCollectionsForPeriod.mockResolvedValue([createServiceData([])]);
 
-    const result = await service.getServiceHistory(
-      serviceId,
-      start,
-      end,
-    );
+    const result = await service.getServiceHistory(serviceId, start, end);
 
     expect(result.service.serviceId).toBe(serviceId);
     expect(result.samples).toEqual([]);
@@ -378,11 +458,7 @@ describe("IndicadoresService.getServiceHistory", () => {
       ]),
     ]);
 
-    const result = await service.getServiceHistory(
-      serviceId,
-      start,
-      end,
-    );
+    const result = await service.getServiceHistory(serviceId, start, end);
 
     expect(result.samples).toHaveLength(1);
 

@@ -1,0 +1,274 @@
+.redistribution-scenario {
+  display: grid;
+  gap: 1.5rem;
+
+  padding: 1.5rem;
+
+  border: 1px solid rgba(143, 238, 112, 0.14);
+  border-radius: 1.4rem;
+
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(127, 238, 103, 0.06),
+      transparent 42%
+    ),
+    rgba(3, 28, 29, 0.42);
+}
+
+.redistribution-scenario-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.redistribution-scenario-header h3 {
+  margin: 0.35rem 0 0;
+
+  color: var(--text-primary, #efffee);
+  font-size: 1.3rem;
+}
+
+.redistribution-scenario-header p:last-child {
+  margin: 0.5rem 0 0;
+
+  max-width: 680px;
+
+  color: rgba(230, 248, 230, 0.7);
+  line-height: 1.5;
+}
+
+.redistribution-scenario-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+
+  gap: 1rem;
+
+  align-items: stretch;
+}
+
+.redistribution-scenario-panel {
+  display: grid;
+  gap: 1rem;
+
+  padding: 1rem;
+
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 1.1rem;
+
+  background: rgba(5, 36, 37, 0.58);
+}
+
+.redistribution-scenario-panel.is-suggested {
+  border-color: rgba(143, 238, 112, 0.2);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(116, 226, 94, 0.05),
+      transparent 45%
+    ),
+    rgba(5, 36, 37, 0.58);
+}
+
+.redistribution-scenario-panel-header {
+  display: flex;
+  gap: 0.75rem;
+
+  align-items: center;
+}
+
+.redistribution-scenario-panel-header > span {
+  display: grid;
+  place-items: center;
+
+  width: 2rem;
+  height: 2rem;
+
+  border: 1px solid rgba(143, 238, 112, 0.2);
+  border-radius: 50%;
+
+  color: #8fee70;
+
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.redistribution-scenario-panel-header div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.redistribution-scenario-panel-header strong {
+  color: #efffee;
+}
+
+.redistribution-scenario-panel-header small {
+  color: rgba(230, 248, 230, 0.55);
+}
+
+.redistribution-scenario-regions {
+  display: grid;
+  gap: 0.7rem;
+  align-content: start;
+}
+
+.redistribution-scenario-region {
+  display: grid;
+  gap: 0.7rem;
+
+  padding: 0.85rem;
+
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 0.9rem;
+
+  background: rgba(0, 15, 16, 0.28);
+}
+
+.redistribution-scenario-region.is-suggested {
+  border-color: rgba(143, 238, 112, 0.12);
+}
+
+.redistribution-scenario-region-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+
+  align-items: center;
+}
+
+.redistribution-scenario-region-header strong {
+  color: #efffee;
+
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+}
+
+.redistribution-scenario-region-header span {
+  color: rgba(230, 248, 230, 0.58);
+
+  font-size: 0.72rem;
+}
+
+.redistribution-scenario-dots {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 0.38rem;
+}
+
+.redistribution-scenario-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+
+  border-radius: 50%;
+
+  background: #8fee70;
+
+  box-shadow:
+    0 0 0 3px rgba(143, 238, 112, 0.06),
+    0 0 12px rgba(143, 238, 112, 0.18);
+}
+
+.redistribution-scenario-region > small {
+  color: rgba(230, 248, 230, 0.55);
+
+  font-size: 0.72rem;
+}
+
+.redistribution-scenario-process {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 160px;
+}
+
+.redistribution-scenario-process-line {
+  width: 1.8rem;
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(143, 238, 112, 0.45)
+    );
+}
+
+.redistribution-scenario-process-line:last-child {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(143, 238, 112, 0.45),
+      transparent
+    );
+}
+
+.redistribution-scenario-process-card {
+  display: grid;
+  gap: 0.25rem;
+
+  padding: 0.9rem 1rem;
+
+  min-width: 130px;
+
+  border: 1px solid rgba(143, 238, 112, 0.2);
+  border-radius: 1rem;
+
+  background: rgba(7, 48, 47, 0.85);
+
+  text-align: center;
+}
+
+.redistribution-scenario-process-card > span {
+  color: #8fee70;
+
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.redistribution-scenario-process-card strong {
+  color: #efffee;
+}
+
+.redistribution-scenario-process-card small {
+  max-width: 130px;
+
+  color: rgba(230, 248, 230, 0.55);
+
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 1050px) {
+  .redistribution-scenario-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .redistribution-scenario-process {
+    min-width: 0;
+
+    padding: 0.25rem 0;
+  }
+
+  .redistribution-scenario-process-line {
+    flex: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .redistribution-scenario {
+    padding: 1rem;
+  }
+
+  .redistribution-scenario-region-header {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 0.25rem;
+  }
+}

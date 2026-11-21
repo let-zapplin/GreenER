@@ -1,3 +1,4 @@
+import "./ui.css";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { HistoryChart } from "../components/HistoryChart";
@@ -27,18 +28,50 @@ import { LocationProjectionSummary } from "../components/LocationProjectionSumma
 import { LocationProjectionChart } from "../components/LocationProjectionChart";
 import { LocationProjectionMap } from "../components/LocationProjectionMap";
 import { ProjectionServiceCard } from "../components/ProjectionServiceCard";
+import { ServiceRedistributionPanel } from "../components/ServiceRedistributionPanel";
+import iconeBusca from "../assets/icones/icone-busca.png";
+import iconeCompara from "../assets/icones/icone-compara.png";
+import iconeRedistribui from "../assets/icones/icone-redistribui.png";
 
 type AnalysisLayout = "focus" | "overview" | "side";
 type OverviewView = "charts" | "ranking";
 type AnalysisMode = "explore" | "compare" | "project";
+type ProjectionView = "location" | "redistribution";
 
 const MIN_COMPARISON_SERVICES = 2;
 const MAX_COMPARISON_SERVICES = 4;
 
-
 const ANALYSES_LAYOUT_STORAGE_KEY = "greener:analyses:layout";
 
 const ANALYSES_OVERVIEW_STORAGE_KEY = "greener:analyses:overview-collapsed";
+
+const ANALYSES_MODE_STORAGE_KEY = "greener:analyses:mode";
+
+const ANALYSES_PROJECTION_VIEW_STORAGE_KEY = "greener:analyses:projection-view";
+
+function getInitialAnalysisMode(): AnalysisMode {
+  const savedMode = localStorage.getItem(ANALYSES_MODE_STORAGE_KEY);
+
+  if (
+    savedMode === "explore" ||
+    savedMode === "compare" ||
+    savedMode === "project"
+  ) {
+    return savedMode;
+  }
+
+  return "explore";
+}
+
+function getInitialProjectionView(): ProjectionView {
+  const savedView = localStorage.getItem(ANALYSES_PROJECTION_VIEW_STORAGE_KEY);
+
+  if (savedView === "location" || savedView === "redistribution") {
+    return savedView;
+  }
+
+  return "location";
+}
 
 function getServiceInitials(name: string): string {
   return name
@@ -99,7 +132,13 @@ export function Analyses() {
       ? serviceIndicators
       : null;
 
-  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("explore");
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(
+    getInitialAnalysisMode,
+  );
+
+  const [projectionView, setProjectionView] = useState<ProjectionView>(
+    getInitialProjectionView,
+  );
 
   const [projectionServiceId, setProjectionServiceId] = useState<number | null>(
     null,
@@ -110,12 +149,12 @@ export function Analyses() {
   );
 
   const {
-  regions: projectionRegions,
-  loading: projectionRegionsLoading,
-  error: projectionRegionsError,
-} = useProjectionRegions(
-  analysisMode === "project",
-);
+    regions: projectionRegions,
+    loading: projectionRegionsLoading,
+    error: projectionRegionsError,
+  } = useProjectionRegions(
+    analysisMode === "project" && projectionView === "location",
+  );
 
   const [overviewView, setOverviewView] = useState<OverviewView>("charts");
 
@@ -334,75 +373,67 @@ export function Analyses() {
     };
   }, [selectedServiceId, analysisLayout, isOverviewCollapsed]);
 
-useEffect(() => {
-  if (services.length === 0) {
-    setProjectionServiceId(null);
-    return;
+  useEffect(() => {
+    if (services.length === 0) {
+      setProjectionServiceId(null);
+      return;
+    }
+
+    setProjectionServiceId((currentServiceId) => {
+      const currentServiceStillExists =
+        currentServiceId !== null &&
+        services.some((service) => service.serviceId === currentServiceId);
+
+      if (currentServiceStillExists) {
+        return currentServiceId;
+      }
+
+      return selectedServiceId ?? services[0].serviceId;
+    });
+  }, [services, selectedServiceId]);
+
+  const projectionService =
+    services.find((service) => service.serviceId === projectionServiceId) ??
+    null;
+
+  const currentProjectionRegionCode =
+    projectionService?.location.region_code ?? null;
+
+  function toggleProjectionRegion(regionCode: string) {
+    setProjectionRegionCodes((currentCodes) => {
+      const isSelected = currentCodes.includes(regionCode);
+
+      if (isSelected) {
+        return currentCodes.filter((currentCode) => currentCode !== regionCode);
+      }
+
+      return [...currentCodes, regionCode];
+    });
   }
 
-  setProjectionServiceId((currentServiceId) => {
-    const currentServiceStillExists =
-      currentServiceId !== null &&
-      services.some(
-        (service) =>
-          service.serviceId === currentServiceId,
-      );
+  function changeProjectionService(serviceId: number) {
+    setProjectionServiceId(serviceId);
+    setProjectionRegionCodes([]);
+  }
 
-    if (currentServiceStillExists) {
-      return currentServiceId;
-    }
+  const {
+    projection,
+    loading: projectionLoading,
+    error: projectionError,
+  } = useLocationProjection(
+    projectionServiceId,
+    analysisPeriod,
+    projectionRegionCodes,
+    analysisMode === "project" && projectionView === "location",
+  );
 
-    return selectedServiceId ?? services[0].serviceId;
-  });
-}, [services, selectedServiceId]);
+  useEffect(() => {
+    localStorage.setItem(ANALYSES_MODE_STORAGE_KEY, analysisMode);
+  }, [analysisMode]);
 
-const projectionService =
-  services.find(
-    (service) =>
-      service.serviceId === projectionServiceId,
-  ) ?? null;
-
-const currentProjectionRegionCode =
-  projectionService?.location.region_code ?? null;
-
-function toggleProjectionRegion(
-  regionCode: string,
-) {
-  setProjectionRegionCodes((currentCodes) => {
-    const isSelected =
-      currentCodes.includes(regionCode);
-
-    if (isSelected) {
-      return currentCodes.filter(
-        (currentCode) =>
-          currentCode !== regionCode,
-      );
-    }
-
-      return [
-      ...currentCodes,
-      regionCode,
-    ];
-  });
-}
-
-function changeProjectionService(
-  serviceId: number,
-) {
-  setProjectionServiceId(serviceId);
-  setProjectionRegionCodes([]);
-}
-
-const {
-  projection,
-  loading: projectionLoading,
-  error: projectionError,
-} = useLocationProjection(
-  projectionServiceId,
-  analysisPeriod,
-  projectionRegionCodes,
-  analysisMode === "project",
-);
+  useEffect(() => {
+    localStorage.setItem(ANALYSES_PROJECTION_VIEW_STORAGE_KEY, projectionView);
+  }, [projectionView]);
 
   useEffect(() => {
     localStorage.setItem(ANALYSES_LAYOUT_STORAGE_KEY, analysisLayout);
@@ -495,7 +526,15 @@ const {
             tempo a partir das coletas realizadas pelo GreenER.
           </p>
         </header>
-        <div className="analyses-mode-switch" aria-label="Modo de análise">
+        <div
+          className="analyses-mode-switch"
+          role="group"
+          aria-label="Modo de análise"
+        >
+          {/* =====================================================
+      EXPLORAR
+      ===================================================== */}
+
           <button
             type="button"
             className={
@@ -506,8 +545,27 @@ const {
             aria-pressed={analysisMode === "explore"}
             onClick={() => setAnalysisMode("explore")}
           >
-            Explorar
+            <span className="analyses-mode-icon">
+              <img src={iconeBusca} alt="" aria-hidden="true" />
+            </span>
+
+            <span className="analyses-mode-content">
+              <strong>Explorar</strong>
+
+              <small>
+                Acompanhe o histórico, os indicadores e a visão geral dos
+                serviços monitorados.
+              </small>
+            </span>
+
+            <span className="analyses-mode-status" aria-hidden="true">
+              {analysisMode === "explore" ? "ATIVO" : "→"}
+            </span>
           </button>
+
+          {/* =====================================================
+      COMPARAR
+      ===================================================== */}
 
           <button
             type="button"
@@ -519,8 +577,27 @@ const {
             aria-pressed={analysisMode === "compare"}
             onClick={() => setAnalysisMode("compare")}
           >
-            Comparar serviços
+            <span className="analyses-mode-icon">
+              <img src={iconeCompara} alt="" aria-hidden="true" />
+            </span>
+
+            <span className="analyses-mode-content">
+              <strong>Comparar serviços</strong>
+
+              <small>
+                Compare consumo, emissões e comportamento ambiental entre
+                diferentes serviços.
+              </small>
+            </span>
+
+            <span className="analyses-mode-status" aria-hidden="true">
+              {analysisMode === "compare" ? "ATIVO" : "→"}
+            </span>
           </button>
+
+          {/* =====================================================
+      PROJEÇÕES REGIONAIS
+      ===================================================== */}
 
           <button
             type="button"
@@ -532,7 +609,22 @@ const {
             aria-pressed={analysisMode === "project"}
             onClick={() => setAnalysisMode("project")}
           >
-            Projetar localização
+            <span className="analyses-mode-icon">
+              <img src={iconeRedistribui} alt="" aria-hidden="true" />
+            </span>
+
+            <span className="analyses-mode-content">
+              <strong>Projeções regionais</strong>
+
+              <small>
+                Simule cenários de localização e redistribuição para estimar
+                diferentes impactos ambientais.
+              </small>
+            </span>
+
+            <span className="analyses-mode-status" aria-hidden="true">
+              {analysisMode === "project" ? "ATIVO" : "→"}
+            </span>
           </button>
         </div>
 
@@ -662,144 +754,203 @@ const {
             className="analyses-projection-workspace"
             aria-labelledby="projection-title"
           >
+            {/* =====================================================
+        SELETOR DO MODO DE PROJEÇÃO
+
+        Primeiro o usuário escolhe qual experiência deseja:
+        projetar um serviço ou redistribuir vários serviços.
+        ===================================================== */}
+
+            <div
+              className="analyses-projection-view-switch"
+              role="group"
+              aria-label="Visualização da projeção regional"
+            >
+              <button
+                type="button"
+                className={
+                  projectionView === "location"
+                    ? "analyses-projection-view-button is-active"
+                    : "analyses-projection-view-button"
+                }
+                aria-pressed={projectionView === "location"}
+                onClick={() => setProjectionView("location")}
+              >
+                <span className="analyses-projection-view-index">01</span>
+
+                <span className="analyses-projection-view-content">
+                  <strong>Projetar localização</strong>
+
+                  <small>
+                    Compare o impacto de um serviço em diferentes matrizes
+                    energéticas regionais.
+                  </small>
+                </span>
+
+                <span
+                  className="analyses-projection-view-status"
+                  aria-hidden="true"
+                >
+                  {projectionView === "location" ? "ATIVO" : "→"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={
+                  projectionView === "redistribution"
+                    ? "analyses-projection-view-button is-active"
+                    : "analyses-projection-view-button"
+                }
+                aria-pressed={projectionView === "redistribution"}
+                onClick={() => setProjectionView("redistribution")}
+              >
+                <span className="analyses-projection-view-index">02</span>
+
+                <span className="analyses-projection-view-content">
+                  <strong>Redistribuir serviços</strong>
+
+                  <small>
+                    Encontre uma distribuição regional otimizada para reduzir as
+                    emissões estimadas.
+                  </small>
+                </span>
+
+                <span
+                  className="analyses-projection-view-status"
+                  aria-hidden="true"
+                >
+                  {projectionView === "redistribution" ? "ATIVO" : "→"}
+                </span>
+              </button>
+            </div>
+
+            {/* =====================================================
+        CONTEXTO DO MODO SELECIONADO
+
+        Depois da escolha, explicamos o objetivo específico
+        daquele modo.
+        ===================================================== */}
+
             <div className="analyses-projection-intro">
               <div>
                 <p className="analyses-section-label">PROJEÇÃO REGIONAL</p>
 
-                <h2 id="projection-title">Projetar impacto por localização</h2>
+                <h2 id="projection-title">
+                  {projectionView === "location"
+                    ? "Projetar impacto por localização"
+                    : "Redistribuir serviços entre regiões"}
+                </h2>
 
                 <p>
-                  Compare como o mesmo perfil de consumo energético poderia
-                  resultar em diferentes emissões de CO₂e quando associado a
-                  outras matrizes energéticas regionais.
+                  {projectionView === "location"
+                    ? "Compare como o mesmo perfil de consumo energético poderia resultar em diferentes emissões de CO₂e quando associado a outras matrizes energéticas regionais."
+                    : "Encontre uma distribuição estimada dos serviços ativos que minimize emissões, usando os dados observados na janela selecionada."}
                 </p>
               </div>
 
               <div className="analyses-projection-notice">
-                <strong>Simulação ambiental</strong>
+                <strong>
+                  {projectionView === "location"
+                    ? "Simulação ambiental"
+                    : "Cenário de redistribuição"}
+                </strong>
 
                 <span>
-                  A projeção mantém o consumo energético do serviço constante e
-                  altera apenas o fator ambiental da localização.
+                  {projectionView === "location"
+                    ? "A projeção mantém o consumo energético do serviço constante e altera apenas o fator ambiental da localização."
+                    : "A sugestão não executa migrações. Dados parciais são sinalizados; serviços sem energia calculável permanecem na região atual."}
                 </span>
               </div>
             </div>
 
-<div className="analyses-projection-primary">
-<ProjectionServiceCard
-  service={projectionService}
-  services={services}
-  selectedServiceId={projectionServiceId}
-  energyKwh={
-    projection?.energyKwh ??
-    null
-  }
-  isPartial={
-    projection?.isPartial ??
-    false
-  }
-  regions={projectionRegions}
-  selectedRegionCodes={
-    projectionRegionCodes
-  }
-  currentRegionCode={
-    currentProjectionRegionCode
-  }
-  onChangeService={
-    changeProjectionService
-  }
-  onToggleRegion={
-    toggleProjectionRegion
-  }
-/>
+            {projectionView === "location" ? (
+              <>
+                <div className="analyses-projection-primary">
+                  <ProjectionServiceCard
+                    service={projectionService}
+                    services={services}
+                    selectedServiceId={projectionServiceId}
+                    energyKwh={projection?.energyKwh ?? null}
+                    isPartial={projection?.isPartial ?? false}
+                    regions={projectionRegions}
+                    selectedRegionCodes={projectionRegionCodes}
+                    currentRegionCode={currentProjectionRegionCode}
+                    onChangeService={changeProjectionService}
+                    onToggleRegion={toggleProjectionRegion}
+                  />
 
-<LocationProjectionMap
-  service={projectionService}
-  regions={projectionRegions}
-  selectedRegionCodes={projectionRegionCodes}
-  onToggleRegion={toggleProjectionRegion}
-/>
+                  <LocationProjectionMap
+                    service={projectionService}
+                    regions={projectionRegions}
+                    selectedRegionCodes={projectionRegionCodes}
+                    onToggleRegion={toggleProjectionRegion}
+                  />
+                </div>
 
-
-</div>
-
-
-{/* =====================================================
+                {/* =====================================================
     ESTADO INICIAL
     ===================================================== */}
-{projectionRegionCodes.length === 0 && (
-  <div
-    className="analyses-projection-placeholder"
-    role="status"
-  >
-    <span aria-hidden="true">◎</span>
+                {projectionRegionCodes.length === 0 && (
+                  <div
+                    className="analyses-projection-placeholder"
+                    role="status"
+                  >
+                    <span aria-hidden="true">◎</span>
 
-    <div>
-      <strong>
-        Selecione uma ou mais localidades
-      </strong>
+                    <div>
+                      <strong>Selecione uma ou mais localidades</strong>
 
-      <p>
-        Os cenários serão calculados mantendo o
-        consumo energético do serviço constante.
-      </p>
-    </div>
-  </div>
-)}
+                      <p>
+                        Os cenários serão calculados mantendo o consumo
+                        energético do serviço constante.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-{/* =====================================================
+                {/* =====================================================
     PROJEÇÃO SENDO CALCULADA
     ===================================================== */}
-{projectionLoading && (
-  <div
-    className="analyses-history-state"
-    role="status"
-  >
-    <h3>Calculando projeção</h3>
+                {projectionLoading && (
+                  <div className="analyses-history-state" role="status">
+                    <h3>Calculando projeção</h3>
 
-    <p>
-      Comparando o consumo observado com os fatores
-      ambientais das regiões selecionadas.
-    </p>
-  </div>
-)}
+                    <p>
+                      Comparando o consumo observado com os fatores ambientais
+                      das regiões selecionadas.
+                    </p>
+                  </div>
+                )}
 
-{/* =====================================================
+                {/* =====================================================
     ERRO NA PROJEÇÃO
     ===================================================== */}
-{projectionError && (
-  <div
-    className="analyses-history-state analyses-state-error"
-    role="alert"
-  >
-    <h3>
-      Não foi possível calcular a projeção
-    </h3>
+                {projectionError && (
+                  <div
+                    className="analyses-history-state analyses-state-error"
+                    role="alert"
+                  >
+                    <h3>Não foi possível calcular a projeção</h3>
 
-    <p>{projectionError}</p>
-  </div>
-)}
+                    <p>{projectionError}</p>
+                  </div>
+                )}
 
-{/* =====================================================
+                {/* =====================================================
     RESULTADO TEMPORÁRIO
     ===================================================== */}
-{projection &&
-  !projectionLoading &&
-  !projectionError && (
-    <div className="analyses-projection-results">
-      
-       <LocationProjectionChart
-        scenarios={
-          projection.scenarios
-        }
-      />
+                {projection && !projectionLoading && !projectionError && (
+                  <div className="analyses-projection-results">
+                    <LocationProjectionChart scenarios={projection.scenarios} />
 
-      <LocationProjectionSummary
-        projection={projection}
-      />
-     
-    </div>
-  )}
+                    <LocationProjectionSummary projection={projection} />
+                  </div>
+                )}
+              </>
+            ) : (
+              <ServiceRedistributionPanel period={analysisPeriod} />
+            )}
           </section>
         )}
 

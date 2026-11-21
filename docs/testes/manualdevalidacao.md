@@ -803,6 +803,53 @@ Resultado: ✅ **Aprovado**.
 
 ---
 
+## 14. Validar redistribuição regional — API e frontend
+
+> **Roteiro pendente de execução.** Esta seção descreve verificações para a redistribuição; não registra que elas já foram executadas manualmente.
+
+### Pré-requisitos
+
+- backend e frontend em execução;
+- usuário autenticado;
+- serviços ativos com coletas no período escolhido;
+- snapshots atuais nas regiões disponíveis para redistribuição;
+- um serviço com cobertura completa e, se possível, outro com energia calculável em mais coletas do que emissões observadas.
+
+Use um período com dados do ambiente. A rota aceita `start`, `end` e uma política de ocupação:
+
+```json
+{
+  "start": "<início ISO-8601>",
+  "end": "<fim ISO-8601>",
+  "occupancyPolicy": "balanced"
+}
+```
+
+### Validar políticas de ocupação
+
+1. Acesse **Análises → Projeção regional → Redistribuir serviços** e aguarde o cálculo automático.
+2. Selecione cada política e confirme que a resposta `200` retorna a mesma `occupancyPolicy`:
+   - `preserve_current_counts`: preserva a contagem atual por região;
+   - `balanced`: distribui os serviços com diferença máxima de um entre as regiões elegíveis;
+   - `unconstrained`: não impõe cotas de ocupação.
+3. Confirme que a tela apresenta a sugestão como cenário hipotético e que nenhuma migração de serviço é executada.
+4. Se houver serviços fixos ou regiões elegíveis incompatíveis com uma política restrita, confirme a resposta `422 REDISTRIBUTION_INFEASIBLE`, sem relaxamento silencioso da regra.
+
+### Validar comparação e subtotal
+
+1. Para um serviço com `validObservedEmissionSampleCount` igual a `validEnergySampleCount`, confirme que a tabela mostra a variação percentual.
+2. Para um serviço com contagens diferentes, confirme que a variação aparece como **Não comparável** e que o serviço não entra no subtotal comparável.
+3. Confirme que a linha de cobertura apresenta valores válidos/total, por exemplo `2/3`.
+4. Confirme que `isPartial` sinaliza cobertura incompleta de energia ou de emissões observadas, inclusive quando a energia está completa, mas faltam intensidades de carbono históricas.
+5. Verifique que o percentual do subtotal é calculado a partir das somas comparáveis, e não pela média dos percentuais individuais.
+6. Se a emissão observada for zero, confirme que a variação percentual é indicada como não calculável.
+
+Se o ambiente não tiver naturalmente um serviço com cobertura divergente ou emissão observada zero, use dados de teste controlados; não altere registros da coleta em andamento apenas para produzir esses cenários.
+
+Registre a data, o período, a política, os serviços utilizados, as coberturas observadas, o resultado e evidências visuais/API após executar o roteiro.
+
+---
+
 ## Solução de problemas
 
 ### Ver logs
