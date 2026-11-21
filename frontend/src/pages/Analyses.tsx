@@ -211,6 +211,7 @@ export function Analyses() {
     histories: comparisonHistories,
     loading: comparisonHistoriesLoading,
     error: comparisonHistoriesError,
+    failedServiceIds: comparisonFailedServiceIds,
   } = useComparisonHistories(comparisonServiceIds, analysisPeriod, canCompare);
 
   const comparisonSeries = buildComparisonSeries(
@@ -1026,21 +1027,37 @@ export function Analyses() {
                 </div>
               )}
 
-            {/* ERRO */}
-            {canCompare && comparisonHistoriesError && (
+            {/* A falha parcial avisa o usuário sem esconder os históricos recebidos. */}
+            {canCompare && comparisonVisualization === "timeline" && comparisonHistoriesError && (
               <div
-                className="analyses-history-state analyses-state-error"
-                role="alert"
+                className={comparisonHistories.length > 0
+                  ? "analyses-warning"
+                  : "analyses-history-state analyses-state-error"}
+                role={comparisonHistories.length > 0 ? "status" : "alert"}
               >
-                <h3>Não foi possível carregar a comparação</h3>
+                <h3>
+                  {comparisonHistories.length > 0
+                    ? "Comparação parcial"
+                    : "Não foi possível carregar a comparação"}
+                </h3>
 
                 <p>{comparisonHistoriesError}</p>
+                {comparisonFailedServiceIds.length > 0 && (
+                  <p>
+                    Históricos não carregados: {comparisonFailedServiceIds.map(
+                      (id) => services.find((service) => service.serviceId === id)?.name
+                        ?? `Serviço ${id}`,
+                    ).join(", ")}.
+                  </p>
+                )}
+                {comparisonHistories.length === 1 && (
+                  <p>Apenas um serviço está disponível nesta visualização.</p>
+                )}
               </div>
             )}
 
             {/* VISUALIZAÇÃO TEMPORAL */}
             {canCompare &&
-              !comparisonHistoriesError &&
               comparisonSeries.length > 0 &&
               comparisonVisualization === "timeline" && (
                 <div
