@@ -113,6 +113,72 @@ describe("AuthService.register", () => {
     vi.clearAllMocks();
   });
 
+  it.each(["teste.com", "test.com", "abc.com", "yopmail.com", "YOPMAIL.COM"])(
+    "rejeita e-mails do domínio bloqueado %s",
+    async (domain) => {
+      const service = new AuthService();
+
+      await expect(
+        service.register("Vitor", `vitor@${domain}`, "senha123"),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message:
+          "Por favor, utilize um e-mail corporativo ou pessoal válido.",
+      });
+
+      expect(emailExistsMock).not.toHaveBeenCalled();
+      expect(createUserMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejeita e-mail com mais de 255 caracteres", async () => {
+    const service = new AuthService();
+    const email = `${"a".repeat(244)}@example.com`;
+
+    await expect(
+      service.register("Vitor", email, "senha123"),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "O e-mail deve ter no máximo 255 caracteres.",
+    });
+
+    expect(emailExistsMock).not.toHaveBeenCalled();
+    expect(createUserMock).not.toHaveBeenCalled();
+  });
+
+  it("rejeita senha com menos de 6 caracteres", async () => {
+    const service = new AuthService();
+
+    await expect(
+      service.register("Vitor", "vitor@example.com", "12345"),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "A senha deve ter no mínimo 6 caracteres.",
+    });
+
+    expect(emailExistsMock).not.toHaveBeenCalled();
+    expect(createUserMock).not.toHaveBeenCalled();
+  });
+
+  it("permite cadastro com e-mail não bloqueado e senha válida", async () => {
+    emailExistsMock.mockResolvedValue(false);
+    createUserMock.mockResolvedValue({
+      id_users: 42,
+      email: "vitor@empresa.com",
+    });
+    const service = new AuthService();
+
+    await expect(
+      service.register("Vitor", "vitor@empresa.com", "senha123"),
+    ).resolves.toEqual({ id: 42, email: "vitor@empresa.com" });
+
+    expect(createUserMock).toHaveBeenCalledWith(
+      "Vitor",
+      "vitor@empresa.com",
+      "senha123",
+    );
+  });
+
   // Um e-mail já existente impede a criação e produz o erro de conflito 409.
   it("lança ConflictError quando o email já está cadastrado", async () => {
     emailExistsMock.mockResolvedValue(true);
