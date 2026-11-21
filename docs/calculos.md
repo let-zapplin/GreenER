@@ -464,6 +464,28 @@ Assim, energia ainda pode contribuir para o total enquanto a emissão permanece 
 
 Um total parcial não deve ser interpretado como medição completa do impacto real.
 
+### Comparação de emissões na redistribuição
+
+Para cada serviço, a interface compara a emissão observada no período com a emissão projetada para a região sugerida:
+
+```text
+emissão observada = soma das emissões calculáveis nas coletas do período
+emissão projetada = energia calculável × intensidade da região sugerida
+```
+
+A emissão observada utiliza a intensidade registrada para cada coleta. A projeção utiliza a energia calculável do serviço e o snapshot elegível da região de destino. Ambas são estimativas; a emissão observada não é uma medição direta de CO₂.
+
+Como a emissão observada exige intensidade de carbono válida, ela pode abranger menos coletas do que a energia projetada. Para comparar os valores sem misturar amostras, a variação percentual e o subtotal incluem apenas serviços em que `validObservedEmissionSampleCount` é igual a `validEnergySampleCount`. Como uma emissão calculável também exige energia calculável, a igualdade indica que ambas usam o mesmo conjunto de coletas. Serviços com contagens diferentes continuam visíveis na tabela, mas não entram no percentual nem no subtotal comparável.
+
+A variação percentual é:
+
+```text
+variação_percentual =
+  ((emissão_projetada - emissão_observada) / emissão_observada) × 100
+```
+
+Valores negativos indicam redução estimada; valores positivos indicam aumento. Se a emissão observada for zero, a variação percentual não é calculável. O percentual do subtotal é calculado a partir da soma das emissões observadas e projetadas dos serviços comparáveis, e não pela média dos percentuais individuais. Dados ausentes nunca são tratados como zero.
+
 ---
 
 ## 11. Intervalo do job x duração da amostra

@@ -30,4 +30,15 @@ router.post(
     ),
 );
 
+router.post(
+  "/redistribuicao",
+  authMiddleware,
+  (req, res, next) =>
+    controller.redistributeServices(
+      req,
+      res,
+      next,
+    ),
+);
+
 export default router;
