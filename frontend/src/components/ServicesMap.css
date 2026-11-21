@@ -536,17 +536,17 @@
   }
 }
 
-/* A grouped list stays inside the map instead of extending past its marker. */
+/* Center the grouped list independently of the marker position on mobile. */
 @media (max-width: 700px) {
-  .services-map-group-popup {
-    top: auto;
-    bottom: 8px;
-    left: 8px;
-    right: 8px;
-    width: auto;
-    max-width: calc(100% - 16px) !important;
-    max-height: calc(100% - 16px);
-    transform: none !important;
+  .monitoring-map-shell .services-map-group-popup {
+    top: 50%;
+    left: 50%;
+    bottom: auto;
+    right: auto;
+    width: calc(100% - 24px);
+    max-width: 320px !important;
+    max-height: calc(100% - 24px);
+    transform: translate(-50%, -50%) !important;
   }
 
   .services-map-group-popup .maplibregl-popup-tip {
