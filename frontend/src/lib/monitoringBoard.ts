@@ -587,9 +587,15 @@ export function collapseWidget(
 // ---------- páginas e persistência ----------
 
 export const FIXED_PAGE_MONITORAMENTO = "page-monitoramento";
-export const FIXED_PAGE_ANALISE = "page-analise";
 
-/** Páginas fixas: sempre primeiro, com arranjo próprio e sem edição. */
+/**
+ * Páginas que já foram fixas e saíram do painel. Se ainda estiverem no
+ * armazenamento do navegador, são descartadas em vez de virarem páginas
+ * do usuário.
+ */
+const RETIRED_FIXED_PAGES: readonly string[] = ["page-analise"];
+
+/** Página fixa: sempre primeiro, com arranjo próprio e sem edição. */
 const FIXED_PAGES: readonly BoardPage[] = [
   {
     id: FIXED_PAGE_MONITORAMENTO,
@@ -599,16 +605,6 @@ const FIXED_PAGES: readonly BoardPage[] = [
       { id: "region", type: "region", x: 8, y: 0, w: 4, h: 5 },
       { id: "services", type: "services", x: 0, y: 5, w: 12, h: 2 },
       { id: "summary", type: "summary", x: 0, y: 7, w: 12, h: 4 },
-    ],
-  },
-  {
-    id: FIXED_PAGE_ANALISE,
-    name: "Análise",
-    widgets: [
-      { id: "ranking", type: "ranking", x: 0, y: 0, w: 4, h: 6 },
-      { id: "history", type: "history", x: 4, y: 0, w: 8, h: 6 },
-      { id: "comparison", type: "comparison", x: 0, y: 6, w: 6, h: 7 },
-      { id: "projection", type: "projection", x: 6, y: 6, w: 6, h: 7 },
     ],
   },
 ];
@@ -634,15 +630,16 @@ export function defaultWidgets(): BoardWidget[] {
 }
 
 /**
- * O painel com as páginas fixas na frente. As páginas criadas pelo
- * usuário vêm depois; uma página fixa gravada por engano é
- * substituída pelo arranjo oficial.
+ * O painel com a página fixa na frente. As páginas criadas pelo usuário
+ * vêm depois; uma página fixa gravada por engano é substituída pelo
+ * arranjo oficial, e as que deixaram de ser fixas são descartadas.
  */
 export function normalizeBoard(board: Board | null): Board {
   const pages = [
     ...fixedPages(),
     ...(board?.pages ?? []).filter(
-      (page) => !isFixedPage(page.id),
+      (page) =>
+        !isFixedPage(page.id) && !RETIRED_FIXED_PAGES.includes(page.id),
     ),
   ];
 

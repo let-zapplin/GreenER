@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  FIXED_PAGE_ANALISE,
   FIXED_PAGE_MONITORAMENTO,
   GRID_COLS,
   addWidget,
@@ -336,43 +335,35 @@ test("isDefaultLayout reconhece o arranjo inicial e qualquer mudança", () => {
   assert.equal(isDefaultLayout(moved), false);
 });
 
-test("o painel nasce com Monitoramento e Análise fixas, nessa ordem", () => {
+test("o painel nasce só com a Monitoramento fixa", () => {
   const board = defaultBoard();
 
   assert.deepEqual(
     board.pages.map((page) => page.name),
-    ["Monitoramento", "Análise"],
+    ["Monitoramento"],
   );
 
   assert.equal(board.activePageId, FIXED_PAGE_MONITORAMENTO);
   assert.equal(isFixedPage(FIXED_PAGE_MONITORAMENTO), true);
-  assert.equal(isFixedPage(FIXED_PAGE_ANALISE), true);
+  assert.equal(isFixedPage("page-analise"), false);
   assert.equal(isFixedPage("page-visao-geral"), false);
 });
 
-test("as páginas fixas têm arranjo válido, sem sobreposição", () => {
-  const monitoramento = fixedPages()[0];
-  const analise = fixedPages()[1];
+test("a página fixa tem arranjo válido, sem sobreposição", () => {
+  const [monitoramento] = fixedPages();
 
   assert.deepEqual(
     monitoramento.widgets.map((item) => item.type),
     ["map", "region", "services", "summary"],
   );
 
-  assert.deepEqual(
-    analise.widgets.map((item) => item.type),
-    ["ranking", "history", "comparison", "projection"],
-  );
+  for (const item of monitoramento.widgets) {
+    assert.equal(item.x + item.w <= GRID_COLS, true);
+  }
 
-  for (const page of [monitoramento, analise]) {
-    for (const item of page.widgets) {
-      assert.equal(item.x + item.w <= GRID_COLS, true);
-    }
-
-    for (const a of page.widgets) {
-      for (const b of page.widgets) {
-        if (a !== b) assert.equal(overlaps(a, b), false);
-      }
+  for (const a of monitoramento.widgets) {
+    for (const b of monitoramento.widgets) {
+      if (a !== b) assert.equal(overlaps(a, b), false);
     }
   }
 });
@@ -386,8 +377,8 @@ test("normalizeBoard põe as fixas na frente e preserva páginas criadas", () =>
         widgets: defaultWidgets(),
       },
       {
-        id: FIXED_PAGE_ANALISE,
-        name: "Tentativa",
+        id: "page-analise",
+        name: "Análise",
         widgets: [],
       },
     ],
@@ -398,13 +389,11 @@ test("normalizeBoard põe as fixas na frente e preserva páginas criadas", () =>
 
   assert.deepEqual(
     board.pages.map((page) => page.id),
-    [FIXED_PAGE_MONITORAMENTO, FIXED_PAGE_ANALISE, "page-visao-geral"],
+    [FIXED_PAGE_MONITORAMENTO, "page-visao-geral"],
   );
 
   assert.equal(board.activePageId, "page-visao-geral");
-  assert.equal(board.pages[1].name, "Análise");
-  assert.equal(board.pages[1].widgets.length, 4);
-  assert.equal(board.pages[2].widgets.length, 3);
+  assert.equal(board.pages[1].widgets.length, 3);
 });
 
 test("normalizeBoard cai na primeira fixa quando a ativa não existe", () => {
@@ -416,5 +405,5 @@ test("normalizeBoard cai na primeira fixa quando a ativa não existe", () => {
   });
 
   assert.equal(board.activePageId, FIXED_PAGE_MONITORAMENTO);
-  assert.equal(board.pages.length, 3);
+  assert.equal(board.pages.length, 2);
 });

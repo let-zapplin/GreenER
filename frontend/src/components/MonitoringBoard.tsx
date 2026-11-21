@@ -34,7 +34,6 @@ import {
 
 import {
   EDIT_SPARE_ROWS,
-  FIXED_PAGE_ANALISE,
   GRID_COLS,
   GRID_GAP,
   MONITORING_WIDGETS,
@@ -599,11 +598,7 @@ export function MonitoringBoard({
   const gridBox = gridRef.current?.getBoundingClientRect();
 
   // Página fixa: o arranjo é desenhado em CSS, não em células.
-  const fixedLayout = locked
-    ? activePage.id === FIXED_PAGE_ANALISE
-      ? "analise"
-      : "monitoramento"
-    : "";
+  const fixedLayout = locked ? "monitoramento" : "";
 
   // A marca mostra onde o bloco preso vai cair, que pode ser acima do ponteiro.
   const landing =
