@@ -27,6 +27,13 @@ vi.mock("../../config/env.js", () => ({
     serviceSyncIntervalMs: 300_000,
     carbonIntensitySyncIntervalMs: 300_000,
     metricsCollectionIntervalMs: 60_000,
+
+    // Assistente Karma / Ollama
+    ollamaUrl: "http://ollama.test:11434",
+    ollamaModel: "qwen2.5:3b",
+    ollamaTimeoutMs: 60_000,
+    ollamaNumCtx: 4_096,
+    ollamaEnabled: false,
   },
 }));
 

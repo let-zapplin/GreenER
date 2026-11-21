@@ -1,3 +1,4 @@
+import "./ui.css";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import type { MapFocusRequest } from "../components/ServicesMap";
