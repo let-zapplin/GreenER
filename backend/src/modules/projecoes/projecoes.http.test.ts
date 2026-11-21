@@ -1,11 +1,4 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /*
  * O app importa módulos que dependem de env.ts.
@@ -41,15 +34,9 @@ import { IndicadoresRepository } from "../indicadores/indicadores.repository.js"
 import { ProjecoesRepository } from "./projecoes.repository.js";
 
 beforeEach(() => {
-  vi.stubEnv(
-    "JWT_SECRET",
-    "segredo-exclusivo-deste-teste",
-  );
+  vi.stubEnv("JWT_SECRET", "segredo-exclusivo-deste-teste");
 
-  vi.stubEnv(
-    "JWT_EXPIRES_IN",
-    "15m",
-  );
+  vi.stubEnv("JWT_EXPIRES_IN", "15m");
 });
 
 afterEach(() => {
@@ -60,17 +47,11 @@ afterEach(() => {
 describe("HTTP da projeção ambiental por localização", () => {
   it("retorna 401 quando não recebe token", async () => {
     const consultarHistorico = vi
-      .spyOn(
-        IndicadoresRepository.prototype,
-        "findCollectionsForPeriod",
-      )
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
       .mockResolvedValue([]);
 
     const consultarRegioes = vi
-      .spyOn(
-        ProjecoesRepository.prototype,
-        "findLatestRegionalSnapshots",
-      )
+      .spyOn(ProjecoesRepository.prototype, "findLatestRegionalSnapshots")
       .mockResolvedValue([]);
 
     const response = await request(app)
@@ -78,39 +59,27 @@ describe("HTTP da projeção ambiental por localização", () => {
       .send({
         serviceId: 7,
 
-        start:
-          "2026-11-16T00:00:00.000Z",
+        start: "2026-11-16T00:00:00.000Z",
 
-        end:
-          "2026-11-17T00:00:00.000Z",
+        end: "2026-11-17T00:00:00.000Z",
 
         regionCodes: ["CA-QC"],
       });
 
     expect(response.status).toBe(401);
 
-    expect(
-      consultarHistorico,
-    ).not.toHaveBeenCalled();
+    expect(consultarHistorico).not.toHaveBeenCalled();
 
-    expect(
-      consultarRegioes,
-    ).not.toHaveBeenCalled();
+    expect(consultarRegioes).not.toHaveBeenCalled();
   });
 
   it("retorna 400 quando não informa as regiões", async () => {
     const consultarHistorico = vi
-      .spyOn(
-        IndicadoresRepository.prototype,
-        "findCollectionsForPeriod",
-      )
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
       .mockResolvedValue([]);
 
     const consultarRegioes = vi
-      .spyOn(
-        ProjecoesRepository.prototype,
-        "findLatestRegionalSnapshots",
-      )
+      .spyOn(ProjecoesRepository.prototype, "findLatestRegionalSnapshots")
       .mockResolvedValue([]);
 
     const token = createToken({
@@ -119,48 +88,31 @@ describe("HTTP da projeção ambiental por localização", () => {
 
     const response = await request(app)
       .post("/api/projecoes/localizacao")
-      .set(
-        "Authorization",
-        `Bearer ${token}`,
-      )
+      .set("Authorization", `Bearer ${token}`)
       .send({
         serviceId: 7,
 
-        start:
-          "2026-11-16T00:00:00.000Z",
+        start: "2026-11-16T00:00:00.000Z",
 
-        end:
-          "2026-11-17T00:00:00.000Z",
+        end: "2026-11-17T00:00:00.000Z",
       });
 
     expect(response.status).toBe(400);
 
-    expect(response.body.code).toBe(
-      "INVALID_PROJECTION_REGIONS",
-    );
+    expect(response.body.code).toBe("INVALID_PROJECTION_REGIONS");
 
-    expect(
-      consultarHistorico,
-    ).not.toHaveBeenCalled();
+    expect(consultarHistorico).not.toHaveBeenCalled();
 
-    expect(
-      consultarRegioes,
-    ).not.toHaveBeenCalled();
+    expect(consultarRegioes).not.toHaveBeenCalled();
   });
 
   it("retorna 400 quando o corpo JSON é null", async () => {
     const consultarHistorico = vi
-      .spyOn(
-        IndicadoresRepository.prototype,
-        "findCollectionsForPeriod",
-      )
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
       .mockResolvedValue([]);
 
     const consultarRegioes = vi
-      .spyOn(
-        ProjecoesRepository.prototype,
-        "findLatestRegionalSnapshots",
-      )
+      .spyOn(ProjecoesRepository.prototype, "findLatestRegionalSnapshots")
       .mockResolvedValue([]);
 
     const token = createToken({
@@ -169,34 +121,23 @@ describe("HTTP da projeção ambiental por localização", () => {
 
     const response = await request(app)
       .post("/api/projecoes/localizacao")
-      .set(
-        "Authorization",
-        `Bearer ${token}`,
-      )
+      .set("Authorization", `Bearer ${token}`)
       .set("Content-Type", "application/json")
       .send("null");
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe(
-      "INVALID_JSON_BODY",
-    );
+    expect(response.body.code).toBe("INVALID_JSON_BODY");
     expect(consultarHistorico).not.toHaveBeenCalled();
     expect(consultarRegioes).not.toHaveBeenCalled();
   });
 
   it("retorna 400 quando a requisição não tem corpo", async () => {
     const consultarHistorico = vi
-      .spyOn(
-        IndicadoresRepository.prototype,
-        "findCollectionsForPeriod",
-      )
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
       .mockResolvedValue([]);
 
     const consultarRegioes = vi
-      .spyOn(
-        ProjecoesRepository.prototype,
-        "findLatestRegionalSnapshots",
-      )
+      .spyOn(ProjecoesRepository.prototype, "findLatestRegionalSnapshots")
       .mockResolvedValue([]);
 
     const token = createToken({
@@ -205,32 +146,21 @@ describe("HTTP da projeção ambiental por localização", () => {
 
     const response = await request(app)
       .post("/api/projecoes/localizacao")
-      .set(
-        "Authorization",
-        `Bearer ${token}`,
-      );
+      .set("Authorization", `Bearer ${token}`);
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe(
-      "INVALID_PROJECTION_REQUEST",
-    );
+    expect(response.body.code).toBe("INVALID_PROJECTION_REQUEST");
     expect(consultarHistorico).not.toHaveBeenCalled();
     expect(consultarRegioes).not.toHaveBeenCalled();
   });
 
   it("retorna 400 quando regionCodes contém um valor que não é texto", async () => {
     const consultarHistorico = vi
-      .spyOn(
-        IndicadoresRepository.prototype,
-        "findCollectionsForPeriod",
-      )
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
       .mockResolvedValue([]);
 
     const consultarRegioes = vi
-      .spyOn(
-        ProjecoesRepository.prototype,
-        "findLatestRegionalSnapshots",
-      )
+      .spyOn(ProjecoesRepository.prototype, "findLatestRegionalSnapshots")
       .mockResolvedValue([]);
 
     const token = createToken({
@@ -239,10 +169,7 @@ describe("HTTP da projeção ambiental por localização", () => {
 
     const response = await request(app)
       .post("/api/projecoes/localizacao")
-      .set(
-        "Authorization",
-        `Bearer ${token}`,
-      )
+      .set("Authorization", `Bearer ${token}`)
       .send({
         serviceId: 7,
         start: "2026-11-16T00:00:00.000Z",
@@ -251,19 +178,14 @@ describe("HTTP da projeção ambiental por localização", () => {
       });
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe(
-      "INVALID_PROJECTION_REGIONS",
-    );
+    expect(response.body.code).toBe("INVALID_PROJECTION_REGIONS");
     expect(consultarHistorico).not.toHaveBeenCalled();
     expect(consultarRegioes).not.toHaveBeenCalled();
   });
 
   it("projeta o impacto do serviço em outra região", async () => {
     const consultarHistorico = vi
-      .spyOn(
-        IndicadoresRepository.prototype,
-        "findCollectionsForPeriod",
-      )
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
       .mockResolvedValue([
         {
           id_service: 7,
@@ -277,15 +199,11 @@ describe("HTTP da projeção ambiental por localização", () => {
 
               status: "success",
 
-              attempted_at: new Date(
-                "2026-11-16T12:00:00.000Z",
-              ),
+              attempted_at: new Date("2026-11-16T12:00:00.000Z"),
 
               id_metrics: "201",
 
-              recorded_at: new Date(
-                "2026-11-16T12:00:00.000Z",
-              ),
+              recorded_at: new Date("2026-11-16T12:00:00.000Z"),
 
               cpu_percent: 50,
               memory_gb: 2,
@@ -296,8 +214,7 @@ describe("HTTP da projeção ambiental por localização", () => {
 
               carbon_intensity_id: 301,
 
-              carbon_intensity_gco2e_per_kwh:
-                200,
+              carbon_intensity_gco2e_per_kwh: 200,
 
               renewable_share_percent: 80,
             },
@@ -306,10 +223,7 @@ describe("HTTP da projeção ambiental por localização", () => {
       ]);
 
     const consultarRegioes = vi
-      .spyOn(
-        ProjecoesRepository.prototype,
-        "findLatestRegionalSnapshots",
-      )
+      .spyOn(ProjecoesRepository.prototype, "findLatestRegionalSnapshots")
       .mockResolvedValue([
         {
           regionCode: "BR-SP",
@@ -325,9 +239,7 @@ describe("HTTP da projeção ambiental por localização", () => {
 
           renewableSharePercent: 80,
 
-          registeredAt: new Date(
-            "2026-11-17T00:00:00.000Z",
-          ),
+          registeredAt: new Date("2026-11-17T00:00:00.000Z"),
         },
 
         {
@@ -344,9 +256,7 @@ describe("HTTP da projeção ambiental por localização", () => {
 
           renewableSharePercent: 95,
 
-          registeredAt: new Date(
-            "2026-11-17T00:00:00.000Z",
-          ),
+          registeredAt: new Date("2026-11-17T00:00:00.000Z"),
         },
       ]);
 
@@ -354,18 +264,13 @@ describe("HTTP da projeção ambiental por localização", () => {
       sub: "1",
     });
 
-    const start =
-      "2026-11-16T00:00:00.000Z";
+    const start = "2026-11-16T00:00:00.000Z";
 
-    const end =
-      "2026-11-17T00:00:00.000Z";
+    const end = "2026-11-17T00:00:00.000Z";
 
     const response = await request(app)
       .post("/api/projecoes/localizacao")
-      .set(
-        "Authorization",
-        `Bearer ${token}`,
-      )
+      .set("Authorization", `Bearer ${token}`)
       .send({
         serviceId: 7,
         start,
@@ -377,8 +282,7 @@ describe("HTTP da projeção ambiental por localização", () => {
     expect(response.status).toBe(200);
 
     expect(response.body).toMatchObject({
-      message:
-        "Projeção ambiental calculada",
+      message: "Projeção ambiental calculada",
 
       service: {
         serviceId: 7,
@@ -412,52 +316,30 @@ describe("HTTP da projeção ambiental por localização", () => {
      *
      * duração = 60 segundos
      */
-    const expectedEnergy =
-      (50.95 * 60) / 3_600_000;
+    const expectedEnergy = (50.95 * 60) / 3_600_000;
 
-    expect(
-      response.body.energyKwh,
-    ).toBeCloseTo(
-      expectedEnergy,
-      10,
+    expect(response.body.energyKwh).toBeCloseTo(expectedEnergy, 10);
+
+    expect(response.body.scenarios).toHaveLength(2);
+
+    const currentScenario = response.body.scenarios.find(
+      (scenario: { regionCode: string }) => scenario.regionCode === "BR-SP",
     );
 
-    expect(
-      response.body.scenarios,
-    ).toHaveLength(2);
-
-    const currentScenario =
-      response.body.scenarios.find(
-        (scenario: {
-          regionCode: string;
-        }) =>
-          scenario.regionCode ===
-          "BR-SP",
-      );
-
-    const projectedScenario =
-      response.body.scenarios.find(
-        (scenario: {
-          regionCode: string;
-        }) =>
-          scenario.regionCode ===
-          "CA-QC",
-      );
+    const projectedScenario = response.body.scenarios.find(
+      (scenario: { regionCode: string }) => scenario.regionCode === "CA-QC",
+    );
 
     expect(currentScenario).toMatchObject({
       regionCode: "BR-SP",
       isCurrent: true,
 
-      carbonIntensityGco2ePerKwh:
-        100,
+      carbonIntensityGco2ePerKwh: 100,
 
       renewableSharePercent: 80,
     });
 
-    expect(
-      currentScenario
-        .projectedEmissionsGco2e,
-    ).toBeCloseTo(
+    expect(currentScenario.projectedEmissionsGco2e).toBeCloseTo(
       expectedEnergy * 100,
       10,
     );
@@ -466,37 +348,21 @@ describe("HTTP da projeção ambiental por localização", () => {
       regionCode: "CA-QC",
       isCurrent: false,
 
-      carbonIntensityGco2ePerKwh:
-        25,
+      carbonIntensityGco2ePerKwh: 25,
 
       renewableSharePercent: 95,
     });
 
-    expect(
-      projectedScenario
-        .projectedEmissionsGco2e,
-    ).toBeCloseTo(
+    expect(projectedScenario.projectedEmissionsGco2e).toBeCloseTo(
       expectedEnergy * 25,
       10,
     );
 
-    expect(
-      projectedScenario.differencePercent,
-    ).toBeCloseTo(
-      -75,
-      10,
-    );
+    expect(projectedScenario.differencePercent).toBeCloseTo(-75, 10);
 
-    expect(
-      consultarHistorico,
-    ).toHaveBeenCalledTimes(1);
+    expect(consultarHistorico).toHaveBeenCalledTimes(1);
 
-    expect(
-      consultarRegioes,
-    ).toHaveBeenCalledWith([
-      "BR-SP",
-      "CA-QC",
-    ]);
+    expect(consultarRegioes).toHaveBeenCalledWith(["BR-SP", "CA-QC"]);
   });
 
   it("retorna região indisponível sem inventar dados", async () => {
@@ -516,15 +382,11 @@ describe("HTTP da projeção ambiental por localização", () => {
 
             status: "success",
 
-            attempted_at: new Date(
-              "2026-11-16T12:00:00.000Z",
-            ),
+            attempted_at: new Date("2026-11-16T12:00:00.000Z"),
 
             id_metrics: "201",
 
-            recorded_at: new Date(
-              "2026-11-16T12:00:00.000Z",
-            ),
+            recorded_at: new Date("2026-11-16T12:00:00.000Z"),
 
             cpu_percent: 50,
             memory_gb: 2,
@@ -535,8 +397,7 @@ describe("HTTP da projeção ambiental por localização", () => {
 
             carbon_intensity_id: 301,
 
-            carbon_intensity_gco2e_per_kwh:
-              100,
+            carbon_intensity_gco2e_per_kwh: 100,
           },
         ],
       },
@@ -556,8 +417,7 @@ describe("HTTP da projeção ambiental por localização", () => {
         latitude: -23.55,
         longitude: -46.63,
 
-        carbonIntensityGco2ePerKwh:
-          100,
+        carbonIntensityGco2ePerKwh: 100,
 
         renewableSharePercent: 80,
 
@@ -571,152 +431,115 @@ describe("HTTP da projeção ambiental por localização", () => {
 
     const response = await request(app)
       .post("/api/projecoes/localizacao")
-      .set(
-        "Authorization",
-        `Bearer ${token}`,
-      )
+      .set("Authorization", `Bearer ${token}`)
       .send({
         serviceId: 7,
 
-        start:
-          "2026-11-16T00:00:00.000Z",
+        start: "2026-11-16T00:00:00.000Z",
 
-        end:
-          "2026-11-17T00:00:00.000Z",
+        end: "2026-11-17T00:00:00.000Z",
 
-        regionCodes: [
-          "REGIAO-INEXISTENTE",
-        ],
+        regionCodes: ["REGIAO-INEXISTENTE"],
       });
 
     expect(response.status).toBe(200);
 
-    expect(
-      response.body.unavailableRegionCodes,
-    ).toEqual([
+    expect(response.body.unavailableRegionCodes).toEqual([
       "REGIAO-INEXISTENTE",
     ]);
 
-    expect(
-      response.body.scenarios,
-    ).toHaveLength(1);
+    expect(response.body.scenarios).toHaveLength(1);
 
-    expect(
-      response.body.scenarios[0]
-        .regionCode,
-    ).toBe("BR-SP");
+    expect(response.body.scenarios[0].regionCode).toBe("BR-SP");
+  });
+
+  it("retorna as regiões disponíveis para projeção", async () => {
+    const consultarRegioes = vi
+      .spyOn(ProjecoesRepository.prototype, "listAvailableRegions")
+      .mockResolvedValue([
+        {
+          regionCode: "BR-SP",
+
+          country: "Brasil",
+          region: "São Paulo",
+          city: null,
+
+          latitude: -23.55,
+          longitude: -46.63,
+
+          carbonIntensityGco2ePerKwh: 85,
+          renewableSharePercent: 83,
+
+          registeredAt: new Date("2026-11-17T12:00:00.000Z"),
+        },
+
+        {
+          regionCode: "CA-QC",
+
+          country: "Canadá",
+          region: "Quebec",
+          city: null,
+
+          latitude: 46.81,
+          longitude: -71.21,
+
+          carbonIntensityGco2ePerKwh: 25,
+          renewableSharePercent: 95,
+
+          registeredAt: new Date("2026-11-17T12:00:00.000Z"),
+        },
+      ]);
+
+    const token = createToken({
+      sub: "1",
     });
 
-    it("retorna as regiões disponíveis para projeção", async () => {
-  const consultarRegioes = vi
-    .spyOn(
-      ProjecoesRepository.prototype,
-      "listAvailableRegions",
-    )
-    .mockResolvedValue([
-      {
-        regionCode: "BR-SP",
+    const response = await request(app)
+      .get("/api/projecoes/regioes")
+      .set("Authorization", `Bearer ${token}`);
 
-        country: "Brasil",
-        region: "São Paulo",
-        city: null,
+    expect(response.status).toBe(200);
 
-        latitude: -23.55,
-        longitude: -46.63,
+    expect(response.body.message).toBe("2 regiões disponíveis para projeção");
 
-        carbonIntensityGco2ePerKwh: 85,
-        renewableSharePercent: 83,
+    expect(response.body.regions).toHaveLength(2);
 
-        registeredAt: new Date(
-          "2026-11-17T12:00:00.000Z",
-        ),
-      },
+    expect(response.body.regions[0]).toMatchObject({
+      regionCode: "BR-SP",
 
-      {
-        regionCode: "CA-QC",
+      country: "Brasil",
+      region: "São Paulo",
 
-        country: "Canadá",
-        region: "Quebec",
-        city: null,
+      carbonIntensityGco2ePerKwh: 85,
+      renewableSharePercent: 83,
 
-        latitude: 46.81,
-        longitude: -71.21,
+      snapshotRegisteredAt: "2026-11-17T12:00:00.000Z",
+    });
 
-        carbonIntensityGco2ePerKwh: 25,
-        renewableSharePercent: 95,
+    expect(response.body.regions[1]).toMatchObject({
+      regionCode: "CA-QC",
 
-        registeredAt: new Date(
-          "2026-11-17T12:00:00.000Z",
-        ),
-      },
-    ]);
+      country: "Canadá",
+      region: "Quebec",
 
-  const token = createToken({
-    sub: "1",
+      carbonIntensityGco2ePerKwh: 25,
+      renewableSharePercent: 95,
+    });
+
+    expect(consultarRegioes).toHaveBeenCalledTimes(1);
   });
 
-  const response = await request(app)
-    .get("/api/projecoes/regioes")
-    .set(
-      "Authorization",
-      `Bearer ${token}`,
-    );
+  it("retorna 401 ao listar regiões sem token", async () => {
+    const consultarRegioes = vi
+      .spyOn(ProjecoesRepository.prototype, "listAvailableRegions")
+      .mockResolvedValue([]);
 
-  expect(response.status).toBe(200);
+    const response = await request(app).get("/api/projecoes/regioes");
 
-  expect(response.body.message).toBe(
-    "2 regiões disponíveis para projeção",
-  );
+    expect(response.status).toBe(401);
 
-  expect(response.body.regions).toHaveLength(2);
-
-  expect(response.body.regions[0]).toMatchObject({
-    regionCode: "BR-SP",
-
-    country: "Brasil",
-    region: "São Paulo",
-
-    carbonIntensityGco2ePerKwh: 85,
-    renewableSharePercent: 83,
-
-    snapshotRegisteredAt:
-      "2026-11-17T12:00:00.000Z",
+    expect(consultarRegioes).not.toHaveBeenCalled();
   });
-
-  expect(response.body.regions[1]).toMatchObject({
-    regionCode: "CA-QC",
-
-    country: "Canadá",
-    region: "Quebec",
-
-    carbonIntensityGco2ePerKwh: 25,
-    renewableSharePercent: 95,
-  });
-
-  expect(
-    consultarRegioes,
-  ).toHaveBeenCalledTimes(1);
-});
-
-it("retorna 401 ao listar regiões sem token", async () => {
-  const consultarRegioes = vi
-    .spyOn(
-      ProjecoesRepository.prototype,
-      "listAvailableRegions",
-    )
-    .mockResolvedValue([]);
-
-  const response = await request(app)
-    .get("/api/projecoes/regioes");
-
-  expect(response.status).toBe(401);
-
-  expect(
-    consultarRegioes,
-  ).not.toHaveBeenCalled();
-});
-
-  
 });
 
 describe("HTTP da redistribuição de serviços", () => {
@@ -725,16 +548,10 @@ describe("HTTP da redistribuição de serviços", () => {
 
   it("retorna 401 sem token e não consulta os dados", async () => {
     const consultarIndicadores = vi
-      .spyOn(
-        IndicadoresRepository.prototype,
-        "findCollectionsForPeriod",
-      )
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
       .mockResolvedValue([]);
     const consultarRegioes = vi
-      .spyOn(
-        ProjecoesRepository.prototype,
-        "listAvailableRegions",
-      )
+      .spyOn(ProjecoesRepository.prototype, "listAvailableRegions")
       .mockResolvedValue([]);
 
     const response = await request(app)
@@ -750,18 +567,54 @@ describe("HTTP da redistribuição de serviços", () => {
     expect(consultarRegioes).not.toHaveBeenCalled();
   });
 
+  it("retorna 400 quando start ou end não são informados", async () => {
+    const consultarIndicadores = vi
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
+      .mockResolvedValue([]);
+
+    const consultarRegioes = vi
+      .spyOn(ProjecoesRepository.prototype, "listAvailableRegions")
+      .mockResolvedValue([]);
+
+    const token = createToken({
+      sub: "1",
+    });
+
+    const withoutStart = await request(app)
+      .post("/api/projecoes/redistribuicao")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        end,
+        occupancyPolicy: "balanced",
+      });
+
+    expect(withoutStart.status).toBe(400);
+
+    expect(withoutStart.body.code).toBe("INVALID_REDISTRIBUTION_REQUEST");
+
+    const withoutEnd = await request(app)
+      .post("/api/projecoes/redistribuicao")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        start,
+        occupancyPolicy: "balanced",
+      });
+
+    expect(withoutEnd.status).toBe(400);
+
+    expect(withoutEnd.body.code).toBe("INVALID_REDISTRIBUTION_REQUEST");
+
+    expect(consultarIndicadores).not.toHaveBeenCalled();
+
+    expect(consultarRegioes).not.toHaveBeenCalled();
+  });
+
   it("retorna 400 para política inválida ou campos conflitantes", async () => {
     const consultarIndicadores = vi
-      .spyOn(
-        IndicadoresRepository.prototype,
-        "findCollectionsForPeriod",
-      )
+      .spyOn(IndicadoresRepository.prototype, "findCollectionsForPeriod")
       .mockResolvedValue([]);
     const consultarRegioes = vi
-      .spyOn(
-        ProjecoesRepository.prototype,
-        "listAvailableRegions",
-      )
+      .spyOn(ProjecoesRepository.prototype, "listAvailableRegions")
       .mockResolvedValue([]);
     const token = createToken({ sub: "1" });
 
@@ -775,9 +628,7 @@ describe("HTTP da redistribuição de serviços", () => {
       });
 
     expect(response.status).toBe(400);
-    expect(response.body.code).toBe(
-      "INVALID_REDISTRIBUTION_CONSTRAINT",
-    );
+    expect(response.body.code).toBe("INVALID_REDISTRIBUTION_CONSTRAINT");
 
     const conflictingResponse = await request(app)
       .post("/api/projecoes/redistribuicao")
@@ -853,9 +704,7 @@ describe("HTTP da redistribuição de serviços", () => {
       });
 
     expect(response.status).toBe(200);
-    expect(response.body.message).toBe(
-      "Redistribuição de serviços calculada",
-    );
+    expect(response.body.message).toBe("Redistribuição de serviços calculada");
     expect(response.body.occupancyPolicy).toBe("balanced");
     expect(response.body.requireServicePerRegion).toBe(true);
     expect(response.body.allocations).toMatchObject([
@@ -869,12 +718,12 @@ describe("HTTP da redistribuição de serviços", () => {
       },
     ]);
     expect(response.body.allocations[0].energyKwh).toBeGreaterThan(0);
-    expect(
-      response.body.allocations[0].observedEmissionsGco2e,
-    ).toBeGreaterThan(0);
-    expect(
-      response.body.allocations[0].validObservedEmissionSampleCount,
-    ).toBe(1);
+    expect(response.body.allocations[0].observedEmissionsGco2e).toBeGreaterThan(
+      0,
+    );
+    expect(response.body.allocations[0].validObservedEmissionSampleCount).toBe(
+      1,
+    );
     expect(response.body.regions).toMatchObject([
       {
         regionCode: "BR-SP",

@@ -1,8 +1,4 @@
-import {
-  type NextFunction,
-  type Request,
-  type Response,
-} from "express";
+import { type NextFunction, type Request, type Response } from "express";
 
 import { AppError } from "../../shared/errors/AppError.js";
 import {
@@ -16,8 +12,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isStringArray(value: unknown): value is string[] {
   return (
-    Array.isArray(value) &&
-    value.every((item) => typeof item === "string")
+    Array.isArray(value) && value.every((item) => typeof item === "string")
   );
 }
 
@@ -34,16 +29,10 @@ function isRedistributionPolicy(
 function readRequiredString(
   value: unknown,
   field: string,
+  errorCode = "INVALID_PROJECTION_REQUEST",
 ): string {
-  if (
-    typeof value !== "string" ||
-    value.trim() === ""
-  ) {
-    throw new AppError(
-      `Informe o campo ${field}`,
-      400,
-      "INVALID_PROJECTION_REQUEST",
-    );
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new AppError(`Informe o campo ${field}`, 400, errorCode);
   }
 
   return value;
@@ -72,19 +61,11 @@ export class ProjecoesController {
         );
       }
 
-      const serviceId = Number(
-        body.serviceId,
-      );
+      const serviceId = Number(body.serviceId);
 
-      const start = readRequiredString(
-        body.start,
-        "start",
-      );
+      const start = readRequiredString(body.start, "start");
 
-      const end = readRequiredString(
-        body.end,
-        "end",
-      );
+      const end = readRequiredString(body.end, "end");
 
       if (!isStringArray(body.regionCodes)) {
         throw new AppError(
@@ -94,17 +75,15 @@ export class ProjecoesController {
         );
       }
 
-      const result =
-        await this.service.projectLocation(
-          serviceId,
-          start,
-          end,
-          body.regionCodes,
-        );
+      const result = await this.service.projectLocation(
+        serviceId,
+        start,
+        end,
+        body.regionCodes,
+      );
 
       res.status(200).json({
-        message:
-          "Projeção ambiental calculada",
+        message: "Projeção ambiental calculada",
         ...result,
       });
     } catch (error) {
@@ -128,8 +107,17 @@ export class ProjecoesController {
         );
       }
 
-      const start = readRequiredString(body.start, "start");
-      const end = readRequiredString(body.end, "end");
+      const start = readRequiredString(
+        body.start,
+        "start",
+        "INVALID_REDISTRIBUTION_REQUEST",
+      );
+
+      const end = readRequiredString(
+        body.end,
+        "end",
+        "INVALID_REDISTRIBUTION_REQUEST",
+      );
 
       const hasOccupancyPolicy = Object.prototype.hasOwnProperty.call(
         body,
@@ -180,22 +168,20 @@ export class ProjecoesController {
   }
 
   async listRegions(
-  _req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
-  try {
-    const regions =
-      await this.service.listAvailableRegions();
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const regions = await this.service.listAvailableRegions();
 
-    res.status(200).json({
-      message:
-        `${regions.length} regiões disponíveis para projeção`,
+      res.status(200).json({
+        message: `${regions.length} regiões disponíveis para projeção`,
 
-      regions,
-    });
-  } catch (error) {
-    next(error);
+        regions,
+      });
+    } catch (error) {
+      next(error);
+    }
   }
-}
 }

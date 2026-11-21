@@ -649,7 +649,7 @@ export class ProjecoesService {
     const regionCounts = new Map(initialRegionCounts);
     const bestAssignments = new Map<number, string>();
     let bestEmissions = Number.POSITIVE_INFINITY;
-
+    
     // Keep the recursive search while the expected service and region counts stay small.
     // Revisit this approach if the redistribution workload grows.
     const search = (serviceIndex: number, projectedEmissions: number) => {
@@ -738,6 +738,7 @@ export class ProjecoesService {
           assignedCount + 1,
         );
         assignments.set(service.serviceId, region.regionCode);
+        //RECURSÃO
         search(
           serviceIndex + 1,
           projectedEmissions +
