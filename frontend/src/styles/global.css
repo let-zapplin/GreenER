@@ -65,6 +65,10 @@ body {
   flex: 1;
   min-width: 0;
 }
+.analyses-screen {
+  display: flex;
+  flex-direction: column;
+}
 
 h1,
 h2,

@@ -6,7 +6,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useSearchParams } from "react-router-dom";
 
 import type { MapFocusRequest } from "../components/ServicesMap";
 import { ServiceHud } from "../components/ServiceHud";
@@ -30,7 +29,6 @@ import { RegionEnergyChart } from "../components/RegionEnergyChart";
 import { ServicesMapLegend } from "../components/ServicesMapLegend";
 import { MonitoringBoard } from "../components/MonitoringBoard";
 import { useMonitoringBoard } from "../hooks/useMonitoringBoard";
-import { FIXED_PAGE_ANALISE } from "../lib/monitoringBoard";
 import type { MonitoringWidgetType } from "../lib/monitoringBoard";
 import {
   formatServicePlace,
@@ -47,16 +45,6 @@ export function Monitoring() {
   const { snapshot, loading, error } = useMonitoring();
 
   const board = useMonitoringBoard();
-
-  const [searchParams] = useSearchParams();
-  const requestedPage = searchParams.get("pagina");
-
-  // Links antigos de /analises caem na página fixa de análise do painel.
-  useEffect(() => {
-    if (requestedPage === "analise") {
-      board.selectPage(FIXED_PAGE_ANALISE);
-    }
-  }, [requestedPage, board.selectPage]);
 
   const {
     dashboard,
