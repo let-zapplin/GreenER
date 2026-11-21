@@ -15,3 +15,4 @@ export function createChatService(): ChatService {
     new ServicosService(),
   );
 }
+ //este arquivo é responsável por injetar as dependências (INJEÇÃO DE DEPENDÊNCIA) 

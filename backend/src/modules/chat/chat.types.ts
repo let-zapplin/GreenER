@@ -1,3 +1,5 @@
+//Aqui definimos a linguagem interna do sistema, criamos um vocabulário limitado de intenções , usamos esses contratos para transformar a linguagem humana em estrutura de dados JSON
+
 export const CHAT_PERIODS = ["1h", "6h", "24h", "7d"] as const;
 
 export type ChatPeriod = (typeof CHAT_PERIODS)[number];

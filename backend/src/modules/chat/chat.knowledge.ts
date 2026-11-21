@@ -1,3 +1,5 @@
+//	Base de conhecimento do projeto/metodologia
+
 import type { ChatIntent } from "./chat.types.js";
 
 export type ChatKnowledgeIntent = Extract<

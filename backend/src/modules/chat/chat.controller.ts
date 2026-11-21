@@ -9,6 +9,7 @@ import { createChatService } from "./chat.factory.js";
 import { ChatService } from "./chat.service.js";
 import { chatStateStore } from "./chat.state.js";
 
+//limitação a uma requisição de pergunta por vez, isso funciona para um prototipo local, mas para aplicação real, devemos considerar uma forma de melhorar
 const MAX_CONCURRENT_CHAT_REQUESTS = 1;
 const CHAT_BUSY_MESSAGE =
   "O assistente está processando outras perguntas. Tente novamente em instantes.";
@@ -42,7 +43,7 @@ export class ChatController {
 
       const { message, period, conversationId, context, history } =
         body as Record<string, unknown>;
-
+//aqui é onde impedimos de acessar a conversa de outro usuario 
       const userId = (req as AuthRequest).user?.sub;
       if (typeof userId !== "string" || userId.trim() === "") {
         throw new UnauthorizedError("Token não identifica um usuário válido");

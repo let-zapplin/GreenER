@@ -1,3 +1,5 @@
+//	Aqui Contém o fluxo principal de raciocínio e resposta
+
 import { createHash, randomUUID } from "node:crypto";
 import { AppError, ForbiddenError } from "../../shared/errors/AppError.js";
 import { SingleFlight, TtlCache } from "./chat.cache.js";
@@ -209,7 +211,7 @@ function regionalFacts(service: IndicatorService) {
     renewableSharePercent: service.regionalContext.renewableSharePercent,
   };
 }
-
+// unique indica que encontrou uma possibilidade, ambiguous encontrei mais de uma, none = nada o nome disso é "discriminated union do TypeScript"
 type ServiceResolution =
   | { kind: "unique"; service: IndicatorService }
   | { kind: "ambiguous"; candidates: IndicatorService[] }
@@ -274,7 +276,7 @@ function hashHistory(history: ChatHistoryMessage[]): string {
 
   return createHash("sha1").update(JSON.stringify(history)).digest("hex");
 }
-
+//normaliza os textos tira os acentos e simbolos
 function normalizeText(value: string): string {
   return value
     .normalize("NFD")
@@ -318,6 +320,8 @@ function containsWholePhrase(haystack: string, phrase: string): boolean {
 
   return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(haystack);
 }
+
+//Processamento de Linguagem Natural baseado em regras. SINAIS SEMÂNTICOS direcionamento verbal
 
 function mentionsEnergy(text: string): boolean {
   return /(energia|kwh|consum|gasta|gasto|gastou|potencia)/.test(text);
@@ -1027,7 +1031,7 @@ function classifyByRules(
     mentionsService(text);
 
   const knowledgeIntent = classifyKnowledgeByRules(message, dataReference);
-
+// A ordem dos ifs importam!! Pois assim criamos caminhos mais rápidos tiramos uma espera desnecessária ou respostas equivocadas
   if (knowledgeIntent !== null) {
     return {
       intent: knowledgeIntent,
@@ -1797,7 +1801,7 @@ export class ChatService {
 
     return message;
   }
-
+// funciona como um árbitro para quando há duas opiniões, ela busca reconciliar tudo, é uma camada de resolução de conflitos semânticos
   private mergeClassification(
     classification: ChatClassification,
     message: string,

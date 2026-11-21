@@ -1,3 +1,5 @@
+//Aqui temos uma pequena base de conhecimento, não utilizamos RAG moderno, mas sim uma forma de recuperação lexical de conhecimento ou um mini-RAG baseado em palavras-chave.
+
 import { describe, expect, it } from "vitest";
 import {
   classifyKnowledgeByRules,

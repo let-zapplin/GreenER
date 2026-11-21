@@ -1,3 +1,5 @@
+//	Faz a comunicação HTTP com o Ollama
+
 import { performance } from "node:perf_hooks";
 import { env } from "../../config/env.js";
 import {
@@ -179,7 +181,7 @@ export class OllamaClient implements ChatLlm {
       | "invalid_response"
       | "timeout"
       | "request_error" = "request_error";
-
+//nesse try catch nós chamamos o Ollama, mas caso ele não responda a Karma continua funcionando no modo regras deterministicas, é uma técnica de "graceful degradation" O sistema perde uma capacidade, mas não para completamente.
     try {
       const response = await fetch(`${this.baseUrl}/api/chat`, {
         method: "POST",

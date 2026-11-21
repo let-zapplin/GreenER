@@ -1,3 +1,5 @@
+//Arquivo para centralização da interpretação temporal
+
 import { AppError } from "../../shared/errors/AppError.js";
 import { CHAT_PERIODS, type ChatPeriod } from "./chat.types.js";
 

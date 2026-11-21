@@ -1,5 +1,7 @@
-import type { ChatIntent, ChatPeriod } from "./chat.types.js";
+//Este é o aquivo responsável por criar a memória da conversa
 
+import type { ChatIntent, ChatPeriod } from "./chat.types.js";
+//limites de tempo e tolkens 
 export const CHAT_STATE_TTL_MS = 30 * 60 * 1000;
 export const CHAT_STATE_MAX_CONVERSATIONS = 500;
 
@@ -14,6 +16,7 @@ export type ChatPendingClarification = {
   candidates: ChatServiceReference[];
 };
 
+//Aqui é onde criamos a ideia de estado da conversa, é como a Karma se lembra da pergunta anterior, entende a conversa em uma continuidade --> contexto conversacional.
 export type ChatConversationState = {
   conversationId: string;
   userId: string;

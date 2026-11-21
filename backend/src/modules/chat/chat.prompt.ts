@@ -1,3 +1,5 @@
+//	Define instruções enviadas ao LLM, estabelece regras a LLM no caso torna as respostas mais naturais, mas usa exclusivamente os fatos fornecidos.
+
 export const CLASSIFIER_SYSTEM_PROMPT = `Você é um classificador de intenções do assistente GreenER.
 
 Responda SOMENTE com um objeto JSON, sem markdown, no formato:
