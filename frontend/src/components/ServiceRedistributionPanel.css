@@ -24,72 +24,164 @@
 
 .service-redistribution-constraints {
   display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 16px;
-  border: 1px solid rgba(193, 213, 207, 0.2);
-  border-radius: 14px;
+  gap: 18px;
+  margin-top: 12px;
+  
+  padding: 0;
+
+  border: 0;
 }
 
 .service-redistribution-constraints legend {
-  padding: 0 6px;
-  color: #f4f8f5;
+  margin-bottom: 10px;
+  padding: 0;
+
+  color:#87e46c;
+
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
-.service-redistribution-constraints label {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid rgba(193, 213, 207, 0.16);
-  border-radius: 10px;
-  background: rgba(6, 32, 35, 0.35);
-  cursor: pointer;
-}
-
-.service-redistribution-constraints input {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
-  margin: 2px 0 0;
-  accent-color: #87e46c;
-}
-
-.service-redistribution-constraints label > span {
+.service-redistribution-policy-grid {
   display: grid;
-  gap: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 16px;
 }
 
-.service-redistribution-constraints strong {
+.service-redistribution-policy {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+
+  gap: 12px;
+
+  align-items: start;
+
+  min-height: 132px;
+
+  padding: 18px 18px 16px;
+
+  border: 1px solid rgba(193, 213, 207, 0.14);
+  border-radius: 14px;
+
+  background: rgba(6, 32, 35, 0.34);
+
+  cursor: pointer;
+
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.service-redistribution-policy:hover {
+  transform: translateY(-2px);
+
+  border-color: rgba(135, 228, 108, 0.28);
+
+  background: rgba(8, 42, 44, 0.55);
+}
+
+.service-redistribution-policy.is-selected {
+  border-color: rgba(135, 228, 108, 0.55);
+
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(135, 228, 108, 0.12),
+      transparent 42%
+    ),
+    rgba(7, 46, 45, 0.72);
+
+  box-shadow:
+    inset 0 0 0 1px rgba(135, 228, 108, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.service-redistribution-policy input {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  overflow: hidden;
+
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+.service-redistribution-policy-index {
+  display: grid;
+  place-items: center;
+
+  width: 30px;
+  height: 30px;
+
+  border: 1px solid rgba(135, 228, 108, 0.2);
+  border-radius: 50%;
+
+  color: #87e46c;
+
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.service-redistribution-policy.is-selected
+  .service-redistribution-policy-index {
+  background: #87e46c;
+
+  color: #0c282b;
+}
+
+.service-redistribution-policy-content {
+  display: grid;
+
+  gap: 7px;
+}
+
+.service-redistribution-policy-content strong {
   color: #f4f8f5;
-  line-height: 1.4;
+
+  font-size: 1rem;
+  line-height: 1.35;
 }
 
-.service-redistribution-constraints small {
+.service-redistribution-policy-content small {
   color: var(--text-muted);
+
+  font-size: 0.88rem;
   line-height: 1.5;
 }
 
-.service-redistribution-run {
-  align-self: flex-start;
-  min-height: 44px;
-  padding: 10px 18px;
-  border: 0;
+.service-redistribution-policy-state {
+  display: grid;
+  place-items: center;
+
+  width: 32px;
+  height: 32px;
+
   border-radius: 10px;
-  background: #87e46c;
-  color: #0c282b;
+
+  background: rgba(135, 228, 108, 0.05);
+
+  color: rgba(135, 228, 108, 0.65);
+
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.15rem;
   font-weight: 700;
-  cursor: pointer;
 }
 
-.service-redistribution-run:hover:not(:disabled) {
-  background: #a0f286;
-}
 
-.service-redistribution-run:disabled {
-  cursor: wait;
-  opacity: 0.7;
+.service-redistribution-policy.is-selected
+  .service-redistribution-policy-state {
+  background: rgba(135, 228, 108, 0.14);
+
+  color: #a0f286;
 }
 
 .service-redistribution-state {
@@ -259,6 +351,48 @@
   font-size: 0.9rem;
 }
 
+
+.service-redistribution-visual h3,
+.service-redistribution-table-section h3,
+.service-redistribution-occupancy h3 {
+  font-size: 1.15rem;
+  line-height: 1.35;
+}
+
+.service-redistribution-visual p,
+.service-redistribution-table-section p,
+.service-redistribution-occupancy p {
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.service-redistribution-policy-index,
+.service-redistribution-step-index {
+  font-size: 0.72rem;
+}
+
+.service-redistribution-table td,
+.service-redistribution-table th {
+  padding: 14px 14px;
+}
+
+.service-redistribution-table th,
+.service-redistribution-table td {
+  padding: 16px 14px;
+
+  border-top: 1px solid rgba(193, 213, 207, 0.09);
+
+  vertical-align: middle;
+}
+
+
+
+@media (max-width: 900px) {
+  .service-redistribution-policy-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
   .service-redistribution-panel {
     gap: 16px;
@@ -266,17 +400,15 @@
     border-radius: 14px;
   }
 
-  .service-redistribution-constraints {
-    padding: 10px;
-  }
+.service-redistribution-policy-grid {
+  grid-template-columns: 1fr;
+}
 
-  .service-redistribution-constraints label {
-    padding: 10px;
-  }
+.service-redistribution-policy {
+  min-height: auto;
+}
 
-  .service-redistribution-run {
-    width: 100%;
-  }
+  
 
   .service-redistribution-result-summary {
     align-items: flex-start;

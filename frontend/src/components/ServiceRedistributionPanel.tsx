@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useServiceRedistribution } from "../hooks/useServiceRedistribution";
 import {
@@ -6,6 +6,9 @@ import {
   calculateRedistributionEmissionSubtotal,
   hasComparableEmissionCoverage,
 } from "../lib/redistributionEmissions";
+
+import { RedistributionScenarioOverview } from "./RedistributionScenarioOverview";
+import { RedistributionImpactSummary } from "./RedistributionImpactSummary";
 
 import type { AnalysisPeriodWindow } from "../services/analysisPeriod";
 import type { ServiceRedistributionPolicy } from "../types/projection";
@@ -19,10 +22,14 @@ type ServiceRedistributionPanelProps = {
   period: AnalysisPeriodWindow;
 };
 
+type RegionDistribution = {
+  regionCode: string;
+  serviceCount: number;
+  carbonIntensityGco2ePerKwh: number | null;
+};
+
 function getInitialOccupancyPolicy(): ServiceRedistributionPolicy {
-  const savedPolicy = localStorage.getItem(
-    REDISTRIBUTION_POLICY_STORAGE_KEY,
-  );
+  const savedPolicy = localStorage.getItem(REDISTRIBUTION_POLICY_STORAGE_KEY);
 
   if (
     savedPolicy === "preserve_current_counts" ||
@@ -85,19 +92,70 @@ export function ServiceRedistributionPanel({
   period,
 }: ServiceRedistributionPanelProps) {
   const [occupancyPolicy, setOccupancyPolicy] =
-    useState<ServiceRedistributionPolicy>(
-      getInitialOccupancyPolicy,
-    );
+    useState<ServiceRedistributionPolicy>(getInitialOccupancyPolicy);
   const { result, loading, error, run } = useServiceRedistribution();
   const emissionSubtotal = calculateRedistributionEmissionSubtotal(
     result?.allocations ?? [],
   );
 
-  useEffect(() => {
-    localStorage.setItem(
-      REDISTRIBUTION_POLICY_STORAGE_KEY,
-      occupancyPolicy,
+  const redistributionVisualData = useMemo(() => {
+    if (result === null) {
+      return null;
+    }
+
+    const intensityByRegion = new Map(
+      result.regions.map((region) => [
+        region.regionCode,
+        region.carbonIntensityGco2ePerKwh,
+      ]),
     );
+
+    const currentRegionCounts = new Map<string, number>();
+
+    for (const allocation of result.allocations) {
+      currentRegionCounts.set(
+        allocation.currentRegionCode,
+        (currentRegionCounts.get(allocation.currentRegionCode) ?? 0) + 1,
+      );
+    }
+
+    const buildDistribution = (
+      counts: Map<string, number>,
+    ): RegionDistribution[] => {
+      return [...counts.entries()]
+        .map(([regionCode, serviceCount]) => ({
+          regionCode,
+          serviceCount,
+          carbonIntensityGco2ePerKwh: intensityByRegion.get(regionCode) ?? null,
+        }))
+        .sort((left, right) => left.regionCode.localeCompare(right.regionCode));
+    };
+
+    return {
+      currentDistribution: buildDistribution(currentRegionCounts),
+
+      suggestedDistribution: result.regions
+        .map((region) => ({
+          regionCode: region.regionCode,
+          serviceCount: region.serviceCount,
+          carbonIntensityGco2ePerKwh: region.carbonIntensityGco2ePerKwh,
+        }))
+        .sort((left, right) => left.regionCode.localeCompare(right.regionCode)),
+
+      impact: {
+        observedEmissionsGco2e: emissionSubtotal.observedEmissionsGco2e,
+
+        projectedEmissionsGco2e: emissionSubtotal.projectedEmissionsGco2e,
+
+        differencePercent: emissionSubtotal.differencePercent,
+
+        comparableServiceCount: emissionSubtotal.comparableServiceCount,
+      },
+    };
+  }, [result, emissionSubtotal]);
+
+  useEffect(() => {
+    localStorage.setItem(REDISTRIBUTION_POLICY_STORAGE_KEY, occupancyPolicy);
   }, [occupancyPolicy]);
 
   useEffect(() => {
@@ -112,78 +170,119 @@ export function ServiceRedistributionPanel({
       <header className="service-redistribution-header">
         <div>
           <p className="analyses-section-label">CENÁRIO HIPOTÉTICO</p>
-          <h2 id="service-redistribution-title">
-            Redistribuição otimizada
-          </h2>
+          <h2 id="service-redistribution-title">Redistribuição otimizada</h2>
           <p>
             A aplicação calcula automaticamente uma distribuição estimada dos
-            serviços ativos entre as regiões disponíveis, conforme a política
-            de ocupação selecionada e a mesma janela de análise.
+            serviços ativos entre as regiões disponíveis, conforme a política de
+            ocupação selecionada e a mesma janela de análise.
           </p>
         </div>
       </header>
 
       <fieldset className="service-redistribution-constraints">
-        <legend>Ocupação das regiões</legend>
-        <label>
-          <input
-            type="radio"
-            name="occupancy-policy"
-            checked={occupancyPolicy === "preserve_current_counts"}
-            onChange={() => setOccupancyPolicy("preserve_current_counts")}
-          />
-          <span>
-            <strong>Preservar a quantidade atual por região</strong>
-            <small>
-              Mantém exatamente a contagem atual de serviços ativos em cada
-              região; regiões sem snapshot atualizado podem tornar a política
-              inviável.
-            </small>
-          </span>
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="occupancy-policy"
-            checked={occupancyPolicy === "balanced"}
-            onChange={() => setOccupancyPolicy("balanced")}
-          />
-          <span>
-            <strong>Distribuir de forma equilibrada</strong>
-            <small>
-              Mantém diferenças de no máximo um serviço entre regiões; se
-              houver menos serviços que regiões, algumas podem ficar vazias.
-              Serviços sem energia calculável permanecem na região atual.
-            </small>
-          </span>
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="occupancy-policy"
-            checked={occupancyPolicy === "unconstrained"}
-            onChange={() => setOccupancyPolicy("unconstrained")}
-          />
-          <span>
-            <strong>Otimizar sem restrição de ocupação</strong>
-            <small>
-              Não impõe cotas e pode concentrar serviços nas regiões com menor
-              intensidade de carbono.
-            </small>
-          </span>
-        </label>
+        <legend>Política de redistribuição</legend>
+
+        <div className="service-redistribution-policy-grid">
+          <label
+            className={
+              occupancyPolicy === "preserve_current_counts"
+                ? "service-redistribution-policy is-selected"
+                : "service-redistribution-policy"
+            }
+          >
+            <input
+              type="radio"
+              name="occupancy-policy"
+              checked={occupancyPolicy === "preserve_current_counts"}
+              onChange={() => setOccupancyPolicy("preserve_current_counts")}
+            />
+
+            <span className="service-redistribution-policy-index">01</span>
+
+            <span className="service-redistribution-policy-content">
+              <strong>Preservar ocupação</strong>
+
+              <small>
+                Mantém exatamente a quantidade atual de serviços em cada região.
+              </small>
+            </span>
+
+            <span
+              className="service-redistribution-policy-state"
+              aria-hidden="true"
+            >
+              =
+            </span>
+          </label>
+
+          <label
+            className={
+              occupancyPolicy === "balanced"
+                ? "service-redistribution-policy is-selected"
+                : "service-redistribution-policy"
+            }
+          >
+            <input
+              type="radio"
+              name="occupancy-policy"
+              checked={occupancyPolicy === "balanced"}
+              onChange={() => setOccupancyPolicy("balanced")}
+            />
+
+            <span className="service-redistribution-policy-index">02</span>
+
+            <span className="service-redistribution-policy-content">
+              <strong>Distribuir igualmente</strong>
+
+              <small>
+                Busca manter uma diferença máxima de um serviço entre regiões.
+              </small>
+            </span>
+
+            <span
+              className="service-redistribution-policy-state"
+              aria-hidden="true"
+            >
+              ≋
+            </span>
+          </label>
+
+          <label
+            className={
+              occupancyPolicy === "unconstrained"
+                ? "service-redistribution-policy is-selected"
+                : "service-redistribution-policy"
+            }
+          >
+            <input
+              type="radio"
+              name="occupancy-policy"
+              checked={occupancyPolicy === "unconstrained"}
+              onChange={() => setOccupancyPolicy("unconstrained")}
+            />
+
+            <span className="service-redistribution-policy-index">03</span>
+
+            <span className="service-redistribution-policy-content">
+              <strong>Minimizar emissões</strong>
+
+              <small>
+                Permite concentrar serviços nas regiões com menor intensidade de
+                carbono.
+              </small>
+            </span>
+
+            <span
+              className="service-redistribution-policy-state"
+              aria-hidden="true"
+            >
+              ↓
+            </span>
+          </label>
+        </div>
       </fieldset>
 
-      <button
-        type="button"
-        className="service-redistribution-run"
-        onClick={() => void run(period, occupancyPolicy)}
-        disabled={loading}
-      >
-        {loading
-          ? "Calculando distribuição..."
-          : "Recalcular distribuição otimizada"}
-      </button>
+ 
 
       {loading && (
         <p className="service-redistribution-state" role="status">
@@ -192,36 +291,49 @@ export function ServiceRedistributionPanel({
       )}
 
       {error && (
-        <p
-          className="service-redistribution-state is-error"
-          role="alert"
-        >
+        <p className="service-redistribution-state is-error" role="alert">
           {error}
         </p>
       )}
 
       {result && !loading && (
         <div className="service-redistribution-results">
-          <header className="service-redistribution-result-summary">
-            <div>
-              <p className="analyses-section-label">EMISSÕES ESTIMADAS</p>
-              <strong>
-                {formatEmissions(result.knownProjectedEmissionsGco2e)}
-              </strong>
-            </div>
-            <span>
-              {result.allocations.length} serviço(s) ativo(s) considerado(s)
-            </span>
-          </header>
+          {redistributionVisualData && result.allocations.length > 0 && (
+            <RedistributionScenarioOverview
+              currentDistribution={redistributionVisualData.currentDistribution}
+              suggestedDistribution={
+                redistributionVisualData.suggestedDistribution
+              }
+            />
+          )}
+
+          {redistributionVisualData && result.allocations.length > 0 && (
+            <RedistributionImpactSummary
+              observedEmissionsGco2e={
+                redistributionVisualData.impact.observedEmissionsGco2e
+              }
+              projectedEmissionsGco2e={
+                redistributionVisualData.impact.projectedEmissionsGco2e
+              }
+              differencePercent={
+                redistributionVisualData.impact.differencePercent
+              }
+              comparableServiceCount={
+                redistributionVisualData.impact.comparableServiceCount
+              }
+              totalServiceCount={result.allocations.length}
+            />
+          )}
 
           {result.isPartial && (
             <p className="service-redistribution-state is-partial" role="note">
-              Resultado parcial: algumas coletas não permitiram calcular
-              energia ou emissão observada. Serviços sem energia válida
-              permanecem na região atual e não são tratados como consumo zero.
-              Percentuais não são calculados quando as coberturas divergem.
+              Resultado parcial: algumas coletas não permitiram calcular energia
+              ou emissão observada. Serviços sem energia válida permanecem na
+              região atual e não são tratados como consumo zero. Percentuais não
+              são calculados quando as coberturas divergem.
             </p>
           )}
+          
 
           {result.allocations.length === 0 ? (
             <p className="service-redistribution-state" role="status">
@@ -239,7 +351,7 @@ export function ServiceRedistributionPanel({
                     <th scope="col">Energia observada</th>
                     <th scope="col">Emissões observadas</th>
                     <th scope="col">Emissões projetadas</th>
-                    <th scope="col">Variação vs. observado</th>
+                    <th scope="col">Variação </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -261,9 +373,7 @@ export function ServiceRedistributionPanel({
                       </td>
                       <td>
                         <span>
-                          {formatEmissions(
-                            allocation.observedEmissionsGco2e,
-                          )}
+                          {formatEmissions(allocation.observedEmissionsGco2e)}
                         </span>
                         <small
                           aria-label={`${allocation.validObservedEmissionSampleCount} de ${allocation.totalSampleCount} coletas com emissão observada calculável`}
@@ -276,9 +386,7 @@ export function ServiceRedistributionPanel({
                       </td>
                       <td>
                         <span>
-                          {formatEmissions(
-                            allocation.projectedEmissionsGco2e,
-                          )}
+                          {formatEmissions(allocation.projectedEmissionsGco2e)}
                         </span>
                         {allocation.isPartial && (
                           <small className="service-redistribution-partial-label">
@@ -304,9 +412,7 @@ export function ServiceRedistributionPanel({
                       {result.allocations.length} serviços)
                     </th>
                     <td>
-                      {formatEmissions(
-                        emissionSubtotal.observedEmissionsGco2e,
-                      )}
+                      {formatEmissions(emissionSubtotal.observedEmissionsGco2e)}
                     </td>
                     <td>
                       {formatEmissions(
@@ -326,8 +432,8 @@ export function ServiceRedistributionPanel({
                 coletas válidas/total do período. A variação só é comparada
                 quando as contagens válidas de energia e emissão observada
                 coincidem; nesses casos, usa ((projetada − observada) /
-                observada) × 100. Valores negativos indicam redução estimada.
-                O subtotal considera apenas serviços com emissões calculáveis e
+                observada) × 100. Valores negativos indicam redução estimada. O
+                subtotal considera apenas serviços com emissões calculáveis e
                 coberturas coincidentes.
               </p>
             </div>
@@ -346,9 +452,7 @@ export function ServiceRedistributionPanel({
                   <strong>{region.regionCode}</strong>
                   <span>{region.serviceCount} serviço(s)</span>
                   <span>
-                    {region.carbonIntensityGco2ePerKwh.toLocaleString(
-                      "pt-BR",
-                    )}{" "}
+                    {region.carbonIntensityGco2ePerKwh.toLocaleString("pt-BR")}{" "}
                     gCO₂e/kWh
                   </span>
                 </li>

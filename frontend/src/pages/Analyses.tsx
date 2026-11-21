@@ -536,7 +536,7 @@ const {
             aria-pressed={analysisMode === "project"}
             onClick={() => setAnalysisMode("project")}
           >
-            Projetar localização
+            Projeções regionais
           </button>
         </div>
 
