@@ -19,7 +19,7 @@ Os arquivos de teste citados abaixo são a cobertura disponível atualmente. Ele
 | Filtros e seleção de período | Vitor; testes complementares de Patricia | [PR #169](https://github.com/let-zapplin/GreenER/pull/169); [commit 6a8e616](https://github.com/let-zapplin/GreenER/commit/6a8e616) | `frontend/tests/analysisPeriod.test.ts` | Quatro testes aprovados; a integração do filtro com a tela exige conferência manual. |
 | Consultas analíticas e consolidados | Gustavo Koiti | [PR #170](https://github.com/let-zapplin/GreenER/pull/170) | `backend/src/modules/indicadores/indicadores.service.test.ts`; testes HTTP e de serviço do dashboard | Cobertura de recursos, energia, emissão e estados parciais. A integração PostgreSQL existente testa coletas, não a consulta SQL dos indicadores. |
 | Ranking de impacto | Vitor; validação manual de Patricia | [PR #172](https://github.com/let-zapplin/GreenER/pull/172); [PR #176 — documentação](https://github.com/let-zapplin/GreenER/pull/176) | Validação manual de energia, CO₂e, ordenação e aviso de dados parciais | Patricia informou que registrou capturas na task. Não há teste automatizado específico do componente de ranking. |
-| Comparação entre serviços | Vitor; testes complementares de Patricia | [PR #174](https://github.com/let-zapplin/GreenER/pull/174); [PR #182](https://github.com/let-zapplin/GreenER/pull/182); [commit 6a8e616](https://github.com/let-zapplin/GreenER/commit/6a8e616) | `frontend/tests/comparisonSeries.test.ts`; `frontend/tests/comparisonMetrics.test.ts` | Dez testes aprovados nesses dois arquivos. O cenário de falha HTTP parcial possui a limitação descrita neste relatório. |
+| Comparação entre serviços | Vitor; testes complementares de Patricia | [PR #174](https://github.com/let-zapplin/GreenER/pull/174); [PR #182](https://github.com/let-zapplin/GreenER/pull/182); [commit 6a8e616](https://github.com/let-zapplin/GreenER/commit/6a8e616) | `frontend/tests/comparisonSeries.test.ts`; `frontend/tests/comparisonMetrics.test.ts` | Dez testes aprovados nesses dois arquivos. Apresentação da falha HTTP parcial corrigida posteriormente nesta branch; conferência visual pendente. |
 | Mapa e estados dos serviços | Marcello e Vitor; complementos de Patricia | [PR #171](https://github.com/let-zapplin/GreenER/pull/171); [PR #182](https://github.com/let-zapplin/GreenER/pull/182) | `serviceGeoJson.test.ts`, `regionEnergy.test.ts`, `monitoringState.test.ts`, `serviceMapping.test.ts` e `mapFocus.test.ts`, em `frontend/tests` | Coordenadas ausentes e inválidas, preservação de ponto válido, estados e foco possuem cobertura automatizada. Isso não substitui a conferência visual do mapa. |
 | Localização dos serviços | Igor | [PR #177](https://github.com/let-zapplin/GreenER/pull/177) | `frontend/tests/serviceLocation.test.ts`; `backend/src/modules/servicos/servicos.service.test.ts` | Cobertura de informações de localização opcionais e ausentes. |
 | Refinamentos de interface | Marcello, Patricia e Vitor | [PR #173](https://github.com/let-zapplin/GreenER/pull/173) | Validação visual dos fluxos e painéis | Confirmar as evidências específicas de navegação, abertura e recolhimento dos painéis. |
@@ -64,12 +64,12 @@ Ambos utilizam a estrutura existente de `node:test` e `node:assert/strict`, sem 
 | Verificação | Último resultado confirmado | Contexto |
 | --- | --- | --- |
 | Suíte comum do backend | **300 testes aprovados; sete ignorados** | Execução da análise de 21/11/2026, anterior ao commit que acrescenta os dois arquivos de frontend. |
-| Suíte completa do frontend | **62 testes aprovados; nenhuma falha ou teste ignorado** | Reexecutada nesta consolidação, incluindo os dois arquivos novos, no commit `6a8e616`. |
+| Suíte completa do frontend | **62 testes aprovados; nenhuma falha ou teste ignorado** | Reexecutada após a correção da apresentação da comparação parcial, na cópia de trabalho baseada no commit `6a8e616`. Não há teste automatizado de renderização desse cenário na suíte atual. |
 | Integração PostgreSQL | **Sete testes aprovados** | Executada em 21/11/2026, no ambiente exclusivo de `compose.test.yaml`. |
 | Typecheck do backend | **Aprovado** | Execução da análise anterior à inclusão dos dois arquivos de teste. |
-| Typecheck do frontend | **Aprovado** | Execução da análise anterior à inclusão dos dois arquivos de teste. |
+| Typecheck do frontend | **Aprovado** | Reexecutado após a correção da apresentação da comparação parcial. |
 | Build do backend | **Aprovado** | Execução da análise anterior à inclusão dos dois arquivos de teste. |
-| Build do frontend | **Aprovado com aviso de tamanho dos arquivos gerados** | O aviso não impediu a compilação; execução anterior à inclusão dos dois arquivos de teste. |
+| Build do frontend | **Aprovado com aviso de tamanho dos arquivos gerados** | Reexecutado após a correção da apresentação da comparação parcial; o aviso não impediu a compilação. |
 
 Os sete testes ignorados na suíte comum são os testes de integração das coletas, habilitados separadamente por `RUN_DB_INTEGRATION_TESTS=true`. Eles passaram na execução dedicada. A mensagem de violação de restrição durante a integração é esperada pelo cenário que valida rollback.
 
@@ -82,20 +82,19 @@ Os typechecks atuais não abrangem os arquivos de teste: o frontend inclui `src`
 | Interrupção e recuperação do backend | **Aprovado conforme execução informada por Patricia** | Capturas e descrição registradas na task. |
 | Ranking com dados parciais retornados pela API | **Aprovado conforme execução informada por Patricia** | Capturas e descrição registradas na task. |
 | Mapa com coordenadas ausentes | **Preparação dos dados aprovada por teste automatizado** | `serviceGeoJson.test.ts`. Cenário visual com coordenadas ausentes não foi reproduzido de forma controlada. |
-| Filtros aplicados na plataforma | **Confirmar evidência manual** | Alternar 1h, 6h, 24h e 7d e conferir a atualização das análises e os parâmetros das consultas. |
-| Comparação na plataforma | **Confirmado evidência manual dos fluxos normais** | Selecionar serviços, alternar métricas e as visualizações temporal/consolidada. |
-| Responsividade e painéis | **Confirmado evidências dos responsáveis** | Desktop e celular; controles, gráficos, mapa e painéis devem permanecer utilizáveis. |
+| Filtros aplicados na plataforma | **Evidência manual dos fluxos normais confirmada por Patricia** | Alternar 1h, 6h, 24h e 7d e conferir a atualização das análises e os parâmetros das consultas. |
+| Comparação na plataforma | **Evidência manual dos fluxos normais confirmada por Patricia** | Seleção de serviços, alternância de métricas e das visualizações temporal/consolidada. |
+| Responsividade e painéis | **Evidências confirmadas por Patricia** | Conferência em desktop e celular de controles, gráficos, mapa e painéis. |
 | Login, acesso protegido e logout | **Suítes automatizadas aprovadas; confirmar evidência manual** | Executado o fluxo na plataforma e registrar o resultado. |
-| Falha HTTP isolada na comparação temporal | **Limitação identificada por análise do código; não validada manualmente** | Encaminhar a definição e correção da apresentação dos resultados parciais ao responsável pela interface. |
-| Aceite das regras de cada responsável | **Confirmação individual ainda necessária** | O histórico identifica contribuições e testes, mas não comprova a confirmação de cada integrante sobre suas regras. |
+| Falha HTTP isolada na comparação temporal | **Apresentação corrigida; validação manual pendente** | A tela mantém os históricos disponíveis junto do aviso de comparação parcial e identifica as consultas com falha. Confirmar visualmente com uma consulta bloqueada e outra bem-sucedida. |
 
 As evidências relatadas como registradas na task não foram copiadas ou inspecionadas neste levantamento. O endereço da task não foi informado; consultar os registros mantidos por Patricia.
 
-### Limitação da comparação parcial
+### Correção da apresentação da comparação parcial
 
-`useComparisonHistories.ts` utiliza `Promise.allSettled`, preserva os históricos recebidos e informa erro quando alguma consulta falha. Contudo, na versão consultada, `Analyses.tsx` condiciona a exibição do gráfico temporal à ausência de `comparisonHistoriesError`.
+`useComparisonHistories.ts` utiliza `Promise.allSettled`, preserva os históricos recebidos e informa erro quando alguma consulta falha. A condição de `Analyses.tsx` que escondia o gráfico temporal diante de qualquer erro foi removida. A tela agora exibe os históricos disponíveis junto de um aviso de comparação parcial e dos nomes dos serviços cujas consultas falharam. Se apenas um histórico responder, a tela informa essa limitação. Se nenhum responder, mantém a mensagem de erro sem exibir o gráfico.
 
-Assim, uma falha parcial pode ocultar o gráfico mesmo com históricos válidos no hook. A correção do carregamento não equivale à correção da apresentação. Os testes de gaps e de métricas consolidadas não comprovam esse cenário de requisições. A tentativa de bloqueio de uma consulta no navegador não foi concluída; o cenário não está aprovado manualmente.
+O aviso dos históricos aparece somente na evolução temporal, pois a comparação consolidada utiliza outra consulta. Os testes de gaps e de métricas consolidadas não comprovam esse cenário de requisições. A tentativa anterior de bloqueio de uma consulta no navegador não foi concluída; o cenário continua pendente de aprovação manual, mesmo com a correção implementada.
 
 ## Como reproduzir as verificações
 
@@ -135,11 +134,9 @@ docker compose exec frontend npm run build
 
 | Critério | Situação |
 | --- | --- |
-| Responsáveis entregam testes das próprias regras | Existem testes associados às entregas; confirmar individualmente a cobertura e as evidências de cada responsável. |
 | Patricia consolida a cobertura geral | Consolidada neste relatório, com distinção entre cobertura automatizada, evidências relatadas e pendências. |
 | Suíte comum permanece aprovada | Backend aprovado na análise anterior; frontend aprovado novamente com os dois arquivos novos. |
 | Integração PostgreSQL permanece aprovada | Sete testes aprovados na execução dedicada. |
 | Typechecks continuam aprovados | Últimas execuções aprovadas; repetir na versão integrada final se houver novas alterações. |
 | Build continua aprovado | Últimas execuções aprovadas; repetir na versão integrada final se houver novas alterações. |
 
-Este relatório não representa aprovação integral dos cenários ainda pendentes. Antes do encerramento, reunir as evidências manuais faltantes, definir o aceite da limitação conhecida e registrar a versão final integrada que foi validada.
