@@ -47,6 +47,7 @@ setError(null);
 
     async function loadHistory(authToken: string, selectedServiceId: number) {
       if (disposed || requestInFlight) return;
+      if (document.hidden) return;
 
       requestInFlight = true;
 

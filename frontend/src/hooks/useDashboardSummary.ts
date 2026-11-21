@@ -43,6 +43,13 @@ export function useDashboardSummary() {
         return;
       }
 
+      if (document.hidden) {
+        refreshTimer = window.setTimeout(() => {
+          void loadDashboard();
+        }, DASHBOARD_REFRESH_INTERVAL_MS);
+        return;
+      }
+
       const requestController =
         new AbortController();
 
