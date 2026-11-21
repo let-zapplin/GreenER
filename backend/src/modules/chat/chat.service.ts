@@ -3,11 +3,8 @@ import { AppError, ForbiddenError } from "../../shared/errors/AppError.js";
 import { SingleFlight, TtlCache } from "./chat.cache.js";
 import { DashboardService } from "../dashboard/dashboard.service.js";
 import { IndicadoresService } from "../indicadores/indicadores.service.js";
-import {
-  parseChatPeriod,
-  periodBounds,
-  periodPhrase,
-} from "./chat.period.js";
+import { ServicosService } from "../servicos/servicos.service.js";
+import { parseChatPeriod, periodBounds, periodPhrase } from "./chat.period.js";
 import {
   InMemoryChatStateStore,
   type ChatConversationState,
@@ -194,15 +191,13 @@ function resourceFacts(service: IndicatorService) {
   return {
     cpuAveragePercent:
       cpu.averagePercent === null ? null : round(cpu.averagePercent, 2),
-    cpuPeakPercent:
-      cpu.peakPercent === null ? null : round(cpu.peakPercent, 2),
+    cpuPeakPercent: cpu.peakPercent === null ? null : round(cpu.peakPercent, 2),
     memoryAverageGb:
       memory.averageGb === null ? null : round(memory.averageGb, 2),
     memoryPeakGb: memory.peakGb === null ? null : round(memory.peakGb, 2),
     diskAverageGb: disk.averageGb === null ? null : round(disk.averageGb, 2),
     diskPeakGb: disk.peakGb === null ? null : round(disk.peakGb, 2),
-    networkTotalGb:
-      network.totalGb === null ? null : round(network.totalGb, 3),
+    networkTotalGb: network.totalGb === null ? null : round(network.totalGb, 3),
   };
 }
 
@@ -262,7 +257,9 @@ const DATA_INTENTS = new Set<ChatIntent>([
   "RANKING_EMISSIONS",
   "RANKING_RESOURCE",
   "SERVICE_SUMMARY",
+  "SERVICE_LOCATION",
   "COMPARE_SERVICES",
+  "LOCATION_IMPACT",
   "ENVIRONMENT_SUMMARY",
 ]);
 
@@ -275,9 +272,7 @@ function hashHistory(history: ChatHistoryMessage[]): string {
     return "-";
   }
 
-  return createHash("sha1")
-    .update(JSON.stringify(history))
-    .digest("hex");
+  return createHash("sha1").update(JSON.stringify(history)).digest("hex");
 }
 
 function normalizeText(value: string): string {
@@ -335,6 +330,19 @@ function mentionsEmissions(text: string): boolean {
 function mentionsEnvironment(text: string): boolean {
   return /(ambiente|ambiental|panorama|visao geral|resumo geral|disponibilidade)/.test(
     text,
+  );
+}
+
+function mentionsLocation(text: string): boolean {
+  return /(localizacao|localizado|localizada|onde fica|onde esta|regiao|cidade|pais)/.test(
+    text,
+  );
+}
+
+function mentionsLocationImpact(text: string): boolean {
+  return (
+    mentionsLocation(text) &&
+    /(impacto|emissao|emissoes|co2|carbono|maior|mais)/.test(text)
   );
 }
 
@@ -469,10 +477,7 @@ function resourceMetricPeak(
   }
 }
 
-function roundResourceValue(
-  value: number,
-  metric: ChatResourceMetric,
-): number {
+function roundResourceValue(value: number, metric: ChatResourceMetric): number {
   return metric === "network" ? round(value, 4) : round(value, 2);
 }
 
@@ -531,6 +536,21 @@ function isFollowUp(message: string): boolean {
   return /^(e|agora|entao|tambem)\b/.test(text);
 }
 
+function wantsAllClarificationOptions(message: string): boolean {
+  const text = normalizeText(message).trim();
+
+  const asksToShow = /\b(mostre|mostrar|ver|liste|listar|exiba|exibir)\b/.test(
+    text,
+  );
+
+  const asksForAll =
+    /\b(todos|todas)\b/.test(text) ||
+    /\b(os|as)\s+\d+\b/.test(text) ||
+    /\blista completa\b/.test(text);
+
+  return asksToShow && asksForAll;
+}
+
 function isContextDependent(message: string): boolean {
   const text = normalizeText(message);
 
@@ -548,10 +568,7 @@ function isContextDependent(message: string): boolean {
   );
 }
 
-function isServiceOnlyMessage(
-  message: string,
-  serviceName: string,
-): boolean {
+function isServiceOnlyMessage(message: string, serviceName: string): boolean {
   const tokens = tokenize(message).filter(
     (token) => !SERVICE_STOPWORDS.has(token) && !/^\d+$/.test(token),
   );
@@ -607,9 +624,7 @@ function extractRequestedServiceName(message: string): string | null {
     .split(/\s+/)
     .filter(
       (token) =>
-        token !== "" &&
-        !SERVICE_STOPWORDS.has(token) &&
-        !/^\d+$/.test(token),
+        token !== "" && !SERVICE_STOPWORDS.has(token) && !/^\d+$/.test(token),
     );
 
   if (tokens.length === 0) {
@@ -631,9 +646,7 @@ function detectPeriodInMessage(message: string): ChatPeriod | null {
   }
 
   if (
-    /\b(24|vinte e quatro)\s+horas?\b|\b(1|um|uma)\s+dia\b|\bhoje\b/.test(
-      text,
-    )
+    /\b(24|vinte e quatro)\s+horas?\b|\b(1|um|uma)\s+dia\b|\bhoje\b/.test(text)
   ) {
     return "24h";
   }
@@ -777,8 +790,7 @@ function matchServicesInOrder(
   const kept: typeof found = [];
 
   for (const entry of [...found].sort(
-    (left, right) =>
-      right.end - right.start - (left.end - left.start),
+    (left, right) => right.end - right.start - (left.end - left.start),
   )) {
     const overlaps = kept.some(
       (other) => entry.start < other.end && other.start < entry.end,
@@ -858,9 +870,7 @@ function buildComparisonResolution(
 
     const normalized = normalizeText(name);
     push(
-      services.find(
-        (service) => normalizeText(service.name) === normalized,
-      ),
+      services.find((service) => normalizeText(service.name) === normalized),
     );
   }
 
@@ -929,9 +939,7 @@ function resolveFromPendingClarification(
 
   const messageTokens = new Set(tokenize(message));
   const matches = candidates.filter((candidate) =>
-    serviceNameTokens(candidate.name).some((token) =>
-      messageTokens.has(token),
-    ),
+    serviceNameTokens(candidate.name).some((token) => messageTokens.has(token)),
   );
 
   if (matches.length === 1) {
@@ -1023,6 +1031,36 @@ function classifyByRules(
   if (knowledgeIntent !== null) {
     return {
       intent: knowledgeIntent,
+      serviceName: null,
+      compareWith: null,
+      metric: null,
+    };
+  }
+
+  if (mentionsLocationImpact(text)) {
+    return {
+      intent: "LOCATION_IMPACT",
+      serviceName: null,
+      compareWith: null,
+      metric: null,
+    };
+  }
+
+  if (mentionsLocation(text) && resolution.kind !== "none") {
+    return {
+      intent: "SERVICE_LOCATION",
+      serviceName:
+        resolution.kind === "unique" ? resolution.service.name : null,
+      compareWith: null,
+      metric: null,
+    };
+  }
+
+  // Pergunta genérica sobre localização, sem indicar um serviço.
+  // A resposta será uma clarificação com os serviços disponíveis.
+  if (mentionsLocation(text)) {
+    return {
+      intent: "SERVICE_LOCATION",
       serviceName: null,
       compareWith: null,
       metric: null,
@@ -1153,10 +1191,13 @@ function isRulesClassificationConfident(
     case "ENVIRONMENT_SUMMARY":
     case "PROJECT_INFO":
     case "METHODOLOGY":
+    case "SERVICE_LOCATION":
+    case "LOCATION_IMPACT":
       return true;
 
     case "COMPARE_SERVICES":
       return (
+        (mentionsComparison(text) && mentionsService(text)) ||
         matchServicesInOrder(message, services, true).length >= 1 ||
         resolution.kind !== "none"
       );
@@ -1256,11 +1297,7 @@ function parseChatContext(value: unknown): ChatContext {
   const record = value as Record<string, unknown>;
 
   return {
-    page: normalizeOptionalString(
-      record.page,
-      "page",
-      MAX_CONTEXT_PAGE_LENGTH,
-    ),
+    page: normalizeOptionalString(record.page, "page", MAX_CONTEXT_PAGE_LENGTH),
     serviceName: normalizeOptionalString(
       record.serviceName,
       "serviceName",
@@ -1382,6 +1419,10 @@ export class ChatService {
     private readonly llm: ChatLlm = new OllamaClient(),
     private readonly now: () => Date = () => new Date(),
     private readonly states: ChatStateStore = new InMemoryChatStateStore(),
+    private readonly servicesCatalog: Pick<
+      ServicosService,
+      "listAll"
+    > = new ServicosService(),
   ) {
     const nowMs = () => this.now().getTime();
 
@@ -1484,15 +1525,16 @@ export class ChatService {
     const endISO = end.toISOString();
 
     // O modelo não consulta o banco: os dados chegam prontos das ferramentas do backend.
-    const indicators = await this.getIndicatorsCached(
-      period,
-      startISO,
-      endISO,
-    );
+    const indicators = await this.getIndicatorsCached(period, startISO, endISO);
     const activeServices = indicators.services.filter(
       (service) => service.status === "active",
     );
     const serviceNames = activeServices.map((service) => service.name);
+
+    const wantsExpandedClarification =
+      conversation?.pendingClarification !== null &&
+      conversation?.pendingClarification !== undefined &&
+      wantsAllClarificationOptions(message);
 
     const resolution = resolveServiceReference(
       message,
@@ -1511,6 +1553,7 @@ export class ChatService {
     let classificationFailed = !this.llm.enabled;
 
     if (
+      !wantsExpandedClarification &&
       !isRulesClassificationConfident(
         message,
         resolution,
@@ -1727,10 +1770,7 @@ export class ChatService {
       return cached;
     }
 
-    const indicators = await this.indicators.getIndicators(
-      startISO,
-      endISO,
-    );
+    const indicators = await this.indicators.getIndicators(startISO, endISO);
     this.indicatorsCache.set(period, indicators, INDICATORS_CACHE_TTL_MS);
 
     return indicators;
@@ -1883,9 +1923,7 @@ export class ChatService {
 
         if (
           active !== undefined &&
-          (mentionsEnergy(text) ||
-            mentionsEmissions(text) ||
-            isFollowUp(text))
+          (mentionsEnergy(text) || mentionsEmissions(text) || isFollowUp(text))
         ) {
           intent = "SERVICE_SUMMARY";
           resolution = { kind: "unique", service: active };
@@ -1977,6 +2015,38 @@ export class ChatService {
       (service) => service.status === "active",
     );
 
+    if (
+      conversation?.pendingClarification !== null &&
+      conversation?.pendingClarification !== undefined &&
+      wantsAllClarificationOptions(message)
+    ) {
+      const candidates = conversation.pendingClarification.candidates
+        .map((candidate) =>
+          activeServices.find(
+            (service) => service.serviceId === candidate.serviceId,
+          ),
+        )
+        .filter(
+          (service): service is IndicatorService => service !== undefined,
+        );
+
+      if (conversation.lastIntent === "SERVICE_LOCATION") {
+        return this.buildLocationClarification(
+          "Aqui estão todos os serviços disponíveis. De qual deles você quer saber a localização?",
+          candidates,
+          indicators,
+          true,
+        );
+      }
+
+      return this.buildClarification(
+        "Aqui estão todos os serviços disponíveis. Qual deles você quer consultar?",
+        candidates,
+        indicators,
+        true,
+      );
+    }
+    //Casos de intenção
     switch (merged.intent) {
       case "RANKING_ENERGY":
       case "RANKING_EMISSIONS":
@@ -2004,6 +2074,35 @@ export class ChatService {
               mentionsLowest(normalizeText(message)),
             );
       }
+
+      case "SERVICE_LOCATION": {
+        if (merged.resolution.kind === "ambiguous") {
+          return this.buildLocationClarification(
+            "Encontrei mais de um serviço com esse nome. De qual deles você quer saber a localização?",
+            merged.resolution.candidates,
+            indicators,
+          );
+        }
+
+        if (merged.resolution.kind === "none") {
+          if (activeServices.length > 1) {
+            return this.buildLocationClarification(
+              "De qual serviço você quer saber a localização?",
+              activeServices,
+              indicators,
+            );
+          }
+
+          if (activeServices.length === 1) {
+            return this.buildServiceLocation(activeServices[0], indicators);
+          }
+        }
+
+        return this.buildServiceLocation(merged.service, indicators);
+      }
+
+      case "LOCATION_IMPACT":
+        return this.buildLocationImpact(period, indicators);
 
       case "ENVIRONMENT_SUMMARY":
         return this.buildEnvironment(period, startISO, endISO);
@@ -2098,11 +2197,11 @@ export class ChatService {
     question: string,
     candidates: IndicatorService[],
     indicators: IndicatorsResult,
+    showAll = false,
   ): ChatDraft {
-    const visibleCandidates = candidates.slice(
-      0,
-      MAX_CLARIFICATION_OPTIONS,
-    );
+    const visibleCandidates = showAll
+      ? candidates
+      : candidates.slice(0, MAX_CLARIFICATION_OPTIONS);
     const truncated = candidates.length > visibleCandidates.length;
 
     const fullQuestion = truncated
@@ -2137,7 +2236,293 @@ export class ChatService {
         serviceId: service.serviceId,
         name: service.name,
       })),
+    };
+  }
+
+  private buildLocationClarification(
+    question: string,
+    candidates: IndicatorService[],
+    indicators: IndicatorsResult,
+    showAll = false,
+  ): ChatDraft {
+    const visibleCandidates = showAll
+      ? candidates
+      : candidates.slice(0, MAX_CLARIFICATION_OPTIONS);
+
+    const truncated = candidates.length > visibleCandidates.length;
+
+    const fullQuestion = truncated
+      ? `${question} Mostrando ${visibleCandidates.length} de ${candidates.length}; você também pode digitar o nome completo do serviço.`
+      : question;
+
+    return {
+      intent: "SERVICE_LOCATION",
+      answer: fullQuestion,
+      chart: null,
+      partial: false,
+
+      facts: {
+        clarification: true,
+        candidates: visibleCandidates.map((service) => ({
+          service: service.name,
+          serviceId: service.serviceId,
+        })),
+      },
+
+      activeService: null,
+
+      clarification: {
+        question: fullQuestion,
+        options: visibleCandidates.map((service) => ({
+          label: service.name,
+          message: `Onde fica o serviço ${service.name}?`,
+          serviceName: service.name,
+        })),
+      },
+
+      clarificationCandidates: candidates.map((service) => ({
+        serviceId: service.serviceId,
+        name: service.name,
+      })),
+    };
+  }
+
+  private async buildServiceLocation(
+    service: IndicatorService | null,
+    indicators: IndicatorsResult,
+  ): Promise<ChatDraft> {
+    if (service === null) {
+      return {
+        intent: "SERVICE_LOCATION",
+        answer: "Não consegui identificar o serviço informado.",
+        chart: null,
+        partial: false,
+        facts: {
+          availableServices: indicators.services
+            .filter((item) => item.status === "active")
+            .map((item) => item.name),
+        },
+        activeService: null,
+        clarification: null,
+        clarificationCandidates: [],
       };
+    }
+
+    const services = await this.servicesCatalog.listAll();
+
+    const storedService = services.find(
+      (item) => item.id_service === service.serviceId,
+    );
+
+    if (storedService === undefined) {
+      return {
+        intent: "SERVICE_LOCATION",
+        answer: `O serviço ${service.name} está associado à região ${service.regionCode}, mas não encontrei os detalhes completos da localização no catálogo.`,
+        chart: null,
+        partial: false,
+        facts: {
+          service: service.name,
+          regionCode: service.regionCode,
+        },
+        activeService: {
+          serviceId: service.serviceId,
+          name: service.name,
+        },
+        clarification: null,
+        clarificationCandidates: [],
+      };
+    }
+
+    const locationParts = [
+      storedService.city,
+      storedService.region,
+      storedService.country,
+    ].filter(
+      (value): value is string =>
+        typeof value === "string" && value.trim() !== "",
+    );
+
+    const locationText =
+      locationParts.length > 0
+        ? locationParts.join(", ")
+        : storedService.region_code;
+
+    return {
+      intent: "SERVICE_LOCATION",
+      answer: `O serviço ${service.name} está localizado em ${locationText}, na região ${storedService.region_code}.`,
+      chart: null,
+      partial: false,
+      facts: {
+        service: service.name,
+        location: {
+          regionCode: storedService.region_code,
+          country: storedService.country,
+          region: storedService.region,
+          city: storedService.city,
+          latitude: storedService.latitude,
+          longitude: storedService.longitude,
+        },
+      },
+      activeService: {
+        serviceId: service.serviceId,
+        name: service.name,
+      },
+      clarification: null,
+      clarificationCandidates: [],
+    };
+  }
+
+  private async buildLocationImpact(
+    period: ChatPeriod,
+    indicators: IndicatorsResult,
+  ): Promise<ChatDraft> {
+    const activeServices = indicators.services.filter(
+      (service) => service.status === "active",
+    );
+
+    const catalog = await this.servicesCatalog.listAll();
+
+    const locationsByRegion = new Map(
+      catalog.map((service) => [service.region_code, service]),
+    );
+
+    const regions = new Map<
+      string,
+      {
+        regionCode: string;
+        emissionsGco2e: number;
+        serviceCount: number;
+        validCarbonSampleCount: number;
+        partial: boolean;
+      }
+    >();
+
+    for (const service of activeServices) {
+      const regionCode =
+        service.regionalContext.regionCode ?? service.regionCode;
+
+      const totals = service.periodTotals;
+
+      const current = regions.get(regionCode) ?? {
+        regionCode,
+        emissionsGco2e: 0,
+        serviceCount: 0,
+        validCarbonSampleCount: 0,
+        partial: false,
+      };
+
+      current.serviceCount += 1;
+
+      current.validCarbonSampleCount += totals.validCarbonIntensityCount;
+
+      // Só soma emissões quando houve pelo menos
+      // uma amostra com fator de carbono válido.
+      if (totals.validCarbonIntensityCount > 0) {
+        current.emissionsGco2e += totals.emissionsGco2e;
+      }
+
+      current.partial =
+        current.partial ||
+        totals.isPartial ||
+        totals.validCarbonIntensityCount === 0;
+
+      regions.set(regionCode, current);
+    }
+
+    const ranking = [...regions.values()]
+      // Uma região sem nenhuma intensidade de carbono válida
+      // não deve aparecer artificialmente como "0 gCO₂e".
+      .filter((region) => region.validCarbonSampleCount > 0)
+      .sort((left, right) => right.emissionsGco2e - left.emissionsGco2e);
+
+    if (ranking.length === 0) {
+      return {
+        intent: "LOCATION_IMPACT",
+
+        answer: `Não encontrei emissões com dados de carbono válidos ${periodPhrase(period)} para comparar o impacto entre as regiões.`,
+
+        chart: null,
+
+        partial: true,
+
+        facts: {
+          ranking: [],
+          activeServiceCount: indicators.summary.activeServiceCount,
+        },
+
+        activeService: null,
+        clarification: null,
+        clarificationCandidates: [],
+      };
+    }
+
+    function regionLabel(regionCode: string) {
+      const location = locationsByRegion.get(regionCode);
+
+      if (location === undefined) {
+        return regionCode;
+      }
+
+      const parts = [location.city, location.region, location.country].filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim() !== "",
+      );
+
+      if (parts.length === 0) {
+        return regionCode;
+      }
+
+      return `${parts.join(", ")} (${regionCode})`;
+    }
+
+    const visibleRanking = ranking.slice(0, MAX_RANKING_ITEMS);
+
+    const top = visibleRanking[0];
+
+    const chart: ChatChart = {
+      type: "bar",
+      title: "Emissões de CO₂e por região",
+      unit: "gCO₂e",
+
+      data: visibleRanking.map((region) => ({
+        label: regionLabel(region.regionCode),
+        value: round(region.emissionsGco2e),
+      })),
+    };
+
+    const partial =
+      indicators.summary.isPartial || ranking.some((region) => region.partial);
+
+    return {
+      intent: "LOCATION_IMPACT",
+
+      answer:
+        `${capitalize(periodPhrase(period))}, ` +
+        `a localização com maior impacto ambiental, considerando as emissões estimadas de CO₂e, ` +
+        `foi ${regionLabel(top.regionCode)}, com ` +
+        `${formatNumber(round(top.emissionsGco2e))} gCO₂e ` +
+        `somados entre ${top.serviceCount} ` +
+        `${top.serviceCount === 1 ? "serviço ativo" : "serviços ativos"}.`,
+
+      chart,
+
+      partial,
+
+      facts: {
+        ranking: ranking.map((region) => ({
+          regionCode: region.regionCode,
+          location: regionLabel(region.regionCode),
+          emissionsGco2e: round(region.emissionsGco2e),
+          serviceCount: region.serviceCount,
+          validCarbonSampleCount: region.validCarbonSampleCount,
+          partial: region.partial,
+        })),
+      },
+
+      activeService: null,
+      clarification: null,
+      clarificationCandidates: [],
+    };
   }
 
   private buildRanking(
@@ -2184,7 +2569,7 @@ export class ChatService {
         activeService: null,
         clarification: null,
         clarificationCandidates: [],
-          };
+      };
     }
 
     const [top, ...rest] = ranking;
@@ -2246,7 +2631,7 @@ export class ChatService {
       },
       clarification: null,
       clarificationCandidates: [],
-      };
+    };
   }
 
   private buildResourceRanking(
@@ -2401,7 +2786,8 @@ export class ChatService {
 
     const first = comparison.first;
     const second = comparison.second;
-    const partial = first.periodTotals.isPartial || second.periodTotals.isPartial;
+    const partial =
+      first.periodTotals.isPartial || second.periodTotals.isPartial;
     const partialNote = partial
       ? " Os dados de pelo menos um dos serviços são parciais por lacunas de coleta no período."
       : "";
@@ -2478,10 +2864,7 @@ export class ChatService {
       );
       const percent =
         Math.min(firstRounded, secondRounded) > 0
-          ? round(
-              (difference / Math.min(firstRounded, secondRounded)) * 100,
-              2,
-            )
+          ? round((difference / Math.min(firstRounded, secondRounded)) * 100, 2)
           : null;
 
       const deltaSentence =
@@ -2641,7 +3024,7 @@ export class ChatService {
       activeService: null,
       clarification: null,
       clarificationCandidates: [],
-      };
+    };
   }
 
   private async buildServiceSummary(
@@ -2675,7 +3058,7 @@ export class ChatService {
         activeService: null,
         clarification: null,
         clarificationCandidates: [],
-          };
+      };
     }
 
     const totals = service.periodTotals;
@@ -2794,8 +3177,7 @@ export class ChatService {
 
       chartData.push({
         label: formatSampleLabel(sample.attemptedAt, period),
-        value:
-          sample.energyKwh === null ? null : round(sample.energyKwh),
+        value: sample.energyKwh === null ? null : round(sample.energyKwh),
       });
     }
 
@@ -2896,9 +3278,9 @@ export class ChatService {
       },
       clarification: null,
       clarificationCandidates: [],
-      };
+    };
   }
-
+  //sugestões de perguntas
   private buildSuggestions(
     intent: ChatIntent,
     period: ChatPeriod,
@@ -2932,6 +3314,33 @@ export class ChatService {
     };
 
     switch (intent) {
+      case "LOCATION_IMPACT":
+        add("Maior consumo", "Qual serviço gasta mais energia?");
+
+        add("Maiores emissões", "Qual serviço emite mais CO₂?");
+
+        add(
+          otherPeriodLabel,
+          "Qual região teve maior impacto ambiental?",
+          otherPeriod,
+        );
+
+        break;
+
+      case "SERVICE_LOCATION":
+        if (activeService !== null) {
+          add(
+            `Detalhar ${activeService.name}`,
+            `Como está o serviço ${activeService.name}?`,
+          );
+        }
+
+        add("Impacto por região", "Qual região teve maior impacto ambiental?");
+
+        add("Panorama ambiental", "Resumo ambiental do período");
+
+        break;
+
       case "RANKING_ENERGY":
         add("Ver emissões", "Qual serviço emite mais CO₂ no mesmo período?");
         if (activeService !== null) {
@@ -3002,7 +3411,10 @@ export class ChatService {
         break;
 
       case "PROJECT_INFO":
-        add("Como as contas funcionam", "Como o GreenER calcula energia e CO₂?");
+        add(
+          "Como as contas funcionam",
+          "Como o GreenER calcula energia e CO₂?",
+        );
         add("Funcionalidades", "Quais são as funcionalidades do GreenER?");
         add("Maior consumo", "Qual serviço gasta mais energia?");
         break;
@@ -3050,8 +3462,7 @@ export class ChatService {
     }
 
     const pendingClarification =
-      draft.clarification !== null &&
-      draft.clarificationCandidates.length > 0
+      draft.clarification !== null && draft.clarificationCandidates.length > 0
         ? {
             kind: "SERVICE" as const,
             question: draft.clarification.question,

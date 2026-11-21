@@ -1,5 +1,6 @@
 import { DashboardService } from "../dashboard/dashboard.service.js";
 import { IndicadoresService } from "../indicadores/indicadores.service.js";
+import { ServicosService } from "../servicos/servicos.service.js";
 import { ChatService } from "./chat.service.js";
 import { chatStateStore } from "./chat.state.js";
 import { OllamaClient } from "./ollama.client.js";
@@ -11,5 +12,6 @@ export function createChatService(): ChatService {
     new OllamaClient(),
     () => new Date(),
     chatStateStore,
+    new ServicosService(),
   );
 }
