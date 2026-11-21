@@ -57,9 +57,9 @@ emissão estimada de CO₂e
 | --- | --- | --- | --- | --- |
 | **Sprint 1** | 28/09–19/10/2026 | [`sprint-1.md`](docs/sprints/sprint-1.md) | [▶ Vídeo](https://youtu.be/pGdiciJxTPw) | ✅ Finalizada |
 | **Sprint 2** | 20/10–09/11/2026 | [`sprint-2.md`](docs/sprints/sprint-2.md) | [▶ Vídeo](https://youtu.be/qW38NnthF8Q) | 🟡 Incremento tecnicamente validado; Sprint Review pendente |
-| **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | A definir | ⏳ Planejada |
+| **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | A definir | ✅ Concluída |
 
-> A visualização geográfica começou antecipadamente no fim da Sprint 2 e será consolidada na Sprint 3.
+> A visualização geográfica foi antecipada da Sprint 3 e integrada ao Monitoramento. Ranking, comparação e refinamentos finais de análise foram concluídos na Sprint 3.
 
 ---
 
@@ -90,7 +90,9 @@ emissão estimada de CO₂e
 - gráfico temporal;
 - identificação de lacunas;
 - navegação a partir do Monitoramento;
-- base preparada para ranking, comparação e filtros na Sprint 3.
+- ranking por energia ou CO₂e;
+- comparação de serviços e períodos;
+- filtros temporais para explorar os dados.
 
 </td>
 </tr>
@@ -107,7 +109,14 @@ Também estão implementados:
   modo regras;
 - ✅ persistência PostgreSQL após reinicialização dos containers;
 - 🔄 reformulação visual do Monitoramento — TEC37 em revisão;
-- 🔄 visualização geográfica — US13 antecipada da Sprint 3 e em revisão no fechamento da Sprint 2.
+- ✅ visualização geográfica — US13 antecipada e integrada ao Monitoramento.
+
+### Arquitetura de desempenho — TEC26
+
+`Home`, `Monitoring` e `Analyses` usam lazy loading para reduzir o JavaScript da
+entrada inicial. A pausa do polling em abas ocultas ainda não está implementada no
+código atual: os hooks não verificam a visibilidade da aba nem suspendem suas
+consultas; o navegador pode aplicar seu próprio throttling em segundo plano.
 
 ---
 
