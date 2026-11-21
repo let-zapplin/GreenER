@@ -79,6 +79,10 @@ Conhecimento: base curada; o Ollama apenas reescreve
 Frontend renderiza texto + especificação do gráfico
 ```
 
+O histórico recebido pela API não é enviado integralmente ao modelo: o Ollama recebe
+no máximo as **últimas 6 mensagens** na classificação e as **últimas 4 mensagens** na
+redação. O endpoint aceita até 12 mensagens para manter a continuidade da conversa.
+
 Por que não deixar o modelo consultar o banco:
 
 - **Precisão:** o modelo pode inventar serviços, números ou períodos.
@@ -102,11 +106,18 @@ nada.
 | `RANKING_EMISSIONS` | “Qual serviço emite mais CO₂?” | `IndicadoresService.getIndicators` | Barras, top 5 em gCO₂e |
 | `RANKING_RESOURCE` | “Qual serviço usa mais CPU?”, “Qual serviço usa mais memória?” | `IndicadoresService.getIndicators` | Barras, top 5 em % ou GB da métrica pedida |
 | `SERVICE_SUMMARY` | “Como está o serviço X?”, “Qual o uso de CPU do serviço X?” | `IndicadoresService.getIndicators` + `getServiceHistory` | Linha do consumo em kWh ou da métrica de recurso pedida |
+| `SERVICE_LOCATION` | “Onde fica o serviço X?” | Catálogo de serviços | Nenhum |
 | `COMPARE_SERVICES` | “Compare o serviço X com o serviço Y”, “Compare a CPU de X com Y” | `IndicadoresService.getIndicators` | Barras com o consumo ou a métrica de recurso pedida |
+| `LOCATION_IMPACT` | “Qual região tem maior impacto ambiental?” | `IndicadoresService.getIndicators` + catálogo de serviços | Barras, top 5 em gCO₂e |
 | `ENVIRONMENT_SUMMARY` | “Panorama ambiental do período” | `DashboardService.getSummary` | Barras de disponibilidade |
 | `PROJECT_INFO` | “O que é o GreenER?”, “Quem fez o projeto?” | Base curada em `chat.knowledge.ts` | Nenhum |
 | `METHODOLOGY` | “Como a energia é calculada?”, “Quais são as limitações?” | Base curada em `chat.knowledge.ts` | Nenhum |
 | `OUT_OF_SCOPE` | Qualquer outro assunto | Nenhuma | Nenhum |
+
+O contrato do backend contém **11 intenções**. `SERVICE_LOCATION` e
+`LOCATION_IMPACT` são resolvidas deterministicamente pelas regras do backend; elas não
+fazem parte das 9 intenções listadas no prompt do classificador nem do tipo atual do
+frontend. As outras nove intenções são compartilhadas por esses contratos.
 
 ### Clarificação e continuidade
 
@@ -558,6 +569,11 @@ com base em `chart.type`. O modelo **não gera código de gráfico**.
 `OLLAMA_TIMEOUT_MS` e `OLLAMA_NUM_CTX` são validados como inteiros positivos.
 `OLLAMA_ENABLED` aceita `true/false`, `1/0`, `yes/no`, `on/off`.
 
+Na chamada de classificação, o cliente usa `temperature: 0`, `num_predict: 140` e
+`format: "json"`. Na redação de conhecimento, usa `temperature: 0.2` e
+`num_predict: 220`; não define `format`, pois espera texto livre. O limite `num_ctx`
+aplica-se às duas chamadas.
+
 ### Consumo de tokens e limites
 
 O GreenER usa **Ollama local**, portanto **não há cobrança por token**. Não existe
@@ -846,7 +862,9 @@ recebidas.
 
 - **JWT obrigatório** em `POST /api/chat`.
 - **Sem acesso do modelo ao banco**: apenas o backend consulta o PostgreSQL.
-- **Ferramentas allowlisted**: só existem as sete intenções implementadas.
+- **Ferramentas allowlisted**: o contrato do backend define 11 intenções; 9 estão no
+  prompt e no tipo do frontend, e `SERVICE_LOCATION` e `LOCATION_IMPACT` são
+  resolvidas deterministicamente no backend.
 - **Somente leitura**: nenhuma operação de escrita é exposta.
 - **Validação de entrada**: mensagem não vazia, até 500 caracteres; período em lista
   fechada; `conversationId`, contexto e histórico com formato e tamanho limitados.
@@ -865,6 +883,25 @@ recebidas.
   latência e resultado (`outcome`), e falhas que acionam o modo regras geram aviso sem
   registrar a pergunta ou a resposta.
 - **Erros internos**: o middleware global devolve mensagem genérica, sem stack trace.
+
+### Memória e caches
+
+Os estados e caches são mantidos em memória por processo. Os TTLs são definidos por
+tipo de dado, não por um cache geral único:
+
+| Estado ou cache | TTL | Limite |
+| --- | ---: | ---: |
+| Estado da conversa | 30 min | 500 conversas |
+| Classificação | 30 min | 500 entradas |
+| Respostas de conhecimento | 30 min | Parte do limite compartilhado de 200 respostas |
+| Respostas de dados | 60 s | Parte do limite compartilhado de 200 respostas |
+| Respostas degradadas | 30 s | Parte do limite compartilhado de 200 respostas |
+| Indicadores por período | 15 s | 16 períodos |
+
+O estado da conversa recebe novo `updatedAt` quando uma resposta é salva. A expiração
+é verificada sob demanda, sem tarefa periódica de limpeza. Nos caches TTL, uma leitura
+não renova o prazo da entrada; entradas expiradas são removidas ao serem consultadas
+ou durante uma gravação. Os acessos atualizam a ordem usada para descarte LRU.
 
 ### Limitações do protótipo
 
