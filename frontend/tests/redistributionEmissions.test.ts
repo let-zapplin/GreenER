@@ -10,7 +10,7 @@ test("calcula a variação percentual positiva e negativa", () => {
   assert.equal(
     calculateEmissionDifferencePercent({
       observedEmissionsGco2e: 100,
-      projectedEmissionsGco2e: 125,
+      comparableProjectedEmissionsGco2e: 125,
       validEnergySampleCount: 2,
       validObservedEmissionSampleCount: 2,
     }),
@@ -19,7 +19,7 @@ test("calcula a variação percentual positiva e negativa", () => {
   assert.equal(
     calculateEmissionDifferencePercent({
       observedEmissionsGco2e: 100,
-      projectedEmissionsGco2e: 80,
+      comparableProjectedEmissionsGco2e: 80,
       validEnergySampleCount: 2,
       validObservedEmissionSampleCount: 2,
     }),
@@ -31,16 +31,27 @@ test("não calcula variação sem cobertura comparável ou com base zero", () =>
   assert.equal(
     calculateEmissionDifferencePercent({
       observedEmissionsGco2e: 100,
-      projectedEmissionsGco2e: 125,
+      comparableProjectedEmissionsGco2e: 80,
       validEnergySampleCount: 2,
       validObservedEmissionSampleCount: 1,
     }),
+    -20,
+  );
+
+  assert.equal(
+    calculateEmissionDifferencePercent({
+      observedEmissionsGco2e: 100,
+      comparableProjectedEmissionsGco2e: 80,
+      validEnergySampleCount: 1,
+      validObservedEmissionSampleCount: 2,
+    }),
     null,
   );
+
   assert.equal(
     calculateEmissionDifferencePercent({
       observedEmissionsGco2e: null,
-      projectedEmissionsGco2e: 10,
+      comparableProjectedEmissionsGco2e: 10,
       validEnergySampleCount: 0,
       validObservedEmissionSampleCount: 0,
     }),
@@ -49,7 +60,7 @@ test("não calcula variação sem cobertura comparável ou com base zero", () =>
   assert.equal(
     calculateEmissionDifferencePercent({
       observedEmissionsGco2e: 0,
-      projectedEmissionsGco2e: 0,
+      comparableProjectedEmissionsGco2e: 0,
       validEnergySampleCount: 1,
       validObservedEmissionSampleCount: 1,
     }),
@@ -57,45 +68,45 @@ test("não calcula variação sem cobertura comparável ou com base zero", () =>
   );
 });
 
-test("subtotaliza somente serviços com ambas as emissões calculáveis", () => {
+test("subtotaliza serviços com emissão observada e projeção comparável calculáveis", () => {
   const result = calculateRedistributionEmissionSubtotal([
     {
       observedEmissionsGco2e: 10,
-      projectedEmissionsGco2e: 8,
+      comparableProjectedEmissionsGco2e: 8,
       validEnergySampleCount: 1,
       validObservedEmissionSampleCount: 1,
     },
     {
       observedEmissionsGco2e: null,
-      projectedEmissionsGco2e: 100,
+      comparableProjectedEmissionsGco2e: 100,
       validEnergySampleCount: 1,
       validObservedEmissionSampleCount: 0,
     },
     {
       observedEmissionsGco2e: 30,
-      projectedEmissionsGco2e: null,
+      comparableProjectedEmissionsGco2e: null,
       validEnergySampleCount: 2,
       validObservedEmissionSampleCount: 2,
     },
     {
       observedEmissionsGco2e: 10,
-      projectedEmissionsGco2e: 18,
+      comparableProjectedEmissionsGco2e: 18,
       validEnergySampleCount: 2,
       validObservedEmissionSampleCount: 2,
     },
     {
       observedEmissionsGco2e: 100,
-      projectedEmissionsGco2e: 200,
+      comparableProjectedEmissionsGco2e: 80,
       validEnergySampleCount: 2,
       validObservedEmissionSampleCount: 1,
     },
   ]);
 
   assert.deepEqual(result, {
-    comparableServiceCount: 2,
-    observedEmissionsGco2e: 20,
-    projectedEmissionsGco2e: 26,
-    differencePercent: 30,
+    comparableServiceCount: 3,
+    observedEmissionsGco2e: 120,
+    projectedEmissionsGco2e: 106,
+    differencePercent: -11.666666666666666,
   });
 });
 

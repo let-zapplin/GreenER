@@ -845,6 +845,10 @@ A busca de alocações com restrições é atualmente recursiva, decisão tomada
 
 Snapshots mais antigos que `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão) são excluídos das regiões elegíveis. Se não houver nenhuma região elegível, a requisição retorna `503`. Somente serviços com status `active` participam. Sem nenhuma amostra de energia válida, o serviço permanece na região atual, com energia e emissões projetadas como `null`. `allocations[].isPartial` indica cobertura incompleta de energia; o `isPartial` geral também fica `true` quando há cobertura incompleta das emissões observadas.
 
+A resposta diferencia a projeção total da projeção comparável. projectedEmissionsGco2e considera toda a energia calculável do serviço, enquanto comparableProjectedEmissionsGco2e considera apenas a energia das amostras que também possuem intensidade de carbono válida. Essa segunda medida permite comparar o cenário observado e o projetado sobre a mesma cobertura de dados, mesmo quando a intensidade de carbono está disponível apenas para parte das coletas.
+
+validEnergySampleCount informa quantas amostras possuem energia calculável e validObservedEmissionSampleCount quantas delas também permitem calcular emissão observada. A comparação percentual é possível quando existe ao menos uma amostra com emissão observada válida; não é necessário que as duas contagens sejam iguais.
+
 **Corpo da requisição:**
 
 ```json

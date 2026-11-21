@@ -81,6 +81,7 @@ export type ServiceRedistributionAllocation = {
   totalSampleCount: number;
   isPartial: boolean;
   projectedEmissionsGco2e: number | null;
+  comparableProjectedEmissionsGco2e: number | null;
 };
 
 export type ServiceRedistributionRegion = {

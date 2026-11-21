@@ -66,6 +66,7 @@ export interface ServiceRedistributionAllocation {
   totalSampleCount: number;
   isPartial: boolean;
   projectedEmissionsGco2e: number | null;
+  comparableProjectedEmissionsGco2e: number | null;
 }
 
 export interface ServiceRedistributionRegion {
@@ -118,8 +119,7 @@ type ProjectionIndicatorsService = Pick<
 
 export class ProjecoesService {
   constructor(
-    private readonly indicadoresService: ProjectionIndicatorsService =
-      new IndicadoresService(),
+    private readonly indicadoresService: ProjectionIndicatorsService = new IndicadoresService(),
 
     private readonly repository: Pick<
       ProjecoesRepository,
@@ -353,10 +353,7 @@ export class ProjecoesService {
     );
     const currentRegionCounts = new Map<string, number>();
     const energyBearingServices: EnergyBearingService[] = [];
-    const serviceById = new Map<
-      number,
-      (typeof activeServices)[number]
-    >();
+    const serviceById = new Map<number, (typeof activeServices)[number]>();
 
     for (const service of activeServices) {
       serviceById.set(service.serviceId, service);
@@ -380,6 +377,7 @@ export class ProjecoesService {
           totalSampleCount: collectionCount,
           isPartial: true,
           projectedEmissionsGco2e: null,
+          comparableProjectedEmissionsGco2e: null,
         });
 
         if (freshRegionCodes.has(service.regionCode)) {
@@ -416,8 +414,7 @@ export class ProjecoesService {
     if (
       (occupancyPolicy === "preserve_current_counts" &&
         hasCurrentServicesInUnavailableRegions) ||
-      (occupancyPolicy === "balanced" &&
-        hasFixedServicesInUnavailableRegions)
+      (occupancyPolicy === "balanced" && hasFixedServicesInUnavailableRegions)
     ) {
       throw new AppError(
         "Não é possível cumprir a política de ocupação com as regiões elegíveis e os serviços fixos",
@@ -471,9 +468,14 @@ export class ProjecoesService {
         );
       }
 
-      const { validMetricCount, collectionCount } = indicator.periodTotals;
-      const validObservedEmissionSampleCount =
-        indicator.periodTotals.validCarbonIntensityCount;
+      const {
+        validMetricCount,
+        validCarbonIntensityCount,
+        collectionCount,
+        energyKwhWithCarbonIntensity,
+      } = indicator.periodTotals;
+
+      const validObservedEmissionSampleCount = validCarbonIntensityCount;
       return {
         serviceId: indicator.serviceId,
         name: indicator.name,
@@ -490,6 +492,10 @@ export class ProjecoesService {
         isPartial: validMetricCount < collectionCount,
         projectedEmissionsGco2e:
           service.energyKwh * region.carbonIntensityGco2ePerKwh,
+        comparableProjectedEmissionsGco2e:
+          validObservedEmissionSampleCount === 0
+            ? null
+            : energyKwhWithCarbonIntensity * region.carbonIntensityGco2ePerKwh,
       };
     });
 
@@ -521,8 +527,7 @@ export class ProjecoesService {
       regions: freshRegions.map((region) => ({
         regionCode: region.regionCode,
         serviceCount: finalRegionCounts.get(region.regionCode) ?? 0,
-        carbonIntensityGco2ePerKwh:
-          region.carbonIntensityGco2ePerKwh,
+        carbonIntensityGco2ePerKwh: region.carbonIntensityGco2ePerKwh,
         renewableSharePercent: region.renewableSharePercent,
         snapshotRegisteredAt: region.registeredAt,
       })),
@@ -542,8 +547,7 @@ export class ProjecoesService {
   }
 
   async listAvailableRegions() {
-    const regions =
-     await this.repository.listAvailableRegions();
+    const regions = await this.repository.listAvailableRegions();
 
     return regions.map((region) => ({
       regionCode: region.regionCode,
@@ -616,8 +620,7 @@ export class ProjecoesService {
     if (policy === "unconstrained") {
       for (const service of services) {
         const bestRegion = regions.reduce((best, region) =>
-          region.carbonIntensityGco2ePerKwh <
-          best.carbonIntensityGco2ePerKwh
+          region.carbonIntensityGco2ePerKwh < best.carbonIntensityGco2ePerKwh
             ? region
             : best,
         );
@@ -649,7 +652,7 @@ export class ProjecoesService {
     const regionCounts = new Map(initialRegionCounts);
     const bestAssignments = new Map<number, string>();
     let bestEmissions = Number.POSITIVE_INFINITY;
-    
+
     // Keep the recursive search while the expected service and region counts stay small.
     // Revisit this approach if the redistribution workload grows.
     const search = (serviceIndex: number, projectedEmissions: number) => {
@@ -727,16 +730,13 @@ export class ProjecoesService {
         const assignedCount = regionCounts.get(region.regionCode) ?? 0;
         const regionCapacity =
           policy === "preserve_current_counts"
-            ? targetRegionCounts?.get(region.regionCode) ?? 0
+            ? (targetRegionCounts?.get(region.regionCode) ?? 0)
             : maximumServicesPerRegion;
         if (assignedCount >= regionCapacity) {
           continue;
         }
 
-        regionCounts.set(
-          region.regionCode,
-          assignedCount + 1,
-        );
+        regionCounts.set(region.regionCode, assignedCount + 1);
         assignments.set(service.serviceId, region.regionCode);
         //RECURSÃO
         search(

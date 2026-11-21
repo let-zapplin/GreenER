@@ -361,6 +361,7 @@ describe("ProjecoesService.redistributeServices", () => {
     status = "active",
     regionCode,
     energyKwh,
+    energyKwhWithCarbonIntensity = energyKwh,
     validMetricCount,
     observedEmissionsGco2e = energyKwh * 10,
     validObservedEmissionSampleCount = validMetricCount,
@@ -370,6 +371,7 @@ describe("ProjecoesService.redistributeServices", () => {
     status?: string;
     regionCode: string;
     energyKwh: number;
+    energyKwhWithCarbonIntensity?: number;
     validMetricCount: number;
     observedEmissionsGco2e?: number;
     validObservedEmissionSampleCount?: number;
@@ -382,6 +384,7 @@ describe("ProjecoesService.redistributeServices", () => {
       regionCode,
       periodTotals: {
         energyKwh,
+        energyKwhWithCarbonIntensity,
         emissionsGco2e: observedEmissionsGco2e,
         validMetricCount,
         validCarbonIntensityCount: validObservedEmissionSampleCount,
@@ -520,6 +523,59 @@ describe("ProjecoesService.redistributeServices", () => {
       projectedEmissionsGco2e: 1000,
     });
   });
+
+  it(
+  "projeta uma emissão comparável usando somente a energia com cobertura de carbono",
+  async () => {
+    mockRedistributionData(
+      [
+        createServiceIndicator({
+          serviceId: 7,
+
+          regionCode: "BR-SP",
+
+          energyKwh: 10,
+
+          energyKwhWithCarbonIntensity: 8,
+
+          validMetricCount: 2,
+
+          validObservedEmissionSampleCount: 1,
+
+          observedEmissionsGco2e: 800,
+
+          collectionCount: 2,
+        }),
+      ],
+
+      [
+        createRegion("BR-SP", 100),
+        createRegion("CA-QC", 20),
+      ],
+    );
+
+    const result =
+      await service.redistributeServices(
+        start,
+        end,
+        "unconstrained",
+      );
+
+    expect(result.allocations[0]).toMatchObject({
+      energyKwh: 10,
+
+      validEnergySampleCount: 2,
+
+      validObservedEmissionSampleCount: 1,
+
+      observedEmissionsGco2e: 800,
+
+      projectedEmissionsGco2e: 200,
+
+      comparableProjectedEmissionsGco2e: 160,
+    });
+  },
+);
 
   it("marca o resultado parcial quando a cobertura de emissão observada é menor", async () => {
     mockRedistributionData(

@@ -1,6 +1,8 @@
 export type RedistributionEmissionValues = {
   observedEmissionsGco2e: number | null;
-  projectedEmissionsGco2e: number | null;
+
+  comparableProjectedEmissionsGco2e: number | null;
+
   validEnergySampleCount: number;
   validObservedEmissionSampleCount: number;
 };
@@ -16,7 +18,10 @@ export function hasComparableEmissionCoverage(
   validEnergySampleCount: number,
   validObservedEmissionSampleCount: number,
 ): boolean {
-  return validEnergySampleCount === validObservedEmissionSampleCount;
+  return (
+    validObservedEmissionSampleCount > 0 &&
+    validObservedEmissionSampleCount <= validEnergySampleCount
+  );
 }
 
 export function calculateEmissionDifferencePercent(
@@ -24,7 +29,7 @@ export function calculateEmissionDifferencePercent(
 ): number | null {
   const {
     observedEmissionsGco2e,
-    projectedEmissionsGco2e,
+    comparableProjectedEmissionsGco2e,
     validEnergySampleCount,
     validObservedEmissionSampleCount,
   } = values;
@@ -35,14 +40,14 @@ export function calculateEmissionDifferencePercent(
       validObservedEmissionSampleCount,
     ) ||
     observedEmissionsGco2e === null ||
-    projectedEmissionsGco2e === null ||
+    comparableProjectedEmissionsGco2e === null ||
     observedEmissionsGco2e === 0
   ) {
     return null;
   }
 
   return (
-    ((projectedEmissionsGco2e - observedEmissionsGco2e) /
+    ((comparableProjectedEmissionsGco2e - observedEmissionsGco2e) /
       observedEmissionsGco2e) *
     100
   );
@@ -53,7 +58,8 @@ export function calculateRedistributionEmissionSubtotal(
 ): RedistributionEmissionSubtotal {
   const comparableEmissions = allocations.flatMap((allocation) => {
     const observedEmissionsGco2e = allocation.observedEmissionsGco2e;
-    const projectedEmissionsGco2e = allocation.projectedEmissionsGco2e;
+    const projectedEmissionsGco2e =
+      allocation.comparableProjectedEmissionsGco2e;
 
     if (
       observedEmissionsGco2e === null ||
@@ -66,15 +72,20 @@ export function calculateRedistributionEmissionSubtotal(
       return [];
     }
 
-    return [
-      {
-        observedEmissionsGco2e,
-        projectedEmissionsGco2e,
-        validEnergySampleCount: allocation.validEnergySampleCount,
-        validObservedEmissionSampleCount:
-          allocation.validObservedEmissionSampleCount,
-      },
-    ];
+return [
+  {
+    observedEmissionsGco2e,
+
+    comparableProjectedEmissionsGco2e:
+      projectedEmissionsGco2e,
+
+    validEnergySampleCount:
+      allocation.validEnergySampleCount,
+
+    validObservedEmissionSampleCount:
+      allocation.validObservedEmissionSampleCount,
+  },
+];
   });
 
   if (comparableEmissions.length === 0) {
@@ -90,8 +101,11 @@ export function calculateRedistributionEmissionSubtotal(
     (total, emissions) => total + emissions.observedEmissionsGco2e,
     0,
   );
-  const projectedEmissionsGco2e = comparableEmissions.reduce(
-    (total, emissions) => total + emissions.projectedEmissionsGco2e,
+  const projectedEmissionsGco2e =
+  comparableEmissions.reduce(
+    (total, emissions) =>
+      total +
+      (emissions.comparableProjectedEmissionsGco2e ?? 0),
     0,
   );
   const validEnergySampleCount = comparableEmissions.reduce(
@@ -99,8 +113,7 @@ export function calculateRedistributionEmissionSubtotal(
     0,
   );
   const validObservedEmissionSampleCount = comparableEmissions.reduce(
-    (total, emissions) =>
-      total + emissions.validObservedEmissionSampleCount,
+    (total, emissions) => total + emissions.validObservedEmissionSampleCount,
     0,
   );
 
@@ -108,13 +121,12 @@ export function calculateRedistributionEmissionSubtotal(
     comparableServiceCount: comparableEmissions.length,
     observedEmissionsGco2e,
     projectedEmissionsGco2e,
-    differencePercent: calculateEmissionDifferencePercent(
-      {
-        observedEmissionsGco2e,
-        projectedEmissionsGco2e,
-        validEnergySampleCount,
-        validObservedEmissionSampleCount,
-      },
-    ),
+    differencePercent: calculateEmissionDifferencePercent({
+      observedEmissionsGco2e,
+      comparableProjectedEmissionsGco2e:
+      projectedEmissionsGco2e,
+      validEnergySampleCount,
+      validObservedEmissionSampleCount,
+    }),
   };
 }

@@ -94,6 +94,7 @@ interface ServiceIndicators {
   };
   periodTotals: {
     energyKwh: number;
+    energyKwhWithCarbonIntensity: number;
     emissionsGco2e: number;
     collectionCount: number;
     validMetricCount: number;
@@ -143,11 +144,8 @@ function calculateEnergyBreakdown(
 
   return {
     cpuKwh:
-      (metrics.cpuPercent / 100) *
-      POWER_MODEL.cpuMaximumWatts *
-      intervalToKwh,
-    memoryKwh:
-      metrics.memoryGb * POWER_MODEL.memoryWattsPerGb * intervalToKwh,
+      (metrics.cpuPercent / 100) * POWER_MODEL.cpuMaximumWatts * intervalToKwh,
+    memoryKwh: metrics.memoryGb * POWER_MODEL.memoryWattsPerGb * intervalToKwh,
     diskKwh: metrics.diskGb * POWER_MODEL.diskWattsPerGb * intervalToKwh,
     networkKwh:
       metrics.networkGb * POWER_MODEL.networkWattsPerGb * intervalToKwh,
@@ -519,8 +517,7 @@ export class IndicadoresService {
       (sample) => sample.collectionIntervalSeconds !== null,
     );
     const cpuDurationSeconds = cpuSamples.reduce(
-      (total, sample) =>
-        total + (sample.collectionIntervalSeconds ?? 0),
+      (total, sample) => total + (sample.collectionIntervalSeconds ?? 0),
       0,
     );
     const cpuWeightedPercentSeconds = cpuSamples.reduce(
@@ -645,8 +642,7 @@ export class IndicadoresService {
           peakGb: diskPeakGb,
         },
         network: {
-          totalGb:
-            resourceSamples.length === 0 ? null : networkTotalGb,
+          totalGb: resourceSamples.length === 0 ? null : networkTotalGb,
         },
       },
       energyBreakdown:
@@ -670,6 +666,11 @@ export class IndicadoresService {
           (total, sample) => total + (sample.energyKwh ?? 0),
           0,
         ),
+        energyKwhWithCarbonIntensity: validCarbonSamples.reduce(
+          (total, sample) => total + (sample.energyKwh ?? 0),
+          0,
+        ),
+
         emissionsGco2e: validCarbonSamples.reduce(
           (total, sample) => total + (sample.emissionsGco2e ?? 0),
           0,
