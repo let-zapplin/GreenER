@@ -4,8 +4,8 @@ API do GreenER, responsável por integrar os serviços auxiliares da Unilaunch, 
 
 [← Voltar para o README principal](../README.md)
 
-> **Referência atualizada no fechamento da Sprint 2 — 09/11/2026.**  
-> O backend concentra as regras de negócio, cálculos ambientais, jobs periódicos, persistência e contratos HTTP do GreenER.
+> **Referência atualizada no fechamento da Sprint 3 — entrega final.**  
+> O backend concentra as regras de negócio, cálculos ambientais, jobs periódicos, persistência, projeções, segurança e contratos HTTP do GreenER.
 
 ---
 
@@ -68,11 +68,13 @@ backend/
     │   └── service-sync.job.ts
     ├── modules/
     │   ├── auth/
+    │   ├── chat/
     │   ├── coletas/
     │   ├── dashboard/
     │   ├── indicadores/
     │   ├── intensidades/
     │   ├── localidades/
+    │   ├── projecoes/
     │   └── servicos/
     └── shared/
         ├── errors/
@@ -113,7 +115,7 @@ Integrações externas são chamadas pelo domínio quando necessário, sem coloc
 
 ## 🔄 Fluxo Principal
 
-O ciclo funcional consolidado na Sprint 2 é:
+O ciclo base do GreenER é:
 
 ```text
 Metrics API /services
@@ -135,10 +137,19 @@ cálculo de energia + CO₂e
         ↓
 indicadores / dashboard / histórico
         ↓
-Frontend
+Monitoramento + Análises
+        ↓
+dados consolidados para Karma e Projeções
 ```
 
 O backend não depende de dados simulados no frontend para os indicadores principais.
+
+Na Sprint 3, o backend passou a oferecer dois novos fluxos de alto nível:
+
+- **Projeções e redistribuição:** consultas regionais e modelos de alocação de serviços a partir dos dados consolidados;
+- **Assistente Karma:** respostas técnicas e operacionais baseadas no estado do projeto, no contexto ambiental e em indicadores persistidos.
+
+Esses recursos são expostos por rotas autenticadas e respeitam as mesmas regras de validação, erros e persistência usadas pelos módulos anteriores.
 
 ---
 
@@ -286,6 +297,44 @@ O backend transforma essas situações em erros controlados ou estados de coleta
 
 ---
 
+## 🚀 Arquitetura de Performance e Resiliência
+
+### Jobs em background
+
+Os ciclos de sincronização e coleta são iniciados após o servidor Express começar a ouvir. Cada job executa de forma independente e reagenda o próximo ciclo somente depois da execução anterior, evitando concorrência acumulada.
+
+Uma falha em um serviço ou integração é isolada no respectivo ciclo. Além disso, os jobs não bloqueiam a inicialização da API HTTP.
+
+### Cache do assistente
+
+O módulo `chat` mantém caches em memória para reduzir consultas repetidas:
+
+- respostas por contexto e pergunta;
+- classificações de intenção;
+- indicadores e histórico usados pelas respostas;
+- requisições concorrentes equivalentes (`single-flight`), evitando chamadas duplicadas ao Ollama.
+
+Os caches usam TTL por tipo de conteúdo e limite máximo de entradas com descarte das entradas mais antigas. Dados ambientais possuem TTL curto; conhecimento geral pode permanecer armazenado por mais tempo. Respostas degradadas têm TTL próprio.
+
+### Assistente Karma com fallback
+
+O assistente utiliza Ollama localmente por HTTP. Antes das operações em segundo plano, o servidor faz aquecimento (`warmup`) do modelo.
+
+O cliente aplica:
+
+- timeout configurável;
+- controle do tamanho da janela de contexto;
+- possibilidade de desativar a geração por LLM;
+- log de latência e resultado (`success`, `timeout` ou `request_error`).
+
+Se o Ollama estiver indisponível, exceder o timeout ou retornar uma resposta inválida, o módulo não derruba a requisição: ele continua no modo determinístico baseado em regras e conhecimento interno do GreenER.
+
+### Cache e fallback de dados
+
+As respostas do chat podem reutilizar indicadores já calculados e conhecimento versionado no backend. Consultas repetidas evitam repetir cálculos e chamadas ao modelo. Na ausência de dados suficientes, o assistente mantém a resposta transparente sobre lacunas como métricas ausentes, intervalo indisponível ou intensidade de carbono não elegível.
+
+---
+
 ## 🗄 PostgreSQL
 
 A conexão fica em:
@@ -355,7 +404,13 @@ GET /api/indicadores
 GET /api/indicadores/:serviceId/historico
 GET /api/dashboard
 POST /api/metricas/collect
+POST /api/chat
+GET /api/projecoes/regioes
+POST /api/projecoes/localizacao
+POST /api/projecoes/redistribuicao
 ```
+
+O `authMiddleware` exige o cabeçalho `Authorization: Bearer <token>`, verifica a assinatura e a expiração do JWT e adiciona o usuário autenticado ao contexto da requisição. O middleware não aceita outro esquema de autorização.
 
 ### Permissão administrativa
 
@@ -382,6 +437,12 @@ administrador    → 200
 ```
 
 A autorização é confirmada no backend, não apenas no estado da interface.
+
+Para operações administrativas, o `adminMiddleware` executa após o JWT e consulta o campo `admin` do usuário no banco a cada requisição. Assim, o papel administrativo não é inferido apenas pelo conteúdo do token:
+
+- JWT inválido ou ausente → `401 Unauthorized`;
+- usuário válido sem perfil administrador → `403 Forbidden`;
+- usuário administrador → operação autorizada.
 
 ---
 
@@ -450,7 +511,7 @@ como referência.
 | Variável | Descrição |
 | --- | --- |
 | `JWT_SECRET` | Segredo usado para assinar/verificar JWT. Deve ser alterado no ambiente real. |
-| `JWT_EXPIRES_IN` | Validade do token. O modelo atual utiliza `3600` segundos. |
+| `JWT_EXPIRES_IN` | Validade do token. Aceita segundos ou durações (`15m`, `1h`, `7d`). Fallback do código: `3600` segundos; `.env.example`: `7d`. |
 
 ### APIs externas
 
@@ -458,6 +519,18 @@ como referência.
 | --- | --- | --- |
 | `METRICS_API_URL` | Sim | `https://metrics.unilaunch.org` |
 | `CARBON_API_URL` | Sim | `https://carbon.unilaunch.org` |
+
+### Assistente Ollama
+
+| Variável | Obrigatória | Fallback do código | `.env.example` | Uso |
+| --- | --- | --- | --- | --- |
+| `OLLAMA_URL` | Não | `http://localhost:11434` | `http://localhost:11434` | Endereço do Ollama |
+| `OLLAMA_MODEL` | Não | `qwen2.5:3b` | `qwen2.5:3b` | Modelo usado pelo Karma |
+| `OLLAMA_TIMEOUT_MS` | Não | `60000` | `60000` | Timeout por operação |
+| `OLLAMA_NUM_CTX` | Não | `4096` | `4096` | Janela total de contexto |
+| `OLLAMA_ENABLED` | Não | `true` | `true` | Habilita/desabilita geração por LLM |
+
+Quando executado pelo Docker Compose, o backend deve usar o nome do serviço interno, por exemplo `http://ollama:11434`, em vez de `localhost`.
 
 ### Intervalos e timeout
 
@@ -566,14 +639,14 @@ cd backend
 npm test
 ```
 
-Resultado do fechamento da Sprint 2:
+Resultado do fechamento da Sprint 3:
 
 ```text
-Test Files: 26 passed | 1 skipped
-Tests:      156 passed | 7 skipped
+Suíte completa do backend: 300 testes aprovados
+Testes ignorados:            7
 ```
 
-Os 7 testes ignorados nessa execução pertencem à integração PostgreSQL e são executados separadamente.
+Os testes ignorados pertencem a cenários específicos da integração PostgreSQL ou à configuração de execução exclusiva da suíte. Eles são executados separadamente no ambiente `compose.test.yaml`.
 
 ### Integração PostgreSQL
 
@@ -623,7 +696,11 @@ Também foram confirmados:
 - coleta automática após reinicialização;
 - estados `no_metrics` e `unavailable`;
 - consistência de indicadores e dashboard;
-- histórico ambiental por serviço.
+- histórico ambiental por serviço;
+- respostas do chat com JWT válido;
+- cache e fallback do assistente diante de indisponibilidade do Ollama;
+- consulta de regiões e projeções autenticadas;
+- redistribuição de serviços com validação de regras regionais;
 
 As evidências completas estão em:
 
@@ -645,14 +722,21 @@ Resumo:
 | `POST` | `/auth/register` | Cadastro |
 | `POST` | `/auth/login` | Login |
 | `GET` | `/auth/me` | Validar sessão JWT |
-| `GET` | `/api/servicos` | Serviços persistidos |
-| `POST` | `/api/servicos/sync` | Sincronização manual |
+| `GET` | `/api/servicos/discover` | Descobrir serviços na API externa |
+| `POST` | `/api/servicos/sync` | Sincronização manual autenticada |
+| `GET` | `/api/servicos` | Listar serviços persistidos |
 | `POST` | `/api/metricas/collect` | Coleta manual administrativa |
-| `GET` | `/api/metricas/historico/:serviceId` | Histórico bruto |
-| `GET` | `/api/intensidades` | Snapshots ambientais |
-| `GET` | `/api/indicadores` | Indicadores ambientais |
-| `GET` | `/api/indicadores/:serviceId/historico` | Histórico ambiental |
-| `GET` | `/api/dashboard` | Resumo operacional |
+| `GET` | `/api/metricas/historico/:serviceId` | Histórico bruto autenticado |
+| `GET` | `/api/intensidades/discover` | Descobrir intensidades na API externa |
+| `POST` | `/api/intensidades/sync` | Sincronizar intensidades no banco |
+| `GET` | `/api/intensidades` | Listar snapshots ambientais |
+| `GET` | `/api/indicadores?start=<iso>&end=<iso>` | Indicadores ambientais do período |
+| `GET` | `/api/indicadores/:serviceId/historico?start=<iso>&end=<iso>` | Histórico ambiental por serviço |
+| `GET` | `/api/dashboard` | Resumo operacional consolidado |
+| `POST` | `/api/chat` | Perguntar ao assistente Karma |
+| `GET` | `/api/projecoes/regioes` | Consultar regiões disponíveis para projeções |
+| `POST` | `/api/projecoes/localizacao` | Projetar alocação por localização |
+| `POST` | `/api/projecoes/redistribuicao` | Redistribuir serviços entre regiões |
 
 ---
 
@@ -664,4 +748,5 @@ Resumo:
 - [`database/README.md`](../database/README.md) — schema, migrations e DML;
 - [`frontend/README.md`](../frontend/README.md) — frontend;
 - [`docs/sprints/sprint-2.md`](../docs/sprints/sprint-2.md) — registro da Sprint 2;
+- [`docs/sprints/sprint-3.md`](../docs/sprints/sprint-3.md) — registro da Sprint 3;
 - [`docs/testes/manualdevalidacao.md`](../docs/testes/manualdevalidacao.md) — validação técnica.
