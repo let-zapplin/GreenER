@@ -94,6 +94,7 @@ interface ServiceIndicators {
   };
   periodTotals: {
     energyKwh: number;
+    energyKwhWithCarbonIntensity: number;
     emissionsGco2e: number;
     collectionCount: number;
     validMetricCount: number;
@@ -143,11 +144,8 @@ function calculateEnergyBreakdown(
 
   return {
     cpuKwh:
-      (metrics.cpuPercent / 100) *
-      POWER_MODEL.cpuMaximumWatts *
-      intervalToKwh,
-    memoryKwh:
-      metrics.memoryGb * POWER_MODEL.memoryWattsPerGb * intervalToKwh,
+      (metrics.cpuPercent / 100) * POWER_MODEL.cpuMaximumWatts * intervalToKwh,
+    memoryKwh: metrics.memoryGb * POWER_MODEL.memoryWattsPerGb * intervalToKwh,
     diskKwh: metrics.diskGb * POWER_MODEL.diskWattsPerGb * intervalToKwh,
     networkKwh:
       metrics.networkGb * POWER_MODEL.networkWattsPerGb * intervalToKwh,
@@ -404,12 +402,66 @@ export class IndicadoresService {
       services: indicators,
     };
   }
-  //o método abaixo recebe serviço e período
+  async getServicePeriodIndicators(
+    serviceId: number,
+    startValue: string,
+    endValue: string,
+  ) {
+    const { service } = await this.findServiceDataForPeriod(
+      serviceId,
+      startValue,
+      endValue,
+    );
+
+    return this.calculateServiceIndicators(service);
+  }
+
   async getServiceHistory(
     serviceId: number,
     startValue: string,
     endValue: string,
   ) {
+    const { start, end, service } = await this.findServiceDataForPeriod(
+      serviceId,
+      startValue,
+      endValue,
+    );
+
+    const calculatedSamples = service.collections.map((collection) =>
+      calculateSample(collection),
+    );
+
+    const { samples, stride } = downsampleHistory(calculatedSamples);
+
+    return {
+      period: {
+        start,
+        end,
+        collectionIntervalMs: env.metricsCollectionIntervalMs,
+
+        displayIntervalMs: env.metricsCollectionIntervalMs * stride,
+      },
+
+      service: {
+        serviceId: service.id_service,
+        name: service.name,
+        status: service.status,
+        regionCode: service.region_code,
+      },
+
+      samples,
+    };
+  }
+
+  private async findServiceDataForPeriod(
+    serviceId: number,
+    startValue: string,
+    endValue: string,
+  ): Promise<{
+    start: Date;
+    end: Date;
+    service: ServiceIndicatorData;
+  }> {
     if (!Number.isInteger(serviceId) || serviceId <= 0) {
       throw new AppError(
         "O identificador do serviço deve ser um número inteiro positivo",
@@ -440,29 +492,10 @@ export class IndicadoresService {
     if (!service) {
       throw new AppError("Serviço não encontrado", 404, "SERVICE_NOT_FOUND");
     }
-    const calculatedSamples = service.collections.map((collection) =>
-      calculateSample(collection),
-    );
-
-    const { samples, stride } = downsampleHistory(calculatedSamples);
-
     return {
-      period: {
-        start,
-        end,
-        collectionIntervalMs: env.metricsCollectionIntervalMs,
-
-        displayIntervalMs: env.metricsCollectionIntervalMs * stride,
-      },
-
-      service: {
-        serviceId: service.id_service,
-        name: service.name,
-        status: service.status,
-        regionCode: service.region_code,
-      },
-
-      samples,
+      start,
+      end,
+      service,
     };
   }
 
@@ -484,8 +517,7 @@ export class IndicadoresService {
       (sample) => sample.collectionIntervalSeconds !== null,
     );
     const cpuDurationSeconds = cpuSamples.reduce(
-      (total, sample) =>
-        total + (sample.collectionIntervalSeconds ?? 0),
+      (total, sample) => total + (sample.collectionIntervalSeconds ?? 0),
       0,
     );
     const cpuWeightedPercentSeconds = cpuSamples.reduce(
@@ -610,8 +642,7 @@ export class IndicadoresService {
           peakGb: diskPeakGb,
         },
         network: {
-          totalGb:
-            resourceSamples.length === 0 ? null : networkTotalGb,
+          totalGb: resourceSamples.length === 0 ? null : networkTotalGb,
         },
       },
       energyBreakdown:
@@ -635,6 +666,11 @@ export class IndicadoresService {
           (total, sample) => total + (sample.energyKwh ?? 0),
           0,
         ),
+        energyKwhWithCarbonIntensity: validCarbonSamples.reduce(
+          (total, sample) => total + (sample.energyKwh ?? 0),
+          0,
+        ),
+
         emissionsGco2e: validCarbonSamples.reduce(
           (total, sample) => total + (sample.emissionsGco2e ?? 0),
           0,

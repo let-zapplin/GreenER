@@ -1,6 +1,8 @@
 import type {
   LocationProjectionResponse,
   ProjectionRegionsResponse,
+  ServiceRedistributionPolicy,
+  ServiceRedistributionResponse,
 } from "../types/projection";
 
 import { apiRequest } from "./api";
@@ -47,6 +49,28 @@ export async function projectServiceLocation(
         end: period.end,
 
         regionCodes,
+      }),
+    },
+    token,
+  );
+}
+
+export async function redistributeServices(
+  period: ProjectionPeriod,
+  occupancyPolicy: ServiceRedistributionPolicy,
+  signal?: AbortSignal,
+  token?: string,
+): Promise<ServiceRedistributionResponse> {
+  return apiRequest<ServiceRedistributionResponse>(
+    "/api/projecoes/redistribuicao",
+    {
+      method: "POST",
+      signal,
+      cache: "no-store",
+      body: JSON.stringify({
+        start: period.start,
+        end: period.end,
+        occupancyPolicy,
       }),
     },
     token,

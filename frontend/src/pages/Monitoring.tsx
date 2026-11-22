@@ -1,5 +1,12 @@
 import "./ui.css";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import type { MapFocusRequest } from "../components/ServicesMap";
 import { ServiceHud } from "../components/ServiceHud";
@@ -9,10 +16,21 @@ import logoMin from "../../assets/logo_min.png";
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useDashboardSummary } from "../hooks/useDashboardSummary";
 import { useServiceIndicators } from "../hooks/useServiceIndicators";
+import { useAnalysisPeriod } from "../hooks/useAnalysisPeriod";
+import {
+  AnalysisComparisonWidget,
+  AnalysisHistoryWidget,
+  AnalysisProjectionWidget,
+  AnalysisRankingWidget,
+  type AnalysisPeriodControl,
+} from "../components/AnalysisBoardWidgets";
 import { MapServiceDetailsPanel } from "../components/MapServiceDetailsPanel";
 import { EnvironmentOverviewDock } from "../components/EnvironmentOverviewDock";
 import { RegionEnergyChart } from "../components/RegionEnergyChart";
 import { ServicesMapLegend } from "../components/ServicesMapLegend";
+import { MonitoringBoard } from "../components/MonitoringBoard";
+import { useMonitoringBoard } from "../hooks/useMonitoringBoard";
+import type { MonitoringWidgetType } from "../lib/monitoringBoard";
 import {
   formatServicePlace,
   hasServiceCoordinates,
@@ -27,6 +45,8 @@ const ServicesMap = lazy(() =>
 export function Monitoring() {
   const { snapshot, loading, error } = useMonitoring();
 
+  const board = useMonitoringBoard();
+
   const {
     dashboard,
     loading: dashboardLoading,
@@ -35,10 +55,34 @@ export function Monitoring() {
   } = useDashboardSummary();
 
   const {
+    periods: analysisPeriods,
+    durationMs: analysisPeriodMs,
+    period: analysisPeriod,
+    selectPeriod,
+  } = useAnalysisPeriod();
+
+  const {
     indicators: serviceIndicators,
     loading: indicatorsLoading,
     error: indicatorsError,
   } = useServiceIndicators();
+
+  const {
+    indicators: analysisIndicators,
+    loading: analysisIndicatorsLoading,
+    error: analysisIndicatorsError,
+  } = useServiceIndicators(analysisPeriod);
+
+  const analysisPeriodLabel =
+    analysisPeriods.find(
+      (period) => period.value === analysisPeriodMs,
+    )?.label ?? "Período atual";
+
+  const periodControl: AnalysisPeriodControl = {
+    periods: analysisPeriods,
+    durationMs: analysisPeriodMs,
+    onSelectPeriod: selectPeriod,
+  };
 
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     null,
@@ -232,7 +276,7 @@ export function Monitoring() {
 
       if (
         target.closest(
-          ".monitoring-map-shell, .service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell, .map-loading-overlay, .monitoring-visualization-toggle, .region-energy-chart",
+          ".monitoring-map-shell, .service-card.is-selected, .map-service-panel, .service-hud, .services-map-shell, .map-loading-overlay, .monitoring-visualization-toggle, .region-energy-chart, .monitoring-board-toolbar, .monitoring-board-widget-bar, .monitoring-board-palette",
         )
       ) {
         return;
@@ -258,19 +302,264 @@ export function Monitoring() {
     };
   }, [selectedServiceId, isFullscreen]);
 
+  const mapWidget = (
+    <>
+      <div
+        className={`monitoring-map-shell${isFullscreen ? " is-fullscreen" : ""}${isFullscreenFallback ? " is-fullscreen-fallback" : ""}`}
+        role={isFullscreenFallback ? "dialog" : undefined}
+        aria-modal={isFullscreenFallback ? true : undefined}
+        aria-label={isFullscreenFallback ? "Mapa em tela cheia" : undefined}
+        ref={mapShellRef}
+      >
+        <div
+          className={`services-map-workspace ${
+            selectedService ? "is-focused" : ""
+          }`}
+        >
+          <div className="services-map-stage">
+            <div className="services-map-viewport">
+            {/* Tela cheia */}
+            <button
+              type="button"
+              ref={fullscreenButtonRef}
+              className="monitoring-map-fullscreen-button"
+              onClick={toggleMapFullscreen}
+              aria-pressed={isFullscreen}
+              title={
+                isFullscreen ? "Sair da tela cheia (Esc)" : "Maximizar mapa"
+              }
+            >
+              {isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            </button>
+
+            {fullscreenError && (
+              <p className="monitoring-map-fullscreen-error" role="alert">
+                {fullscreenError}
+              </p>
+            )}
+
+            <Suspense fallback={null}>
+              <ServicesMap
+                services={services}
+                selectedServiceId={selectedServiceId}
+                onLoadingChange={setMapLoading}
+                focus={mapFocus}
+                onSelectService={(serviceId) =>
+                  focusServiceOnMap(serviceId, {
+                    scroll: false,
+                  })
+                }
+                onClearSelection={closeServiceFocus}
+              />
+            </Suspense>
+
+            {/* Transição cinematográfica */}
+            {mapLoading && (
+              <div
+                className="map-loading-overlay"
+                role="status"
+                aria-label="Carregando mapa"
+              >
+                <span className="map-luma-flare" aria-hidden="true" />
+
+                <img src={logoMin} alt="" className="map-loading-logo" />
+              </div>
+            )}
+            </div>
+
+            {/* Detalhes do serviço */}
+            {selectedService && (
+              <div
+                className={`services-map-overlay ${
+                  mapLoading ? "is-map-moving" : "is-map-ready"
+                }`}
+              >
+                <MapServiceDetailsPanel
+                  key={selectedService.id}
+                  service={selectedService}
+                  indicator={selectedIndicator}
+                  loading={indicatorsLoading}
+                  error={indicatorsError}
+                  onClose={closeServiceFocus}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Rodapé operacional dentro do mapa em tela cheia */}
+        {isFullscreen && (
+          <div className="services-map-fullscreen-footer">
+            <div className="services-map-hud services-map-hud-fullscreen">
+              <span className="services-map-count">
+                {servicesWithLocation} de {services.length} localizados
+              </span>
+
+              <ServiceHud
+                services={services}
+                selectedServiceId={selectedServiceId ?? undefined}
+                onSelect={(serviceId) =>
+                  focusServiceOnMap(serviceId, {
+                    scroll: false,
+                  })
+                }
+              />
+            </div>
+
+            <ServicesMapLegend services={services} />
+          </div>
+        )}
+      </div>
+
+      {/* Legenda abaixo do mapa na visualização normal */}
+      {!isFullscreen && <ServicesMapLegend services={services} />}
+    </>
+  );
+
+  const widgetContent: Record<MonitoringWidgetType, ReactNode> = {
+    map: mapWidget,
+    region: (
+      <div className="monitoring-chart-shell">
+        <RegionEnergyChart
+          indicators={serviceIndicators?.services ?? []}
+          services={services}
+          loading={indicatorsLoading}
+          error={indicatorsError}
+        />
+      </div>
+    ),
+    services: (
+      <div className="services-map-hud services-map-hud-below">
+        <span className="services-map-count">
+          {servicesWithLocation} de {services.length} localizados
+        </span>
+
+        <ServiceHud
+          services={services}
+          selectedServiceId={selectedServiceId ?? undefined}
+          onSelect={(serviceId) =>
+            focusServiceOnMap(serviceId, { scroll: false })
+          }
+        />
+      </div>
+    ),
+    summary: (
+      <div className="monitoring-summary-shell">
+        <EnvironmentOverviewDock
+          energyKwh={dashboard?.summary.energyKwh ?? null}
+          emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
+          activeServiceCount={dashboard?.summary.activeServiceCount ?? 0}
+          noMetricsServiceCount={dashboard?.summary.noMetricsServiceCount ?? 0}
+          unavailableServiceCount={
+            dashboard?.summary.unavailableServiceCount ?? 0
+          }
+          isPartial={dashboard?.summary.isPartial ?? false}
+          loading={dashboardLoading}
+          error={dashboardError}
+          initialCollapsed={false}
+        />
+      </div>
+    ),
+    ranking: (
+      <AnalysisRankingWidget
+        services={services}
+        indicators={analysisIndicators}
+        loading={analysisIndicatorsLoading}
+        error={analysisIndicatorsError}
+        periodLabel={analysisPeriodLabel}
+        periodControl={periodControl}
+      />
+    ),
+    history: (
+      <AnalysisHistoryWidget
+        services={services}
+        period={analysisPeriod}
+        periodControl={periodControl}
+      />
+    ),
+    comparison: (
+      <AnalysisComparisonWidget
+        services={services}
+        indicators={analysisIndicators}
+        indicatorsLoading={analysisIndicatorsLoading}
+        period={analysisPeriod}
+        periodControl={periodControl}
+      />
+    ),
+    projection: (
+      <AnalysisProjectionWidget
+        services={services}
+        period={analysisPeriod}
+        periodControl={periodControl}
+      />
+    ),
+  };
+
+  const syncStatus = (
+    <details className={`monitoring-sync ${hasSyncError ? "has-error" : ""}`}>
+      <summary className="monitoring-sync-label">
+        <span aria-hidden="true" className="monitoring-sync-dot" />
+
+        {hasSyncError
+          ? "Atualização com falha"
+          : isSyncing
+            ? "Atualizando dados"
+            : "Última atualização"}
+
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <path d="m4 6 4 4 4-4" />
+        </svg>
+      </summary>
+
+      <div className="refresh-note">
+        <div className="refresh-item">
+          <span className="refresh-item-label">Indicadores</span>
+
+          {dashboardLastUpdated ? (
+            <time dateTime={dashboardLastUpdated}>
+              {new Date(dashboardLastUpdated).toLocaleString("pt-BR")}
+            </time>
+          ) : (
+            <span>Aguardando primeira consulta</span>
+          )}
+        </div>
+
+        <div className="refresh-item">
+          <span className="refresh-item-label">Serviços</span>
+
+          {lastUpdated ? (
+            <time dateTime={lastUpdated}>
+              {new Date(lastUpdated).toLocaleString("pt-BR")}
+            </time>
+          ) : (
+            <span>Aguardando primeira consulta</span>
+          )}
+        </div>
+      </div>
+    </details>
+  );
+
   return (
     <main className="monitoring-page">
       <section className="monitoring-header">
         <div className="monitoring-intro">
-          <p className="monitoring-eyebrow">SEU AMBIENTE, EM UM SÓ LUGAR</p>
+          <p className="monitoring-eyebrow">
+            MONITORAMENTO E ANÁLISES, EM UM SÓ LUGAR
+          </p>
 
           <h1>
-            Monitoramento de <span>serviços.</span>
+            O impacto do seu ambiente, <br /><span>em foco.</span>
           </h1>
 
           <p className="monitoring-description">
-            Acompanhe os serviços descobertos, sua localização e as mudanças no
-            seu ambiente.
+            Acompanhe consumo de energia, emissões e o status dos seus
+            serviços em um só painel.
           </p>
         </div>
       </section>
@@ -310,256 +599,16 @@ export function Monitoring() {
       )}
 
       {services.length > 0 && (
-        <section
-          className="services-map-section"
-          aria-labelledby="services-map-title"
-        >
-          <div className="services-map-heading">
-            <div>
-              <p className="monitoring-section-label">
-                LOCALIZAÇÃO DOS SERVIÇOS
-              </p>
-
-              <h2 id="services-map-title">Onde seus serviços estão</h2>
-            </div>
-          </div>
-
-<div className="monitoring-charts-layout">
-  {/* Coluna principal: mapa */}
-  <div className="monitoring-map-column">
-    <div
-      className={`monitoring-map-shell${isFullscreen ? " is-fullscreen" : ""}${isFullscreenFallback ? " is-fullscreen-fallback" : ""}`}
-      role={isFullscreenFallback ? "dialog" : undefined}
-      aria-modal={isFullscreenFallback ? true : undefined}
-      aria-label={isFullscreenFallback ? "Mapa em tela cheia" : undefined}
-      ref={mapShellRef}
-    >
-      <EnvironmentOverviewDock
-        energyKwh={dashboard?.summary.energyKwh ?? null}
-        emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
-        activeServiceCount={
-          dashboard?.summary.activeServiceCount ?? 0
-        }
-        noMetricsServiceCount={
-          dashboard?.summary.noMetricsServiceCount ?? 0
-        }
-        unavailableServiceCount={
-          dashboard?.summary.unavailableServiceCount ?? 0
-        }
-        isPartial={dashboard?.summary.isPartial ?? false}
-        loading={dashboardLoading}
-        error={dashboardError}
-      />
-
-      <div
-        className={`services-map-workspace ${
-          selectedService ? "is-focused" : ""
-        }`}
-      >
-        <div className="services-map-stage">
-          <div className="services-map-viewport">
-          {/* Tela cheia */}
-          <button
-            type="button"
-            ref={fullscreenButtonRef}
-            className="monitoring-map-fullscreen-button"
-            onClick={toggleMapFullscreen}
-            aria-pressed={isFullscreen}
-            title={
-              isFullscreen
-                ? "Sair da tela cheia (Esc)"
-                : "Maximizar mapa"
-            }
-          >
-            {isFullscreen
-              ? "Sair da tela cheia"
-              : "Tela cheia"}
-          </button>
-
-          {fullscreenError && (
-            <p
-              className="monitoring-map-fullscreen-error"
-              role="alert"
-            >
-              {fullscreenError}
-            </p>
-          )}
-
-          <Suspense fallback={null}>
-            <ServicesMap
-              services={services}
-              selectedServiceId={selectedServiceId}
-              onLoadingChange={setMapLoading}
-              focus={mapFocus}
-              onSelectService={(serviceId) =>
-                focusServiceOnMap(serviceId, {
-                  scroll: false,
-                })
-              }
-              onClearSelection={closeServiceFocus}
+        <section className="services-map-section" aria-label="Painel de monitoramento">
+          <div className="monitoring-charts-layout">
+            <MonitoringBoard
+              state={board}
+              contents={widgetContent}
+              toolbarExtra={syncStatus}
             />
-          </Suspense>
-
-          {/* Transição cinematográfica */}
-          {mapLoading && (
-            <div
-              className="map-loading-overlay"
-              role="status"
-              aria-label="Carregando mapa"
-            >
-              <span
-                className="map-luma-flare"
-                aria-hidden="true"
-              />
-
-              <img
-                src={logoMin}
-                alt=""
-                className="map-loading-logo"
-              />
-            </div>
-          )}
-
           </div>
-
-          {/* Detalhes do serviço */}
-          {selectedService && (
-            <div
-              className={`services-map-overlay ${
-                mapLoading
-                  ? "is-map-moving"
-                  : "is-map-ready"
-              }`}
-            >
-              <MapServiceDetailsPanel
-                key={selectedService.id}
-                service={selectedService}
-                indicator={selectedIndicator}
-                loading={indicatorsLoading}
-                error={indicatorsError}
-                onClose={closeServiceFocus}
-              />
-            </div>
-           )}
-        </div>
-      </div>
-
-{/* Rodapé operacional dentro do mapa em tela cheia */}
-{isFullscreen && (
-  <div className="services-map-fullscreen-footer">
-    <div className="services-map-hud services-map-hud-fullscreen">
-      <span className="services-map-count">
-        {servicesWithLocation} de {services.length} localizados
-      </span>
-
-      <ServiceHud
-        services={services}
-        selectedServiceId={selectedServiceId ?? undefined}
-        onSelect={(serviceId) =>
-          focusServiceOnMap(serviceId, {
-            scroll: false,
-          })
-        }
-      />
-    </div>
-
-    <ServicesMapLegend services={services} />
-  </div>
-)}
-    </div>
-
-                  {!isFullscreen && (
-  <div className="services-map-hud services-map-hud-below">
-    <span className="services-map-count">
-      {servicesWithLocation} de {services.length} localizados
-    </span>
-
-    <ServiceHud
-      services={services}
-      selectedServiceId={selectedServiceId ?? undefined}
-      onSelect={(serviceId) =>
-        focusServiceOnMap(serviceId, { scroll: false })
-      }
-    />
-  </div>
-)}
-
-    {/* Legenda abaixo do mapa na visualização normal */}
-    {!isFullscreen && (
-      <ServicesMapLegend services={services} />
-    )}
-  </div>
-
-{/* Coluna secundária: consumo por região */}
-
-<div className="monitoring-chart-column">
-
-  <div className="monitoring-chart-shell">
-    <RegionEnergyChart
-      indicators={serviceIndicators?.services ?? []}
-      services={services}
-      loading={indicatorsLoading}
-      error={indicatorsError}
-    />
-
-
-
-  </div>
-        <details
-    className={`monitoring-sync ${hasSyncError ? "has-error" : ""}`}
-  >
-    <summary className="monitoring-sync-label">
-      <span aria-hidden="true" className="monitoring-sync-dot" />
-
-      {hasSyncError
-        ? "Atualização com falha"
-        : isSyncing
-          ? "Atualizando dados"
-          : "Última atualização"}
-
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <path d="m4 6 4 4 4-4" />
-      </svg>
-    </summary>
-
-<div className="refresh-note">
-  <div className="refresh-item">
-    <span className="refresh-item-label">Indicadores</span>
-
-    {dashboardLastUpdated ? (
-      <time dateTime={dashboardLastUpdated}>
-        {new Date(dashboardLastUpdated).toLocaleString("pt-BR")}
-      </time>
-    ) : (
-      <span>Aguardando primeira consulta</span>
-    )}
-  </div>
-
-  <div className="refresh-item">
-    <span className="refresh-item-label">Serviços</span>
-
-    {lastUpdated ? (
-      <time dateTime={lastUpdated}>
-        {new Date(lastUpdated).toLocaleString("pt-BR")}
-      </time>
-    ) : (
-      <span>Aguardando primeira consulta</span>
-    )}
-  </div>
-</div>
-  </details>
-</div>
-</div>
         </section>
       )}
-
-
-    </main>
+      </main>
   );
 }

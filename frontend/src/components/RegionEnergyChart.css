@@ -32,7 +32,7 @@
 .region-energy-chart-header > span {
   color: #87e46c;
   font-family: "IBM Plex Mono", monospace;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .region-energy-chart-plot {

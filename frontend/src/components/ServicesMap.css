@@ -97,7 +97,7 @@
   border-radius: 6px 0 0;
   background: #0c282bcc;
   font-family: "IBM Plex Sans", sans-serif;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .services-map-canvas .maplibregl-ctrl-attrib a {
@@ -215,14 +215,14 @@
 }
 
 .services-map-popup-content strong {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
   font-weight: 600;
 }
 
 .services-map-popup-content span {
   color: var(--text-muted, #a7c993);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.4;
   font-weight: 500;
 }
@@ -352,7 +352,7 @@
 
   color: #f4fff4;
 
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 
   letter-spacing: 0.02em;
@@ -361,7 +361,7 @@
 .services-map-popup-content > span {
   color: #8fa9a5;
 
-  font-size: 12px;
+  font-size: 14px;
 }
 
 /* Lista de serviços agrupados */
@@ -435,7 +435,7 @@
 
   color: #eef7f1;
 
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 
   text-overflow: ellipsis;
@@ -450,7 +450,7 @@
 
   color: #9fb5b1;
 
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 
   white-space: nowrap;
@@ -596,13 +596,13 @@
   .services-map-group-popup .services-map-popup-service > span {
     white-space: normal;
     overflow-wrap: anywhere;
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .services-map-group-popup .services-map-popup-service small {
     white-space: normal;
     overflow-wrap: anywhere;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .services-map-group-popup .maplibregl-popup-close-button {

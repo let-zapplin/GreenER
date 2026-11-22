@@ -26,8 +26,8 @@ flowchart LR
 | Sprint | Período | Objetivo | Marco de entrega | Situação documental |
 |---|---|---|---|---|
 | [**1 — Fundação**](sprints/sprint-1.md) | 28/09–19/10/2026 | Disponibilizar o ambiente e o primeiro fluxo ponta a ponta | Serviços descobertos, persistidos e exibidos no React | Registro da sprint aponta tarefas concluídas; consultar evidências |
-| [**2 — Indicadores**](sprints/sprint-2.md) | 20/10–09/11/2026 | Capturar métricas e estimar energia e CO₂e | Coleta periódica e histórica, indicadores no Monitoramento e histórico visual em Análises | Incremento tecnicamente validado; Sprint Review pendente |
-| [**3 — Análises**](sprints/sprint-3.md) | 10/11–23/11/2026 | Comparar serviços e visualizar diferenças por região e período | Mapa, ranking, comparação e validação final | Planejada |
+| [**2 — Indicadores**](sprints/sprint-2.md) | 20/10–09/11/2026 | Capturar métricas e estimar energia e CO₂e | Coleta periódica e histórica, indicadores no Monitoramento e histórico visual em Análises | Sprint Review realizada; feedback do cliente ainda não recebido |
+| [**3 — Análises**](sprints/sprint-3.md) | 10/11–23/11/2026 | Comparar serviços e visualizar diferenças por região e período | Mapa, ranking, comparação e validação final | Em execução; TEC31 concluída em 21/11, com pendências registradas no [manual de validação](testes/manualdevalidacao.md) |
 
 **Nota de acompanhamento:** o status real das tarefas deve ser consultado no [GitHub Projects](https://github.com/orgs/let-zapplin/projects/2). A situação documental informa a disponibilidade do registro, não substitui a validação técnica.
 
@@ -53,7 +53,7 @@ flowchart LR
 > Os responsáveis acima foram extraídos das atribuições registradas no backlog da Sprint 1. São responsáveis **por atividades/frentes**, não necessariamente responsáveis exclusivos pelo aceite de toda a entrega.
 
 ### Sprint 2 — Coleta de métricas e indicadores ambientais
-**Resultado registrado:** o incremento coleta métricas periodicamente, preserva tentativas e amostras no PostgreSQL, calcula indicadores ambientais, apresenta dados no Monitoramento e disponibiliza histórico visual por serviço em Análises. A validação técnica do incremento e da DoD foi concluída pela equipe em 09/11/2026; o fechamento oficial permanece condicionado à Sprint Review.
+**Resultado registrado:** o incremento coleta métricas periodicamente, preserva tentativas e amostras no PostgreSQL, calcula indicadores ambientais, apresenta dados no Monitoramento e disponibiliza histórico visual por serviço em Análises. A validação técnica do incremento e da DoD foi concluída pela equipe em 09/11/2026.
 
 | Entrega | Resultado implementado | Responsabilidade registrada | Evidências |
 |---|---|---|---|
@@ -66,7 +66,7 @@ flowchart LR
 
 **Dependências atendidas pelo incremento anterior:** descoberta de serviços e integração com PostgreSQL. As integrações externas de métricas e intensidade de carbono estão descritas na [API](api.md).
 
-**Status:** incremento funcional e DoD tecnicamente validados pela equipe em 09/11/2026. As suítes comuns, typechecks, build e os sete testes de integração com PostgreSQL foram verificados. A Sprint Review e o registro do feedback do cliente permanecem pendentes para o fechamento oficial da Sprint. O registro detalhado está na [Sprint 2](sprints/sprint-2.md).
+**Status:** incremento funcional e DoD tecnicamente validados pela equipe em 09/11/2026. As suítes comuns, typechecks, build e os sete testes de integração com PostgreSQL foram verificados. A Sprint Review foi realizada; o registro explícito da reunião e o feedback do cliente ainda precisam ser complementados quando houver informações confirmadas. O registro detalhado está na [Sprint 2](sprints/sprint-2.md).
 
 **Demonstração:** [vídeo do incremento funcional da Sprint 2](https://youtu.be/qW38NnthF8Q).  
 
@@ -78,7 +78,7 @@ A situação indicada abaixo considera a versão validada em **09/11/2026**. As 
 | Código | Requisito relacionado | Entrega concreta | Como verificar | Responsáveis | Evidência no GitHub | Situação |
 |---|---|---|---|---|---|---|
 | **ES01–ES05** | RP07 | Backlog priorizado, critérios de aceite, planejamento e evolução incremental da Sprint 2 | Conferir backlog, issues, PRs e registro da Sprint | Equipe | `docs/sprints/`, backlog da Sprint 2 e histórico de PRs | ✅ Concluído |
-| **ES06** | RP07 | Sprint Review, coleta de feedback e adaptação do planejamento | Realizar a Review da Sprint 2, registrar feedback recebido e decisões para a Sprint 3 | Equipe | `docs/sprints/sprint-2.md` | ⏳ Pendente da Sprint Review |
+| **ES06** | RP07 | Sprint Review, coleta de feedback e adaptação do planejamento | Registrar a Review realizada e incorporar feedback e decisões quando forem efetivamente recebidos | Equipe | `docs/sprints/sprint-2.md` | 🟡 Review realizada; feedback do cliente não recebido |
 | **ES07** | Qualidade / DoD | Definition of Done aplicada às entregas da Sprint 2 | Executar testes, typechecks, build e validações documentadas | Equipe | `docs/testes/manualdevalidacao.md` | ✅ Concluído |
 | **ES08** | RNF05 | Documentação técnica e procedimentos de reprodução/validação | Seguir README e manuais em ambiente Docker | Equipe | `README.md`, `docs/`, READMEs internos | 🔄 Em fechamento |
 | **ES09** | RP07 | Participação distribuída da equipe nas entregas da Sprint | Conferir responsáveis, issues, PRs, revisões e contribuições registradas | Equipe | GitHub Projects, histórico de PRs e `docs/sprints/sprint-2.md` | ✅ Concluído |
@@ -133,9 +133,9 @@ O fluxo principal previsto para a Sprint foi validado ponta a ponta:
 
 `serviço descoberto → métricas coletadas → tentativa persistida → intensidade de carbono obtida → energia/CO₂e calculados → histórico preservado → indicadores consolidados → dashboard e análise histórica apresentados no frontend`
 
-**Situação:** ✅ Incremento funcional tecnicamente validado para a entrega da Sprint 2. O fechamento oficial permanece pendente da Sprint Review.
+**Situação:** ✅ Incremento funcional tecnicamente validado para a entrega da Sprint 2. A Sprint Review foi realizada; permanecem pendentes o registro de detalhes não disponíveis e o feedback do cliente, quando repassado.
 
-> O hash do commit final e os links definitivos de PRs devem ser registrados após o fechamento da branch **`chore/sprint2-finalizacao`**.*
+> O commit final identificado para a branch `chore/sprint2-finalizacao` é `b123a524def9203be7c714ddd65e90ba12c61f31` (09/11/2026).
 
 ### Sprint 3 — Análise, comparação e consolidação
 **Resultado esperado:** consolidar a exploração geográfica iniciada antecipadamente na Sprint 2 e implementar os recursos de comparação, ranking, filtros e refinamentos finais, concluindo a aplicação com validações de qualidade.

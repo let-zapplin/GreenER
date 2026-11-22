@@ -97,7 +97,7 @@ backdrop-filter: blur(14px);
 .map-service-panel-eyebrow {
   color: var(--monitoring-muted);
 
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.09em;
 }
@@ -115,7 +115,7 @@ backdrop-filter: blur(14px);
   color: var(--panel-status-color);
 
   font-family: "IBM Plex Mono", monospace;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .map-service-panel-close {
@@ -170,7 +170,7 @@ backdrop-filter: blur(14px);
 
   color: var(--panel-status-color);
 
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -189,7 +189,7 @@ backdrop-filter: blur(14px);
 .map-service-panel-partial {
   color: #e7cf55;
 
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -209,7 +209,7 @@ backdrop-filter: blur(14px);
 .map-service-panel-metrics span {
   color: var(--monitoring-muted);
 
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -218,7 +218,7 @@ backdrop-filter: blur(14px);
 .map-service-panel-location strong {
   color: #f1f8f5;
 
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -274,7 +274,7 @@ backdrop-filter: blur(14px);
 .map-service-panel-metrics strong {
   color: #f4ffff;
 
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .map-service-panel-updated {
@@ -287,7 +287,7 @@ backdrop-filter: blur(14px);
 
   color: var(--monitoring-muted);
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .map-service-panel-updated time {
@@ -299,7 +299,7 @@ backdrop-filter: blur(14px);
 
   color: var(--monitoring-muted);
 
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .map-service-panel-analysis {
@@ -321,7 +321,7 @@ backdrop-filter: blur(14px);
 
   color: #f4ffff;
 
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   text-decoration: none;
 

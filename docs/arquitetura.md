@@ -536,10 +536,9 @@ A página de **Análises** concentra exploração temporal:
 - histórico ambiental;
 - gráfico de energia;
 - lacunas no histórico;
-- navegação entre serviços;
-- ranking por energia ou CO₂e;
-- comparação de serviços no mesmo período;
-- projeção do impacto ambiental por localização.
+- navegação entre serviços.
+
+Ranking e comparação estão implementados na página de Análises. O ranking ordena os serviços por energia ou CO₂e no período selecionado, e a comparação permite analisar dois ou mais serviços no mesmo período; ambos usam os indicadores e históricos existentes, sem endpoints exclusivos. A interface sinaliza dados parciais e mantém serviços removidos com dados no período; no ranking, eles aparecem como “Removido”.
 
 ### Atualização automática
 

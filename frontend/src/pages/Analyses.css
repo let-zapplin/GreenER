@@ -65,9 +65,9 @@
 
   place-items: center;
 
-  width: 72px;
+  width: 82px;
 
-  height: 72px;
+  height: 82px;
 
   margin: 0 auto 28px;
 
@@ -1776,74 +1776,274 @@
 
    ========================================================= */
 
+/* =========================================================
+   MODOS PRINCIPAIS DA PÁGINA DE ANÁLISES
+
+   Estes controles alteram a função principal da tela,
+   portanto recebem maior hierarquia visual.
+   ========================================================= */
+
 .analyses-mode-switch {
   display: grid;
 
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
 
-  width: min(100%, 760px);
+  gap: 14px;
 
-  margin-top: 8px;
+  width: 100%;
 
-  margin-bottom: 18px;
-
-  padding: 5px;
-
-  background: #0c2d30;
-
-  border: 1px solid #426c60;
-
-  border-radius: 13px;
+  margin-top: 10px;
+  margin-bottom: 22px;
 }
 
+
+/* =========================================================
+   CARD / BOTÃO PRINCIPAL
+   ========================================================= */
+
 .analyses-mode-button {
-  min-height: 44px;
+  position: relative;
 
-  padding: 10px 18px;
+  display: grid;
 
-  background: transparent;
+  grid-template-columns:
+    auto minmax(0, 1fr) auto;
 
-  border: 1px solid transparent;
+  align-items: center;
 
-  border-radius: 9px;
+  gap: 18px;
 
-  color: #b9ccc6;
+  min-height: 112px;
+
+  padding: 18px 20px;
+
+  border: 1px solid #315657;
+  border-radius: 15px;
+
+  background:
+    rgba(8, 38, 39, 0.68);
+
+  color: #dce9e4;
 
   cursor: pointer;
 
   font: inherit;
+  text-align: left;
 
-  font-size: 0.86rem;
-
-  font-weight: 700;
-
-  opacity: 0.76;
+  opacity: 1;
 
   transition:
-    background 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease,
-    opacity 160ms ease,
-    transform 160ms ease;
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
 }
+
+/* =========================================================
+   HOVER
+   ========================================================= */
 
 .analyses-mode-button:hover {
-  color: #f4f8f5;
+  transform: translateY(-2px);
 
-  opacity: 1;
+  border-color:
+    rgba(88, 203, 183, 0.52);
+
+  background:
+    rgba(12, 54, 55, 0.8);
 }
+
+
+/* =========================================================
+   MODO ATIVO
+   ========================================================= */
 
 .analyses-mode-button.is-active {
-  background: #58cbb7;
+  border-color:
+    rgba(139, 255, 93, 0.62);
 
-  border-color: #87e46c;
+  background:
+    linear-gradient(
+      115deg,
+      rgba(139, 255, 93, 0.11),
+      rgba(12, 54, 55, 0.82)
+    );
 
-  color: #082627;
+  box-shadow:
+    inset 3px 0 0 #8bff5d,
+    0 10px 30px rgba(0, 0, 0, 0.12);
+}
+/* =========================================================
+   ÍCONES DOS MODOS PRINCIPAIS
+   ========================================================= */
 
+.analyses-mode-icon {
+  display: grid;
+  place-items: center;
+
+  width: 58px;
+  height: 58px;
+
+  flex-shrink: 0;
+
+  overflow: hidden;
+
+  border: 1px solid
+    rgba(88, 203, 183, 0.38);
+
+  border-radius: 14px;
+
+  background:
+    rgba(88, 203, 183, 0.08);
+
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+
+/* imagem real */
+
+.analyses-mode-icon img {
+  display: block;
+
+  width: 44px;
+  height: 44px;
+
+  max-width: 44px;
+  max-height: 44px;
+
+  object-fit: contain;
+
+  opacity: 0.9;
+
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.analyses-mode-button:hover
+  .analyses-mode-icon {
+  border-color:
+    rgba(88, 203, 183, 0.72);
+
+  background:
+    rgba(88, 203, 183, 0.14);
+}
+
+.analyses-mode-button:hover
+  .analyses-mode-icon img {
   opacity: 1;
 
-  box-shadow: 0 5px 18px rgba(88, 203, 183, 0.14);
+  transform: scale(1.06);
 }
+
+
+/* =========================================================
+   MODO ATIVO
+   ========================================================= */
+
+.analyses-mode-button.is-active
+  .analyses-mode-icon {
+  border-color:
+    rgba(139, 255, 93, 0.75);
+
+  background:
+    rgba(139, 255, 93, 0.14);
+
+  box-shadow:
+    0 0 18px
+      rgba(139, 255, 93, 0.09);
+}
+
+.analyses-mode-button.is-active
+  .analyses-mode-icon img {
+  opacity: 1;
+
+  transform: scale(1.08);
+}
+
+/* =========================================================
+   CONTEÚDO
+   ========================================================= */
+
+.analyses-mode-content {
+  display: grid;
+
+  gap: 7px;
+
+  min-width: 0;
+}
+
+.analyses-mode-content strong {
+  color: #f4f8f5;
+
+  font-family:
+    "IBM Plex Mono",
+    monospace;
+
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.analyses-mode-content small {
+  max-width: 380px;
+
+  color: #b9ccc6;
+
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+
+/* =========================================================
+   INDICADOR DE ESTADO
+   ========================================================= */
+
+.analyses-mode-status {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-width: 42px;
+
+  padding: 6px 8px;
+
+  border-radius: 8px;
+
+  color:
+    rgba(185, 204, 198, 0.52);
+
+  font-family:
+    "IBM Plex Mono",
+    monospace;
+
+  font-size: 0.62rem;
+  font-weight: 800;
+
+  letter-spacing: 0.06em;
+}
+
+.analyses-mode-button.is-active
+  .analyses-mode-status {
+  background:
+    rgba(139, 255, 93, 0.1);
+
+  color: #8bff5d;
+}
+
+
 
 .analyses-comparison-workspace {
   display: flex;
@@ -2230,9 +2430,8 @@
 
   color: var(--text-muted);
 
-  font-size: 0.82rem;
-
-  line-height: 1.6;
+  font-size: 0.9rem;
+  line-height: 1.65;
 }
 
 .analyses-projection-notice {
@@ -2256,17 +2455,15 @@
 .analyses-projection-notice strong {
   color: #8bff5d;
 
-  font-size: 0.72rem;
+  font-size: 0.8rem;
 }
 
 .analyses-projection-notice span {
   color: #b9ccc6;
 
-  font-size: 0.7rem;
-
-  line-height: 1.5;
+  font-size: 0.82rem;
+  line-height: 1.55;
 }
-
 .analyses-projection-placeholder {
   display: flex;
 
@@ -2320,6 +2517,220 @@
 
   line-height: 1.5;
 }
+
+/* =========================================================
+   MODOS DA PROJEÇÃO REGIONAL
+
+   Os dois modos representam mudanças grandes na experiência,
+   então recebem mais presença visual que um seletor comum.
+   ========================================================= */
+
+.analyses-projection-view-switch {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 14px;
+
+  width: 100%;
+}
+
+
+/* =========================================================
+   CARD / BOTÃO
+   ========================================================= */
+
+.analyses-projection-view-button {
+  position: relative;
+
+  display: grid;
+
+  grid-template-columns:
+    auto minmax(0, 1fr) auto;
+
+  align-items: center;
+
+  gap: 16px;
+
+  min-height: 92px;
+
+  padding: 16px 18px;
+
+  border: 1px solid #315657;
+  border-radius: 14px;
+
+  background:
+    rgba(8, 38, 39, 0.72);
+
+  color: #dce9e4;
+
+  cursor: pointer;
+
+  font: inherit;
+  text-align: left;
+
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.analyses-projection-view-button:hover {
+  transform: translateY(-2px);
+
+  border-color:
+    rgba(88, 203, 183, 0.5);
+
+  background:
+    rgba(12, 54, 55, 0.82);
+}
+
+
+/* =========================================================
+   MODO ATIVO
+   ========================================================= */
+
+.analyses-projection-view-button.is-active {
+  border-color:
+    rgba(139, 255, 93, 0.56);
+
+  background:
+    linear-gradient(
+      110deg,
+      rgba(139, 255, 93, 0.09),
+      rgba(12, 54, 55, 0.78)
+    );
+
+  box-shadow:
+    inset 3px 0 0 #8bff5d,
+    0 10px 28px rgba(0, 0, 0, 0.1);
+}
+
+
+/* =========================================================
+   NUMERAÇÃO
+   ========================================================= */
+
+.analyses-projection-view-index {
+  display: grid;
+
+  place-items: center;
+
+  width: 36px;
+  height: 36px;
+
+  flex-shrink: 0;
+
+  border: 1px solid
+    rgba(88, 203, 183, 0.28);
+
+  border-radius: 10px;
+
+  color: #58cbb7;
+
+  font-family:
+    "IBM Plex Mono",
+    monospace;
+
+  font-size: 0.72rem;
+  font-weight: 800;
+
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.analyses-projection-view-button.is-active
+  .analyses-projection-view-index {
+  border-color: #8bff5d;
+
+  background:
+    rgba(139, 255, 93, 0.12);
+
+  color: #8bff5d;
+}
+
+
+/* =========================================================
+   TEXTO
+   ========================================================= */
+
+.analyses-projection-view-content {
+  display: grid;
+
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.analyses-projection-view-content strong {
+  color: #f4f8f5;
+
+  font-family:
+    "IBM Plex Mono",
+    monospace;
+
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.analyses-projection-view-content small {
+  max-width: 520px;
+
+  color: #b9ccc6;
+
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   INDICADOR DA DIREITA
+   ========================================================= */
+
+.analyses-projection-view-status {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-width: 42px;
+
+  padding: 6px 8px;
+
+  border-radius: 8px;
+
+  color:
+    rgba(185, 204, 198, 0.58);
+
+  font-family:
+    "IBM Plex Mono",
+    monospace;
+
+  font-size: 0.62rem;
+  font-weight: 800;
+
+  letter-spacing: 0.06em;
+}
+
+.analyses-projection-view-button.is-active
+  .analyses-projection-view-status {
+  background:
+    rgba(139, 255, 93, 0.1);
+
+  color: #8bff5d;
+}
+
 
 /* =========================================================
 
@@ -2673,6 +3084,26 @@
 
    antes de ficarem apertados. */
 
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1000px) {
+  .analyses-mode-switch {
+    grid-template-columns: 1fr;
+  }
+
+  .analyses-mode-button {
+    min-height: 86px;
+  }
+
+  .analyses-mode-content small {
+    max-width: none;
+  }
+}
+
+
+
 @media (max-width: 900px) {
   .analyses-overview-toolbar {
     align-items: stretch;
@@ -2686,6 +3117,16 @@
 
   .analyses-projection-primary {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .analyses-projection-view-switch {
+    grid-template-columns: 1fr;
+  }
+
+  .analyses-projection-view-button {
+    min-height: 82px;
   }
 }
 
@@ -2950,5 +3391,47 @@
 
   .analyses-projection-region-chip-impact {
     margin-left: auto;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 560px) {
+  .analyses-mode-button {
+    grid-template-columns:
+      auto minmax(0, 1fr);
+
+    gap: 12px;
+
+    padding: 14px;
+  }
+
+  .analyses-mode-status {
+    display: none;
+  }
+
+  .analyses-mode-content strong {
+    font-size: 0.96rem;
+  }
+
+  .analyses-mode-content small {
+    font-size: 0.84rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .analyses-projection-view-button {
+    grid-template-columns:
+      auto minmax(0, 1fr);
+
+    gap: 12px;
+
+    padding: 14px;
+  }
+
+  .analyses-projection-view-status {
+    display: none;
   }
 }
