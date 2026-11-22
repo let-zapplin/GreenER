@@ -46,6 +46,7 @@ flowchart LR
 | `GET` | `/api/projecoes/regioes` | Listar regiões com snapshots disponíveis para projeção | US17 / RF16 |
 | `POST` | `/api/projecoes/localizacao` | Projetar emissões do serviço em regiões alternativas | US17 / RF16 |
 | `POST` | `/api/projecoes/redistribuicao` | Sugerir distribuição de serviços entre regiões com menores emissões estimadas | Redistribuição regional |
+| `POST` | `/api/chat` | Consultar o Assistente Karma com dados monitorados e conhecimento do GreenER | Assistente Karma |
 
 **Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
 
