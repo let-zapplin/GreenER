@@ -488,7 +488,7 @@
 }
 
 .analysis-widget .analyses-section-label {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .analysis-widget .comparison-chart-header h2,
@@ -645,7 +645,7 @@
 .analysis-widget .location-projection-map-legend {
   margin-top: 0;
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .analysis-widget .location-projection-map-error {

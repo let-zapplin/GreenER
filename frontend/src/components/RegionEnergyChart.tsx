@@ -83,7 +83,7 @@ export function RegionEnergyChart({
                 />
                 <XAxis
                   type="number"
-                  tick={{ fill: "#a7c993", fontSize: 11 }}
+                  tick={{ fill: "#a7c993", fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
                 />

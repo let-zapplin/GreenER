@@ -2999,7 +2999,6 @@
   height: 100dvh;
 }
 
-.monitoring-map-shell.is-fullscreen > .environment-overview-dock,
 .monitoring-map-shell.is-fullscreen > .services-map-footer {
   flex-shrink: 0;
 }

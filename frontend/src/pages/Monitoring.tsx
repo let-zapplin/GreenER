@@ -311,19 +311,6 @@ export function Monitoring() {
         aria-label={isFullscreenFallback ? "Mapa em tela cheia" : undefined}
         ref={mapShellRef}
       >
-        <EnvironmentOverviewDock
-          energyKwh={dashboard?.summary.energyKwh ?? null}
-          emissionsGco2e={dashboard?.summary.emissionsGco2e ?? null}
-          activeServiceCount={dashboard?.summary.activeServiceCount ?? 0}
-          noMetricsServiceCount={dashboard?.summary.noMetricsServiceCount ?? 0}
-          unavailableServiceCount={
-            dashboard?.summary.unavailableServiceCount ?? 0
-          }
-          isPartial={dashboard?.summary.isPartial ?? false}
-          loading={dashboardLoading}
-          error={dashboardError}
-        />
-
         <div
           className={`services-map-workspace ${
             selectedService ? "is-focused" : ""
