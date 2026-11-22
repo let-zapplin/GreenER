@@ -1,7 +1,7 @@
 # Documentação da API — GreenER
 > _**Referência técnica | Versão validada no fechamento da Sprint 2 — 09/11/2026**
 
-> Esta documentação separa endpoints **já implementados**_ de endpoints _**planejados**_. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução._
+> Esta documentação separa endpoints **já implementados** dos endpoints **planejados**. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução.
 
 ## 01. Visão geral
 O backend do **GreenER** utiliza **Node.js, Express e TypeScript** para fornecer uma API REST que conecta a interface React, o banco de dados PostgreSQL e serviços externos de monitoramento.
@@ -46,6 +46,7 @@ flowchart LR
 | `GET` | `/api/projecoes/regioes` | Listar regiões com snapshots disponíveis para projeção | US17 / RF16 |
 | `POST` | `/api/projecoes/localizacao` | Projetar emissões do serviço em regiões alternativas | US17 / RF16 |
 | `POST` | `/api/projecoes/redistribuicao` | Sugerir distribuição de serviços entre regiões com menores emissões estimadas | Redistribuição regional |
+| `POST` | `/api/chat` | Consultar o Assistente Karma com dados monitorados e conhecimento do GreenER | Assistente Karma |
 
 **Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
 
@@ -237,6 +238,40 @@ Sem o cabeçalho `Authorization: Bearer <token>`:
 **Status:** `401 Unauthorized`.
 
 Token inválido ou expirado também retorna `401`, com mensagem correspondente.
+
+### `POST /api/chat` — Assistente Karma
+Envia uma pergunta ao assistente. A rota exige JWT válido e aceita apenas consultas de
+leitura; o modelo local não acessa o banco de dados.
+
+**Corpo esperado:**
+
+```json
+{
+  "message": "Qual serviço gasta mais energia?",
+  "period": "24h",
+  "conversationId": "8f14e45f-ceea-4a67-9f0b-7d2c1a4e5b10",
+  "context": {
+    "page": "/home",
+    "serviceName": null
+  },
+  "history": []
+}
+```
+
+`message` é obrigatória e aceita até 500 caracteres. `period` é opcional e deve ser
+`1h`, `6h`, `24h` ou `7d` (padrão `24h`). `conversationId`, `context` e `history` são
+opcionais; o histórico recebido aceita até 12 mensagens. O backend aplica regras
+determinísticas primeiro e consulta o Ollama apenas quando necessário para classificar
+uma pergunta ambígua ou redigir uma resposta de conhecimento. Em caso de falha do
+Ollama, o assistente continua em modo regras.
+
+**Sucesso:** `200 OK`. A resposta contém `conversationId`, `answer`, `intent`, `period`,
+`chart`, `clarification`, `suggestions`, `partial`, `disclaimer`, `model` e `degraded`.
+
+**Erros principais:** `400` para entrada inválida, `401` para JWT ausente ou inválido,
+`403` ao tentar acessar uma conversa de outro usuário e `429` quando já existe uma
+pergunta em processamento no processo do backend. O contrato completo está em
+[`docs/assistente-ia.md`](assistente-ia.md).
 
 ---
 
@@ -1055,6 +1090,108 @@ A interface diferencia ausência de histórico, coletas sem energia calculável 
 
 O frontend consome esta rota na página **Análises**, permitindo seleção do serviço, seleção de período, atualização automática e exploração do histórico por zoom. O cálculo ambiental permanece centralizado no backend; o gráfico apenas representa os valores retornados pela API.
 
+### Projeções ambientais por localização
+
+As duas rotas exigem JWT válido. A projeção reutiliza o histórico ambiental do
+serviço e os snapshots regionais persistidos; não consulta as APIs externas durante
+a requisição.
+
+#### `GET /api/projecoes/regioes`
+
+Lista a intensidade de carbono mais recente disponível para cada região.
+
+**Sucesso:** `200 OK`.
+
+```json
+{
+  "message": "2 regiões disponíveis para projeção",
+  "regions": [
+    {
+      "regionCode": "BR-SP",
+      "country": "Brasil",
+      "region": "São Paulo",
+      "city": null,
+      "latitude": -23.55,
+      "longitude": -46.63,
+      "carbonIntensityGco2ePerKwh": 200,
+      "renewableSharePercent": 80,
+      "snapshotRegisteredAt": "2026-11-17T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### `POST /api/projecoes/localizacao`
+
+**Corpo esperado:**
+
+```json
+{
+  "serviceId": 7,
+  "start": "2026-11-16T00:00:00.000Z",
+  "end": "2026-11-17T00:00:00.000Z",
+  "regionCodes": ["CA-QC"]
+}
+```
+
+`serviceId` deve identificar um serviço existente; `start` e `end` devem formar um
+período válido. `regionCodes` deve conter de 1 a 4 códigos não vazios. O backend
+normaliza e remove duplicatas e inclui automaticamente a região atual do serviço
+entre os cenários.
+
+**Sucesso:** `200 OK`. A resposta contém o serviço, o período, a energia usada no
+cálculo, as contagens de amostras, a indicação de dados parciais, os cenários
+disponíveis e os códigos de regiões sem snapshot:
+
+```json
+{
+  "message": "Projeção ambiental calculada",
+  "service": {
+    "serviceId": 7,
+    "name": "Billing API",
+    "currentRegionCode": "BR-SP"
+  },
+  "period": {
+    "start": "2026-11-16T00:00:00.000Z",
+    "end": "2026-11-17T00:00:00.000Z"
+  },
+  "energyKwh": 0.000849,
+  "validEnergySampleCount": 1,
+  "totalSampleCount": 1,
+  "isPartial": false,
+  "scenarios": [
+    {
+      "regionCode": "CA-QC",
+      "country": "Canadá",
+      "region": "Quebec",
+      "city": null,
+      "latitude": 46.81,
+      "longitude": -71.21,
+      "carbonIntensityGco2ePerKwh": 25,
+      "renewableSharePercent": 95,
+      "projectedEmissionsGco2e": 0.021225,
+      "differenceGco2e": -0.148575,
+      "differencePercent": -87.5,
+      "isCurrent": false,
+      "snapshotRegisteredAt": "2026-11-17T00:00:00.000Z"
+    }
+  ],
+  "unavailableRegionCodes": []
+}
+```
+
+**Erros principais:** `400` para serviço, período ou lista de regiões inválidos
+(`INVALID_PROJECTION_SERVICE_ID`, `INVALID_PROJECTION_REQUEST`,
+`INVALID_INDICATOR_PERIOD`, `INVALID_PROJECTION_REGIONS` ou
+`PROJECTION_REGION_LIMIT_EXCEEDED`); `401` para JWT ausente ou inválido; `404`
+(`SERVICE_NOT_FOUND`) quando o serviço não existe.
+
+**Limitação atual:** a projeção reutiliza o histórico de indicadores, que reduz
+históricos longos para até aproximadamente 500 pontos antes de devolvê-los.
+Consequentemente, em períodos com mais de 500 amostras, `energyKwh` e os cenários
+da projeção são calculados sobre as amostras reduzidas, não sobre todas as coletas
+brutas. Considere esse resultado parcial ao interpretar a projeção.
+
 ## 05. Coleta de métricas — US03 / US04 / US05
 A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`. Falhas de comunicação (timeout ou conexão recusada) são registradas como `unavailable`, sem interromper a coleta dos demais serviços.
 
@@ -1318,8 +1455,8 @@ Exemplo sem JWT:
 
 ---
 
-## 08. Situação funcional no fechamento da Sprint 2
-No fechamento da Sprint 2 estão implementados e integrados ao produto:
+## 08. Situação funcional no fechamento da Sprint 3
+No fechamento da Sprint 3 estão implementados e integrados ao produto:
 
 - descoberta e sincronização do catálogo de serviços;
 
@@ -1334,19 +1471,22 @@ No fechamento da Sprint 2 estão implementados e integrados ao produto:
 - histórico ambiental por serviço;
 
 - resumo consolidado do dashboard;
-
+- ranking de impacto por energia ou CO₂e;
+- comparação de serviços no mesmo período;
+- projeção ambiental por localização;
 - autenticação JWT;
 
 - autorização administrativa para coleta manual;
 
 - consumo dos endpoints pelo Monitoramento e pela página de Análises.
 
-A validação de 09/11/2026 confirmou o fluxo com dados persistidos e atualização automática. Os detalhes estão em [`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md).
+A validação de 09/11/2026 confirmou o fluxo com dados persistidos e atualização automática. A implementação final de ranking, comparação e projeção foi concluída na Sprint 3. Os detalhes da validação estão em [`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md).
 
 ## 09. Recursos de análise disponíveis
 O ranking por energia ou CO₂e e a comparação entre serviços são apresentados na página de Análises usando os endpoints existentes `GET /api/indicadores?start=<ISO>&end=<ISO>` e `GET /api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>`. Não há endpoints exclusivos para ranking ou comparação. A interface sinaliza dados parciais; serviços removidos com dados no período permanecem disponíveis nas análises, e o ranking os identifica como “Removido”.
 
-A visualização geográfica (`US13`) foi antecipada para o frontend na Sprint 2 e utiliza os dados de localização já expostos por `GET /api/servicos`; ela não exige um novo endpoint específico de mapa.
+A visualização geográfica (`US13`) utiliza os dados de localização expostos por
+`GET /api/servicos`; o mapa não exige um endpoint próprio.
 
 ---
 
@@ -1402,14 +1542,21 @@ backend/src/
 │   │   └── intensidades.repository.ts # Histórico e seleção temporal
 
 │   ├── dashboard/
-
 │   │   ├── dashboard.routes.ts      # GET / (protegido por JWT)
-
 │   │   ├── dashboard.controller.ts  # Validação do período e resposta HTTP
-
 │   │   ├── dashboard.service.ts     # Consolidação dos indicadores
-
 │   │   └── dashboard.repository.ts  # Contagem do estado dos serviços
+│   ├── projecoes/
+│   │   ├── projecoes.routes.ts      # GET /regioes e POST /localizacao (JWT)
+│   │   ├── projecoes.controller.ts  # Validação HTTP e resposta da projeção
+│   │   ├── projecoes.service.ts     # Cálculo dos cenários regionais
+│   │   └── projecoes.repository.ts  # Snapshots regionais mais recentes
+│   ├── chat/
+│   │   ├── chat.routes.ts           # POST /api/chat (protegido por JWT)
+│   │   ├── chat.controller.ts       # Validação HTTP e titularidade da conversa
+│   │   ├── chat.service.ts          # Regras, fatos, fallback e resposta
+│   │   ├── chat.prompt.ts           # Prompts de classificação e redação
+│   │   └── ollama.client.ts         # Cliente HTTP do Ollama local
 
 ├── integrations/
 

@@ -46,6 +46,7 @@ emissão estimada de CO₂e
 | ⚙️ **Backend / API** | [`backend/README.md`](backend/README.md) · [`docs/api.md`](docs/api.md) |
 | 🗄️ **Banco de dados** | [`database/README.md`](database/README.md) |
 | 🧩 **Arquitetura** | [`docs/arquitetura.md`](docs/arquitetura.md) |
+| 🤖 **Assistente Karma (Ollama)** | [`docs/assistente-ia.md`](docs/assistente-ia.md) |
 | 🌱 **Cálculos ambientais** | [`docs/calculos.md`](docs/calculos.md) |
 | 📦 **Plano de entregas** | [`docs/plano-de-entregas.md`](docs/plano-de-entregas.md) |
 | ✅ **Validação técnica** | [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md) |
@@ -58,7 +59,7 @@ emissão estimada de CO₂e
 | **Sprint 2** | 20/10–09/11/2026 | [`sprint-2.md`](docs/sprints/sprint-2.md) | [▶ Vídeo](https://youtu.be/qW38NnthF8Q) | 🟡 Sprint Review realizada; feedback do cliente não recebido|
 | **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | A definir | 🔄 Em andamento; fechamento após entrega em 23/11|
 
-> A visualização geográfica começou antecipadamente no fim da Sprint 2 e será consolidada na Sprint 3.
+> A visualização geográfica foi antecipada da Sprint 3 e integrada ao Monitoramento. Ranking, comparação e refinamentos finais de análise foram concluídos na Sprint 3.
 
 ---
 
@@ -104,9 +105,18 @@ Também estão implementados:
 - ✅ estimativa de emissão de CO₂e por serviço;
 - ✅ autenticação JWT;
 - ✅ autorização administrativa para coleta manual;
+- ✅ Assistente Karma com Ollama local, respostas determinísticas e fallback para
+  modo regras;
 - ✅ persistência PostgreSQL após reinicialização dos containers;
 - 🔄 reformulação visual do Monitoramento — TEC37 em revisão;
-- 🔄 visualização geográfica — US13 antecipada da Sprint 3 e em revisão no fechamento da Sprint 2.
+- ✅ visualização geográfica — US13 antecipada e integrada ao Monitoramento.
+
+### Arquitetura de desempenho — TEC26
+
+`Home`, `Monitoring` e `Analyses` usam lazy loading para reduzir o JavaScript da
+entrada inicial. A pausa do polling em abas ocultas ainda não está implementada no
+código atual: os hooks não verificam a visibilidade da aba nem suspendem suas
+consultas; o navegador pode aplicar seu próprio throttling em segundo plano.
 
 ---
 
@@ -166,6 +176,7 @@ O ambiente monitorado é dinâmico: serviços podem surgir, desaparecer, tornar-
 | --- | --- |
 | **Frontend** | React 19 · TypeScript · Vite · React Router · Recharts · MapLibre GL · OpenFreeMap · MapTiler SDK · Phosphor Icons |
 | **Backend** | Node.js · Express · TypeScript · JWT · `pg` |
+| **Assistente IA** | Karma · Ollama local · `qwen2.5:3b` |
 | **Dados** | PostgreSQL 17 · SQL explícito e parametrizado |
 | **Infraestrutura** | Docker · Docker Compose · Git · GitHub |
 

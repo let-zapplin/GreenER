@@ -36,6 +36,7 @@ export function useServiceIndicators(period?: AnalysisPeriodWindow) {
 
     async function loadIndicators(authToken: string) {
       if (disposed || requestInFlight) return;
+      if (document.hidden) return;
 
       requestInFlight = true;
 

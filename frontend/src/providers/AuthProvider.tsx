@@ -60,10 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         timer = setTimeout(checkExpiration, Math.min(remaining, 2_147_483_647));
     }
     checkExpiration();
-    document.addEventListener("visibilitychange", checkExpiration);
     return () => {
       clearTimeout(timer);
-      document.removeEventListener("visibilitychange", checkExpiration);
     };
   }, [session, logout]);
 
