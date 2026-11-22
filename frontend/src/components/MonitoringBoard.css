@@ -1,0 +1,1570 @@
+/* =========================================================
+   PAINEL DO MONITORAMENTO — GRADE PERSONALIZÁVEL (TEC34/TEC37)
+
+   Mesma mecânica da tela de Estatísticas do MFSim, com a
+   identidade do GreenER: células quadradas, blocos arrastáveis
+   e redimensionáveis, paleta lateral e páginas em abas.
+   ========================================================= */
+
+.monitoring-board {
+  --board-accent: var(--monitoring-accent, #87e46c);
+  --board-muted: var(--monitoring-muted, #c1d5cf);
+  --board-border: rgba(88, 154, 144, 0.32);
+  --board-border-strong: rgba(88, 154, 144, 0.55);
+  --board-surface: rgba(8, 44, 46, 0.72);
+  --board-card: linear-gradient(
+    180deg,
+    rgba(11, 54, 56, 0.96) 0%,
+    rgba(8, 44, 46, 0.96) 100%
+  );
+  --board-danger: #ee1e41;
+
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* ---------- Barra: páginas e ações ---------- */
+
+.monitoring-board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.monitoring-board-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.monitoring-board-tab,
+.monitoring-board-tab-input,
+.monitoring-board-tab-add {
+  flex: none;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 36px;
+  padding: 0 14px;
+
+  border: 1px solid var(--board-border);
+  border-radius: 999px;
+
+  background: var(--board-surface);
+  color: var(--board-muted);
+
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.monitoring-board-tab:hover,
+.monitoring-board-tab-add:hover {
+  border-color: var(--board-accent);
+  color: #f4f8f5;
+}
+
+.monitoring-board-tab.is-active {
+  border-color: var(--board-accent);
+  background: rgba(135, 228, 108, 0.14);
+  color: #f4f8f5;
+}
+
+.monitoring-board-tab-count {
+  min-width: 18px;
+  padding: 2px 6px;
+
+  border-radius: 6px;
+
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--board-accent);
+
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.monitoring-board-tab-lock {
+  width: 13px;
+  height: 13px;
+
+  color: var(--board-accent);
+  opacity: 0.75;
+}
+
+.monitoring-board-tab-input {
+  width: 160px;
+  border-color: var(--board-accent);
+  color: #f4f8f5;
+  outline: none;
+  cursor: text;
+}
+
+.monitoring-board-tab-add {
+  width: 36px;
+  padding: 0;
+
+  justify-content: center;
+
+  border-style: dashed;
+  background: transparent;
+  color: var(--board-accent);
+}
+
+.monitoring-board-tab-add svg {
+  width: 16px;
+  height: 16px;
+}
+
+.monitoring-board-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.monitoring-board-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 36px;
+  padding: 0 14px;
+
+  border: 1px solid var(--board-border);
+  border-radius: 999px;
+
+  background: var(--board-surface);
+  color: #f4f8f5;
+
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.monitoring-board-action svg {
+  width: 15px;
+  height: 15px;
+}
+
+.monitoring-board-action:hover:not(:disabled) {
+  border-color: var(--board-accent);
+}
+
+.monitoring-board-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.monitoring-board-action.is-edit.is-active {
+  border-color: var(--board-accent);
+  background: var(--board-accent);
+  color: #0c282b;
+}
+
+.monitoring-board-action.is-reset {
+  border-style: dashed;
+  color: var(--board-muted);
+  background: transparent;
+}
+
+.monitoring-board-action.is-reset:hover:not(:disabled) {
+  color: #f4f8f5;
+}
+
+.monitoring-board-action.is-delete.is-confirming,
+.monitoring-board-action.is-reset.is-confirming {
+  border-color: var(--board-danger);
+  background: rgba(238, 30, 65, 0.16);
+  color: #ffd7d9;
+}
+
+.monitoring-board-width-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  height: 36px;
+  padding: 0 12px;
+
+  border: 1px dashed rgba(135, 228, 108, 0.5);
+  border-radius: 999px;
+
+  color: #cdf3bf;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.monitoring-board-width-note svg {
+  width: 15px;
+  height: 15px;
+}
+
+.monitoring-board-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  height: 36px;
+  padding: 0 12px;
+
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+
+  color: var(--board-muted);
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.monitoring-board-locked svg {
+  width: 14px;
+  height: 14px;
+
+  color: var(--board-accent);
+  opacity: 0.75;
+}
+
+.monitoring-board-action:focus-visible,
+.monitoring-board-tab:focus-visible,
+.monitoring-board-tab-add:focus-visible,
+.monitoring-board-tab-input:focus-visible,
+.monitoring-board-widget-action:focus-visible,
+.monitoring-board-palette-item:focus-visible,
+.monitoring-board-palette-open:focus-visible,
+.monitoring-board-palette-close:focus-visible,
+.monitoring-board-widget-bar:focus-visible {
+  outline: 2px solid var(--board-accent);
+  outline-offset: 2px;
+}
+
+.monitoring-board-live {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.monitoring-board p.monitoring-board-hint {
+  margin: -2px 0 0;
+  color: var(--board-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---------- Corpo: grade + paleta ---------- */
+
+.monitoring-board-body {
+  position: relative;
+
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+
+  min-width: 0;
+}
+
+.monitoring-board-scroller {
+  flex: 1;
+
+  min-width: 0;
+}
+
+.monitoring-board-grid {
+  position: relative;
+  width: 100%;
+}
+
+/* As células só aparecem em edição, como um pontilhado discreto. */
+.monitoring-board.is-editing .monitoring-board-grid {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(193, 213, 207, 0.18) 1px,
+    transparent 1.5px
+  );
+  background-size: var(--board-pitch) var(--board-pitch);
+  background-position: -6px -6px;
+}
+
+/* ---------- Blocos ---------- */
+
+.monitoring-board-widget {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+  min-height: 0;
+
+  overflow: hidden;
+
+  /* O conteúdo acompanha o tamanho do bloco (cqw/cqh). */
+  container-type: size;
+  container-name: widget;
+
+  border: 1px solid var(--board-border);
+  border-radius: 18px;
+
+  background: var(--board-card);
+
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(151, 255, 185, 0.08);
+
+  /* Os vizinhos deslizam para o novo lugar quando o arranjo assenta. */
+  transition:
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.monitoring-board.is-editing .monitoring-board-widget {
+  cursor: grab;
+  touch-action: none;
+}
+
+.monitoring-board.is-editing .monitoring-board-widget:hover {
+  border-color: var(--board-border-strong);
+}
+
+/* Foco vindo do mouse não desenha contorno; teclado mantém o anel. */
+.monitoring-board-body[data-focus-input="pointer"]
+  .monitoring-board-widget :focus {
+  outline: none;
+}
+
+/* Bloco ativo: é ele que recebe a rolagem depois do clique. */
+.monitoring-board-widget.is-scroll-active {
+  border-color: var(--board-accent);
+}
+
+/*
+ * Bloco inativo não tem rolagem própria: `overflow-y: clip` tira a caixa
+ * da cadeia de rolagem, então a roda sobe direto para a página e o
+ * navegador rola com suavidade nativa. Novos containers roláveis de
+ * bloco entram nesta lista.
+ */
+.monitoring-board-widget:not(.is-scroll-active)
+  :is(
+    .services-map-hud,
+    .environment-overview-dock,
+    .monitoring-summary-shell,
+    .analysis-widget-scroll,
+    .analysis-widget-regions,
+    .projection-service-region-list,
+    .map-service-panel,
+    .services-map-popup-service-list
+  ) {
+  overflow-y: clip;
+}
+
+.monitoring-board-widget.is-held {
+  z-index: 5;
+
+  border-color: var(--board-accent);
+
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.55),
+    0 0 0 1px var(--board-accent);
+}
+
+.monitoring-board-widget.is-held.is-move {
+  transition:
+    width 220ms ease,
+    height 220ms ease;
+
+  cursor: grabbing;
+  opacity: 0.92;
+}
+
+.monitoring-board.is-dragging,
+.monitoring-board.is-dragging * {
+  cursor: grabbing !important;
+}
+
+.monitoring-board-widget.is-collapsed .monitoring-board-widget-bar {
+  flex: 1;
+  border-bottom: 0;
+}
+
+/* ---------- Barra do bloco ---------- */
+
+.monitoring-board-widget-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  flex: none;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 8px 0 14px;
+
+  border-bottom: 1px solid transparent;
+}
+
+.monitoring-board.is-editing .monitoring-board-widget-bar {
+  border-bottom-color: rgba(88, 154, 144, 0.18);
+  cursor: grab;
+}
+
+.monitoring-board.is-editing .monitoring-board-widget-bar:active {
+  cursor: grabbing;
+}
+
+.monitoring-board-widget-grip {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--board-muted);
+}
+
+.monitoring-board-widget-title {
+  flex: 1;
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: var(--board-accent);
+
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.monitoring-board-widget-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.monitoring-board-widget-action {
+  display: inline-grid;
+  place-items: center;
+
+  width: 26px;
+  height: 26px;
+  padding: 0;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+
+  background: transparent;
+  color: var(--board-muted);
+
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.monitoring-board-widget-action svg {
+  width: 13px;
+  height: 13px;
+}
+
+.monitoring-board-widget-action:hover {
+  border-color: var(--board-border);
+  color: #f4f8f5;
+}
+
+.monitoring-board-widget-action.is-remove:hover {
+  border-color: rgba(238, 30, 65, 0.55);
+  background: rgba(238, 30, 65, 0.16);
+  color: #ffd7d9;
+}
+
+/* ---------- Corpo do bloco ---------- */
+
+.monitoring-board-widget-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+
+  min-width: 0;
+  min-height: 0;
+
+  overflow: hidden;
+}
+
+.monitoring-board-widget-body[hidden] {
+  display: none;
+}
+
+/* Em edição o conteúdo não recebe o ponteiro: a barra comanda. */
+.monitoring-board.is-editing .monitoring-board-widget-body {
+  pointer-events: none;
+}
+
+/* ---------- Alças de redimensionamento ---------- */
+
+.monitoring-board-handle {
+  position: absolute;
+  z-index: 2;
+}
+
+.monitoring-board-handle.is-n,
+.monitoring-board-handle.is-s {
+  left: 16px;
+  right: 16px;
+  height: 10px;
+  cursor: ns-resize;
+}
+
+.monitoring-board-handle.is-n {
+  top: 0;
+}
+
+.monitoring-board-handle.is-s {
+  bottom: 0;
+}
+
+.monitoring-board-handle.is-e,
+.monitoring-board-handle.is-w {
+  top: 16px;
+  bottom: 16px;
+  width: 10px;
+  cursor: ew-resize;
+}
+
+.monitoring-board-handle.is-e {
+  right: 0;
+}
+
+.monitoring-board-handle.is-w {
+  left: 0;
+}
+
+.monitoring-board-handle.is-ne,
+.monitoring-board-handle.is-nw,
+.monitoring-board-handle.is-se,
+.monitoring-board-handle.is-sw {
+  width: 18px;
+  height: 18px;
+}
+
+.monitoring-board-handle.is-ne {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.monitoring-board-handle.is-sw {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+.monitoring-board-handle.is-nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.monitoring-board-handle.is-se {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+/* O canto mostra um L discreto ao passar o mouse. */
+.monitoring-board-handle.is-se::after,
+.monitoring-board-handle.is-sw::after,
+.monitoring-board-handle.is-ne::after,
+.monitoring-board-handle.is-nw::after {
+  content: "";
+
+  position: absolute;
+
+  width: 8px;
+  height: 8px;
+
+  border: 0 solid var(--board-accent);
+  opacity: 0;
+
+  transition: opacity 160ms ease;
+}
+
+.monitoring-board-handle.is-se::after {
+  right: 5px;
+  bottom: 5px;
+  border-right-width: 2px;
+  border-bottom-width: 2px;
+}
+
+.monitoring-board-handle.is-sw::after {
+  left: 5px;
+  bottom: 5px;
+  border-left-width: 2px;
+  border-bottom-width: 2px;
+}
+
+.monitoring-board-handle.is-ne::after {
+  right: 5px;
+  top: 5px;
+  border-right-width: 2px;
+  border-top-width: 2px;
+}
+
+.monitoring-board-handle.is-nw::after {
+  left: 5px;
+  top: 5px;
+  border-left-width: 2px;
+  border-top-width: 2px;
+}
+
+.monitoring-board-widget:hover .monitoring-board-handle::after,
+.monitoring-board-widget.is-resize .monitoring-board-handle::after {
+  opacity: 1;
+}
+
+/* ---------- Marca de destino e fantasma ---------- */
+
+.monitoring-board-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  border: 2px dashed var(--board-accent);
+  border-radius: 18px;
+
+  background: rgba(135, 228, 108, 0.1);
+
+  pointer-events: none;
+
+  transition:
+    transform 120ms ease,
+    width 120ms ease,
+    height 120ms ease;
+}
+
+.monitoring-board-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  z-index: 100;
+
+  pointer-events: none;
+
+  opacity: 0.85;
+
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.55);
+
+  transition: none;
+}
+
+.monitoring-board-empty {
+  position: absolute;
+  inset: 0 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+
+  padding: 48px 16px;
+
+  color: var(--board-muted);
+
+  text-align: center;
+
+  pointer-events: none;
+}
+
+.monitoring-board-empty-icon {
+  width: 34px;
+  height: 34px;
+  color: var(--board-border-strong);
+}
+
+.monitoring-board-empty p {
+  max-width: 380px;
+  font-size: 14px;
+}
+
+/* ---------- Paleta de blocos ---------- */
+
+.monitoring-board-palette {
+  position: sticky;
+  top: 96px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  flex: none;
+  width: 236px;
+  max-height: calc(100vh - 128px);
+  padding: 14px;
+
+  overflow-y: auto;
+
+  border: 1px solid var(--board-border);
+  border-radius: 16px;
+
+  background: rgba(8, 44, 46, 0.92);
+
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+
+  animation: monitoring-board-palette-in 220ms
+    cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes monitoring-board-palette-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+.monitoring-board-palette-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.monitoring-board-palette-group h3 {
+  margin: 0 0 2px;
+
+  color: var(--board-muted);
+
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.monitoring-board-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 8px 10px;
+
+  border: 1px solid var(--board-border);
+  border-radius: 10px;
+
+  background: rgba(11, 54, 56, 0.72);
+  color: #e2ece6;
+
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+
+  text-align: left;
+
+  cursor: grab;
+
+  touch-action: none;
+  user-select: none;
+
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.monitoring-board-palette-item:hover {
+  border-color: var(--board-accent);
+  background: rgba(16, 70, 71, 0.9);
+}
+
+.monitoring-board-palette-glyph {
+  display: grid;
+  place-items: center;
+
+  flex: none;
+  width: 28px;
+  height: 28px;
+
+  border-radius: 8px;
+
+  background: rgba(135, 228, 108, 0.14);
+  color: var(--board-accent);
+}
+
+.monitoring-board-palette-glyph.is-indicador {
+  border-radius: 50%;
+  background: rgba(125, 211, 252, 0.14);
+  color: #7dd3fc;
+}
+
+.monitoring-board-palette-glyph svg {
+  width: 16px;
+  height: 16px;
+}
+
+.monitoring-board p.monitoring-board-palette-hint {
+  margin: 0;
+  color: var(--board-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* Em janela estreita a paleta flutua sobre a grade. */
+.monitoring-board-palette.is-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+
+  z-index: 20;
+
+  width: min(250px, 82%);
+  max-height: min(560px, calc(100vh - 168px));
+
+  padding-top: 40px;
+
+  box-shadow: -14px 0 34px rgba(0, 0, 0, 0.5);
+}
+
+.monitoring-board.is-dragging .monitoring-board-palette.is-overlay {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.monitoring-board-palette-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+
+  display: grid;
+  place-items: center;
+
+  width: 28px;
+  height: 28px;
+  padding: 0;
+
+  border: 0;
+  border-radius: 8px;
+
+  background: transparent;
+  color: var(--board-muted);
+
+  cursor: pointer;
+}
+
+.monitoring-board-palette-close:hover {
+  background: rgba(16, 70, 71, 0.9);
+  color: #f4f8f5;
+}
+
+.monitoring-board-palette-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.monitoring-board-palette-open {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+
+  z-index: 20;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 36px;
+  padding: 0 14px;
+
+  border: 1px solid var(--board-accent);
+  border-radius: 999px;
+
+  background: rgba(16, 70, 71, 0.96);
+  color: #f4f8f5;
+
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+
+  cursor: pointer;
+}
+
+.monitoring-board-palette-open svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ---------- Conteúdo: mapa, gráfico, indicadores ---------- */
+
+.monitoring-board-widget .monitoring-map-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+
+  min-height: 0;
+
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.monitoring-board-widget .monitoring-map-shell > * + * {
+  border-top: 1px solid rgba(88, 154, 144, 0.18);
+}
+
+.monitoring-board-widget .services-map-workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
+  min-height: 0;
+}
+
+.monitoring-board-widget .services-map-stage {
+  flex: 1;
+
+  height: auto;
+  min-height: 0;
+
+  overflow: hidden;
+}
+
+.monitoring-board-widget .services-map-stage .services-map-shell {
+  height: 100%;
+  min-height: 0;
+}
+
+.monitoring-board-widget .services-map-overlay {
+  position: absolute;
+
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+
+  inset-inline-start: auto;
+
+  width: min(340px, calc(100% - 24px));
+
+  margin: 0;
+}
+
+.monitoring-board-widget .services-map-footer {
+  margin: 0;
+  padding: 8px 16px 10px;
+}
+
+.monitoring-board-widget .monitoring-chart-shell {
+  display: flex;
+  flex: 1;
+
+  min-height: 0;
+
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.monitoring-board-widget .region-energy-chart {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+
+  min-height: 0;
+  height: 100%;
+}
+
+.monitoring-board-widget .region-energy-chart-plot {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.monitoring-board-widget .services-map-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 16px 12px;
+
+  overflow-y: auto;
+}
+
+.monitoring-board-widget .services-map-hud .service-hud {
+  max-width: 100%;
+
+  overflow: visible;
+}
+
+.monitoring-board-widget .environment-overview-dock {
+  flex: 0 0 auto;
+
+  height: auto;
+  max-height: 56%;
+
+  overflow-y: auto;
+
+  background: transparent;
+}
+
+.monitoring-board-widget .monitoring-summary-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: safe center;
+
+  min-width: 0;
+  min-height: 0;
+
+  overflow-y: auto;
+}
+
+/* Barras de rolagem discretas, no tom dos blocos. */
+.monitoring-board-widget .services-map-hud,
+.monitoring-board-widget .environment-overview-dock,
+.monitoring-board-widget .monitoring-summary-shell {
+  scrollbar-color: #58cbb766 transparent;
+  scrollbar-width: thin;
+
+  /* No fim do bloco a página continua; travar aqui seria rolagem morta. */
+  overscroll-behavior: auto;
+}
+
+.monitoring-board-widget .services-map-hud::-webkit-scrollbar,
+.monitoring-board-widget .environment-overview-dock::-webkit-scrollbar,
+.monitoring-board-widget .monitoring-summary-shell::-webkit-scrollbar {
+  display: block;
+
+  width: 6px;
+  height: 6px;
+}
+
+.monitoring-board-widget .services-map-hud::-webkit-scrollbar-track,
+.monitoring-board-widget
+  .environment-overview-dock::-webkit-scrollbar-track,
+.monitoring-board-widget .monitoring-summary-shell::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.monitoring-board-widget .services-map-hud::-webkit-scrollbar-thumb,
+.monitoring-board-widget
+  .environment-overview-dock::-webkit-scrollbar-thumb,
+.monitoring-board-widget .monitoring-summary-shell::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+
+  background: #58cbb766;
+}
+
+.monitoring-board-widget .services-map-hud::-webkit-scrollbar-thumb:hover,
+.monitoring-board-widget
+  .environment-overview-dock::-webkit-scrollbar-thumb:hover,
+.monitoring-board-widget .monitoring-summary-shell::-webkit-scrollbar-thumb:hover {
+  background: #87e46c88;
+}
+
+.monitoring-board-widget
+  .monitoring-summary-shell
+  .environment-overview-dock {
+  flex: 1 1 auto;
+
+  grid-template-rows:
+    auto
+    minmax(0, 1fr)
+    auto;
+
+  height: auto;
+  max-height: none;
+
+  overflow: visible;
+}
+
+.monitoring-board-widget
+  .monitoring-summary-shell
+  .environment-overview-stat {
+  align-content: center;
+}
+
+.monitoring-board-widget
+  .monitoring-summary-shell
+  .environment-overview-dock.is-collapsed {
+  flex: 0 0 auto;
+
+  grid-template-rows: auto;
+}
+
+.monitoring-board-widget
+  .environment-overview-dock-grid {
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(clamp(126px, 20cqw, 230px), 1fr)
+  );
+}
+
+/* ---------- O conteúdo cresce junto com o bloco ---------- */
+
+.monitoring-board-widget .environment-overview-dock-compact {
+  font-size: clamp(10px, 1.4cqw, 15px);
+}
+
+.monitoring-board-widget .environment-overview-dock-compact strong {
+  font-size: clamp(11px, 1.6cqw, 17px);
+}
+
+.monitoring-board-widget .environment-overview-dock-eyebrow {
+  font-size: clamp(11px, 1.5cqw, 15px);
+}
+
+.monitoring-board-widget .environment-overview-dock-title strong {
+  font-size: clamp(13px, 1.9cqw, 21px);
+}
+
+.monitoring-board-widget .environment-overview-stat > span {
+  font-size: clamp(10px, 1.1cqw, 14px);
+}
+
+.monitoring-board-widget .environment-overview-stat strong {
+  font-size: clamp(21px, 5.2cqw, 56px);
+}
+
+@container widget (min-height: 300px) and (min-width: 620px) {
+  .monitoring-board-widget[data-widget-type="summary"]
+    .environment-overview-dock-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(0, 1fr);
+  }
+
+  .monitoring-board-widget[data-widget-type="summary"]
+    .environment-overview-stat {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    align-content: stretch;
+
+    padding: 6px clamp(16px, 3cqw, 32px);
+  }
+
+  .monitoring-board-widget[data-widget-type="summary"]
+    .environment-overview-stat > div {
+    justify-content: flex-end;
+  }
+
+  .monitoring-board-widget[data-widget-type="summary"]
+    .environment-overview-stat > span {
+    font-size: clamp(12px, 2.2cqw, 18px);
+  }
+
+  .monitoring-board-widget[data-widget-type="summary"]
+    .environment-overview-stat strong {
+    font-size: clamp(24px, 11cqh, 56px);
+  }
+}
+
+.monitoring-board-widget .environment-overview-stat small {
+  font-size: clamp(10px, 1.2cqw, 15px);
+}
+
+.monitoring-board-widget .region-energy-chart {
+  padding: clamp(18px, 2.6cqw, 36px);
+}
+
+.monitoring-board-widget .region-energy-chart-header h3 {
+  font-size: clamp(18px, 2.8cqw, 30px);
+}
+
+.monitoring-board-widget .region-energy-chart-header p {
+  font-size: clamp(13px, 1.8cqw, 18px);
+}
+
+.monitoring-board-widget .region-energy-chart-header > span {
+  font-size: clamp(11px, 1.4cqw, 17px);
+}
+
+.monitoring-board-widget .recharts-cartesian-axis-tick-value {
+  font-size: clamp(11px, 1.5cqw, 17px);
+}
+
+.monitoring-board-widget .services-map-hud {
+  gap: clamp(8px, 1cqw, 16px);
+
+  padding: clamp(10px, 1.4cqw, 22px);
+}
+
+.monitoring-board-widget .services-map-count {
+  font-size: clamp(12px, 1.05cqw, 16px);
+}
+
+.monitoring-board-widget .service-hud {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(clamp(64px, 7cqw, 120px), 1fr)
+  );
+
+  align-content: center;
+  justify-items: center;
+  flex: 1;
+
+  width: 100%;
+
+  gap: clamp(6px, 0.85cqw, 18px);
+
+  padding: 0;
+
+  overflow: visible;
+}
+
+.monitoring-board-widget .service-hud-item {
+  width: 100%;
+  max-width: clamp(96px, 12cqw, 190px);
+}
+
+.monitoring-board-widget .service-hud-hexagon {
+  width: clamp(46px, min(7cqw, 40cqh), 104px);
+  height: clamp(42px, min(6.5cqw, 37cqh), 96px);
+}
+
+.monitoring-board-widget .service-hud-hexagon::after {
+  width: clamp(6px, 0.85cqw, 10px);
+  height: clamp(6px, 0.85cqw, 10px);
+}
+
+.monitoring-board-widget .service-hud-hexagon span {
+  font-size: clamp(11px, 1.5cqw, 20px);
+}
+
+@container widget (max-width: 620px) {
+  .monitoring-board-widget[data-widget-type="summary"]
+    .environment-overview-stat strong {
+    font-size: clamp(21px, 4.4cqw, 30px);
+  }
+
+  .monitoring-board-widget[data-widget-type="services"]
+    .services-map-hud {
+    gap: 6px;
+    padding: 6px 10px 2px;
+  }
+
+  .monitoring-board-widget[data-widget-type="services"]
+    .service-hud {
+    row-gap: 6px;
+  }
+
+  .monitoring-board-widget[data-widget-type="services"]
+    .service-hud-hexagon {
+    height: clamp(36px, 26cqh, 46px);
+  }
+}
+
+@container widget (min-width: 620px) {
+  .monitoring-board-widget[data-widget-type="services"]
+    .service-hud-name {
+    display: block;
+
+    max-width: 100%;
+
+    overflow: hidden;
+
+    color: var(--board-muted);
+
+    font-size: clamp(11px, 1.3cqw, 17px);
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* ---------- Páginas fixas: página natural, sem rolagem em blocos ---------- */
+
+/*
+ * Monitoramento e Análise não são personalizáveis, então não seguem a
+ * grade de células: cada bloco ocupa a largura que precisa e cresce até
+ * a altura do próprio conteúdo. Nada rola dentro de um bloco; quem rola
+ * é a página. Só o mapa e os gráficos têm altura definida, porque
+ * precisam dela para desenhar.
+ */
+
+.monitoring-board-grid.is-fixed {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 16px;
+
+  height: auto;
+}
+
+.monitoring-board-widget.is-flow {
+  position: static;
+
+  width: auto;
+  height: auto;
+  min-height: 0;
+
+  overflow: visible;
+
+  /* Só a largura é medida (cqw). A altura é a do conteúdo. */
+  container-type: inline-size;
+  container-name: widget;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.monitoring-board-widget.is-flow.is-scroll-active {
+  border-color: var(--board-border);
+}
+
+.monitoring-board-widget.is-flow .monitoring-board-widget-body {
+  flex: 1 1 auto;
+
+  min-height: 0;
+
+  overflow: visible;
+}
+
+/* Arranjo em colunas: dois blocos lado a lado, o resto em faixa. */
+
+.monitoring-board-grid.is-monitoramento .monitoring-board-widget.is-flow {
+  grid-column: 1 / -1;
+}
+
+.monitoring-board-grid.is-monitoramento .monitoring-board-widget.is-map {
+  grid-column: span 8;
+}
+
+.monitoring-board-grid.is-monitoramento .monitoring-board-widget.is-region {
+  grid-column: span 4;
+}
+
+/* ---- Nada rola dentro dos blocos ---- */
+
+.monitoring-board-widget.is-flow .services-map-hud,
+.monitoring-board-widget.is-flow .environment-overview-dock,
+.monitoring-board-widget.is-flow .monitoring-summary-shell {
+  flex: 0 0 auto;
+
+  height: auto;
+  max-height: none;
+
+  overflow: visible;
+}
+
+.monitoring-board-widget.is-flow .service-hud {
+  overflow: visible;
+}
+
+/* Sem cqh: a altura do bloco não é mais um dado de entrada. */
+
+.monitoring-board-widget.is-flow .service-hud-hexagon {
+  width: clamp(46px, 6.5cqw, 96px);
+  height: clamp(42px, 6cqw, 88px);
+}
+
+@container widget (max-width: 620px) {
+  .monitoring-board-widget.is-flow[data-widget-type="services"]
+    .service-hud-hexagon {
+    width: 46px;
+    height: 42px;
+  }
+}
+
+/* ---- Mapa: altura definida para a vista, o restante flui ---- */
+
+.monitoring-board-widget.is-flow.is-map {
+  overflow: hidden;
+}
+
+.monitoring-board-widget.is-flow.is-map
+  .monitoring-map-shell:not(.is-fullscreen)
+  .services-map-stage {
+  flex: 0 0 auto;
+
+  height: clamp(440px, 62vh, 680px);
+}
+
+/* Monitoring.css fixa a vista do mapa em 380px; aqui ela preenche o palco. */
+.monitoring-board-widget.is-flow.is-map
+  .monitoring-map-shell:not(.is-fullscreen)
+  .services-map-viewport {
+  height: 100%;
+}
+
+/* ---- Energia por região: acompanha a altura do mapa ao lado ---- */
+
+.monitoring-board-widget.is-flow.is-region .monitoring-chart-shell {
+  flex: 1 1 auto;
+}
+
+.monitoring-board-widget.is-flow.is-region .region-energy-chart {
+  height: auto;
+  min-height: 360px;
+}
+
+.monitoring-board-widget.is-flow.is-region .region-energy-chart-plot {
+  min-height: 260px;
+}
+
+/* ---- Análises: conteúdo inteiro visível, gráficos com altura própria ---- */
+
+.monitoring-board-widget.is-flow .analysis-widget {
+  flex: 1 1 auto;
+
+  height: auto;
+}
+
+.monitoring-board-widget.is-flow .analysis-widget-scroll,
+.monitoring-board-widget.is-flow .analysis-widget-regions,
+.monitoring-board-widget.is-flow .impact-ranking-list,
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .projection-service-region-list {
+  flex: 0 0 auto;
+
+  max-height: none;
+
+  overflow: visible;
+}
+
+.monitoring-board-widget.is-flow .analysis-widget .history-chart-canvas {
+  height: 300px;
+}
+
+.monitoring-board-widget.is-flow .analysis-widget .comparison-chart-canvas {
+  height: 320px;
+}
+
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .comparison-period-chart-canvas {
+  height: 280px;
+}
+
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .location-projection-chart-canvas {
+  height: 260px;
+}
+
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .location-projection-map-frame,
+.monitoring-board-widget.is-flow
+  .analysis-widget
+  .location-projection-map-canvas {
+  min-height: 340px;
+}
+
+/* Estreito: tudo em uma coluna, na ordem de leitura. */
+
+@media (max-width: 1180px) {
+  .monitoring-board-grid.is-monitoramento .monitoring-board-widget.is-flow {
+    grid-column: 1 / -1;
+  }
+
+  .monitoring-board-widget.is-flow.is-map
+    .monitoring-map-shell:not(.is-fullscreen)
+    .services-map-stage {
+    height: clamp(360px, 56vh, 520px);
+  }
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 900px) {
+  .monitoring-board-toolbar {
+    align-items: stretch;
+  }
+
+  .monitoring-board-tabs {
+    width: 100%;
+  }
+
+  .monitoring-board-actions {
+    width: 100%;
+  }
+
+  .monitoring-board-body {
+    gap: 12px;
+  }
+
+  .monitoring-board-palette:not(.is-overlay) {
+    width: 208px;
+  }
+}
+
+@media (max-width: 700px) {
+  .monitoring-board-label {
+    display: none;
+  }
+
+  .monitoring-board-action,
+  .monitoring-board-width-note {
+    justify-content: center;
+
+    width: 36px;
+    padding: 0;
+  }
+
+  .monitoring-board-width-note {
+    display: none;
+  }
+
+  .monitoring-board-action svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .monitoring-board-widget-action {
+    width: 32px;
+    height: 32px;
+  }
+
+  .monitoring-board-palette.is-overlay {
+    width: min(260px, 88%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monitoring-board-widget,
+  .monitoring-board-placeholder,
+  .monitoring-board-palette {
+    transition: none;
+    animation: none;
+  }
+}
