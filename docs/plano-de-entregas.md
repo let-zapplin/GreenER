@@ -27,7 +27,7 @@ flowchart LR
 |---|---|---|---|---|
 | [**1 — Fundação**](sprints/sprint-1.md) | 28/09–19/10/2026 | Disponibilizar o ambiente e o primeiro fluxo ponta a ponta | Serviços descobertos, persistidos e exibidos no React | Registro da sprint aponta tarefas concluídas; consultar evidências |
 | [**2 — Indicadores**](sprints/sprint-2.md) | 20/10–09/11/2026 | Capturar métricas e estimar energia e CO₂e | Coleta periódica e histórica, indicadores no Monitoramento e histórico visual em Análises | Sprint Review realizada; feedback do cliente ainda não recebido |
-| [**3 — Análises**](sprints/sprint-3.md) | 10/11–23/11/2026 | Comparar serviços e visualizar diferenças por região e período | Mapa, ranking, comparação e validação final | Em execução; TEC31 concluída em 21/11, com pendências registradas no [manual de validação](testes/manualdevalidacao.md) |
+| [**3 — Análises**](sprints/sprint-3.md) | 10/11–23/11/2026 | Comparar serviços e visualizar diferenças por região e período | Mapa, ranking, comparação e validação final | ✅ Concluída em 23/11/2026; evidências e pendências registradas no manual de validação e no consolidado de testes |
 
 **Nota de acompanhamento:** o status real das tarefas deve ser consultado no [GitHub Projects](https://github.com/orgs/let-zapplin/projects/2). A situação documental informa a disponibilidade do registro, não substitui a validação técnica.
 
@@ -80,7 +80,7 @@ A situação indicada abaixo considera a versão validada em **09/11/2026**. As 
 | **ES01–ES05** | RP07 | Backlog priorizado, critérios de aceite, planejamento e evolução incremental da Sprint 2 | Conferir backlog, issues, PRs e registro da Sprint | Equipe | `docs/sprints/`, backlog da Sprint 2 e histórico de PRs | ✅ Concluído |
 | **ES06** | RP07 | Sprint Review, coleta de feedback e adaptação do planejamento | Registrar a Review realizada e incorporar feedback e decisões quando forem efetivamente recebidos | Equipe | `docs/sprints/sprint-2.md` | 🟡 Review realizada; feedback do cliente não recebido |
 | **ES07** | Qualidade / DoD | Definition of Done aplicada às entregas da Sprint 2 | Executar testes, typechecks, build e validações documentadas | Equipe | `docs/testes/manualdevalidacao.md` | ✅ Concluído |
-| **ES08** | RNF05 | Documentação técnica e procedimentos de reprodução/validação | Seguir README e manuais em ambiente Docker | Equipe | `README.md`, `docs/`, READMEs internos | 🔄 Em fechamento |
+| **ES08** | RNF05 | Documentação técnica e procedimentos de reprodução/validação | Seguir README e manuais em ambiente Docker | Equipe | `README.md`, `docs/`, READMEs internos | ✅ Concluído |
 | **ES09** | RP07 | Participação distribuída da equipe nas entregas da Sprint | Conferir responsáveis, issues, PRs, revisões e contribuições registradas | Equipe | GitHub Projects, histórico de PRs e `docs/sprints/sprint-2.md` | ✅ Concluído |
 | **DW01** | RP01, RP02, RP03, RP04 | Aplicação organizada em React + TypeScript, Node + TypeScript, PostgreSQL e Docker | Subir aplicação com `docker compose up -d` e conferir containers | Equipe | `compose.yaml`, `frontend/`, `backend/`, `database/` | ✅ Concluído |
 | **DW02** | RF01, RF03, RF05, RF06, RF07 | Integração com Metrics Aggregator e Carbon Intensity API | Executar descoberta/coleta e conferir dados externos processados | Gustavo, Marcello e Igor | `backend/src/integrations/`, módulos de coleta e intensidades | ✅ Concluído |
@@ -138,20 +138,20 @@ O fluxo principal previsto para a Sprint foi validado ponta a ponta:
 > O commit final identificado para a branch `chore/sprint2-finalizacao` é `b123a524def9203be7c714ddd65e90ba12c61f31` (09/11/2026).
 
 ### Sprint 3 — Análise, comparação e consolidação
-**Resultado esperado:** consolidar a exploração geográfica iniciada antecipadamente na Sprint 2 e implementar os recursos de comparação, ranking, filtros e refinamentos finais, concluindo a aplicação com validações de qualidade.
+**Resultado registrado:** a Sprint 3 consolidou a localização e o mapa, implementou filtros temporais, ranking por energia/CO₂e e comparação de serviços no mesmo período, integrou projeções ambientais e concluiu a validação técnica do MVP, com documentação e evidências atualizadas.
 
-| Entrega planejada | Critério de aceite proposto | Frente responsável | Evidência prevista |
-|---|---|---|---|
-| Localização e mapa | Consolidar e validar a visualização geográfica adiantada na Sprint 2, tratando agrupamentos, estados, ausência de coordenadas, responsividade e integração final | Backend + Frontend | Capturas do mapa, cenários de localização e validação funcional |
-| Ranking por consumo e emissões | Serviços são ordenados segundo métrica e período selecionados, usando dados comparáveis | Backend + Frontend | Testes do ranking e captura da interface |
-| Comparação entre serviços | Usuário seleciona serviços e compara métricas no mesmo recorte temporal | Backend + Frontend | Cenário de uso validado e demonstração |
-| Filtros e navegação | Períodos e seleções podem ser alterados sem resultados inconsistentes; estados vazios são comunicados | Frontend | Testes funcionais e capturas |
-| Consolidação de qualidade e segurança | Revisão de responsividade, desempenho, tratamento de falhas e proteção dos recursos aplicáveis | Equipe | Resultado dos testes e checklist de validação final |
-| Documentação e demonstração final | Artefatos atualizados, fluxo ponta a ponta validado e demonstração final disponível | Toda a equipe | [`arquitetura.md`](arquitetura.md), [`api.md`](api.md), [Sprint 3](sprints/sprint-3.md) e vídeo final |
+| Entrega | Resultado registrado | Evidência |
+|---|---|---|
+| Localização e mapa | Mapa integrado ao Monitoramento, com coordenadas, estados, agrupamentos e manutenção de serviços sem coordenadas nas demais visualizações | Testes de localização/mapa e validação manual registrada |
+| Ranking por consumo e emissões | Serviços ordenados por energia ou CO₂e no período selecionado, com dados parciais sinalizados | Ranking validado manualmente e consolidado em testes |
+| Comparação entre serviços | Usuário compara dois ou mais serviços no mesmo período, com métricas, indicadores e visualizações temporal/consolidada | Testes de comparação e validação manual registrada |
+| Filtros e navegação | Períodos de 1h, 6h, 24h e 7d aplicados às consultas e à navegação analítica | Testes automatizados de período e evidência manual |
+| Consolidação de qualidade e segurança | Responsividade, tolerância a falhas, desempenho e proteção dos recursos avaliados; pontos remanescentes permanecem identificados | Suítes, typechecks, build e documentação de pendências |
+| Documentação e demonstração final | Artefatos técnicos atualizados e fluxo ponta a ponta validado para demonstração final | Arquitetura, API, cálculos, sprints e manual de validação |
 
 **Dependências:** métricas persistidas, histórico temporal e indicadores calculados na Sprint 2.  
 
-**Registro de execução:** [Sprint 3](sprints/sprint-3.md), a preencher conforme as entregas forem verificadas.
+**Registro de execução:** o fechamento da Sprint 3 está registrado no Sprint Backlog 3, no manual de validação e no consolidado de testes.
 
 ---
 

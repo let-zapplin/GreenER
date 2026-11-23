@@ -3,8 +3,8 @@
 ← [Voltar ao índice da documentação](../README.md)
 
 > Artefato mantido pelo **Product Owner** e refinado a cada Sprint.  
-> **Atualização da validação técnica da Sprint 3 — 21/11/2026.**
-> Este registro consolida evidências técnicas e não substitui Sprint Review ou feedback do cliente.
+> **Atualização da consolidação da Sprint 3 — 23/11/2026.**
+> Este registro consolida a implementação e as evidências técnicas da entrega final. Feedback externo recebido posteriormente deve ser registrado separadamente.
 >
 > A matriz RF01–RF15, as referências de implementação/testes e as evidências de autenticação e Docker estão no [manual de validação final](testes/manualdevalidacao.md).
 
@@ -47,16 +47,16 @@
 | US09 | usuário da plataforma | visualizar um dashboard operacional | acompanhar serviços, métricas e impacto em um único lugar | RF09 | 🔴 Alta | S2 | ✅ Concluído |
 | US10 | usuário da plataforma | que o dashboard seja atualizado automaticamente | acompanhar o ambiente sem recarregar a página | RF11, RNF02 | 🔴 Alta | S2 | ✅ Concluído |
 | US11 | usuário da plataforma | consultar o histórico das coletas | analisar evolução de métricas e impacto ao longo do tempo | RF10 | 🔴 Alta | S2 | ✅ Concluído |
-| US12 | usuário da plataforma | visualizar onde cada serviço está hospedado | relacionar localização e indicadores | RF12 | 🟡 Média | S2-S3 | 🔄 Parcial — localização real já persistida e utilizada; consolidação final permanece na S3 |
-| US13 | usuário da plataforma | visualizar geograficamente serviços com coordenadas | entender sua distribuição espacial | RF13 | 🟡 Média | **S2 → S3** | 🔄 Em revisão — implementação funcional antecipada da S3 para a S2; consolidação final na S3 |
+| US12 | usuário da plataforma | visualizar onde cada serviço está hospedado | relacionar localização e indicadores | RF12 | 🟡 Média | S2-S3 | ✅ Concluído — localização persistida e consolidada nas telas finais |
+| US13 | usuário da plataforma | visualizar geograficamente serviços com coordenadas | entender sua distribuição espacial | RF13 | 🟡 Média | **S2 → S3** | ✅ Concluído — mapa integrado ao Monitoramento e consolidado na Sprint 3 |
 | US14 | usuário da plataforma | ordenar serviços pelo impacto ambiental | identificar maiores e menores impactos no período | RF14 | 🔴 Alta | S3 | ✅ Concluído |
 | US15 | usuário da plataforma | comparar dois ou mais serviços | compreender diferenças de métricas e impacto no mesmo período | RF15 | 🔴 Alta | S3 | ✅ Concluído |
 | US16 | usuário autorizado | me autenticar para acessar recursos protegidos | impedir acesso não autorizado | RP06 | 🔴 Alta | S2 | ✅ Concluído |
-| US17 | usuário da plataforma | projetar o impacto ambiental de um serviço em diferentes localidades | avaliar alternativas de hospedagem com menor emissão| RF16 | 🟡 Média | S3 | ⏳ Planejado |
-| TS01 | usuário | utilizar a plataforma em diferentes tamanhos de tela | acompanhar dados em desktop e mobile | RNF01 | 🔴 Alta | S1-S3 | 🔁 Contínuo — base responsiva e prototipação mobile existem; revisão final na S3 |
-| TS02 | usuário | que uma falha isolada não derrube o GreenER | continuar acompanhando os demais serviços | RNF04 | 🔴 Alta | S2-S3 | 🔁 Contínuo — tratamento principal validado na S2; revalidar regressões na S3 |
-| TS03 | usuário | que a interface responda em tempo adequado | acompanhar continuamente o ambiente | RNF03 | 🟡 Média | S3 | ⏳ Planejado — build atual possui aviso não bloqueante de chunk >500 kB |
-| TS04 | equipe técnica | encontrar documentação coerente e reproduzível | executar, compreender e manter o projeto | RNF05 | 🔴 Alta | S1-S3 | 🔁 Contínuo — documentação atualizada no fechamento da S2 e novamente revisada na S3 |
+| US17 | usuário da plataforma | projetar o impacto ambiental de um serviço em diferentes localidades | avaliar alternativas de hospedagem com menor emissão| RF16 | 🟡 Média | S3 | ✅ Concluído — projeção ambiental por localização implementada e coberta por testes automatizados |
+| TS01 | usuário | utilizar a plataforma em diferentes tamanhos de tela | acompanhar dados em desktop e mobile | RNF01 | 🔴 Alta | S1-S3 | ✅ Concluído — interface responsiva e evidências desktop/mobile consolidadas |
+| TS02 | usuário | que uma falha isolada não derrube o GreenER | continuar acompanhando os demais serviços | RNF04 | 🔴 Alta | S2-S3 | 🔁 Contínuo — base concluída; falha HTTP parcial específica da comparação permanece em validação manual |
+| TS03 | usuário | que a interface responda em tempo adequado | acompanhar continuamente o ambiente | RNF03 | 🟡 Média | S3 | 🔁 Contínuo — lazy loading e pausa de polling implementados; bundle >500 kB permanece como acompanhamento não bloqueante |
+| TS04 | equipe técnica | encontrar documentação coerente e reproduzível | executar, compreender e manter o projeto | RNF05 | 🔴 Alta | S1-S3 | ✅ Concluído — documentação da entrega final revisada e reconciliada |
 
 ---
 
@@ -186,7 +186,7 @@ Apresentar no Monitoramento:
 #### US12 - Localização do serviço
 - [x] persistir país e região recebidos da API;
 - [x] persistir/exibir cidade quando disponível;
-- [ ] concluir a revisão final de contratos e responsividade na Sprint 3.
+- [x] consolidar localização e responsividade nas visualizações finais.
 
 **RF:** RF12
 
@@ -196,11 +196,11 @@ Apresentar no Monitoramento:
 - [x] manter serviços sem coordenadas disponíveis nas demais visualizações;
 - [x] integrar o mapa ao **Monitoramento** como recurso operacional complementar;
 - [x] permitir selecionar serviços agrupados quando compartilham coordenadas;
-- [ ] concluir revisão/integração e refinamentos finais na Sprint 3.
+- [x] concluir revisão/integração e refinamentos finais na Sprint 3.
 
 **RF:** RF13
 
-> **Adaptação de escopo:** a US13 foi originalmente planejada para a Sprint 3, mas sua implementação funcional foi antecipada para a Sprint 2 durante a reformulação do Monitoramento. No fechamento técnico de 09/11/2026, a issue ainda estava em revisão; por isso a história não é registrada como definitivamente concluída.
+> **Adaptação de escopo:** a US13 foi originalmente planejada para a Sprint 3, mas sua implementação funcional foi antecipada para a Sprint 2 durante a reformulação do Monitoramento e consolidada na Sprint 3.
 
 ---
 
@@ -238,18 +238,20 @@ Apresentar no Monitoramento:
 
 #### US17 - Projeção por localização
 
-- [ ] selecionar um serviço monitorado;
-- [ ] utilizar o consumo energético observado no período;
-- [ ] selecionar localidades alternativas;
-- [ ] manter energia constante entre os cenários;
-- [ ] recalcular CO₂e usando intensidade regional;
-- [ ] apresentar intensidade de carbono;
-- [ ] apresentar participação renovável quando disponível;
-- [ ] comparar cenário atual e cenários projetados;
-- [ ] sinalizar claramente que os valores são estimativas;
-- [ ] manter cálculo no backend.
+- [x] selecionar um serviço monitorado;
+- [x] utilizar o consumo energético observado no período;
+- [x] selecionar localidades alternativas;
+- [x] manter energia constante entre os cenários;
+- [x] recalcular CO₂e usando intensidade regional;
+- [x] apresentar intensidade de carbono;
+- [x] apresentar participação renovável quando disponível;
+- [x] comparar cenário atual e cenários projetados;
+- [x] sinalizar claramente que os valores são estimativas;
+- [x] manter cálculo no backend.
 
 **RF:** RF16
+
+**Evidência:** projeções cobridas por testes de serviço e HTTP no backend, além da interface integrada de localização e redistribuição.
 
 ---
 
@@ -274,7 +276,7 @@ Apresentar no Monitoramento:
 - [x] interface base responsiva;
 - [x] navegação utilizável em diferentes larguras;
 - [x] prototipação mobile realizada na Sprint 2;
-- [ ] revisar Monitoramento, Análises, ranking, comparação e mapa no fechamento da Sprint 3.
+- [x] revisar Monitoramento, Análises, ranking, comparação e mapa no fechamento da Sprint 3.
 
 **RNF:** RNF01
 
@@ -285,15 +287,16 @@ Apresentar no Monitoramento:
 - [x] falha/ausência de intensidade é representada como lacuna;
 - [x] falha transitória no frontend preserva os últimos dados válidos;
 - [x] dados incompletos são sinalizados sem inventar valores;
-- [ ] executar regressão final desses cenários na Sprint 3.
+- [x] registrar a regressão final e a interrupção/recuperação de backend;
+- [ ] confirmar manualmente o cenário isolado de falha HTTP na comparação temporal.
 
 **RNF:** RNF04
 
 ### TS03 - Desempenho
-- [ ] revisar intervalos de polling/sincronização/coleta;
-- [ ] analisar consultas históricas e agregações;
-- [ ] avaliar o aviso de bundle/chunk >500 kB do frontend;
-- [ ] corrigir gargalos que prejudiquem acompanhamento contínuo.
+- [x] revisar intervalos de polling/sincronização/coleta;
+- [x] analisar consultas históricas e agregações;
+- [x] implementar lazy loading e pausa de polling em segundo plano;
+- [ ] avaliar a otimização dos chunks >500 kB; o aviso não bloqueia o build atual.
 
 **RNF:** RNF03
 
@@ -305,9 +308,9 @@ Apresentar no Monitoramento:
 - [x] `docs/calculos.md` coerente com o modelo v1;
 - [x] README e registro da Sprint 2 atualizados no fechamento técnico;
 - [x] manual de validação atualizado;
-- [x] Sprint Review 2 realizada;
+- [x] Sprint Review 2 realizada e registrada como ocorrência;
 - [ ] incorporar feedback da Sprint Review 2 quando o professor o repassar;
-- [ ] revisar novamente a documentação no fechamento da Sprint 3.
+- [x] revisar novamente a documentação no fechamento da Sprint 3.
 
 **RNF:** RNF05
 
@@ -345,7 +348,8 @@ Na data em que essas adaptações foram registradas, a Sprint Review 2 ainda nã
 | 18/10/2026 | Refinamento para fechamento da Sprint 1 | Gustavo (Product Owner) |
 | 20/10/2026 | Revisão pós-Review 1 e planejamento das Sprints 2 e 3 | Equipe GreenER |
 | 09/11/2026 | Atualização dos status após validação técnica da Sprint 2 e registro da antecipação da US13 | Equipe GreenER |
-| 21/11/2026 | Registro das evidências e da decisão de interpretação para RF14/RF15; validação final RF01–RF15 e pendências mantidas explicitamente | Equipe GreenER |
+| 21/11/2026 | Registro das evidências e da decisão de interpretação para RF14/RF15; validação final RF01–RF15 e pendências mantidas explicitamente | Gustavo (Product Owner) |
+| 23/11/2026 | Consolidação da Sprint 3: estados finais de US12/US13/US17, RNF01–RNF05 e registro das pendências remanescentes | Gustavo (Product Owner) |
 
 ---
 
