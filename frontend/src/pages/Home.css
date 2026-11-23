@@ -1800,11 +1800,34 @@ transition:
     padding: 15px;
   }
 
-  .home-chat
-    .assistant-chat {
-    min-height: 0;
+  /* No celular, o texto ocupa mais linhas: o cartão acompanha o conteúdo. */
+  .home-chat {
+    height: auto;
+  }
 
+  .home-chat .assistant-chat {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
     padding: 18px;
+  }
+
+  .home-chat .assistant-chat-header,
+  .home-chat .assistant-chat-empty,
+  .home-chat .assistant-chat-form,
+  .home-chat .assistant-chat-footer {
+    flex-shrink: 0;
+  }
+
+  .home-chat .assistant-chat-empty {
+    flex: none;
+    justify-content: flex-start;
+  }
+
+  /* Limita apenas o histórico; cabeçalho, sugestões e envio ficam acessíveis. */
+  .home-chat .assistant-chat-log {
+    flex: none;
+    max-height: min(60dvh, 420px);
   }
 }
 
@@ -1814,25 +1837,79 @@ transition:
 
     flex-direction: column;
 
-    gap: 4px;
+    gap: 16px;
   }
 
   .karma-aura {
     width: 100%;
+    min-height: 0;
+    padding: 20px 0 28px;
+  }
 
-    min-height: 220px;
+  /* Reserva o mesmo espaço para todos os avatares, sem avançar sobre o texto. */
+  .karma-avatar-button {
+    width: min(100%, 220px);
+    aspect-ratio: 1;
+    min-width: 0;
   }
 
   .karma-avatar {
-    width: 220px;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: contain;
   }
 
   .karma-introduction {
-    margin-top: -16px;
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .home-intro-hint {
     font-size: 0.62rem;
+  }
+
+  .home-chat .assistant-chat-controls,
+  .home-chat .assistant-chat-heading {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .home-chat .assistant-chat-period {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    border-radius: 16px;
+  }
+
+  .home-chat .assistant-chat-period button {
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 8px;
+  }
+
+  .home-chat .assistant-chat-suggestions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-chat .assistant-chat-suggestions button,
+  .home-chat .assistant-chat-clarification button,
+  .home-chat .assistant-chat-follow-ups button {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .home-chat .assistant-chat-chart figcaption,
+  .home-chat .assistant-chat-meta {
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
   }
 }
 
