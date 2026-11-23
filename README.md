@@ -56,8 +56,8 @@ emissão estimada de CO₂e
 | Sprint | Período | Registro | Demonstração | Situação |
 | --- | --- | --- | --- | --- |
 | **Sprint 1** | 28/09–19/10/2026 | [`sprint-1.md`](docs/sprints/sprint-1.md) | [▶ Vídeo](https://youtu.be/pGdiciJxTPw) | ✅ Finalizada |
-| **Sprint 2** | 20/10–09/11/2026 | [`sprint-2.md`](docs/sprints/sprint-2.md) | [▶ Vídeo](https://youtu.be/qW38NnthF8Q) | 🟡 Sprint Review realizada; feedback do cliente não recebido|
-| **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | A definir | 🔄 Em andamento; fechamento após entrega em 23/11|
+| **Sprint 2** | 20/10–09/11/2026 | [`sprint-2.md`](docs/sprints/sprint-2.md) | [▶ Vídeo](https://youtu.be/qW38NnthF8Q) | ✅ Finalizada |
+| **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | Demonstração final do MVP | ✅ Concluída |
 
 > A visualização geográfica foi antecipada da Sprint 3 e integrada ao Monitoramento. Ranking, comparação e refinamentos finais de análise foram concluídos na Sprint 3.
 
@@ -100,6 +100,11 @@ emissão estimada de CO₂e
 
 Também estão implementados:
 
+- ✅ ranking de impacto por energia ou CO₂e;
+- ✅ comparação de dois ou mais serviços no mesmo período;
+- ✅ filtros temporais e histórico ambiental por serviço;
+- ✅ projeções de localização e redistribuição de serviços;
+- ✅ visualização geográfica com MapLibre;
 - ✅ integração com intensidade de carbono por região;
 - ✅ estimativa de energia por serviço;
 - ✅ estimativa de emissão de CO₂e por serviço;
@@ -108,42 +113,51 @@ Também estão implementados:
 - ✅ Assistente Karma com Ollama local, respostas determinísticas e fallback para
   modo regras;
 - ✅ persistência PostgreSQL após reinicialização dos containers;
-- 🔄 reformulação visual do Monitoramento — TEC37 em revisão;
-- ✅ visualização geográfica — US13 antecipada e integrada ao Monitoramento.
+- ✅ visualização geográfica — US13 antecipada e integrada ao Monitoramento;
+- ✅ responsividade e experiência móvel dos principais fluxos;
+- ✅ cache em memória e fallback do Assistente Karma.
 
 ### Arquitetura de desempenho — TEC26
 
 `Home`, `Monitoring` e `Analyses` usam lazy loading para reduzir o JavaScript da
-entrada inicial. A pausa do polling em abas ocultas ainda não está implementada no
-código atual: os hooks não verificam a visibilidade da aba nem suspendem suas
-consultas; o navegador pode aplicar seu próprio throttling em segundo plano.
+entrada inicial. Os hooks `useMonitoring`, `useDashboardSummary`,
+`useServiceIndicators` e `useServiceIndicatorHistory` verificam a visibilidade da
+aba por meio de `document.hidden` e suspendem suas requisições enquanto a página
+permanece em segundo plano. Ao retornar à aba, o próximo ciclo de atualização
+retoma o polling sem acumular chamadas concorrentes.
 
 ---
 
 ## 🧠 Como funciona
 
 ```text
-Metrics Aggregator /services
-        ↓
-sincronização do catálogo
-        ↓
-Metrics Aggregator /metrics/{id}
-        ↓
-coleta periódica
-        ↓
-PostgreSQL
-service → collection → metrics
-        ↓
-Carbon Intensity API
-        ↓
-snapshots regionais
-        ↓
-cálculo de energia + CO₂e
-        ↓
-indicadores / dashboard / histórico
-        ↓
-Monitoramento + Análises
+APIs externas
+  Metrics Aggregator + Carbon Intensity
+        │
+        ▼
+Backend Node.js / Express / TypeScript
+  jobs • regras • cálculos • JWT • Chat/Karma
+        │
+        ├──────── SQL explícito ────────▶ PostgreSQL 17
+        │                                   │
+        │◀──────── dados persistidos ───────┘
+        │
+        ▼
+Frontend React / TypeScript / Vite
+  Monitoramento • Análises • Ranking • Comparação • Mapa
 ```
+
+O fluxo completo começa na descoberta de serviços e termina na apresentação das informações no frontend:
+
+1. o backend sincroniza o catálogo por meio da Metrics Aggregator;
+2. jobs em background coletam CPU, memória, disco e rede em intervalos configurados;
+3. PostgreSQL preserva serviços, tentativas, métricas, localização e usuários;
+4. os fatores regionais da Carbon Intensity API alimentam os cálculos ambientais;
+5. o backend calcula energia e CO₂e e entrega indicadores consolidados;
+6. React apresenta histórico, ranking, comparação, mapa e projeções;
+7. o Karma consulta os dados do projeto e usa Ollama local para classificar e redigir respostas, com cache e fallback determinístico.
+
+Toda a solução é executada por Docker Compose. A IA é isolada em um profile opcional: sem o profile `ai`, o backend permanece operacional e o Assistente Karma usa o modo determinístico.
 
 ### Etapas principais
 
@@ -239,6 +253,34 @@ docker compose up --build
 
 O Compose inicia **PostgreSQL + backend + frontend**.
 
+Para iniciar também o Ollama e o Assistente Karma com IA local:
+
+```bash
+docker compose --profile ai up --build
+```
+
+Na primeira inicialização com IA, o serviço `ollama-init` baixa o modelo configurado em `OLLAMA_MODEL` e prepara o volume persistente `ollama_data`. A inicialização pode levar alguns minutos.
+
+### ⚙️ Variáveis importantes
+
+| Variável | Finalidade | Padrão do `.env.example` |
+| --- | --- | --- |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Credenciais e banco PostgreSQL | `greener` / `greener` / valor a trocar |
+| `JWT_SECRET` | Assinatura dos tokens de autenticação | valor a trocar |
+| `JWT_EXPIRES_IN` | Validade do JWT, em segundos ou duração | `7d` |
+| `METRICS_API_URL` | API de serviços e métricas | `https://metrics.unilaunch.org` |
+| `CARBON_API_URL` | API de intensidade de carbono | `https://carbon.unilaunch.org` |
+| `COLLECTION_INTERVAL_MS` | Intervalo de coleta de métricas | `60000` |
+| `SERVICE_SYNC_INTERVAL_MS` | Intervalo de sincronização dos serviços | `60000` |
+| `CARBON_INTENSITY_SYNC_INTERVAL_MS` | Atualização dos fatores regionais | `300000` |
+| `OLLAMA_URL` | Endereço do Ollama | `http://localhost:11434` no host |
+| `OLLAMA_MODEL` | Modelo usado pelo Karma | `qwen2.5:3b` |
+| `OLLAMA_TIMEOUT_MS` | Timeout das operações de IA | `60000` |
+| `OLLAMA_NUM_CTX` | Janela de contexto do modelo | `4096` |
+| `OLLAMA_ENABLED` | Habilita ou desabilita o Ollama | `true` |
+
+Dentro do Compose, o backend usa `OLLAMA_URL=http://ollama:11434`. A porta `11434` fica disponível no host quando o profile `ai` está ativo.
+
 ### 4. Acesse
 
 | Serviço | Endereço |
@@ -246,6 +288,7 @@ O Compose inicia **PostgreSQL + backend + frontend**.
 | Frontend | `http://localhost:5173` |
 | Backend | `http://localhost:3000` |
 | Healthcheck | `http://localhost:3000/health` |
+| Ollama, com profile `ai` | `http://localhost:11434` |
 | PostgreSQL no host | `localhost:5433` |
 | PostgreSQL na rede Docker | `postgres:5432` |
 
@@ -254,6 +297,9 @@ O Compose inicia **PostgreSQL + backend + frontend**.
 ```bash
 # Segundo plano
 docker compose up -d
+
+# Segundo plano com IA/Ollama
+docker compose --profile ai up -d
 
 # Conferir containers
 docker compose ps
@@ -314,19 +360,18 @@ Ao terminar:
 docker compose -f compose.test.yaml down -v
 ```
 
-### Resultado do fechamento técnico da Sprint 2
+### Resultado do fechamento técnico da Sprint 3
 
 | Validação | Resultado |
 | --- | ---: |
-| Backend — suíte comum | **156 testes aprovados** |
+| Backend — suíte comum | **300 testes aprovados; 7 ignorados** |
 | Integração PostgreSQL | **7/7 aprovados** |
-| Frontend | **26/26 aprovados** |
-| Total automatizado único | **189 testes** |
+| Frontend | **62 testes aprovados** |
 | Typecheck backend | ✅ |
 | Typecheck frontend | ✅ |
 | Build de produção | ✅ |
 
-Também foram validados: persistência após restart, coleta automática, atualização automática do frontend, autenticação JWT, autorização `401 / 403 / 200`, estados `no_metrics` e `unavailable`, consistência entre dashboard e indicadores e histórico ambiental por serviço.
+Também foram validados: persistência após restart, coleta automática, atualização automática do frontend, autenticação JWT, autorização `401 / 403 / 200`, estados `no_metrics` e `unavailable`, consistência entre dashboard e indicadores, histórico ambiental por serviço, filtros temporais, ranking, comparação, mapa, assistente Karma e cenários de indisponibilidade ou fallback.
 
 Evidências:
 
@@ -347,6 +392,7 @@ Evidências:
 | [`frontend/README.md`](frontend/README.md) | Organização das telas e execução do frontend |
 | [`backend/README.md`](backend/README.md) | Organização do backend, integrações e configuração |
 | [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md) | Validação técnica ponta a ponta |
+| [`docs/testes/consolidacao_testes_sprint3.md`](docs/testes/consolidacao_testes_sprint3.md) | Consolidação dos testes e evidências da Sprint 3 |
 
 ### Materiais do desafio
 

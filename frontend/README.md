@@ -4,7 +4,7 @@ Aplicação web do GreenER, responsável por apresentar os serviços monitorados
 
 ← [Voltar para o README principal](../README.md)
 
-> **Referência atualizada no fechamento da Sprint 2 — 09/11/2026.**  
+> **Referência atualizada no fechamento da Sprint 3 — 23/11/2026.**
 > O frontend consome dados reais fornecidos pelo backend. Cálculos de energia e CO₂e permanecem centralizados na API GreenER.
 
 ---
@@ -106,14 +106,14 @@ Os hooks concentram estado de carregamento, erro, atualização automática e pr
 
 ## 🧭 Telas
 
-| Tela | Descrição | Situação no fechamento da Sprint 2 |
+| Tela | Descrição | Situação no fechamento da Sprint 3 |
 | --- | --- | --- |
 | **Landing / Login** | Apresentação inicial e autenticação | ✅ Implementada |
 | **Home** | Navegação principal após autenticação | ✅ Implementada |
 | **Sobre / Funcionamento** | Contexto do projeto e funcionamento da solução | ✅ Implementadas |
-| **Monitoramento** | Painel (workspace) com blocos de mapa, indicadores e análises; a primeira página é fixa e as demais são editáveis | ✅ Implementada; refinamentos visuais da TEC37 em revisão |
-| **Análises** | Página dedicada ao histórico ambiental por serviço e período | ✅ Implementada |
-| **Mapa de serviços** | Visualização geográfica complementar no Monitoramento | 🔄 Implementação funcional presente; US13 em revisão no fechamento |
+| **Monitoramento** | Visão operacional dos serviços, indicadores, estados e localização | ✅ Implementada |
+| **Análises** | Histórico, filtros, ranking e comparação ambiental por período | ✅ Implementada |
+| **Mapa de serviços** | Visualização geográfica complementar no Monitoramento | ✅ Integrada ao Monitoramento |
 
 > O Monitoramento e a página de Análises possuem responsabilidades diferentes: o primeiro apresenta o **estado atual do ambiente** em um painel de blocos, enquanto Análises continua **separada** e concentra a **exploração temporal**, que exige espaço dedicado pelo volume de informações e pela interatividade. Os blocos de comparação, histórico e projeção também aparecem dentro do painel quando o usuário os adiciona.
 
@@ -188,7 +188,7 @@ O mapa recebe latitude e longitude existentes no catálogo de serviços. Serviç
 
 Esse comportamento mantém o mapa como recurso complementar, sem transformar a localização geográfica em requisito para visualizar um serviço.
 
-> A US13 foi antecipada da Sprint 3 para a Sprint 2. No fechamento documental, a implementação funcional estava em revisão e seus refinamentos finais permanecem sujeitos à integração definitiva.
+A US13 foi antecipada da Sprint 3 para a Sprint 2 e consolidada durante a Sprint 3. O mapa está integrado ao Monitoramento e utiliza MapLibre GL com OpenFreeMap; também permite selecionar serviços agrupados e mantém os serviços sem coordenadas acessíveis nas demais visualizações.
 
 ---
 
@@ -302,7 +302,11 @@ GET /api/indicadores/:serviceId/historico
 A interface oferece:
 
 - seleção de serviço;
-- períodos de `1h`, `6h`, `24h` e `7d`;
+- ranking de impacto por energia ou CO₂e no período selecionado;
+- comparação de dois ou mais serviços no mesmo período;
+- sinalização de dados parciais;
+- identificação de serviços removidos com dados históricos como “Removido” no ranking;
+- filtros de `1h`, `6h`, `24h` e `7d`;
 - gráfico temporal de energia estimada;
 - tooltip com valores da amostra;
 - tratamento de lacunas;
@@ -467,6 +471,7 @@ Comandos disponíveis:
 | `npm run build` | Executa typecheck e gera o build em `dist/` |
 | `npm run preview` | Serve localmente o build gerado |
 
+### Evidência do fechamento da Sprint 3
 O painel do workspace é coberto por testes sem DOM (`node --test`), que exercitam o modelo puro de `src/lib/monitoringBoard.ts` com um `localStorage` falso:
 
 - `tests/monitoringBoard.test.ts` — grade por largura, `fitRect`, colisão, `reflow`, arrasto, redimensionamento, minimizar e leitura tolerante do armazenamento;
@@ -475,20 +480,21 @@ O painel do workspace é coberto por testes sem DOM (`node --test`), que exercit
 
 ### Evidência do fechamento da Sprint 2
 
-Em 09/11/2026:
+Na varredura atualizada em 23/11/2026:
 
-- **26/26 testes do frontend aprovados**;
+- **101 testes aprovados** no frontend;
 - `npm run typecheck` concluído sem erros;
-- `npm run build` concluído com sucesso;
-- **5030 módulos transformados**;
-- build finalizado pelo Vite em aproximadamente **1,93 s**;
-- atualização automática do Monitoramento validada sem reload manual.
+- build de produção concluído com sucesso;
+- 5094 módulos transformados;
+- ranking, comparação, filtros, mapa e responsividade identificados como recursos integrados;
+- o build apresentou avisos não bloqueantes de chunks acima de 500 kB, relacionado ao RNF03;
+- a validação visual específica de falhas HTTP na comparação temporal permanece pendente de evidência controlada.
 
-O build apresentou apenas aviso não bloqueante sobre chunks acima de 500 kB. Esse ponto fica registrado como oportunidade futura de otimização relacionada ao RNF03.
-
-As evidências completas estão em:
+As evidências detalhadas estão em:
 
 [`docs/testes/manualdevalidacao.md`](../docs/testes/manualdevalidacao.md)
+
+[`docs/testes/consolidacao_testes_sprint3.md`](../docs/testes/consolidacao_testes_sprint3.md)
 
 ---
 
@@ -499,20 +505,18 @@ As evidências completas estão em:
 - [`docs/api.md`](../docs/api.md) — endpoints consumidos pelo frontend;
 - [`docs/arquitetura.md`](../docs/arquitetura.md) — arquitetura e fluxo de dados;
 - [`docs/calculos.md`](../docs/calculos.md) — fórmulas de energia e CO₂e;
-- [`docs/sprints/sprint-2.md`](../docs/sprints/sprint-2.md) — registro da Sprint 2.
+- [`docs/sprints/sprint-2.md`](../docs/sprints/sprint-2.md) — registro da Sprint 2;
+- [`docs/sprints/sprint-3.md`](../docs/sprints/sprint-3.md) — registro da Sprint 3.
 
 ---
 
-## Próximas evoluções
+## Observações finais
 
-Para a Sprint 3 permanecem principalmente:
+A implementação principal da Sprint 3 está integrada no frontend. Permanecem como acompanhamento técnico:
 
-- ranking de impacto;
-- comparação entre serviços;
-- filtros analíticos;
-- refinamentos finais de responsividade;
-- consolidação do mapa;
-- otimização de desempenho;
-- ampliação da cobertura de testes.
+- otimização de chunks acima de 500 kB;
+- consolidação visual das evidências de responsividade e mobile já relatadas pela equipe;
+- validação manual controlada de falha HTTP parcial na comparação;
+- revisão dos estados do mapa e das imagens/cartografia em ambiente autenticado.
 
-Essas funcionalidades devem reutilizar a API e os dados históricos já consolidados, evitando duplicar cálculos ambientais no frontend.
+A interface sinaliza dados parciais e não transforma lacunas em valores calculados.

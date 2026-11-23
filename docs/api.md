@@ -1,7 +1,7 @@
 # Documentação da API — GreenER
-> _**Referência técnica | Versão validada no fechamento da Sprint 2 — 09/11/2026**
+> _**Referência técnica | Versão revisada no fechamento da Sprint 3 — 23/11/2026**_
 
-> Esta documentação separa endpoints **já implementados** dos endpoints **planejados**. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução.
+> Esta documentação separa endpoints **já implementados** dos endpoints **planejados**. Ranking e comparação não possuem endpoints exclusivos; são calculados pela combinação dos endpoints existentes de indicadores e histórico. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução.
 
 ## 01. Visão geral
 O backend do **GreenER** utiliza **Node.js, Express e TypeScript** para fornecer uma API REST que conecta a interface React, o banco de dados PostgreSQL e serviços externos de monitoramento.
@@ -1480,7 +1480,7 @@ No fechamento da Sprint 3 estão implementados e integrados ao produto:
 
 - consumo dos endpoints pelo Monitoramento e pela página de Análises.
 
-A validação de 09/11/2026 confirmou o fluxo com dados persistidos e atualização automática. A implementação final de ranking, comparação e projeção foi concluída na Sprint 3. Os detalhes da validação estão em [`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md).
+A validação técnica inicial em 09/11/2026 confirmou o fluxo com dados persistidos e atualização automática. Na consolidação da Sprint 3, a implementação final de ranking, comparação e projeção foi integrada e validada por testes e evidências técnicas; os detalhes estão em [`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md) e [`docs/testes/consolidacao_testes_sprint3.md`](testes/consolidacao_testes_sprint3.md).
 
 ## 09. Recursos de análise disponíveis
 O ranking por energia ou CO₂e e a comparação entre serviços são apresentados na página de Análises usando os endpoints existentes `GET /api/indicadores?start=<ISO>&end=<ISO>` e `GET /api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>`. Não há endpoints exclusivos para ranking ou comparação. A interface sinaliza dados parciais; serviços removidos com dados no período permanecem disponíveis nas análises, e o ranking os identifica como “Removido”.
@@ -1595,4 +1595,4 @@ Sempre que um endpoint for criado ou alterado, atualizar:
 
 - Estado de implementação e vínculo com a user story correspondente.
 
-**Código-fonte de referência:** branch `develop`, revisada em 09/11/2026 durante o fechamento da Sprint 2.
+**Código-fonte de referência:** implementação revisada no fechamento da Sprint 3 — 23/11/2026.
