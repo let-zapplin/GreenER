@@ -57,7 +57,7 @@ emissão estimada de CO₂e
 | --- | --- | --- | --- | --- |
 | **Sprint 1** | 28/09–19/10/2026 | [`sprint-1.md`](docs/sprints/sprint-1.md) | [▶ Vídeo](https://youtu.be/pGdiciJxTPw) | ✅ Finalizada |
 | **Sprint 2** | 20/10–09/11/2026 | [`sprint-2.md`](docs/sprints/sprint-2.md) | [▶ Vídeo](https://youtu.be/qW38NnthF8Q) | ✅ Finalizada |
-| **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | Demonstração final do MVP | ✅ Concluída |
+| **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | [▶ Vídeo](https://youtu.be/eA8kPQe3600) | ✅ Finalizada |
 
 > A visualização geográfica foi antecipada da Sprint 3 e integrada ao Monitoramento. A Sprint 3 consolidou ranking, comparação, filtros, projeções e redistribuição, além do Workspace personalizável e dos refinamentos de experiência e desempenho.
 

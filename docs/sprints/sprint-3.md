@@ -14,17 +14,6 @@ A Sprint 3 encerra o MVP do GreenER e concentrou o trabalho de **análise, integ
 
 As estruturas fundamentais de coleta, persistência, histórico, cálculo ambiental, indicadores, autenticação e atualização automática já haviam sido validadas na Sprint 2 e foram reutilizadas como base para as novas capacidades analíticas.
 
-### US13 antecipada na Sprint 2
-
-A **US13 — Visualização geográfica com serviços reais**, originalmente estimada em 5 SP para a Sprint 3, foi antecipada para a Sprint 2 durante a reformulação do Monitoramento.
-
-Por isso:
-
-- a US13 permaneceu visível para rastreabilidade;
-- seus 5 SP não foram contabilizados novamente na capacidade da Sprint 3;
-- a Sprint 3 ficou responsável por integração, revisão e refinamentos finais do mapa;
-- o trabalho novo planejado passou de **69 SP para 64 SP**.
-
 ### Evoluções incorporadas durante a Sprint
 
 Além do escopo analítico originalmente previsto, a entrega final passou a incluir três evoluções importantes:
@@ -216,12 +205,12 @@ Nesta demonstração, apresentamos a versão final do GreenER, com monitoramento
 <div align="center">
 
 <a href="https://youtu.be/eA8kPQe3600">
-  <img src="thumbnail_sp2.png"
+  <img src="thumbnail_sp3.png"
        width="560"
-       alt="Assistir à demonstração da Sprint 3 no YouTube" />
+       alt="Assistir à demonstração do MVP no YouTube" />
 </a>
 
-**[▶ Assistir à demonstração da Sprint 3](https://youtu.be/eA8kPQe3600)**
+**[▶ Assistir à demonstração da Sprint 2](https://youtu.be/eA8kPQe3600)**
 
 </div>
 

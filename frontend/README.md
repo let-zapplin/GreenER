@@ -1,6 +1,6 @@
 # 🖥️ GreenER — Frontend
 
-Aplicação web do GreenER, responsável por apresentar os serviços monitorados, seus estados, localização, indicadores ambientais e histórico de energia estimada.
+Aplicação web do GreenER, responsável por apresentar e organizar os serviços monitorados, seus estados, localização e indicadores ambientais, além de oferecer análises históricas, ranking, comparação, projeções regionais, Workspaces personalizáveis e a interface conversacional da Karma.
 
 ← [Voltar para o README principal](../README.md)
 
@@ -17,6 +17,8 @@ Aplicação web do GreenER, responsável por apresentar os serviços monitorados
 - [Monitoramento](#monitoramento)
 - [Workspace](#-workspace)
 - [Análises](#análises)
+- [Projeções regionais](#-projeções-regionais)
+- [Karma — Assistente experimental](#-karma--assistente-experimental)
 - [Autenticação](#-autenticação)
 - [Atualização automática](#-atualização-automática)
 - [Configuração](#-configuração)
@@ -109,13 +111,13 @@ Os hooks concentram estado de carregamento, erro, atualização automática e pr
 | Tela | Descrição | Situação no fechamento da Sprint 3 |
 | --- | --- | --- |
 | **Landing / Login** | Apresentação inicial e autenticação | ✅ Implementada |
-| **Home** | Navegação principal após autenticação | ✅ Implementada |
+| **Home / Karma** | Página inicial autenticada e ponto de entrada para o assistente Karma | ✅ Implementada como protótipo experimental |
 | **Sobre / Funcionamento** | Contexto do projeto e funcionamento da solução | ✅ Implementadas |
-| **Monitoramento** | Visão operacional dos serviços, indicadores, estados e localização | ✅ Implementada |
-| **Análises** | Histórico, filtros, ranking e comparação ambiental por período | ✅ Implementada |
+| **Monitoramento / Workspace** | Visão operacional fixa e acesso às páginas personalizadas do usuário | ✅ Implementada |
+| **Análises** | Exploração histórica, ranking, comparação e projeções ambientais | ✅ Implementada |
 | **Mapa de serviços** | Visualização geográfica complementar no Monitoramento | ✅ Integrada ao Monitoramento |
 
-> O Monitoramento e a página de Análises possuem responsabilidades diferentes: o primeiro apresenta o **estado atual do ambiente** em um painel de blocos, enquanto Análises continua **separada** e concentra a **exploração temporal**, que exige espaço dedicado pelo volume de informações e pela interatividade. Os blocos de comparação, histórico e projeção também aparecem dentro do painel quando o usuário os adiciona.
+> O Monitoramento e a página de Análises possuem responsabilidades diferentes: o primeiro apresenta o **estado atual do ambiente** em um painel de blocos e serve como base do Workspace; Análises continua **separada** e concentra a **exploração temporal e projeções**, que exigem espaço dedicado pelo volume de informações e pela interatividade. Os blocos de comparação, histórico e projeção também podem ser reutilizados nas páginas personalizadas do Workspace.
 
 ---
 
@@ -293,28 +295,64 @@ greener.monitoring.board.v1
 
 ## Análises
 
-A página de Análises utiliza o histórico ambiental retornado por:
+A página de Análises centraliza a exploração temporal, comparativa e projetiva dos dados ambientais do GreenER.
+
+Ela utiliza principalmente:
 
 ```text
+GET /api/indicadores
 GET /api/indicadores/:serviceId/historico
+GET /api/projecoes/regioes
+POST /api/projecoes/localizacao
+POST /api/projecoes/redistribuicao
 ```
 
-A interface oferece:
+A interface está organizada em três modos principais:
+
+### Explorar
+
+Permite investigar um serviço e o comportamento geral do ambiente no período selecionado.
+
+Principais recursos:
 
 - seleção de serviço;
-- ranking de impacto por energia ou CO₂e no período selecionado;
-- comparação de dois ou mais serviços no mesmo período;
-- sinalização de dados parciais;
-- identificação de serviços removidos com dados históricos como “Removido” no ranking;
 - filtros de `1h`, `6h`, `24h` e `7d`;
 - gráfico temporal de energia estimada;
 - tooltip com valores da amostra;
 - tratamento de lacunas;
 - estados de carregamento e erro;
 - estado de ausência de histórico;
-- diferentes modos/layouts de visualização;
 - zoom por seleção de intervalo;
-- restauração da janela temporal.
+- restauração da janela temporal;
+- ranking de impacto por energia ou CO₂e;
+- identificação de serviços removidos com dados históricos como **Removido** no ranking;
+- sinalização de dados parciais.
+
+### Comparar
+
+Permite selecionar múltiplos serviços e analisá-los sob a mesma janela temporal.
+
+Principais recursos:
+
+- seleção de dois a quatro serviços;
+- comparação usando exatamente o mesmo período;
+- troca entre métricas de energia, CO₂e e recursos computacionais suportados;
+- visualização da evolução temporal;
+- comparação consolidada do período;
+- preservação dos históricos válidos quando uma consulta individual falha;
+- identificação dos serviços cujo histórico não pôde ser carregado;
+- sinalização de comparação parcial sem transformar ausência de dados em zero.
+
+### Projetar
+
+Permite usar os dados observados para construir cenários de apoio à decisão.
+
+O modo possui duas visualizações:
+
+- **Projetar localização** — mantém o consumo energético observado e estima como o CO₂e mudaria em localidades com diferentes intensidades de carbono;
+- **Redistribuir serviços** — simula cenários de distribuição dos serviços entre regiões e apresenta alternativas com menor emissão estimada.
+
+As projeções são comparações de cenário. O frontend não executa migração de infraestrutura e não apresenta os valores simulados como medições reais.
 
 O gráfico utiliza **Recharts**.
 
@@ -327,6 +365,55 @@ A seleção também pode ser recebida pela URL:
 ```
 
 permitindo abrir Análises já focada em um serviço escolhido no Monitoramento.
+
+---
+
+## 🌍 Projeções regionais
+
+As projeções ambientais fazem parte da página de Análises e foram consolidadas na Sprint 3.
+
+O frontend permite:
+
+- selecionar um serviço monitorado;
+- escolher uma ou mais regiões disponíveis;
+- visualizar intensidade de carbono e informações regionais retornadas pelo backend;
+- comparar o cenário atual com localidades alternativas;
+- manter o consumo energético constante entre os cenários;
+- visualizar diferenças estimadas de CO₂e;
+- consultar o cenário também em mapa;
+- simular redistribuição de serviços entre regiões.
+
+Os cálculos das projeções são realizados pelo backend. O frontend apenas envia as escolhas do usuário e apresenta os resultados estruturados da API.
+
+As projeções constituem **apoio à decisão** e não representam uma ação automática sobre a infraestrutura monitorada.
+
+---
+
+## 🦎 Karma — Assistente experimental
+
+A Home autenticada funciona também como ponto de entrada para a **Karma**, protótipo de assistente inteligente desenvolvido na Sprint 3.
+
+A experiência permite realizar perguntas em linguagem natural sobre informações e recursos disponíveis no GreenER.
+
+No frontend, a Karma oferece:
+
+- entrada conversacional pela Home;
+- perspectivas iniciais de **Impacto ambiental**, **Serviços** e **Evolução**;
+- envio de perguntas ao endpoint autenticado `POST /api/chat`;
+- apresentação das respostas retornadas pelo backend;
+- continuidade contextual dentro do escopo implementado;
+- estados visuais de processamento;
+- feedback de indisponibilidade ou falha quando necessário.
+
+A interface utiliza o componente `AssistantChat` e os estados visuais da Home para conduzir a transição entre a apresentação inicial e a conversa.
+
+Os cálculos ambientais e os valores usados nas respostas **não são produzidos pelo frontend nem delegados ao modelo de linguagem**. O frontend apresenta os resultados fornecidos pelas regras e serviços do backend.
+
+A Karma é classificada nesta entrega como **protótipo experimental**. Ela complementa, mas não substitui, Monitoramento, Análises ou as demais visualizações determinísticas do GreenER.
+
+Arquitetura, limitações e roadmap de evolução:
+
+[`docs/assistente-ia.md`](../docs/assistente-ia.md)
 
 ---
 
@@ -360,7 +447,7 @@ O backend continua responsável por validar JWT e permissões em cada endpoint p
 
 Monitoramento e dados consolidados são atualizados periodicamente sem exigir `F5`.
 
-Na configuração validada da Sprint 2:
+Na configuração validada para a entrega final da Sprint 3:
 
 ```text
 intervalo principal do frontend: 60 segundos
@@ -383,7 +470,7 @@ agenda próximo ciclo
 
 Esse comportamento permite que uma indisponibilidade temporária do backend não esvazie imediatamente a tela.
 
-A atualização automática do frontend foi validada manualmente em 09/11/2026.
+A atualização automática permaneceu validada no fechamento da Sprint 3, preservando os últimos dados válidos quando ocorre indisponibilidade temporária do backend.
 
 ---
 
@@ -452,9 +539,9 @@ Principais caminhos:
 
 ```text
 /               → landing/login
-/home           → home autenticada
+/home           → home autenticada e entrada da Karma
 /monitoramento  → painel de blocos (workspace) do estado operacional
-/analises       → histórico e análises
+/analises       → histórico, ranking, comparação e projeções
 ```
 
 ---
@@ -478,7 +565,7 @@ O painel do workspace é coberto por testes sem DOM (`node --test`), que exercit
 - `tests/workspacePages.test.ts` — páginas fixas, `normalizeBoard`, criação e numeração de página, persistência e descarte das páginas retiradas;
 - `tests/workspaceWidgets.test.ts` — catálogo de blocos, rótulos e mínimos, identificação de tipo, geração de `id` e reconhecimento do arranjo padrão.
 
-### Evidência do fechamento da Sprint 2
+### Consolidação final da Sprint 3
 
 Na varredura atualizada em 23/11/2026:
 
@@ -486,9 +573,9 @@ Na varredura atualizada em 23/11/2026:
 - `npm run typecheck` concluído sem erros;
 - build de produção concluído com sucesso;
 - 5094 módulos transformados;
-- ranking, comparação, filtros, mapa e responsividade identificados como recursos integrados;
+- ranking, comparação, filtros, mapa, projeções, Workspace e responsividade identificados como recursos integrados;
 - o build apresentou avisos não bloqueantes de chunks acima de 500 kB, relacionado ao RNF03;
-- a validação visual específica de falhas HTTP na comparação temporal permanece pendente de evidência controlada.
+- a correção para falha HTTP parcial na comparação está integrada e preserva os históricos válidos; não foi localizada uma captura manual controlada reproduzindo especificamente esse cenário.
 
 As evidências detalhadas estão em:
 
@@ -505,6 +592,7 @@ As evidências detalhadas estão em:
 - [`docs/api.md`](../docs/api.md) — endpoints consumidos pelo frontend;
 - [`docs/arquitetura.md`](../docs/arquitetura.md) — arquitetura e fluxo de dados;
 - [`docs/calculos.md`](../docs/calculos.md) — fórmulas de energia e CO₂e;
+- [`docs/assistente-ia.md`](../docs/assistente-ia.md) — arquitetura, limitações e roadmap da Karma;
 - [`docs/sprints/sprint-2.md`](../docs/sprints/sprint-2.md) — registro da Sprint 2;
 - [`docs/sprints/sprint-3.md`](../docs/sprints/sprint-3.md) — registro da Sprint 3.
 
@@ -512,11 +600,13 @@ As evidências detalhadas estão em:
 
 ## Observações finais
 
-A implementação principal da Sprint 3 está integrada no frontend. Permanecem como acompanhamento técnico:
+A implementação principal da Sprint 3 está integrada no frontend, incluindo ranking, comparação, projeções regionais, Workspace adaptativo e a interface experimental da Karma.
 
-- otimização de chunks acima de 500 kB;
-- consolidação visual das evidências de responsividade e mobile já relatadas pela equipe;
-- validação manual controlada de falha HTTP parcial na comparação;
-- revisão dos estados do mapa e das imagens/cartografia em ambiente autenticado.
+Permanecem como oportunidades de evolução não bloqueantes:
 
-A interface sinaliza dados parciais e não transforma lacunas em valores calculados.
+- otimização adicional dos chunks de produção acima de 500 kB;
+- obtenção de uma captura manual controlada específica para o cenário de falha HTTP parcial na comparação, cuja correção já está registrada;
+- continuidade dos refinamentos visuais e de acessibilidade conforme evolução do produto;
+- evolução da Karma conforme o roadmap registrado em `docs/assistente-ia.md`.
+
+A interface sinaliza dados parciais, preserva dados válidos diante de falhas isoladas e não transforma lacunas em valores calculados.
