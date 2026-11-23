@@ -4,7 +4,22 @@
 
 ## Objetivo
 
-Validar o fluxo funcional do GreenER e fornecer roteiros reproduzíveis para as integrações e funcionalidades do backend.
+Validar o fluxo funcional do GreenER e fornecer roteiros reproduzíveis para as integrações, funcionalidades do backend e fluxos da interface.
+
+## Como consultar este manual
+
+- [Fechamento atual — Sprint 3](#registro-da-validação-final-do-mvp--sprint-3).
+- [Complementos da entrega final](#complementos-validados-na-entrega-final-da-sprint-3).
+- [Registro histórico — Sprint 2](#registro-da-validação--fechamento-da-sprint-2).
+- [Preparação do ambiente](#1-iniciar-o-ambiente).
+- [Indicadores ambientais](#11-validar-indicadores-ambientais--backend).
+- [Coleta e históricos](#12-validar-coleta-manual-e-histórico-por-serviço).
+- [Dashboard consolidado](#13-validar-dados-consolidados-do-dashboard--tec19).
+- [Redistribuição regional](#14-validar-redistribuição-regional--api-e-frontend).
+- [Roteiros complementares da interface — Sprint 3](#15-reproduzir-os-fluxos-finais-da-interface--sprint-3).
+- [Typechecks e builds](#16-verificações-técnicas-complementares).
+
+**Leitura dos resultados:** o fechamento da Sprint 3 está no início. As seções datadas de 09/11/2026 preservam evidências históricas da Sprint 2, incluindo suas contagens, valores e limitações. Um roteiro descreve como verificar um comportamento; somente os registros de execução comprovam o que foi efetivamente observado.
 
 Fluxo de cálculo documentado:
 
@@ -24,6 +39,7 @@ O endpoint de indicadores calcula energia e CO₂e no backend a partir dos dados
 | Data | 23/11/2026 |
 | Responsável | Equipe GreenER — TEC31 |
 | Branch / referência final | `develop` — fechamento documental após integração das entregas da Sprint 3 |
+| Commit da execução final | Não identificado neste registro. Recuperar a referência nas evidências da execução; não atribuir automaticamente o commit atual a uma validação anterior. |
 | Ambiente | Windows + Docker Compose já em execução; frontend autenticado em `http://localhost:5173` |
 | Fonte dos requisitos | PDF local `edital/Desafio 2DSM - 2026-2.pdf` (RF01–RF15; arquivo fora do repositório e não versionado) |
 | Situação | **Validação final consolidada.** RF01–RF15 revisados; ranking, comparação, mapa, autenticação, Workspace, projeções, Karma e runtime documentados. Limites de evidência permanecem explícitos abaixo. |
@@ -35,9 +51,12 @@ Esta validação não parou nem recriou containers, para preservar a coleta em a
 - Backend: **300 testes aprovados e 7 ignorados**; 34 arquivos de teste aprovados e 1 ignorado.
 - Frontend: **101 testes aprovados** na varredura atualizada de 23/11/2026, conforme fechamento documentado no `frontend/README.md`.
 - `typecheck` do backend e do frontend: aprovado.
+- Build do backend: aprovado na última execução registrada no [consolidado de testes](./consolidacao_testes_sprint3.md); não representa nova execução nesta revisão documental.
 - Build de produção do frontend: aprovado. O bundle JavaScript principal permanece acima do limite recomendado pelo Vite: cerca de **2,25 MB minificado / 615 kB gzip**.
 
 Os testes automatizados verificam comportamento de módulos e regras; não substituem as verificações de interface registradas a seguir.
+
+O typecheck atual verifica o código da aplicação: o backend exclui `src/**/*.test.ts` e o frontend inclui `src` e `vite.config.ts`, sem a pasta `tests`. Sua aprovação não comprova verificação estática dos arquivos de teste.
 
 ### Evidências do runtime e da interface
 
@@ -88,9 +107,9 @@ Os requisitos foram transcritos do edital local. A evidência manual histórica 
 Além da rastreabilidade RF01–RF15, a versão final incorporou recursos que ampliaram o MVP:
 
 - **Workspace / TEC34:** páginas personalizadas, catálogo de widgets, movimentação, redimensionamento, minimização e persistência possuem testes em `monitoringBoard.test.ts`, `workspacePages.test.ts` e `workspaceWidgets.test.ts`; a página fixa de Monitoramento foi preservada como visão padrão.
-- **Responsividade / TEC28:** PR #180 registra validação manual em telas pequenas, incluindo aproximadamente 320 × 445 px; a PR #187 complementa o popup de serviços agrupados no mapa.
-- **Tolerância a falhas / TEC25:** a issue #162 contém capturas de suítes automatizadas, interrupção/recuperação do backend e ranking com dados parciais.
-- **Cobertura / TEC30:** a PR #189 contém capturas das execuções de testes e amostras visuais de Explorar, Comparação, Projeções e responsividade.
+- **Responsividade / TEC28:** [PR #180](https://github.com/let-zapplin/GreenER/pull/180) registra validação manual em telas pequenas, incluindo aproximadamente 320 × 445 px; a [PR #187](https://github.com/let-zapplin/GreenER/pull/187) complementa o popup de serviços agrupados no mapa.
+- **Tolerância a falhas / TEC25:** a [issue #162](https://github.com/let-zapplin/GreenER/issues/162) contém capturas de suítes automatizadas, interrupção/recuperação do backend e ranking com dados parciais.
+- **Cobertura / TEC30:** a [PR #189](https://github.com/let-zapplin/GreenER/pull/189) contém capturas das execuções de testes e amostras visuais de Explorar, Comparação, Projeções e responsividade.
 - **Projeções e redistribuição:** testes de serviço/HTTP no backend e `redistributionEmissions.test.ts` cobrem regras de cálculo, políticas e cobertura parcial; a navegação de Projeções possui evidência visual no PR #189.
 - **Karma:** o módulo de chat possui testes de serviço, HTTP, conversação, conhecimento, cache e cliente Ollama; a assistente é documentada como protótipo experimental em `docs/assistente-ia.md`.
 
@@ -495,7 +514,7 @@ Não manter alterações artificiais de teste no código após a validação.
 | React lê API interna | monitoramento consome `/api/servicos` | Validado na Sprint 1 |
 | Loading / erro / vazio | estados tratados | Validado na Sprint 1 |
 | Mudança de catálogo | indisponível/retorno representados | Validado durante evolução da Sprint 1 |
-| Persistência após restart | registros permanecem sem `-v` | Revalidar e registrar evidência na Sprint 2 |
+| Persistência após restart | registros permanecem sem `-v` | Revalidação realizada em 09/11/2026; consultar a seção 8 e o registro histórico da Sprint 2 |
 
 ---
 
@@ -757,6 +776,8 @@ As contagens usam a última tentativa registrada, mesmo que seja anterior ao per
 | `active` | `unavailable` | Indisponível |
 | `removed` | qualquer estado | Excluído das contagens |
 
+**Interpretação:** “Ativo” nesta tabela é a categoria de contagem do dashboard, não uma afirmação de que a última coleta foi bem-sucedida. Uma tentativa `error` continua nessa categoria pela regra atual, enquanto a interface pode sinalizar o erro de coleta separadamente.
+
 ### Consultar período explícito e validar erros
 
 ```bash
@@ -895,6 +916,16 @@ Resultado: ✅ **Aprovado**.
 
 Use um período com dados do ambiente. A rota aceita `start`, `end` e uma política de ocupação:
 
+No Insomnia, configure:
+
+```text
+POST http://localhost:3000/api/projecoes/redistribuicao
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+Use o corpo JSON abaixo, substituindo os limites por datas ISO-8601 reais do período escolhido. A rota exige JWT válido, sem necessidade de perfil administrador.
+
 ```json
 {
   "start": "<início ISO-8601>",
@@ -915,18 +946,92 @@ Use um período com dados do ambiente. A rota aceita `start`, `end` e uma polít
 
 ### Validar comparação e subtotal
 
-1. Para um serviço com `validObservedEmissionSampleCount` igual a `validEnergySampleCount`, confirme que a tabela mostra a variação percentual.
-2. Para um serviço com contagens diferentes, confirme que a variação aparece como **Não comparável** e que o serviço não entra no subtotal comparável.
+1. Compare `observedEmissionsGco2e` com `comparableProjectedEmissionsGco2e`. O segundo valor aplica a intensidade da região sugerida à energia das amostras que possuem emissão observada calculável, mantendo a mesma base de comparação. Não use a projeção de toda a energia (`projectedEmissionsGco2e`) para esse percentual quando as coberturas forem diferentes.
+2. Um serviço pode continuar comparável com contagens diferentes: a regra exige `validObservedEmissionSampleCount > 0` e `validObservedEmissionSampleCount <= validEnergySampleCount`, além dos valores observado e projetado comparável disponíveis. Nesse caso, confira o percentual mesmo com cobertura parcial. Sem essa cobertura ou com algum desses valores nulo, não deve haver percentual calculável nem inclusão do serviço no subtotal comparável.
 3. Confirme que a linha de cobertura apresenta valores válidos/total, por exemplo `2/3`.
 4. Confirme que `isPartial` sinaliza cobertura incompleta de energia ou de emissões observadas, inclusive quando a energia está completa, mas faltam intensidades de carbono históricas.
-5. Verifique que o percentual do subtotal é calculado a partir das somas comparáveis, e não pela média dos percentuais individuais.
-6. Se a emissão observada for zero, confirme que a variação percentual é indicada como não calculável.
+5. Verifique que o subtotal soma as emissões observadas e as projeções comparáveis dos serviços elegíveis. Seu percentual deve ser calculado a partir dessas somas, e não pela média dos percentuais individuais.
+6. Se a emissão observada for zero, confirme que a variação percentual é indicada como não calculável. Esse serviço ainda pode participar das somas do subtotal quando possui cobertura e valores comparáveis; base zero impede a divisão percentual, não a soma. Se a base observada total do subtotal for zero, seu percentual também não é calculável.
+
+```text
+variação (%) = (emissão projetada comparável − emissão observada)
+              / emissão observada × 100
+```
+
+Por exemplo: três amostras com energia válida e duas com emissão observada não tornam o serviço automaticamente “Não comparável”. A comparação deve usar apenas a energia das duas amostras com cobertura de carbono. As regras estão em [redistributionEmissions.ts](../../frontend/src/lib/redistributionEmissions.ts) e possuem testes em [redistributionEmissions.test.ts](../../frontend/tests/redistributionEmissions.test.ts).
 
 Se o ambiente não tiver naturalmente um serviço com cobertura divergente ou emissão observada zero, use dados de teste controlados; não altere registros da coleta em andamento apenas para produzir esses cenários.
 
 Registre a data, o período, a política, os serviços utilizados, as coberturas observadas, o resultado e evidências visuais/API após executar o roteiro.
 
 ---
+
+## 15. Reproduzir os fluxos finais da interface — Sprint 3
+
+Estes roteiros complementam as evidências já registradas; sua inclusão não significa nova execução ou aprovação. Use a versão integrada do projeto, registre data e commit e vincule a captura ou resultado de cada cenário. Não altere registros da coleta em andamento para criar dados artificiais.
+
+### Workspace e persistência local
+
+1. Faça login e abra **Monitoramento**. Confira a página fixa e seus blocos.
+2. Crie uma página personalizada e adicione blocos pelo catálogo.
+3. Mova e redimensione um bloco; minimize e expanda outro. Confira se os controles permanecem utilizáveis e o conteúdo não fica inacessível.
+4. Renomeie a página e recarregue o navegador. O nome e o arranjo devem ser preservados no mesmo navegador/origem, por `localStorage`.
+5. Remova um bloco e, em uma página descartável, confira a exclusão da página com a confirmação da interface. A página fixa deve ser preservada.
+6. Repita a conferência em uma largura de celular e em desktop, registrando as dimensões utilizadas.
+
+A persistência do Workspace é local no navegador; não comprova sincronização entre dispositivos nem gravação do layout no PostgreSQL. Os testes `monitoringBoard.test.ts`, `workspacePages.test.ts` e `workspaceWidgets.test.ts` verificam regras sem renderizar a interface.
+
+### Filtros, ranking e comparação
+
+1. Abra **Análises → Explorar** e alterne 1h, 6h, 24h e 7d. Confira o período apresentado e os parâmetros `start` e `end` nas consultas pela aba Rede do navegador.
+2. Na visão geral, selecione **Ranking**, alterne Energia e CO₂e e confira a ordenação pelos valores exibidos e o aviso de dados parciais quando aplicável.
+3. Em **Comparar serviços**, selecione de dois a quatro serviços. Confira que utilizam a mesma janela temporal.
+4. Alterne **Evolução temporal** e **Comparação do período**, troque a métrica e remova um serviço. Confira unidades, valores, lacunas e ausência de erros de interface.
+5. Caso o ambiente forneça um serviço removido com histórico no período, confira a identificação e disponibilidade nas análises históricas. Sem esse cenário disponível, registre a limitação, sem marcar a execução como aprovada.
+
+Datas de requisições iniciadas antes e depois da atualização automática da janela podem diferir. Compare chamadas da mesma seleção e ciclo de atualização.
+
+### Projeção individual por localização
+
+1. Em **Análises**, abra a área de projeções por localização, selecione um serviço e regiões alternativas.
+2. Confira na aba Rede as consultas a `GET /api/projecoes/regioes` e `POST /api/projecoes/localizacao`, ambas com autenticação.
+3. Confira que a energia observada permanece constante entre os cenários e que a emissão varia conforme a intensidade regional.
+4. Confira intensidade, participação renovável quando disponível, indicação de estimativa e tratamento de dados ausentes.
+5. Confirme que os resultados são sugestões: não ocorre mudança real de localização dos serviços. Para redistribuição, utilize o roteiro da seção 14.
+
+### Login, acesso protegido e logout
+
+1. Na interface, faça login com uma conta válida e abra Monitoramento e Análises.
+2. Copie o endereço de uma dessas páginas protegidas e abra-o em janela anônima, sem sessão. O sistema deve solicitar autenticação, sem disponibilizar dados protegidos.
+3. Na janela autenticada, clique em **Sair**. Tente acessar novamente a página protegida, inclusive após voltar no navegador e recarregar: deve exigir novo login.
+4. Registre os resultados sem incluir senha, token ou credenciais nas capturas. A proteção JWT do backend possui testes próprios; esses passos verificam o fluxo da interface.
+
+### Falha HTTP parcial na comparação temporal
+
+A implementação preserva os históricos recebidos e apresenta aviso com os serviços cujas consultas falharam. Para confirmar visualmente, é necessário um cenário controlado com falha em uma consulta de histórico e sucesso em outra. Desligar o backend ou toda a rede faz todas falharem e não comprova esse caso. Se a simulação isolada não puder ser realizada, mantenha o cenário como não reproduzido manualmente, conforme o limite registrado no fechamento.
+
+## 16. Verificações técnicas complementares
+
+Na raiz do projeto, com os serviços de aplicação iniciados:
+
+```powershell
+docker compose exec backend npm test
+docker compose exec frontend npm test
+docker compose exec backend npm run typecheck
+docker compose exec frontend npm run typecheck
+docker compose exec backend npm run build
+docker compose exec frontend npm run build
+```
+
+A integração PostgreSQL utiliza um ambiente exclusivo e não interrompe o banco da aplicação:
+
+```powershell
+docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test
+```
+
+Registre o resultado efetivo, a data e o commit das execuções. O backend gera sua compilação em `backend/dist`; o frontend gera o pacote de produção em `frontend/dist`. O aviso de tamanho do bundle deve ser registrado separadamente de falhas de compilação. Os comandos de typecheck não incluem os arquivos de teste nas configurações atuais.
+
+Consulte o [manual dos testes automatizados](./manual_teste_unitario.md) e o [consolidado da Sprint 3](./consolidacao_testes_sprint3.md) para o inventário e o contexto dos resultados registrados.
 
 ## Solução de problemas
 

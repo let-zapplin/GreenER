@@ -7,6 +7,8 @@
 > Este registro consolida a implementação e as evidências técnicas da entrega final. Feedback externo recebido posteriormente deve ser registrado separadamente.
 >
 > A matriz RF01–RF15, as referências de implementação/testes e as evidências de autenticação e Docker estão no [manual de validação final](testes/manualdevalidacao.md).
+>
+> Além dos requisitos obrigatórios do MVP, a Sprint 3 entregou dois incrementos adicionais relevantes: **TEC34 — Workspace com layout adaptativo/personalizável** e **TEC39 — protótipo do assistente de IA Karma**. Eles são registrados neste Product Backlog por fazerem parte do produto efetivamente entregue, sem que sua presença implique, por si só, pontuação adicional na rubrica acadêmica.
 
 ---
 
@@ -28,7 +30,7 @@
 | 🔄 Em revisão | Implementação funcional existe, mas ainda depende de revisão/integração final |
 | 🔄 Parcial | Parte relevante existe, mas ainda falta critério obrigatório |
 | ⏳ Planejado | Selecionado para Sprint futura |
-| 🔁 Contínuo | Requisito já possui base implementada, mas deve ser revalidado/evoluído nas Sprints seguintes |
+| 🧪 Protótipo | Incremento funcional entregue em caráter experimental, fora do núcleo obrigatório do MVP |
 
 ---
 
@@ -54,9 +56,11 @@
 | US16 | usuário autorizado | me autenticar para acessar recursos protegidos | impedir acesso não autorizado | RP06 | 🔴 Alta | S2 | ✅ Concluído |
 | US17 | usuário da plataforma | projetar o impacto ambiental de um serviço em diferentes localidades | avaliar alternativas de hospedagem com menor emissão| RF16 | 🟡 Média | S3 | ✅ Concluído — projeção ambiental por localização implementada e coberta por testes automatizados |
 | TS01 | usuário | utilizar a plataforma em diferentes tamanhos de tela | acompanhar dados em desktop e mobile | RNF01 | 🔴 Alta | S1-S3 | ✅ Concluído — interface responsiva e evidências desktop/mobile consolidadas |
-| TS02 | usuário | que uma falha isolada não derrube o GreenER | continuar acompanhando os demais serviços | RNF04 | 🔴 Alta | S2-S3 | 🔁 Contínuo — base concluída; falha HTTP parcial específica da comparação permanece em validação manual |
-| TS03 | usuário | que a interface responda em tempo adequado | acompanhar continuamente o ambiente | RNF03 | 🟡 Média | S3 | 🔁 Contínuo — lazy loading e pausa de polling implementados; bundle >500 kB permanece como acompanhamento não bloqueante |
+| TS02 | usuário | que uma falha isolada não derrube o GreenER | continuar acompanhando os demais serviços | RNF04 | 🔴 Alta | S2-S3 | ✅ Concluído — regressão final executada; a captura manual controlada da falha HTTP parcial da comparação não foi reproduzida, mas a correção permanece registrada |
+| TS03 | usuário | que a interface responda em tempo adequado | acompanhar continuamente o ambiente | RNF03 | 🟡 Média | S3 | ✅ Concluído — revisão de desempenho realizada, com lazy loading e pausa de polling; otimização adicional do bundle permanece como evolução não bloqueante |
 | TS04 | equipe técnica | encontrar documentação coerente e reproduzível | executar, compreender e manter o projeto | RNF05 | 🔴 Alta | S1-S3 | ✅ Concluído — documentação da entrega final revisada e reconciliada |
+| TEC34 | usuário da plataforma | personalizar páginas de acompanhamento com blocos adaptáveis | organizar o Workspace de acordo com o que desejo monitorar ou analisar | RF09, RNF01 | 🟡 Média | S3 | ✅ Concluído — Workspace com páginas personalizadas, widgets móveis/redimensionáveis e persistência de layout |
+| TEC39 | usuário da plataforma | interagir com um assistente inteligente sobre os dados do GreenER | consultar informações da plataforma em linguagem natural | Incremento adicional | 🟢 Baixa | S3 | 🧪 Protótipo — Karma entregue como demonstração experimental e documentada separadamente |
 
 ---
 
@@ -216,7 +220,7 @@ Apresentar no Monitoramento:
 
 **Evidência:** ranking manual validado para energia e CO₂e no período de 24 horas; ordem, período e sinalização de dados parciais registrados no [manual de validação final](testes/manualdevalidacao.md).
 
-**Decisão de interpretação do Product Owner (21/11/2026):** serviços removidos com dados no período selecionado permanecem disponíveis para ranking e comparação histórica. No ranking, são identificados como “Removido”. A decisão interpreta conjuntamente RF05/RF06.
+**Decisão de interpretação do Product Owner (21/11/2026):** serviços removidos com dados no período selecionado permanecem disponíveis para ranking e comparação histórica. No ranking, são identificados como “Removido”. A decisão relaciona as mudanças de catálogo (RF02), a preservação do histórico (RF10), o ranking (RF14) e a comparação (RF15).
 
 **Ressalva de dados parciais (decisão do Product Owner, 21/11/2026):** o indicador atual no frontend é suficiente nesta etapa; a limitação será explicada ao cliente na apresentação final do MVP. Não declarar as amostras observadas como cobertura completa.
 
@@ -251,7 +255,16 @@ Apresentar no Monitoramento:
 
 **RF:** RF16
 
-**Evidência:** projeções cobridas por testes de serviço e HTTP no backend, além da interface integrada de localização e redistribuição.
+**Extensão entregue — redistribuição de serviços:**
+
+- [x] utilizar a energia observada dos serviços no período para avaliar regiões alternativas, mantendo essa energia nos cenários projetados;
+- [x] oferecer políticas de preservação das contagens atuais por região, distribuição balanceada e distribuição sem cotas;
+- [x] informar inviabilidade quando as restrições de uma política não puderem ser atendidas, sem relaxá-las silenciosamente;
+- [x] preservar serviços sem energia calculável e sinalizar dados parciais ou ausência de fatores regionais utilizáveis;
+- [x] comparar emissões observadas e projetadas sobre a mesma cobertura de amostras, sem confundir ausência de dados com emissão zero;
+- [x] apresentar os resultados como sugestões, sem executar migração real dos serviços.
+
+**Evidência:** projeções e redistribuição possuem testes de serviço e HTTP no backend e testes de comparação de emissões no frontend. A interface está integrada; os roteiros e limites das evidências manuais estão no [manual de validação](testes/manualdevalidacao.md#14-validar-redistribuição-regional--api-e-frontend). A conclusão da implementação não significa que todos os cenários desse roteiro foram reproduzidos manualmente.
 
 ---
 
@@ -267,6 +280,53 @@ Apresentar no Monitoramento:
 - [x] garantir que proteção do frontend não seja o único controle de acesso.
 
 **RP:** RP06
+
+---
+
+### Épico 10 - Workspace adaptável
+
+#### TEC34 - Painéis adaptáveis e personalizáveis
+
+- [x] manter uma página fixa de **Monitoramento** com visão operacional pronta para uso;
+- [x] permitir ao usuário criar páginas próprias no Workspace;
+- [x] permitir renomear e excluir páginas personalizadas;
+- [x] disponibilizar widgets de monitoramento e análise para composição do layout;
+- [x] permitir mover e redimensionar widgets dentro da grade;
+- [x] permitir minimizar e expandir widgets;
+- [x] permitir adicionar e remover blocos das páginas personalizadas;
+- [x] persistir o arranjo criado pelo usuário localmente no navegador, por `localStorage`;
+- [x] adaptar o layout para diferentes larguras de tela;
+- [x] preservar a página de **Análises** como espaço dedicado, mantendo widgets analíticos também disponíveis no Workspace.
+
+**Relacionado:** RF09, RNF01
+
+**Resultado da Sprint 3:** o Monitoramento passa a fazer parte de um Workspace que oferece uma visão padrão pronta para uso e, ao mesmo tempo, permite que cada usuário organize páginas próprias de acordo com sua rotina.
+
+A persistência do layout é local ao navegador e à origem da aplicação; não corresponde à gravação no PostgreSQL nem à sincronização entre dispositivos.
+
+> **Observação de escopo:** TEC34 integra o incremento efetivamente entregue na Sprint 3 e é documentada por rastreabilidade do produto. Seu registro aqui não pressupõe pontuação independente na rubrica.
+
+---
+
+### Épico 11 - Assistente inteligente experimental
+
+#### TEC39 - Protótipo do Camaleão IA Karma
+
+- [x] disponibilizar uma interface conversacional integrada ao GreenER;
+- [x] permitir consultas em linguagem natural sobre informações disponíveis na plataforma;
+- [x] reutilizar regras e serviços determinísticos do backend para obtenção de fatos e valores;
+- [x] evitar delegar ao modelo de linguagem os cálculos ambientais do produto;
+- [x] preservar contexto durante a conversa dentro do escopo implementado;
+- [x] documentar arquitetura, limitações e comportamento experimental;
+- [x] registrar roadmap de evolução futura separado do escopo obrigatório do MVP.
+
+**Classificação:** incremento adicional / protótipo experimental.
+
+**Resultado da Sprint 3:** a Karma foi entregue como uma prova de conceito funcional que permite consultas conversacionais aos dados e recursos do GreenER, dentro dos limites do protótipo experimental.
+
+> **Limitação conhecida:** o protótipo ainda não substitui as visualizações e fluxos determinísticos da plataforma. A documentação específica em `docs/assistente-ia.md` registra suas limitações atuais e o roadmap de evolução.
+
+> **Observação de escopo:** TEC39 não corresponde a um requisito obrigatório original do MVP. Sua inclusão no Product Backlog registra uma evolução real do produto e não implica pontuação adicional automática na rubrica.
 
 ---
 
@@ -288,15 +348,17 @@ Apresentar no Monitoramento:
 - [x] falha transitória no frontend preserva os últimos dados válidos;
 - [x] dados incompletos são sinalizados sem inventar valores;
 - [x] registrar a regressão final e a interrupção/recuperação de backend;
-- [ ] confirmar manualmente o cenário isolado de falha HTTP na comparação temporal.
+- [x] preservar resultados válidos da comparação quando uma consulta de histórico falha isoladamente.
 
 **RNF:** RNF04
+
+> **Limite da evidência final:** a correção para falha HTTP parcial na comparação foi integrada e registrada, porém a equipe não localizou uma captura manual controlada reproduzindo especificamente esse cenário. A ausência dessa captura é documental e não é apresentada como funcionalidade pendente do MVP.
 
 ### TS03 - Desempenho
 - [x] revisar intervalos de polling/sincronização/coleta;
 - [x] analisar consultas históricas e agregações;
 - [x] implementar lazy loading e pausa de polling em segundo plano;
-- [ ] avaliar a otimização dos chunks >500 kB; o aviso não bloqueia o build atual.
+- [x] reavaliar o bundle de produção e registrar o aviso de chunk acima de 500 kB como oportunidade de otimização futura, sem bloqueio do build atual.
 
 **RNF:** RNF03
 
@@ -309,8 +371,9 @@ Apresentar no Monitoramento:
 - [x] README e registro da Sprint 2 atualizados no fechamento técnico;
 - [x] manual de validação atualizado;
 - [x] Sprint Review 2 realizada e registrada como ocorrência;
-- [ ] incorporar feedback da Sprint Review 2 quando o professor o repassar;
 - [x] revisar novamente a documentação no fechamento da Sprint 3.
+
+> O eventual feedback externo recebido após o fechamento deve ser registrado como nova ocorrência, sem manter a documentação final da Sprint 3 artificialmente aberta.
 
 **RNF:** RNF05
 
@@ -340,7 +403,19 @@ Na data em que essas adaptações foram registradas, a Sprint Review 2 ainda nã
 
 ---
 
-## 7. Histórico de alterações
+## 7. Adaptações e incrementos registrados durante a Sprint 3
+
+Durante a execução da Sprint 3, o Product Backlog evoluiu além do núcleo originalmente previsto para ranking, comparação e consolidação geográfica:
+
+1. **TEC34 — Workspace/layout adaptativo:** o Monitoramento foi incorporado a um Workspace com página fixa e suporte à criação de páginas personalizadas, composição por widgets, movimentação, redimensionamento e persistência do arranjo;
+2. **US17 — projeção ambiental por localização:** a funcionalidade foi concluída na Sprint 3 e passou a permitir comparação de cenários regionais mantendo constante o consumo energético observado;
+3. **TEC39 — Karma:** foi desenvolvido um protótipo experimental de assistente inteligente para consultas em linguagem natural sobre os dados e recursos do GreenER.
+
+Esses incrementos são registrados porque fazem parte da versão final demonstrada do produto. **TEC34 e TEC39 não devem ser interpretadas automaticamente como critérios adicionais de pontuação da rubrica**; sua documentação assegura rastreabilidade entre planejamento, implementação e entrega.
+
+---
+
+## 8. Histórico de alterações
 
 | Data | Alteração | Responsável |
 | --- | --- | --- |
@@ -349,7 +424,8 @@ Na data em que essas adaptações foram registradas, a Sprint Review 2 ainda nã
 | 20/10/2026 | Revisão pós-Review 1 e planejamento das Sprints 2 e 3 | Equipe GreenER |
 | 09/11/2026 | Atualização dos status após validação técnica da Sprint 2 e registro da antecipação da US13 | Equipe GreenER |
 | 21/11/2026 | Registro das evidências e da decisão de interpretação para RF14/RF15; validação final RF01–RF15 e pendências mantidas explicitamente | Gustavo (Product Owner) |
-| 23/11/2026 | Consolidação da Sprint 3: estados finais de US12/US13/US17, RNF01–RNF05 e registro das pendências remanescentes | Gustavo (Product Owner) |
+| 23/11/2026 | Consolidação da Sprint 3: estados finais de US12/US13/US17 e RNF01–RNF05; registro do Workspace adaptativo (TEC34), do protótipo Karma (TEC39) e das limitações/evoluções não bloqueantes | Gustavo (Product Owner) |
+| 23/11/2026 | Revisão de coerência documental: referências de histórico/ranking/comparação, critérios da redistribuição, persistência local e minimização do Workspace e descrição do protótipo Karma | Equipe GreenER |
 
 ---
 
