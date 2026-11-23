@@ -21,6 +21,10 @@ import { useProjectionRegions } from "../hooks/useProjectionRegions";
 import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
 import { COMPARISON_METRICS } from "../lib/comparisonMetrics";
 import { buildComparisonSeries } from "../lib/comparisonSeries";
+import {
+  MAX_COMPARISON_SERVICES,
+  MIN_COMPARISON_SERVICES,
+} from "../lib/comparisonLimits";
 import { formatServicePlace } from "../lib/serviceLocation";
 
 import type {
@@ -36,8 +40,6 @@ import type { MonitoredService } from "../types/service";
 
 import "./AnalysisBoardWidgets.css";
 
-const MIN_COMPARISON_SERVICES = 2;
-const MAX_COMPARISON_SERVICES = 4;
 const MAX_PROJECTION_REGIONS = 4;
 
 /** Período compartilhado pelos blocos da página de monitoramento. */
@@ -53,9 +55,7 @@ function PeriodSelect({ control }: { control: AnalysisPeriodControl }) {
       className="analysis-widget-select"
       aria-label="Período da análise"
       value={control.durationMs}
-      onChange={(event) =>
-        control.onSelectPeriod(Number(event.target.value))
-      }
+      onChange={(event) => control.onSelectPeriod(Number(event.target.value))}
     >
       {control.periods.map((period) => (
         <option key={period.value} value={period.value}>
@@ -78,9 +78,7 @@ function WidgetState({
   return (
     <div
       className={
-        error
-          ? "analysis-widget-state is-error"
-          : "analysis-widget-state"
+        error ? "analysis-widget-state is-error" : "analysis-widget-state"
       }
       role={error ? "alert" : "status"}
     >
@@ -95,9 +93,7 @@ function usePlaces(services: readonly MonitoredService[]) {
     const places: Record<number, string> = {};
 
     for (const service of services) {
-      places[service.serviceId] = formatServicePlace(
-        service.location,
-      );
+      places[service.serviceId] = formatServicePlace(service.location);
     }
 
     return places;
@@ -147,8 +143,8 @@ export function AnalysisRankingWidget({
 
             {error && (
               <p className="analysis-widget-note">
-                Não foi possível atualizar o ranking. Os últimos
-                dados carregados permanecem visíveis.
+                Não foi possível atualizar o ranking. Os últimos dados
+                carregados permanecem visíveis.
               </p>
             )}
           </>
@@ -162,8 +158,7 @@ export function AnalysisRankingWidget({
           </WidgetState>
         ) : (
           <WidgetState title="Sem dados no período">
-            Nenhum serviço possui consumo calculado neste
-            período.
+            Nenhum serviço possui consumo calculado neste período.
           </WidgetState>
         )}
       </div>
@@ -186,9 +181,7 @@ export function AnalysisHistoryWidget({
 }: AnalysisHistoryWidgetProps) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  const activeId = services.some(
-    (service) => service.serviceId === selectedId,
-  )
+  const activeId = services.some((service) => service.serviceId === selectedId)
     ? selectedId
     : (services[0]?.serviceId ?? null);
 
@@ -198,8 +191,7 @@ export function AnalysisHistoryWidget({
   );
 
   const validEnergySamples =
-    history?.samples.filter((sample) => sample.energyKwh !== null)
-      .length ?? 0;
+    history?.samples.filter((sample) => sample.energyKwh !== null).length ?? 0;
 
   return (
     <div className="analysis-widget">
@@ -209,9 +201,7 @@ export function AnalysisHistoryWidget({
           aria-label="Serviço do histórico"
           value={activeId ?? ""}
           disabled={services.length === 0}
-          onChange={(event) =>
-            setSelectedId(Number(event.target.value))
-          }
+          onChange={(event) => setSelectedId(Number(event.target.value))}
         >
           {services.map((service) => (
             <option key={service.serviceId} value={service.serviceId}>
@@ -226,8 +216,7 @@ export function AnalysisHistoryWidget({
       <div className="analysis-widget-scroll">
         {activeId === null ? (
           <WidgetState title="Nenhum serviço monitorado">
-            O histórico aparece quando houver serviços
-            cadastrados.
+            O histórico aparece quando houver serviços cadastrados.
           </WidgetState>
         ) : loading && !history ? (
           <WidgetState title="Carregando histórico">
@@ -253,38 +242,31 @@ export function AnalysisHistoryWidget({
               <div>
                 <dt>Período</dt>
                 <dd>
-                  {new Date(history.period.start).toLocaleString(
-                    "pt-BR",
-                    {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  )}
+                  {new Date(history.period.start).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                   {" — "}
-                  {new Date(history.period.end).toLocaleString(
-                    "pt-BR",
-                    {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  )}
+                  {new Date(history.period.end).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </dd>
               </div>
             </dl>
 
             {history.samples.length === 0 ? (
               <WidgetState title="Sem histórico neste período">
-                Ainda não existem coletas registradas para este
-                serviço.
+                Ainda não existem coletas registradas para este serviço.
               </WidgetState>
             ) : validEnergySamples === 0 ? (
               <WidgetState title="Energia ainda indisponível">
-                Existem coletas, mas nenhuma possui dados
-                suficientes para calcular o consumo energético.
+                Existem coletas, mas nenhuma possui dados suficientes para
+                calcular o consumo energético.
               </WidgetState>
             ) : (
               <HistoryChart
@@ -292,19 +274,15 @@ export function AnalysisHistoryWidget({
                 samples={history.samples}
                 periodStart={history.period.start}
                 periodEnd={history.period.end}
-                collectionIntervalMs={
-                  history.period.collectionIntervalMs
-                }
-                displayIntervalMs={
-                  history.period.displayIntervalMs
-                }
+                collectionIntervalMs={history.period.collectionIntervalMs}
+                displayIntervalMs={history.period.displayIntervalMs}
               />
             )}
 
             {error && history && (
               <p className="analysis-widget-note">
-                Não foi possível atualizar o histórico. Os últimos
-                dados permanecem visíveis.
+                Não foi possível atualizar o histórico. Os últimos dados
+                permanecem visíveis.
               </p>
             )}
           </>
@@ -337,9 +315,7 @@ export function AnalysisComparisonWidget({
   const [visualization, setVisualization] =
     useState<ComparisonVisualization>("timeline");
 
-  const [focusServiceId, setFocusServiceId] = useState<
-    number | null
-  >(null);
+  const [focusServiceId, setFocusServiceId] = useState<number | null>(null);
 
   const defaultIds = useMemo(
     () =>
@@ -353,18 +329,14 @@ export function AnalysisComparisonWidget({
   const selectedIds = useMemo(
     () =>
       (selection ?? defaultIds).filter((serviceId) =>
-        services.some(
-          (service) => service.serviceId === serviceId,
-        ),
+        services.some((service) => service.serviceId === serviceId),
       ),
     [selection, defaultIds, services],
   );
 
-  const canCompare =
-    selectedIds.length >= MIN_COMPARISON_SERVICES;
+  const canCompare = selectedIds.length >= MIN_COMPARISON_SERVICES;
 
-  const limitReached =
-    selectedIds.length >= MAX_COMPARISON_SERVICES;
+  const limitReached = selectedIds.length >= MAX_COMPARISON_SERVICES;
 
   const { histories, loading, error } = useComparisonHistories(
     selectedIds,
@@ -409,9 +381,7 @@ export function AnalysisComparisonWidget({
           aria-label="Serviços comparados"
         >
           {services.map((service) => {
-            const isActive = selectedIds.includes(
-              service.serviceId,
-            );
+            const isActive = selectedIds.includes(service.serviceId);
 
             return (
               <button
@@ -455,11 +425,7 @@ export function AnalysisComparisonWidget({
           >
             <button
               type="button"
-              className={
-                visualization === "timeline"
-                  ? "is-active"
-                  : ""
-              }
+              className={visualization === "timeline" ? "is-active" : ""}
               aria-pressed={visualization === "timeline"}
               onClick={() => setVisualization("timeline")}
             >
@@ -468,9 +434,7 @@ export function AnalysisComparisonWidget({
 
             <button
               type="button"
-              className={
-                visualization === "period" ? "is-active" : ""
-              }
+              className={visualization === "period" ? "is-active" : ""}
               aria-pressed={visualization === "period"}
               onClick={() => setVisualization("period")}
             >
@@ -481,8 +445,8 @@ export function AnalysisComparisonWidget({
 
         {!canCompare ? (
           <WidgetState title="Selecione pelo menos 2 serviços">
-            A comparação fica disponível com 2 a{" "}
-            {MAX_COMPARISON_SERVICES} serviços selecionados.
+            A comparação fica disponível com 2 a {MAX_COMPARISON_SERVICES}{" "}
+            serviços selecionados.
           </WidgetState>
         ) : error ? (
           <WidgetState title="Comparação indisponível" error>
@@ -544,12 +508,9 @@ export function AnalysisProjectionWidget({
     : (services[0]?.serviceId ?? null);
 
   const activeService =
-    services.find(
-      (service) => service.serviceId === activeServiceId,
-    ) ?? null;
+    services.find((service) => service.serviceId === activeServiceId) ?? null;
 
-  const currentRegionCode =
-    activeService?.location.region_code ?? null;
+  const currentRegionCode = activeService?.location.region_code ?? null;
 
   const {
     regions,
@@ -595,13 +556,9 @@ export function AnalysisProjectionWidget({
 
       <div className="analysis-widget-scroll">
         {regionsError ? (
-          <p className="analysis-widget-note is-error">
-            {regionsError}
-          </p>
+          <p className="analysis-widget-note is-error">{regionsError}</p>
         ) : regionsLoading ? (
-          <p className="analysis-widget-note">
-            Carregando localidades…
-          </p>
+          <p className="analysis-widget-note">Carregando localidades…</p>
         ) : null}
 
         <div className="analysis-widget-projection-primary">
@@ -628,13 +585,12 @@ export function AnalysisProjectionWidget({
 
         {regionCodes.length === 0 ? (
           <WidgetState title="Selecione uma localidade">
-            Os cenários mantêm o consumo energético do serviço e
-            variam apenas o fator ambiental da região.
+            Os cenários mantêm o consumo energético do serviço e variam apenas o
+            fator ambiental da região.
           </WidgetState>
         ) : projectionLoading ? (
           <WidgetState title="Calculando projeção">
-            Comparando o consumo observado com os fatores
-            ambientais escolhidos.
+            Comparando o consumo observado com os fatores ambientais escolhidos.
           </WidgetState>
         ) : projectionError ? (
           <WidgetState title="Projeção indisponível" error>
@@ -644,9 +600,7 @@ export function AnalysisProjectionWidget({
           <>
             <LocationProjectionSummary projection={projection} />
 
-            <LocationProjectionChart
-              scenarios={projection.scenarios}
-            />
+            <LocationProjectionChart scenarios={projection.scenarios} />
           </>
         ) : null}
       </div>
