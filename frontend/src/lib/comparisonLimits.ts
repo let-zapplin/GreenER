@@ -1,0 +1,2 @@
+export const MIN_COMPARISON_SERVICES = 2;
+export const MAX_COMPARISON_SERVICES = 8;

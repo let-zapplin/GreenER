@@ -32,14 +32,15 @@ import { ServiceRedistributionPanel } from "../components/ServiceRedistributionP
 import iconeBusca from "../assets/icones/icone-busca.png";
 import iconeCompara from "../assets/icones/icone-compara.png";
 import iconeRedistribui from "../assets/icones/icone-redistribui.png";
+import {
+  MAX_COMPARISON_SERVICES,
+  MIN_COMPARISON_SERVICES,
+} from "../lib/comparisonLimits";
 
 type AnalysisLayout = "focus" | "overview" | "side";
 type OverviewView = "charts" | "ranking";
 type AnalysisMode = "explore" | "compare" | "project";
 type ProjectionView = "location" | "redistribution";
-
-const MIN_COMPARISON_SERVICES = 2;
-const MAX_COMPARISON_SERVICES = 4;
 
 const ANALYSES_LAYOUT_STORAGE_KEY = "greener:analyses:layout";
 
@@ -1028,33 +1029,42 @@ export function Analyses() {
               )}
 
             {/* A falha parcial avisa o usuário sem esconder os históricos recebidos. */}
-            {canCompare && comparisonVisualization === "timeline" && comparisonHistoriesError && (
-              <div
-                className={comparisonHistories.length > 0
-                  ? "analyses-warning"
-                  : "analyses-history-state analyses-state-error"}
-                role={comparisonHistories.length > 0 ? "status" : "alert"}
-              >
-                <h3>
-                  {comparisonHistories.length > 0
-                    ? "Comparação parcial"
-                    : "Não foi possível carregar a comparação"}
-                </h3>
+            {canCompare &&
+              comparisonVisualization === "timeline" &&
+              comparisonHistoriesError && (
+                <div
+                  className={
+                    comparisonHistories.length > 0
+                      ? "analyses-warning"
+                      : "analyses-history-state analyses-state-error"
+                  }
+                  role={comparisonHistories.length > 0 ? "status" : "alert"}
+                >
+                  <h3>
+                    {comparisonHistories.length > 0
+                      ? "Comparação parcial"
+                      : "Não foi possível carregar a comparação"}
+                  </h3>
 
-                <p>{comparisonHistoriesError}</p>
-                {comparisonFailedServiceIds.length > 0 && (
-                  <p>
-                    Históricos não carregados: {comparisonFailedServiceIds.map(
-                      (id) => services.find((service) => service.serviceId === id)?.name
-                        ?? `Serviço ${id}`,
-                    ).join(", ")}.
-                  </p>
-                )}
-                {comparisonHistories.length === 1 && (
-                  <p>Apenas um serviço está disponível nesta visualização.</p>
-                )}
-              </div>
-            )}
+                  <p>{comparisonHistoriesError}</p>
+                  {comparisonFailedServiceIds.length > 0 && (
+                    <p>
+                      Históricos não carregados:{" "}
+                      {comparisonFailedServiceIds
+                        .map(
+                          (id) =>
+                            services.find((service) => service.serviceId === id)
+                              ?.name ?? `Serviço ${id}`,
+                        )
+                        .join(", ")}
+                      .
+                    </p>
+                  )}
+                  {comparisonHistories.length === 1 && (
+                    <p>Apenas um serviço está disponível nesta visualização.</p>
+                  )}
+                </div>
+              )}
 
             {/* VISUALIZAÇÃO TEMPORAL */}
             {canCompare &&
