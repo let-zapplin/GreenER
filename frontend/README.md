@@ -15,6 +15,7 @@ Aplicação web do GreenER, responsável por apresentar os serviços monitorados
 - [Organização do código](#-organização-do-código)
 - [Telas](#-telas)
 - [Monitoramento](#monitoramento)
+- [Workspace](#-workspace)
 - [Análises](#análises)
 - [Autenticação](#-autenticação)
 - [Atualização automática](#-atualização-automática)
@@ -53,6 +54,7 @@ O código principal fica em `src/`, separado por responsabilidade:
 | `pages/` | Telas e composição dos fluxos principais |
 | `components/` | Componentes reutilizáveis |
 | `hooks/` | Estado e ciclos de consulta da interface |
+| `lib/` | Regras puras de interface, incluindo o modelo do painel de Monitoramento |
 | `services/` | Comunicação HTTP com o backend |
 | `contexts/` | Contextos compartilhados |
 | `providers/` | Providers globais da aplicação |
@@ -76,6 +78,7 @@ frontend/
     ├── components/
     ├── contexts/
     ├── hooks/
+    ├── lib/
     ├── pages/
     ├── providers/
     ├── services/
@@ -108,17 +111,19 @@ Os hooks concentram estado de carregamento, erro, atualização automática e pr
 | **Landing / Login** | Apresentação inicial e autenticação | ✅ Implementada |
 | **Home** | Navegação principal após autenticação | ✅ Implementada |
 | **Sobre / Funcionamento** | Contexto do projeto e funcionamento da solução | ✅ Implementadas |
-| **Monitoramento** | Visão operacional dos serviços, indicadores, estados e localização | ✅ Implementada; refinamentos visuais da TEC37 em revisão |
-| **Análises** | Histórico ambiental por serviço e período | ✅ Implementada |
+| **Monitoramento** | Painel (workspace) com blocos de mapa, indicadores e análises; a primeira página é fixa e as demais são editáveis | ✅ Implementada; refinamentos visuais da TEC37 em revisão |
+| **Análises** | Página dedicada ao histórico ambiental por serviço e período | ✅ Implementada |
 | **Mapa de serviços** | Visualização geográfica complementar no Monitoramento | 🔄 Implementação funcional presente; US13 em revisão no fechamento |
 
-> O Monitoramento e a página de Análises possuem responsabilidades diferentes: o primeiro apresenta o **estado atual do ambiente**, enquanto Análises concentra a **exploração temporal**.
+> O Monitoramento e a página de Análises possuem responsabilidades diferentes: o primeiro apresenta o **estado atual do ambiente** em um painel de blocos, enquanto Análises continua **separada** e concentra a **exploração temporal**, que exige espaço dedicado pelo volume de informações e pela interatividade. Os blocos de comparação, histórico e projeção também aparecem dentro do painel quando o usuário os adiciona.
 
 ---
 
 ## Monitoramento
 
 A página de Monitoramento apresenta a situação operacional do ambiente monitorado.
+
+Esse conteúdo é organizado como um painel de blocos; o arranjo, as páginas e a edição estão descritos em [Workspace](#-workspace).
 
 Ela utiliza principalmente:
 
@@ -184,6 +189,105 @@ O mapa recebe latitude e longitude existentes no catálogo de serviços. Serviç
 Esse comportamento mantém o mapa como recurso complementar, sem transformar a localização geográfica em requisito para visualizar um serviço.
 
 > A US13 foi antecipada da Sprint 3 para a Sprint 2. No fechamento documental, a implementação funcional estava em revisão e seus refinamentos finais permanecem sujeitos à integração definitiva.
+
+---
+
+## 🧩 Workspace
+
+O workspace é o painel de blocos que compõe a página `/monitoramento`. Em vez de uma tela única e fixa, o usuário vê **páginas** organizadas em uma **grade**, cada uma preenchida por **blocos** (widgets) que podem ser movidos, redimensionados, minimizados e removidos.
+
+| Arquivo | Responsabilidade |
+| --- | --- |
+| `src/lib/monitoringBoard.ts` | modelo puro do painel: catálogo de blocos, grade, layouts, colisão, persistência |
+| `src/hooks/useMonitoringBoard.ts` | estado do painel e gravação a cada alteração |
+| `src/components/MonitoringBoard.tsx` / `.css` | barra de páginas, paleta de blocos, arrastar e redimensionar |
+| `src/pages/Monitoring.tsx` | decide quais dados alimentam cada bloco |
+| `src/components/AnalysisBoardWidgets.tsx` | cartões de ranking, histórico, comparação e projeção reaproveitados do Análises |
+
+As regras do painel não dependem de DOM nem de biblioteca de grid de terceiros: toda a geometria é calculada em `monitoringBoard.ts` e testada em `frontend/tests/`.
+
+### Páginas
+
+| Página | Comportamento |
+| --- | --- |
+| **Monitoramento** (fixa) | `id` `page-monitoramento`, sempre a primeira. O arranjo é do produto, não do usuário: a barra mostra o selo **Página fixa** e desativa edição, renomeação e exclusão. |
+| **Página criada pelo usuário** | editável por completo. `newPage()` gera `Página N`, começando em `quantidade + 1` e pulando nomes já em uso, e a página nasce vazia. |
+
+A página fixa usa o arranjo oficial abaixo, com 12 colunas:
+
+| Bloco | Posição | Tamanho |
+| --- | --- | --- |
+| Mapa de serviços | `(0, 0)` | `8 × 5` |
+| Energia por região | `(8, 0)` | `4 × 5` |
+| Serviços monitorados | `(0, 5)` | `12 × 2` |
+| Resumo ambiental | `(0, 7)` | `12 × 4` |
+
+Nas páginas fixas a grade recebe `.is-fixed.is-monitoramento` e cada bloco `.is-flow`: o arranjo é resolvido por CSS, sem posição absoluta, o que mantém o mapa e o HUD sincronizados com o restante da tela. Nas páginas editáveis cada bloco recebe posição absoluta a partir da célula da grade.
+
+### Blocos disponíveis
+
+O catálogo em `MONITORING_WIDGETS` define o tamanho inicial e o mínimo aceito de cada bloco:
+
+| Tipo | Categoria | Rótulo | Padrão | Mínimo |
+| --- | --- | --- | --- | --- |
+| `map` | visualização | Mapa de serviços | `8 × 5` | `4 × 3` |
+| `region` | visualização | Energia por região | `4 × 5` | `3 × 3` |
+| `services` | indicador | Serviços monitorados | `12 × 2` | `4 × 2` |
+| `summary` | indicador | Resumo ambiental | `4 × 3` | `3 × 2` |
+| `ranking` | indicador | Ranking de impacto | `4 × 6` | `3 × 4` |
+| `history` | visualização | Histórico do serviço | `6 × 5` | `4 × 3` |
+| `comparison` | visualização | Comparação de serviços | `6 × 5` | `4 × 3` |
+| `projection` | visualização | Projeção de localização | `6 × 5` | `4 × 3` |
+
+Os blocos `ranking`, `history`, `comparison` e `projection` são os conteúdos da página de Análises reaproveitados como cartões (`AnalysisBoardWidgets`); a página `/analises` continua existindo separadamente, com espaço dedicado ao volume de informação.
+
+### Grade e largura da janela
+
+```text
+GRID_COLS   = 12 colunas
+GRID_GAP    = 12 px entre blocos
+MIN_CELL_PX = 56 px mínimos por célula
+```
+
+`columnsFor(largura)` escolhe a malha a partir do espaçamento disponível:
+
+```text
+célula ≥ 56 px com 12 colunas → 12
+célula ≥ 56 px com 6 colunas  → 6
+caso contrário                → 3
+```
+
+Em 6 ou 3 colunas o bloco pode ter um **arranjo próprio**, guardado em `layouts`. Reorganizar uma janela estreita não altera o layout da janela larga; enquanto uma largura não tiver arranjo próprio, ela mostra o de 12 colunas refluído (`reflow`). A barra de edição sinaliza isso com o selo **Arranjo da janela estreita**.
+
+`fitRect` limita o bloco ao tamanho mínimo e à largura da grade, `overlaps` detecta colisões, `placeWidget` resolve o destino do arrasto e `freeSpot` encontra a primeira vaga livre ao adicionar um bloco. Durante a edição o painel reserva `EDIT_SPARE_ROWS` (2) linhas extras ao final da grade para facilitar o arrasto.
+
+### Edição
+
+- **Personalizar layout** entra no modo de edição; **Esc** conclui e solta qualquer arrasto em andamento.
+- Um bloco pode ser **arrastado da paleta** para o painel ou adicionado com um clique no item da paleta.
+- Mover é feito pela barra do bloco; redimensionar, por oito alças (`n`, `s`, `e`, `w`, `ne`, `nw`, `se`, `sw`), com as bordas opostas paradas.
+- **Teclado**, com a barra do bloco em foco: setas movem uma célula por vez; `Shift` + setas redimensionam pela alça inferior direita.
+- **Minimizar** / **Expandir**, na barra do bloco: minimizado (`collapsed`) sobra só a barra, e a altura anterior fica guardada em `expandedH` para ser devolvida ao expandir.
+- **Restaurar página** volta ao arranjo padrão e **Excluir página** remove a página editável; ambas exigem um segundo clique de confirmação. **Renomear** aceita `Enter` para confirmar e `Esc` para cancelar.
+
+### Persistência
+
+O painel inteiro é salvo no navegador sob a chave:
+
+```text
+greener.monitoring.board.v1
+```
+
+- A gravação acontece em `useEffect` a cada mudança de estado, sem botão de salvar.
+- Na leitura, `parseBoard` descarta blocos com tipo desconhecido ou geometria inválida em vez de quebrar a tela, e `normalizeBoard` recoloca a página fixa na frente com o arranjo oficial — mesmo que uma versão adulterada dela tenha sido gravada.
+- Páginas fixas que saíram do produto são descartadas na leitura (`RETIRED_FIXED_PAGES`, hoje com `page-analise`), e não reaparecem como páginas do usuário.
+- `localStorage` indisponível ou corrompido não derruba a página: o painel cai no arranjo padrão e vale apenas para a sessão atual.
+
+### Rolagem e legibilidade
+
+- Um bloco só rola o próprio conteúdo **depois de clicado ou focado** (`.is-scroll-active`). Antes disso, a roda do mouse continua rolando a página, sem captura de `wheel` em JavaScript.
+- O piso tipográfico da tela é **12 px**; ajustes de fonte de eixo de gráfico ficam nos componentes `.tsx`, não apenas no CSS.
+- O resumo ambiental é renderizado uma única vez, pelo bloco `summary` — o mapa não carrega mais uma cópia acoplada do dock.
 
 ---
 
@@ -345,7 +449,7 @@ Principais caminhos:
 ```text
 /               → landing/login
 /home           → home autenticada
-/monitoramento  → dashboard operacional
+/monitoramento  → painel de blocos (workspace) do estado operacional
 /analises       → histórico e análises
 ```
 
@@ -362,6 +466,12 @@ Comandos disponíveis:
 | `npm test` | Executa os testes automatizados do frontend |
 | `npm run build` | Executa typecheck e gera o build em `dist/` |
 | `npm run preview` | Serve localmente o build gerado |
+
+O painel do workspace é coberto por testes sem DOM (`node --test`), que exercitam o modelo puro de `src/lib/monitoringBoard.ts` com um `localStorage` falso:
+
+- `tests/monitoringBoard.test.ts` — grade por largura, `fitRect`, colisão, `reflow`, arrasto, redimensionamento, minimizar e leitura tolerante do armazenamento;
+- `tests/workspacePages.test.ts` — páginas fixas, `normalizeBoard`, criação e numeração de página, persistência e descarte das páginas retiradas;
+- `tests/workspaceWidgets.test.ts` — catálogo de blocos, rótulos e mínimos, identificação de tipo, geração de `id` e reconhecimento do arranjo padrão.
 
 ### Evidência do fechamento da Sprint 2
 
