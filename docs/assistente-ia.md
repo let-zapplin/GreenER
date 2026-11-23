@@ -43,6 +43,13 @@ Desde a **fase 1**, o assistente mantém memória de curto prazo por conversa, u
 contexto da página, resolve referências como “ele” e “esse serviço”, pede clarificação
 quando o nome é ambíguo e sugere próximos passos ao final de cada resposta.
 
+> **Coerência com o ranking histórico:** a interface principal de ranking/comparação do
+> GreenER mantém serviços removidos quando eles possuem dados no período selecionado. O
+> protótipo da Karma ainda filtra rankings para `status === "active"`. Esta documentação
+> registra a divergência explicitamente; ela não deve ser interpretada como mudança da
+> regra de negócio histórica.
+
+
 A **base de conhecimento** acrescenta respostas didáticas sobre o próprio GreenER e
 sobre a metodologia de cálculo. Ela usa seções curadas do README e de
 `docs/calculos.md`, não o repositório inteiro, e não cita arquivos nem fontes na
@@ -1106,7 +1113,267 @@ docs/assistente-ia.md                           (este documento)
 
 ---
 
-## 16. Perguntas frequentes
+## 16. Roadmap de evolução da Karma
+
+A Karma foi desenvolvida nesta entrega como um **protótipo funcional de assistente inteligente**, com escopo deliberadamente limitado.
+
+A versão atual prioriza previsibilidade e segurança: os dados e cálculos são produzidos pelas regras e serviços do backend, enquanto o modelo de linguagem atua principalmente na interpretação da intenção e na redação de respostas de conhecimento.
+
+A evolução do assistente deve preservar esse princípio.
+
+> **A Karma não deve substituir as regras de negócio do GreenER.**
+>
+> Mesmo em versões futuras, métricas, rankings, históricos, comparações e projeções devem continuar sendo calculados por componentes determinísticos da aplicação. A IA atua sobre ferramentas autorizadas, interpretando o pedido do usuário e organizando os resultados.
+
+### Etapa 1 — Consolidação do protótipo
+
+Prioridade imediata após a entrega atual.
+
+Objetivos:
+
+- reconciliar o comportamento da Karma com todas as regras de negócio do GreenER, incluindo o tratamento de serviços removidos no histórico;
+- ampliar testes das intenções e das conversas contextuais;
+- avaliar a qualidade das respostas geradas pelo modelo;
+- melhorar mensagens de erro, clarificação e estados degradados;
+- adicionar rate limiting por usuário;
+- revisar caches e limites de concorrência;
+- implementar streaming das respostas quando houver participação do modelo;
+- persistir conversas quando houver necessidade de histórico além da sessão atual.
+
+O objetivo dessa etapa não é ampliar significativamente o escopo, mas tornar o protótipo atual mais estável, consistente e observável.
+
+---
+
+### Etapa 2 — Arquitetura baseada em ferramentas
+
+Atualmente, grande parte da orquestração está concentrada no `ChatService`.
+
+Uma evolução natural é decompor esse fluxo em **ferramentas especializadas**, por exemplo:
+
+```text
+Karma
+ │
+ ├── ferramenta de ranking
+ ├── ferramenta de histórico
+ ├── ferramenta de comparação
+ ├── ferramenta de localização
+ ├── ferramenta de projeção
+ ├── ferramenta de panorama ambiental
+ └── ferramenta de conhecimento
+```
+
+Cada ferramenta possuiria:
+
+- entrada tipada;
+- validação própria;
+- acesso apenas aos serviços necessários;
+- saída estruturada;
+- testes independentes;
+- permissões claramente definidas.
+
+Nesse cenário, a Karma passa a funcionar como uma camada de **planejamento e orquestração**.
+
+A partir de uma pergunta como:
+
+> “Compare os dois serviços que mais emitiram CO₂ na última semana.”
+
+o assistente poderia decompor a solicitação em etapas:
+
+1. consultar o ranking de emissões;
+2. identificar os dois primeiros serviços;
+3. executar a comparação entre eles;
+4. apresentar os resultados ao usuário.
+
+O modelo decide **quais ferramentas utilizar**, mas não calcula os valores e não acessa diretamente o PostgreSQL.
+
+---
+
+### Etapa 3 — Análises mais profundas
+
+Com a arquitetura de ferramentas estabilizada, novas capacidades analíticas podem ser incorporadas.
+
+#### Comparação entre períodos
+
+Permitir perguntas como:
+
+- “Este serviço consumiu mais energia esta semana do que na anterior?”
+- “Quanto as emissões aumentaram nas últimas 24 horas?”
+- “Compare outubro com novembro.”
+
+O backend continua responsável por calcular os dois períodos e suas diferenças.
+
+#### Tendências
+
+A Karma poderia identificar tendências a partir dos históricos calculados pelo GreenER:
+
+- crescimento contínuo de consumo;
+- redução de emissões;
+- mudança persistente de comportamento;
+- concentração de impacto em determinados serviços ou regiões.
+
+Exemplo:
+
+> “O consumo desse serviço vem aumentando?”
+
+A resposta poderia utilizar séries históricas e apresentar a tendência acompanhada do gráfico correspondente.
+
+#### Anomalias
+
+Outra evolução seria detectar comportamentos fora do padrão esperado.
+
+Exemplos:
+
+- picos de CPU acompanhados de aumento energético;
+- consumo muito superior ao histórico recente;
+- emissões inesperadamente elevadas;
+- mudança significativa em uma métrica de recurso.
+
+A detecção deve ser feita por regras estatísticas ou serviços especializados, e não pela interpretação isolada do LLM.
+
+A Karma ficaria responsável por explicar o evento encontrado de forma compreensível.
+
+---
+
+### Etapa 4 — Recomendações apoiadas pelos dados
+
+Com histórico, tendências, comparação e projeções disponíveis como ferramentas, a Karma poderia passar de uma assistente que apenas **descreve os dados** para uma assistente que **apoia decisões**.
+
+Por exemplo:
+
+> “O que eu poderia fazer para reduzir o impacto desse serviço?”
+
+A resposta poderia combinar:
+
+- consumo atual;
+- ranking;
+- comportamento histórico;
+- intensidade de carbono da região;
+- projeções regionais disponíveis no GreenER.
+
+A Karma poderia então apresentar alternativas como:
+
+- investigar um serviço com impacto muito superior aos demais;
+- avaliar outra região com menor intensidade de carbono;
+- comparar períodos para verificar se uma alteração realmente reduziu consumo;
+- executar uma projeção regional antes de considerar uma redistribuição.
+
+Essas recomendações devem permanecer **explicáveis e verificáveis**.
+
+A Karma apresenta possibilidades; ela não executa automaticamente alterações na infraestrutura.
+
+---
+
+### Etapa 5 — Integração mais profunda com o Workspace
+
+O Workspace personalizado abre uma possibilidade importante para a evolução do assistente.
+
+Em versões futuras, a Karma poderia utilizar a página atual como contexto mais rico.
+
+Por exemplo:
+
+> “Explique o que estou vendo aqui.”
+
+A aplicação poderia informar à Karma quais widgets estão presentes no Workspace atual:
+
+```text
+Workspace: Eficiência regional
+
+Widgets:
+- ranking de CO₂e — 7 dias
+- mapa de serviços
+- histórico do billing-api
+- projeção regional do billing-api
+```
+
+A Karma poderia então interpretar a visão montada pelo próprio usuário e relacionar os resultados apresentados.
+
+Outro passo possível seria permitir comandos como:
+
+> “Mostre o histórico desse serviço.”
+
+ou:
+
+> “Quero comparar os três primeiros do ranking.”
+
+A Karma poderia preparar a análise correspondente ou sugerir a inclusão dos widgets adequados no Workspace.
+
+Qualquer modificação do layout deve exigir uma ação explícita do usuário; o assistente não deve alterar automaticamente uma página sem confirmação.
+
+---
+
+### Etapa 6 — Base de conhecimento expandida
+
+A implementação atual utiliza uma base curada e pequena em `chat.knowledge.ts`.
+
+Esse formato é adequado para o protótipo porque é simples, previsível e testável.
+
+Com o crescimento do GreenER, uma evolução possível é utilizar uma estratégia de recuperação de contexto mais ampla, semelhante a **RAG (Retrieval-Augmented Generation)**.
+
+Em vez de enviar documentos inteiros ao modelo, o sistema poderia:
+
+1. indexar a documentação relevante;
+2. localizar apenas os trechos relacionados à pergunta;
+3. enviar esses trechos ao modelo como contexto;
+4. preservar a origem da informação para auditoria.
+
+Isso permitiria consultar conteúdos como:
+
+- metodologia de cálculo;
+- arquitetura;
+- documentação da API;
+- decisões de projeto;
+- funcionalidades;
+- limitações conhecidas.
+
+O acesso continuaria restrito a uma base documental autorizada. O modelo não teria acesso arbitrário aos arquivos do servidor.
+
+---
+
+### Visão de evolução
+
+De forma resumida, a evolução planejada pode ser representada como:
+
+```text
+Karma atual
+   │
+   │  regras + intenções + ferramentas internas
+   ▼
+Estabilização
+   │
+   ▼
+Planner + ferramentas especializadas
+   │
+   ├── ranking
+   ├── histórico
+   ├── comparação
+   ├── localização
+   ├── projeções
+   └── conhecimento
+   │
+   ▼
+Análises avançadas
+   │
+   ├── comparação entre períodos
+   ├── tendências
+   └── anomalias
+   │
+   ▼
+Recomendações
+   │
+   ▼
+Integração contextual com Workspace
+   │
+   ▼
+Base de conhecimento expandida / RAG
+```
+
+A intenção dessa evolução não é tornar a Karma responsável pelos cálculos do GreenER.
+
+O objetivo é fazer com que ela se torne progressivamente uma **interface inteligente sobre as capacidades da plataforma**, mantendo os resultados importantes calculados por componentes determinísticos, testáveis e auditáveis.
+
+---
+
+## 17. Perguntas frequentes
 
 **O Ollama vai dentro da imagem do backend?**
 Não. É um serviço separado no Compose. Isso evita carregar gigabytes de modelo na

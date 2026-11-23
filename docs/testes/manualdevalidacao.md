@@ -21,19 +21,19 @@ O endpoint de indicadores calcula energia e CO₂e no backend a partir dos dados
 
 | Campo | Registro |
 |---|---|
-| Data | 21/11/2026 |
+| Data | 23/11/2026 |
 | Responsável | Equipe GreenER — TEC31 |
-| Branch | `feat/166-tec31-validacao-final` |
+| Branch / referência final | `develop` — fechamento documental após integração das entregas da Sprint 3 |
 | Ambiente | Windows + Docker Compose já em execução; frontend autenticado em `http://localhost:5173` |
 | Fonte dos requisitos | PDF local `edital/Desafio 2DSM - 2026-2.pdf` (RF01–RF15; arquivo fora do repositório e não versionado) |
-| Situação | RF01–RF15 revisados; ranking, comparação, mapa, autenticação e runtime Docker verificados. Pendências abaixo permanecem explícitas. |
+| Situação | **Validação final consolidada.** RF01–RF15 revisados; ranking, comparação, mapa, autenticação, Workspace, projeções, Karma e runtime documentados. Limites de evidência permanecem explícitos abaixo. |
 
 Esta validação não parou nem recriou containers, para preservar a coleta em andamento. Ela comprova o runtime Docker atual, mas não uma reconstrução limpa em máquina vazia. A sessão autenticada foi usada sem registrar credenciais ou tokens.
 
 ### Evidências automatizadas
 
 - Backend: **300 testes aprovados e 7 ignorados**; 34 arquivos de teste aprovados e 1 ignorado.
-- Frontend: **53 testes aprovados**.
+- Frontend: **101 testes aprovados** na varredura atualizada de 23/11/2026, conforme fechamento documentado no `frontend/README.md`.
 - `typecheck` do backend e do frontend: aprovado.
 - Build de produção do frontend: aprovado. O bundle JavaScript principal permanece acima do limite recomendado pelo Vite: cerca de **2,25 MB minificado / 615 kB gzip**.
 
@@ -64,23 +64,37 @@ Os requisitos foram transcritos do edital local. A evidência manual histórica 
 | RF09 — Dashboard operacional | [Monitoring.tsx](../../frontend/src/pages/Monitoring.tsx), [ServiceIndicator.tsx](../../frontend/src/components/ServiceIndicator.tsx), [dashboard.http.test.ts](../../backend/src/modules/dashboard/dashboard.http.test.ts) | Revisado. Monitoramento exibiu serviços, estado, localização, métricas e impacto; o resumo atual mostrou 8 serviços. |
 | RF10 — Histórico de coletas | [coletas.repository.ts](../../backend/src/modules/coletas/coletas.repository.ts), [coletas.repository.test.ts](../../backend/src/modules/coletas/coletas.repository.test.ts), [HistoryChart.tsx](../../frontend/src/components/HistoryChart.tsx) | Revisado. Histórico consultável e sua persistência após reinicialização sem remover o volume estão registrados na validação da Sprint 2. |
 | RF11 — Atualização periódica sem reload | [useMonitoring.ts](../../frontend/src/hooks/useMonitoring.ts), [useDashboardSummary.ts](../../frontend/src/hooks/useDashboardSummary.ts) | Revisado. Atualização sem recarga manual e intervalos configurados foram observados e registrados em 09/11/2026. |
-| RF12 — País, região e cidade quando disponível | [serviceLocation.ts](../../frontend/src/lib/serviceLocation.ts), [serviceLocation.test.ts](../../frontend/tests/serviceLocation.test.ts) | Revisado. Localizações reais foram exibidas no monitoramento e no painel do mapa; testes cobrem cidade nula e partes ausentes. Revisão final de responsividade continua pendente em US12/TS01. |
-| RF13 — Mapa e coordenadas opcionais | [ServicesMap.tsx](../../frontend/src/components/ServicesMap.tsx), [serviceGeoJson.test.ts](../../frontend/tests/serviceGeoJson.test.ts), [mapFocus.test.ts](../../frontend/tests/mapFocus.test.ts) | Mapa visual e seleção/foco validados nesta sessão. Testes cobrem ausência/invalidez de coordenadas sem impedir outros pontos. Revisão de integração final e responsividade continua pendente em US13/TS01. |
+| RF12 — País, região e cidade quando disponível | [serviceLocation.ts](../../frontend/src/lib/serviceLocation.ts), [serviceLocation.test.ts](../../frontend/tests/serviceLocation.test.ts) | Revisado. Localizações reais foram exibidas no monitoramento e no painel do mapa; testes cobrem cidade nula e partes ausentes. A revisão final de responsividade foi consolidada na Sprint 3, com evidências nos PRs #180, #187 e #189. |
+| RF13 — Mapa e coordenadas opcionais | [ServicesMap.tsx](../../frontend/src/components/ServicesMap.tsx), [serviceGeoJson.test.ts](../../frontend/tests/serviceGeoJson.test.ts), [mapFocus.test.ts](../../frontend/tests/mapFocus.test.ts) | Mapa visual e seleção/foco validados nesta sessão. Testes cobrem ausência/invalidez de coordenadas sem impedir outros pontos. Integração e responsividade foram consolidadas na Sprint 3; a evidência visual controlada de um serviço sem coordenadas permanece substituída por cobertura automatizada. |
 | RF14 — Ranking por energia ou CO₂e e período | [ImpactRanking.tsx](../../frontend/src/components/ImpactRanking.tsx), [indicadores.repository.ts](../../backend/src/modules/indicadores/indicadores.repository.ts), [indicadores.service.test.ts](../../backend/src/modules/indicadores/indicadores.service.test.ts) | Validado nesta sessão para as duas métricas em 24h; as listas apareceram em ordem decrescente e com indicação de dados parciais. Billing API, removido e com dados no período, foi incluído e identificado como “Removido”. Decisão do Product Owner em 21/11/2026: manter serviços removidos no ranking quando possuírem dados no intervalo selecionado. Não há teste automatizado dedicado ao componente visual do ranking. |
 | RF15 — Comparação de dois ou mais serviços no mesmo período | [Analyses.tsx](../../frontend/src/pages/Analyses.tsx), [ComparisonPeriodChart.tsx](../../frontend/src/components/ComparisonPeriodChart.tsx), [comparisonSeries.test.ts](../../frontend/tests/comparisonSeries.test.ts) | Validado nesta sessão com dois serviços no mesmo período de 24h, série temporal, resumo de indicadores, gráfico agregado e seleção de CO₂e. |
 
 **Ressalva de dados parciais — decisão do Product Owner (21/11/2026):** o indicador “Dados parciais” apresentado no frontend é suficiente para esta etapa. A limitação será explicada ao cliente na apresentação final do MVP; não foi solicitada alteração da interface. As amostras observadas demonstram o fluxo, mas não devem ser tratadas como cobertura completa.
 
-### Pendências e limites observados
+### Limites observados no fechamento
 
-1. O mapa funcionou, mas o console registrou ausência de chave MapTiler, fallback de estilo diante do identificador “Streets Default” e aviso de `maxzoom` igual a `clusterMaxZoom`. Esses avisos não impediram renderização ou foco; revisar configuração/estilo antes do fechamento final. Não foi feita validação em viewport mobile.
-2. US12/US13 mantêm pendente a revisão final de contratos, responsividade e integração, apesar das verificações funcionais e dos testes automatizados de localização/mapa.
-3. A comparação foi verificada com dois serviços e janela de 24h; não foram reexecutados nesta sessão outros períodos, estados vazios, seleção com três ou quatro serviços nem o caso específico de serviço removido. A decisão de manter serviços removidos com dados no intervalo disponível para comparação foi registrada pelo Product Owner em 21/11/2026.
-4. O Compose em execução foi verificado sem interromper os containers; uma reconstrução limpa/restart não foi executada. O aviso de tamanho do bundle permanece como item de desempenho/RNF03.
-5. Os valores observados no ranking e na comparação estavam marcados como parciais. Portanto, comprovam o fluxo e a apresentação, não completude das coletas do ambiente.
+1. O mapa foi validado funcionalmente e recebeu refinamentos posteriores de responsividade. Avisos de configuração/estilo observados anteriormente não impediram renderização ou foco e não permaneceram como bloqueadores da entrega.
+2. US12/US13 foram consolidadas na Sprint 3: contratos opcionais/nulos possuem cobertura automatizada, e a responsividade do mapa/controles foi revisada nos PRs #180 e #187.
+3. A comparação normal foi verificada com dois serviços e janela de 24h. A decisão de manter serviços removidos com dados no período para ranking/comparação histórica permanece registrada.
+4. **Falha HTTP parcial na comparação temporal:** a correção foi integrada (`Promise.allSettled` + preservação dos históricos bem-sucedidos + aviso de comparação parcial), mas **não foi localizada captura ou reprodução manual controlada desse cenário específico** nas evidências finais. A PR #189 registra explicitamente essa ausência. Portanto, o comportamento é tratado como implementado e coberto por revisão de código, mas a evidência visual específica permanece como limite documental.
+5. O Compose em execução foi verificado sem que esta sessão de validação recriasse o ambiente do zero. A integração PostgreSQL dedicada permaneceu aprovada.
+6. O aviso de bundle acima do recomendado pelo Vite permanece como oportunidade de otimização relacionada ao RNF03, sem impedir build ou execução.
+7. Os valores observados em ranking/comparação estavam sinalizados como parciais; eles comprovam o fluxo e a apresentação, não a completude das coletas do ambiente.
 
-**Conclusão TEC31:** RF01–RF15 foram revisados e possuem referência a implementação, testes e/ou evidência manual anterior; ranking, comparação, mapa, autenticação e runtime Docker foram verificados. Os itens acima não são declarados concluídos e devem continuar acompanhados no backlog.
+**Conclusão TEC31 / fechamento de 23/11/2026:** RF01–RF15 possuem rastreabilidade para implementação, teste e/ou evidência manual. Ranking, comparação, mapa, autenticação e runtime foram verificados; Workspace, projeções e Karma foram incorporados ao fechamento da Sprint 3. As limitações acima permanecem documentadas sem impedir a conclusão da Sprint.
 
+## Complementos validados na entrega final da Sprint 3
+
+Além da rastreabilidade RF01–RF15, a versão final incorporou recursos que ampliaram o MVP:
+
+- **Workspace / TEC34:** páginas personalizadas, catálogo de widgets, movimentação, redimensionamento, minimização e persistência possuem testes em `monitoringBoard.test.ts`, `workspacePages.test.ts` e `workspaceWidgets.test.ts`; a página fixa de Monitoramento foi preservada como visão padrão.
+- **Responsividade / TEC28:** PR #180 registra validação manual em telas pequenas, incluindo aproximadamente 320 × 445 px; a PR #187 complementa o popup de serviços agrupados no mapa.
+- **Tolerância a falhas / TEC25:** a issue #162 contém capturas de suítes automatizadas, interrupção/recuperação do backend e ranking com dados parciais.
+- **Cobertura / TEC30:** a PR #189 contém capturas das execuções de testes e amostras visuais de Explorar, Comparação, Projeções e responsividade.
+- **Projeções e redistribuição:** testes de serviço/HTTP no backend e `redistributionEmissions.test.ts` cobrem regras de cálculo, políticas e cobertura parcial; a navegação de Projeções possui evidência visual no PR #189.
+- **Karma:** o módulo de chat possui testes de serviço, HTTP, conversação, conhecimento, cache e cliente Ollama; a assistente é documentada como protótipo experimental em `docs/assistente-ia.md`.
+
+> A existência das capturas acima foi conferida nos registros do GitHub. Elas não são substituídas por este documento: os links e anexos permanecem nas respectivas issues/PRs para auditoria.
 ## Registro da validação — fechamento da Sprint 2
 
 | Campo | Registro |
