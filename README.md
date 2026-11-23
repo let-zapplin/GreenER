@@ -59,7 +59,7 @@ emissão estimada de CO₂e
 | **Sprint 2** | 20/10–09/11/2026 | [`sprint-2.md`](docs/sprints/sprint-2.md) | [▶ Vídeo](https://youtu.be/qW38NnthF8Q) | ✅ Finalizada |
 | **Sprint 3** | 10/11–23/11/2026 | [`sprint-3.md`](docs/sprints/sprint-3.md) | Demonstração final do MVP | ✅ Concluída |
 
-> A visualização geográfica foi antecipada da Sprint 3 e integrada ao Monitoramento. Ranking, comparação e refinamentos finais de análise foram concluídos na Sprint 3.
+> A visualização geográfica foi antecipada da Sprint 3 e integrada ao Monitoramento. A Sprint 3 consolidou ranking, comparação, filtros, projeções e redistribuição, além do Workspace personalizável e dos refinamentos de experiência e desempenho.
 
 ---
 
@@ -74,7 +74,8 @@ emissão estimada de CO₂e
 - descoberta e sincronização automática dos serviços;
 - coleta periódica de CPU, memória, disco e rede;
 - identificação de serviços removidos;
-- estados `success`, `no_metrics`, `unavailable` e `error`;
+- distinção entre serviços ativos, sem métricas, indisponíveis, com erro e removidos;
+- registro das tentativas de coleta como `success`, `no_metrics`, `unavailable` ou `error`;
 - indicadores ambientais consolidados;
 - atualização automática;
 - localização e visualização geográfica.
@@ -85,37 +86,40 @@ emissão estimada de CO₂e
 ### 📈 Análises
 
 - seleção de serviço;
-- seleção de período;
+- filtros de 1h, 6h, 24h e 7d;
 - histórico de energia;
 - gráfico temporal;
 - identificação de lacunas;
 - navegação a partir do Monitoramento;
 - ranking por energia ou CO₂e no período selecionado;
-- comparação de dois ou mais serviços no mesmo período;
+- comparação de dois a quatro serviços no mesmo período, por evolução temporal ou valores consolidados;
 - sinalização de dados parciais e identificação de serviços removidos com histórico no período como “Removido” no ranking.
 
 </td>
 </tr>
 </table>
 
-Também estão implementados:
+### 🧩 Workspace personalizável
 
-- ✅ ranking de impacto por energia ou CO₂e;
-- ✅ comparação de dois ou mais serviços no mesmo período;
-- ✅ filtros temporais e histórico ambiental por serviço;
-- ✅ projeções de localização e redistribuição de serviços;
-- ✅ visualização geográfica com MapLibre;
-- ✅ integração com intensidade de carbono por região;
-- ✅ estimativa de energia por serviço;
-- ✅ estimativa de emissão de CO₂e por serviço;
-- ✅ autenticação JWT;
-- ✅ autorização administrativa para coleta manual;
-- ✅ Assistente Karma com Ollama local, respostas determinísticas e fallback para
-  modo regras;
-- ✅ persistência PostgreSQL após reinicialização dos containers;
-- ✅ visualização geográfica — US13 antecipada e integrada ao Monitoramento;
-- ✅ responsividade e experiência móvel dos principais fluxos;
-- ✅ cache em memória e fallback do Assistente Karma.
+O Monitoramento mantém uma página padrão e permite criar páginas personalizadas com blocos de serviços, mapa, resumo ambiental, consumo por região, ranking, histórico, comparação e projeção.
+
+- adição e remoção de blocos nas páginas personalizadas;
+- movimentação, redimensionamento, minimização e expansão dos blocos;
+- criação, renomeação e exclusão de páginas personalizadas;
+- organização adaptável à largura da tela;
+- persistência do arranjo no navegador por `localStorage`, com retorno ao padrão se o armazenamento estiver indisponível ou corrompido.
+
+A página **Análises** permanece disponível para exploração dedicada. Os detalhes do painel estão no [README do frontend](frontend/README.md#-workspace).
+
+### 🌱 Projeções e redistribuição
+
+O GreenER permite estimar o impacto de um serviço em outras regiões e avaliar cenários de redistribuição a partir da energia observada e da intensidade regional de carbono. Os resultados sinalizam dados parciais e apoiam a tomada de decisão: **não executam migrações reais de serviços**.
+
+### 🤖 Assistente Karma
+
+A Karma é um **protótipo experimental adicional ao MVP**, com consultas sobre os dados do projeto, respostas determinísticas e cache em memória. O Ollama local pode complementar a classificação e a redação das respostas; quando estiver desabilitado ou indisponível, há fallback para o modo regras. Consulte os limites e a configuração em [`docs/assistente-ia.md`](docs/assistente-ia.md).
+
+Também fazem parte da entrega a autenticação JWT, a autorização administrativa para coleta manual, a persistência do histórico em PostgreSQL e a responsividade dos principais fluxos.
 
 ### Arquitetura de desempenho — TEC26
 
@@ -144,7 +148,7 @@ Backend Node.js / Express / TypeScript
         │
         ▼
 Frontend React / TypeScript / Vite
-  Monitoramento • Análises • Ranking • Comparação • Mapa
+  Workspace • Monitoramento • Análises • Ranking • Comparação • Mapa
 ```
 
 O fluxo completo começa na descoberta de serviços e termina na apresentação das informações no frontend:
@@ -154,7 +158,7 @@ O fluxo completo começa na descoberta de serviços e termina na apresentação 
 3. PostgreSQL preserva serviços, tentativas, métricas, localização e usuários;
 4. os fatores regionais da Carbon Intensity API alimentam os cálculos ambientais;
 5. o backend calcula energia e CO₂e e entrega indicadores consolidados;
-6. React apresenta histórico, ranking, comparação, mapa e projeções;
+6. React apresenta o Workspace, histórico, ranking, comparação, mapa e cenários de projeção e redistribuição;
 7. o Karma consulta os dados do projeto e usa Ollama local para classificar e redigir respostas, com cache e fallback determinístico.
 
 Toda a solução é executada por Docker Compose. A IA é isolada em um profile opcional: sem o profile `ai`, o backend permanece operacional e o Assistente Karma usa o modo determinístico.
@@ -222,10 +226,18 @@ GreenER/
 
 ## ▶️ Como executar
 
+### Pré-requisitos
+
+- Git para obter o repositório;
+- Docker e Docker Compose disponíveis e em execução;
+- acesso à internet para baixar imagens e dependências e consultar as APIs externas e a cartografia.
+
+O ambiente Docker utiliza **Node.js 24** e instala as dependências nas imagens. Node.js **24 ou superior** e a instalação das dependências com `npm ci` são necessários apenas para executar os comandos npm diretamente na máquina, fora dos containers.
+
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/LetzApplin/GreenER.git
+git clone https://github.com/let-zapplin/GreenER.git
 cd GreenER
 ```
 
@@ -243,7 +255,7 @@ PowerShell:
 Copy-Item .env.example .env
 ```
 
-Revise as variáveis antes de iniciar a aplicação.
+Revise as variáveis antes de iniciar a aplicação, substituindo os valores de exemplo de `POSTGRES_PASSWORD` e `JWT_SECRET`. Se já houver um `.env`, preserve a configuração existente e compare com o modelo antes de atualizá-lo.
 
 ### 3. Suba o ambiente
 
@@ -252,6 +264,8 @@ docker compose up --build
 ```
 
 O Compose inicia **PostgreSQL + backend + frontend**.
+
+Na primeira inicialização de um volume PostgreSQL vazio, o schema atual é aplicado automaticamente. Para bancos existentes, verifique as migrations necessárias em [`database/README.md`](database/README.md). Reconstruir as imagens não atualiza automaticamente o schema de um volume já inicializado.
 
 Para iniciar também o Ollama e o Assistente Karma com IA local:
 
@@ -273,6 +287,11 @@ Na primeira inicialização com IA, o serviço `ollama-init` baixa o modelo conf
 | `COLLECTION_INTERVAL_MS` | Intervalo de coleta de métricas | `60000` |
 | `SERVICE_SYNC_INTERVAL_MS` | Intervalo de sincronização dos serviços | `60000` |
 | `CARBON_INTENSITY_SYNC_INTERVAL_MS` | Atualização dos fatores regionais | `300000` |
+| `CARBON_INTENSITY_MAX_AGE_MS` | Idade máxima do fator de carbono válido para uma coleta | `900000` |
+| `EXTERNAL_API_TIMEOUT_MS` | Limite de espera das APIs auxiliares | `10000` |
+| `CORS_ORIGIN` | Origem permitida para o frontend | `http://localhost:5173` |
+| `VITE_API_URL` | Endereço do backend acessado pelo navegador | `http://localhost:3000` |
+| `VITE_MAPTILER_API_KEY` | Chave opcional para imagens de satélite no globo da landing | vazia; usa cartografia local |
 | `OLLAMA_URL` | Endereço do Ollama | `http://localhost:11434` no host |
 | `OLLAMA_MODEL` | Modelo usado pelo Karma | `qwen2.5:3b` |
 | `OLLAMA_TIMEOUT_MS` | Timeout das operações de IA | `60000` |
@@ -280,6 +299,8 @@ Na primeira inicialização com IA, o serviço `ollama-init` baixa o modelo conf
 | `OLLAMA_ENABLED` | Habilita ou desabilita o Ollama | `true` |
 
 Dentro do Compose, o backend usa `OLLAMA_URL=http://ollama:11434`. A porta `11434` fica disponível no host quando o profile `ai` está ativo.
+
+O mapa de serviços e o mapa de projeção utilizam MapLibre com estilo OpenFreeMap e não exigem a chave MapTiler.
 
 ### 4. Acesse
 
@@ -291,6 +312,17 @@ Dentro do Compose, o backend usa `OLLAMA_URL=http://ollama:11434`. A porta `1143
 | Ollama, com profile `ai` | `http://localhost:11434` |
 | PostgreSQL no host | `localhost:5433` |
 | PostgreSQL na rede Docker | `postgres:5432` |
+
+### 5. Primeiro acesso
+
+1. Abra `http://localhost:5173` e utilize o cadastro para criar uma conta, caso ainda não possua uma.
+2. Faça login para acessar Home, Monitoramento e Análises.
+3. No Monitoramento, consulte os serviços e utilize o Workspace para organizar páginas personalizadas.
+4. Em Análises, escolha o período e explore histórico, ranking, comparação e projeções.
+
+O cadastro cria uma conta comum. O disparo manual de coletas exige um usuário com permissão administrativa; consulte a [documentação do backend](backend/README.md#permissão-administrativa). A coleta automática é executada pelos jobs do backend.
+
+Em um banco novo, aguarde a sincronização do catálogo, das intensidades regionais e os ciclos de coleta para formar o histórico. As APIs externas são dinâmicas: ausência de métricas, indisponibilidade e dados parciais são estados possíveis da operação.
 
 ### Comandos úteis
 
@@ -329,21 +361,22 @@ docker compose up --build
 
 ## ✅ Testes e validação
 
+Execute os comandos abaixo **na raiz do repositório**, com backend e frontend iniciados pelo Compose. As dependências utilizadas são as instaladas nos containers.
+
 ### Frontend
 
 ```bash
-cd frontend
-npm test
-npm run typecheck
-npm run build
+docker compose exec frontend npm test
+docker compose exec frontend npm run typecheck
+docker compose exec frontend npm run build
 ```
 
 ### Backend — suíte comum
 
 ```bash
-cd backend
-npm test
-npm run typecheck
+docker compose exec backend npm test
+docker compose exec backend npm run typecheck
+docker compose exec backend npm run build
 ```
 
 ### Integração PostgreSQL
@@ -362,21 +395,30 @@ docker compose -f compose.test.yaml down -v
 
 ### Resultado do fechamento técnico da Sprint 3
 
+Resultados registrados no fechamento de **23/11/2026**, conforme o [manual de validação](docs/testes/manualdevalidacao.md) e o [consolidado da Sprint 3](docs/testes/consolidacao_testes_sprint3.md). Consulte esses registros para o contexto das execuções e as referências de versão; a atualização deste README não representa uma nova execução das suítes.
+
 | Validação | Resultado |
 | --- | ---: |
 | Backend — suíte comum | **300 testes aprovados; 7 ignorados** |
 | Integração PostgreSQL | **7/7 aprovados** |
-| Frontend | **62 testes aprovados** |
+| Frontend | **101 testes aprovados** |
 | Typecheck backend | ✅ |
 | Typecheck frontend | ✅ |
-| Build de produção | ✅ |
+| Build do backend | ✅ Aprovado na última execução registrada |
+| Build do frontend | ✅ Aprovado, com aviso não bloqueante de tamanho do bundle |
 
-Também foram validados: persistência após restart, coleta automática, atualização automática do frontend, autenticação JWT, autorização `401 / 403 / 200`, estados `no_metrics` e `unavailable`, consistência entre dashboard e indicadores, histórico ambiental por serviço, filtros temporais, ranking, comparação, mapa, assistente Karma e cenários de indisponibilidade ou fallback.
+Os testes incluem autenticação, coleta, persistência, cálculos ambientais, consolidados, estados `no_metrics` e `unavailable`, filtros, séries e métricas de comparação, localização, mapa, redistribuição, regras do Workspace e o módulo da Karma. Os sete testes ignorados na suíte comum do backend são os de integração PostgreSQL, executados separadamente no ambiente de testes.
+
+As evidências manuais e os resultados de runtime estão descritos no manual de validação, incluindo ranking, comparação, mapa, autenticação e recuperação do backend. Os testes das regras não substituem a conferência visual de cada fluxo.
+
+**Limites documentados da entrega:** a apresentação da comparação temporal com falha HTTP isolada foi corrigida, mas não possui evidência visual controlada desse cenário; a checagem final do Compose em execução não equivale a uma reconstrução limpa em máquina vazia; o build do frontend mantém aviso de tamanho do bundle. As observações de cartografia e demais limites de evidência constam no manual de validação.
 
 Evidências:
 
 - [`docs/testes/manual_teste_unitario.md`](docs/testes/manual_teste_unitario.md)
 - [`docs/testes/manualdevalidacao.md`](docs/testes/manualdevalidacao.md)
+- [`docs/testes/consolidacao_testes_sprint3.md`](docs/testes/consolidacao_testes_sprint3.md)
+- [`docs/testes/manual_integracao_postgres.md`](docs/testes/manual_integracao_postgres.md)
 
 ---
 

@@ -2,7 +2,9 @@
 
 Este manual reúne os testes unitários, HTTP e de integração do GreenER e explica como executá-los no Docker. O backend utiliza **Vitest**, os testes HTTP utilizam **Supertest** e o frontend utiliza **Node.js Test Runner**.
 
-O nome deste arquivo foi mantido para preservar os links do projeto. Seu conteúdo agora abrange a suíte automatizada da Sprint 2.
+O nome deste arquivo foi mantido para preservar os links do projeto. Seu conteúdo abrange a suíte automatizada da entrega final da Sprint 3.
+
+**Atualização: 23/11/2026.** As contagens e os resultados de referência correspondem ao fechamento documentado no [manual de validação](./manualdevalidacao.md) e no [consolidado da Sprint 3](./consolidacao_testes_sprint3.md). A revisão deste manual não representa uma nova execução das suítes.
 
 ## 1. Tipos de teste
 
@@ -11,7 +13,7 @@ O nome deste arquivo foi mantido para preservar os links do projeto. Seu conteú
 | Unitário | Services, controllers, middlewares, integrações e repositories com dependências controladas | Não; o acesso ao banco é simulado |
 | HTTP | Requisições ao Express, autenticação, validações, status e respostas | Não; consultas ou operações são simuladas |
 | Integração de persistência | SQL, gravação, recuperação, restrições e transações pelo repository real | Sim, em banco exclusivo |
-| Frontend | Sessão, conversão dos dados e estados do monitoramento | Não |
+| Frontend | Sessão, estados, filtros, comparação, localização, mapa, redistribuição e regras do Workspace | Não; dados e armazenamento controlados quando necessário |
 
 Nos testes HTTP, a autenticação JWT usa o código real e segredos temporários de teste. As demais camadas continuam reais, exceto as operações explicitamente simuladas em cada cenário. Não é necessário abrir o Insomnia nem fazer login manualmente.
 
@@ -70,11 +72,11 @@ docker compose exec backend npm test
 
 O comando executa `vitest run` dentro do container. O Vitest encontra automaticamente os arquivos `*.test.ts`; não é necessário cadastrar novos testes em uma lista.
 
-Resumo esperado conforme o inventário revisado em 08/11/2026, caso todos os cenários comuns sejam aprovados (não representa uma nova execução validada):
+Resumo de referência da última execução registrada no fechamento da Sprint 3:
 
 ~~~text
-Test Files  26 passed | 1 skipped (27)
-     Tests  156 passed | 7 skipped (163)
+Test Files  34 passed | 1 skipped (35)
+     Tests  300 passed | 7 skipped (307)
 ~~~
 
 O arquivo ignorado é `coletas.integration.test.ts`. Seus sete testes precisam do banco exclusivo e são executados separadamente. **`Skipped` não significa que a persistência foi validada.**
@@ -85,7 +87,7 @@ O arquivo ignorado é `coletas.integration.test.ts`. Seus sete testes precisam d
 docker compose exec frontend npm test
 ~~~
 
-O comando executa `node --test tests/*.test.ts`. O total de referência é **26 testes aprovados em três arquivos**.
+O comando executa `node --test tests/*.test.ts`. O total de referência do fechamento de 23/11/2026 é **101 testes aprovados em 14 arquivos**.
 
 As quantidades podem mudar com novas implementações. Confira se existem falhas e registre o commit da versão à qual o resultado pertence. As contagens deste manual não substituem a evidência de uma execução.
 
@@ -102,10 +104,10 @@ Os caminhos do backend abaixo são relativos a `backend/src/`. As quantidades in
 | `jobs/metrics-collection.job.test.ts` | 3 | Coleta imediata, repetição, continuidade após falha e logs |
 | `jobs/service-sync.job.test.ts` | 4 | Descoberta imediata, repetição, falhas, bloqueio de sobreposição e logs |
 | `jobs/carbon-intensity-sync.job.test.ts` | 3 | Sincronização imediata de snapshots, repetição, continuidade após falha e logs |
-| `modules/servicos/servicos.service.test.ts` | 7 | Descoberta, falhas externas, localização, atualização e remoção de serviços |
+| `modules/servicos/servicos.service.test.ts` | 8 | Descoberta, falhas externas, localização sem coordenadas, atualização e remoção de serviços |
 | `modules/coletas/coletas.service.test.ts` | 18 | Coleta por serviço, estados, falhas isoladas, amostras sucessivas, concorrência e validação do histórico |
 | `modules/coletas/coletas.repository.test.ts` | 4 | Transação, gravação, indisponibilidade, ausência de métricas e erro de rollback, com banco simulado |
-| `modules/indicadores/indicadores.service.test.ts` | 9 | Energia, emissão, duração e intensidade ausentes, lacunas, período inválido e histórico ambiental por serviço |
+| `modules/indicadores/indicadores.service.test.ts` | 13 | Recursos, decomposição de energia, cobertura de carbono, lacunas, períodos, histórico e totais preservados mesmo com redução dos pontos do gráfico |
 | `modules/indicadores/indicadores.controller.test.ts` | 7 | Período, parâmetros ausentes ou repetidos, histórico por ID e propagação de erros |
 | `modules/intensidades/intensidades.service.test.ts` | 3 | Catálogo, snapshots regionais e configuração de idade máxima |
 | `modules/intensidades/intensidades.repository.test.ts` | 3 | Critérios da consulta temporal e regional, com conexão simulada |
@@ -120,8 +122,16 @@ Os caminhos do backend abaixo são relativos a `backend/src/`. As quantidades in
 | `shared/utils/jwt-expiration.test.ts` | 16 | Formatos aceitos e rejeitados na configuração da expiração e padrão |
 | `shared/middlewares/auth.middleware.test.ts` | 7 | JWT válido, cabeçalho ausente ou incorreto, token malformado, expirado ou com outro segredo |
 | `shared/middlewares/admin.middleware.test.ts` | 5 | Administrador, usuário comum, identificação inválida, usuário removido e falha na consulta |
+| `modules/projecoes/projecoes.service.test.ts` | 16 | Projeção com energia constante, ausência de dados, regiões e políticas de redistribuição, cobertura parcial, balanceamento e inviabilidade |
+| `modules/chat/chat.service.test.ts` | 25 | Intenções, ranking, comparação, recursos, resumo, fallback determinístico, cache, concorrência e validação de entrada |
+| `modules/chat/chat.conversation.test.ts` | 46 | Contexto, identificação de serviços, clarificação, conhecimento e avaliação parametrizada das intenções |
+| `modules/chat/chat.knowledge.test.ts` | 23 | Recuperação da base curada, distinção entre perguntas de dados e metodologia e coeficientes reais do modelo |
+| `modules/chat/chat.cache.test.ts` | 5 | Validade e descarte do cache e compartilhamento de execução em andamento |
+| `modules/chat/ollama.client.test.ts` | 3 | Registro de latência, falhas e timeout, sem expor o conteúdo das perguntas nos logs |
 
 Os testes de APIs externas simulam as respostas; não dependem da disponibilidade das APIs do cliente. Os testes de repositories simulados verificam comandos e parâmetros, sem executar SQL no PostgreSQL.
+
+O `vitest.setup.ts` fornece valores fictícios de configuração quando ausentes, permitindo carregar o aplicativo nos testes sem exigir as APIs externas. Os testes da Karma usam dependências controladas; não exigem iniciar o profile `ai` nem baixar o modelo Ollama.
 
 ### HTTP de coletas: oito testes
 
@@ -185,15 +195,49 @@ Arquivo: [dashboard.http.test.ts](../../backend/src/modules/dashboard/dashboard.
 
 As duas consultas são simuladas. Omitir ambas as datas é permitido e utiliza as últimas 24 horas; informar somente uma delas é inválido. Sem serviços ativos, o dashboard retorna `isPartial: false`, conforme sua regra atual, diferente do resumo vazio de indicadores.
 
-### Frontend: 26 testes
+### HTTP de projeções e redistribuição: 13 testes
+
+Arquivo: [projecoes.http.test.ts](../../backend/src/modules/projecoes/projecoes.http.test.ts).
+
+- Projeção por localização: autenticação, regiões ausentes, corpo ausente ou `null`, tipos inválidos, cálculo, região sem dados e listagem de regiões.
+- Redistribuição: autenticação, período obrigatório, política inválida ou campos conflitantes e resposta calculada para o período.
+
+As consultas são simuladas conforme cada cenário. Esses testes não executam migração real dos serviços.
+
+### HTTP da Karma: oito testes
+
+Arquivo: [chat.http.test.ts](../../backend/src/modules/chat/chat.http.test.ts).
+
+- Token ausente ou inválido: `401`.
+- Mensagem vazia ou não textual e período inválido: `400`.
+- Resposta determinística sem dados no período.
+- Pergunta concorrente enquanto outra está em processamento: `429`.
+- Impedimento de acesso a uma conversa pertencente a outro usuário.
+
+Os dados e o cliente do modelo são controlados nos cenários. A aprovação não comprova a disponibilidade de um Ollama real.
+
+### Frontend: 101 testes em 14 arquivos
 
 | Arquivo relativo a `frontend/` | Testes | Cobertura principal |
 |---|---:|---|
 | `tests/authSession.test.ts` | 7 | Token inválido ou expirado, sessão, armazenamento corrompido, migração e logout |
-| `tests/monitoringState.test.ts` | 15 | Serviços novos, removidos e retornados; ausência de métricas; indisponibilidade; prazos e última confirmação |
-| `tests/serviceMapping.test.ts` | 4 | Conversão e distinção entre ativo, removido, sem métricas e indisponível |
+| `tests/monitoringState.test.ts` | 16 | Serviços novos, removidos e retornados; ausência de métricas; erro; indisponibilidade; prazos e última confirmação |
+| `tests/serviceMapping.test.ts` | 5 | Conversão e distinção entre ativo, removido, sem métricas, indisponível e erro de coleta |
+| `tests/analysisPeriod.test.ts` | 4 | Períodos suportados, rejeição de durações arbitrárias e cálculo de datas, incluindo mudança de dia/mês |
+| `tests/comparisonSeries.test.ts` | 5 | Valores ausentes, falta de intensidade, gaps temporais e preservação das séries válidas |
+| `tests/comparisonMetrics.test.ts` | 5 | Totais ambientais e de rede, médias de recursos e distinção entre `null` e zero |
+| `tests/mapFocus.test.ts` | 6 | Destinos da câmera, tolerância de coordenadas, zoom, inclinação e longitudes equivalentes |
+| `tests/serviceGeoJson.test.ts` | 3 | Pontos, seleção, coordenadas inválidas e preservação do serviço válido junto de outro incompleto |
+| `tests/serviceLocation.test.ts` | 6 | Formatação de localização, campos opcionais, fallback e presença de coordenadas |
+| `tests/regionEnergy.test.ts` | 1 | Agregação da energia por região sem incluir amostras não calculáveis |
+| `tests/redistributionEmissions.test.ts` | 4 | Variação de emissões, cobertura comparável, base zero e subtotais calculáveis |
+| `tests/monitoringBoard.test.ts` | 23 | Grade responsiva, posicionamento, colisão, reflow, redimensionamento, minimização e leitura tolerante |
+| `tests/workspacePages.test.ts` | 10 | Páginas fixas e personalizadas, normalização, criação, numeração, persistência e descarte de páginas retiradas |
+| `tests/workspaceWidgets.test.ts` | 6 | Catálogo de blocos, rótulos, dimensões mínimas, tipos, IDs e arranjo padrão |
 
-Esses testes verificam funções de sessão e monitoramento. Não verificam renderização de componentes ou navegação completa em um navegador.
+Esses testes verificam funções e regras sem DOM. O Workspace utiliza dados e armazenamento simulados quando necessário; a grade responsiva é testada como regra de cálculo, não como renderização CSS. A aprovação não substitui a conferência visual de componentes, navegação, gestos, responsividade, cartografia ou integração com a API.
+
+Os testes de comparação não reproduzem falhas HTTP no hook nem renderizam o aviso de comparação parcial. A correção da tela e o limite da evidência visual desse cenário estão descritos no [consolidado da Sprint 3](./consolidacao_testes_sprint3.md).
 
 ## 5. Executar um arquivo ou módulo
 
@@ -203,9 +247,13 @@ Esses testes verificam funções de sessão e monitoramento. Não verificam rend
 docker compose exec backend npm test -- src/modules/coletas/coletas.http.test.ts
 docker compose exec backend npm test -- src/modules/indicadores/indicadores.http.test.ts
 docker compose exec backend npm test -- src/modules/dashboard/dashboard.http.test.ts
+
+docker compose exec backend npm test -- src/modules/projecoes/projecoes.http.test.ts
+
+docker compose exec backend npm test -- src/modules/chat/chat.http.test.ts
 ~~~
 
-Os resultados esperados são, respectivamente, **oito, 16 e quatro testes aprovados**.
+Os totais de referência são, respectivamente, **oito, 16, quatro, 13 e oito testes**. Verifique o resultado efetivo da execução na versão utilizada.
 
 ### Todos os testes comuns de um módulo
 
@@ -214,9 +262,13 @@ docker compose exec backend npm test -- src/modules/coletas
 docker compose exec backend npm test -- src/modules/indicadores
 docker compose exec backend npm test -- src/modules/dashboard
 docker compose exec backend npm test -- src/modules/intensidades
+
+docker compose exec backend npm test -- src/modules/projecoes
+
+docker compose exec backend npm test -- src/modules/chat
 ~~~
 
-No módulo de coletas, os sete testes de integração ficam ignorados na execução comum. O módulo de indicadores executa service, controller e HTTP, totalizando **32 testes** na versão descrita.
+No módulo de coletas, os sete testes de integração ficam ignorados na execução comum. O módulo de indicadores executa service, controller e HTTP, totalizando **36 testes** na versão descrita. Projeções possui **29 testes** e chat possui **110 testes**, considerando os casos parametrizados.
 
 ### Outros grupos
 
@@ -231,6 +283,24 @@ Para executar um único arquivo do frontend, chame diretamente o executor:
 
 ~~~powershell
 docker compose exec frontend node --test tests/authSession.test.ts
+~~~
+
+Filtros e comparação:
+
+~~~powershell
+docker compose exec frontend node --test tests/analysisPeriod.test.ts tests/comparisonMetrics.test.ts tests/comparisonSeries.test.ts
+~~~
+
+Mapa e localização:
+
+~~~powershell
+docker compose exec frontend node --test tests/serviceGeoJson.test.ts tests/serviceLocation.test.ts tests/mapFocus.test.ts tests/regionEnergy.test.ts
+~~~
+
+Regras do Workspace:
+
+~~~powershell
+docker compose exec frontend node --test tests/monitoringBoard.test.ts tests/workspacePages.test.ts tests/workspaceWidgets.test.ts
 ~~~
 
 ## 6. Executar os sete testes com PostgreSQL real
@@ -298,7 +368,7 @@ O último erro é provocado pela duração negativa no teste de rollback. A apli
 
 **Confira o resumo final.** Um `console.error` sozinho não significa falha na suíte. Já `failed`, rejeições não tratadas ou encerramento com erro exigem investigação. Fora dos cenários controlados, mensagens semelhantes podem indicar problemas reais.
 
-## 8. Acompanhar alterações e verificar TypeScript
+## 8. Acompanhar alterações, verificar TypeScript e gerar builds
 
 Para repetir os testes comuns do backend ao alterar o código:
 
@@ -317,6 +387,18 @@ docker compose exec frontend npm run typecheck
 
 A verificação TypeScript é complementar e não substitui a execução dos cenários.
 
+**Alcance da configuração atual:** o `tsconfig.json` do backend exclui `src/**/*.test.ts`; o do frontend inclui `src` e `vite.config.ts`, deixando `tests` fora dessa verificação. Portanto, aprovação do typecheck não equivale a verificação estática dos arquivos de testes.
+
+Para gerar os builds:
+
+~~~powershell
+docker compose exec backend npm run build
+
+docker compose exec frontend npm run build
+~~~
+
+O backend compila TypeScript para `dist/`. O frontend verifica os tipos da aplicação e gera o pacote de produção com Vite em `dist/`. O aviso de chunks maiores que 500 kB foi registrado no fechamento e não impediu o build. Falhas de compilação ou código de saída diferente de zero devem ser investigados.
+
 ## 9. Resolver problemas
 
 ### Vitest ou Supertest não encontrado no container
@@ -324,23 +406,23 @@ A verificação TypeScript é complementar e não substitui a execução dos cen
 As dependências já estão declaradas. Sincronize a instalação e repita o teste:
 
 ~~~powershell
-docker compose exec backend npm install
+docker compose exec backend npm ci
 ~~~
 
 Se faltarem dependências no frontend:
 
 ~~~powershell
-docker compose exec frontend npm install
+docker compose exec frontend npm ci
 ~~~
 
-O container utiliza instalação própria de `node_modules`; instalar somente no computador não atualiza essa instalação.
+O container utiliza instalação própria de `node_modules`; instalar somente no computador não atualiza essa instalação. `npm ci` reinstala conforme o `package-lock.json`, sem atualizá-lo, e exige que ele esteja coerente com `package.json`. Esse procedimento é para corrigir dependências ausentes, não é necessário antes de cada teste.
 
 ### VS Code não encontra Supertest, mas o Docker executa o teste
 
 O editor aberto no Windows utiliza dependências locais. Na raiz:
 
 ~~~powershell
-npm.cmd --prefix backend install
+npm.cmd --prefix backend ci
 ~~~
 
 Se necessário, abra um arquivo `.ts`, pressione `Ctrl+Shift+P` e selecione **TypeScript: Restart TS Server**. `npm.cmd` evita o bloqueio de `npm.ps1` pela política do PowerShell. A execução documentada dos testes permanece no Docker.
@@ -363,6 +445,7 @@ Para a evidência final da task, registre:
 - Resultado do backend, distinguindo aprovados e ignorados.
 - Resultado separado dos sete testes com PostgreSQL real.
 - Resultado do frontend e das verificações TypeScript.
+- Resultado separado dos builds do backend e frontend e eventuais avisos.
 - Links dos testes, PRs e evidência manual de preservação após reinicialização.
 
 Para encerrar a aplicação:
@@ -377,7 +460,9 @@ O comando preserva o volume do PostgreSQL. A opção `-v` remove os volumes e n�
 
 - [Manual de integração com PostgreSQL](./manual_integracao_postgres.md).
 - [Roteiro de validação manual](./manualdevalidacao.md).
+- [Consolidação dos testes e entregas da Sprint 3](./consolidacao_testes_sprint3.md).
 - [Fórmulas e unidades dos cálculos](../calculos.md).
 
-### Para o futuro
-Esse é um projeto ainda em desenvolvimento, futuramente irá abarcar mais testes
+### Fechamento da entrega
+
+Este manual documenta a suíte existente na entrega acadêmica da Sprint 3. Utilize os registros de validação para distinguir testes automatizados aprovados, evidências manuais e cenários sem reprodução visual controlada. A versão final integrada deve ser identificada pelo commit ao registrar os resultados.

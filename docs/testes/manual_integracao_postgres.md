@@ -1,5 +1,9 @@
 # Testes de integração de coletas com PostgreSQL real
 
+← [Voltar ao índice da documentação](../../README.md)
+
+**Atualização documental: 23/11/2026 — fechamento da Sprint 3.** Os resultados abaixo são registros de execuções anteriores. A atualização deste manual não representa uma nova execução dos testes.
+
 ## 1. Para que servem
 
 Os testes HTTP existentes simulam consultas ou operações de coleta.
@@ -7,21 +11,23 @@ Já [`coletas.integration.test.ts`](../../backend/src/modules/coletas/coletas.in
 executa `INSERT`, `SELECT`, transações e restrições do esquema.
 Não usa `vi.mock`, `spyOn` ou `mockResolvedValue`.
 
+**Alcance:** a suíte valida a persistência das tentativas, as métricas associadas, o histórico bruto por serviço, as restrições e as transações de `ColetasRepository`. Não executa as consultas analíticas de indicadores, a associação de snapshots de carbono, os cálculos ambientais ou as projeções. Também não valida a interface, as APIs externas nem a integração completa da plataforma.
+
 ## 2. Arquivos
 
 ### Ambiente Docker
 
 O arquivo [`compose.test.yaml`](../../compose.test.yaml), na raiz:
 
-- Cria o projeto Docker greener-tests, separado do Compose da aplicação.
-- postgres-test executa PostgreSQL 17 com banco greener_test.
+- Cria o projeto Docker `greener-tests`, separado do Compose da aplicação.
+- `postgres-test` executa PostgreSQL 17 com banco `greener_test`.
 - As credenciais fixas desse arquivo são exclusivas do ambiente de testes.
-- Não publica porta no Windows e não compartilha o volume postgres_data.
-- Carrega database/schema.sql para criar as tabelas no banco vazio.
-- Usa tmpfs: os dados são temporários e são perdidos ao parar o banco.
-- Aguarda o healthcheck antes de iniciar backend-test.
-- backend-test executa o Vitest, sem iniciar o servidor e os jobs automáticos.
-- As variáveis POSTGRES_* do serviço apontam para postgres-test.
+- Não publica porta no host e não compartilha o volume `postgres_data`.
+- Carrega `database/schema.sql` para criar as tabelas no banco vazio.
+- Usa `tmpfs`: os dados são temporários e são perdidos ao parar o banco.
+- Aguarda o healthcheck antes de iniciar `backend-test`.
+- `backend-test` executa o Vitest, sem iniciar o servidor e os jobs automáticos.
+- As variáveis `POSTGRES_*` do serviço apontam para `postgres-test`.
 
 ### Suíte de integração
 
@@ -29,8 +35,8 @@ O arquivo [`coletas.integration.test.ts`](../../backend/src/modules/coletas/cole
 
 - Define os sete cenários e os dados usados em cada um.
 - Importa o pool de conexão e o repository reais.
-- Antes de inserir dados, exige NODE_ENV=test, host postgres-test e banco
-  greener_test. Confirma também current_database() pela conexão real.
+- Antes de inserir dados, exige `NODE_ENV=test`, host `postgres-test` e banco
+  `greener_test`. Confirma também `current_database()` pela conexão real.
 - Essa conferência ajuda a evitar execução acidental no banco de desenvolvimento.
 
 O [`schema.sql`](../../database/schema.sql) cria um banco novo completo. Não executamos as migrations sobre
@@ -154,8 +160,8 @@ Para remover os containers e a rede desse ambiente após a execução:
 docker compose -f compose.test.yaml down
 ```
 
-Esse comando seleciona o projeto greener-tests. O Compose da aplicação e seu
-volume postgres_data são separados.
+Esse comando seleciona o projeto `greener-tests`. O Compose da aplicação e seu
+volume `postgres_data` são separados.
 
 ## 6. Relação com o comando `npm test` habitual
 
@@ -174,12 +180,33 @@ rodar esta suíte no banco normal; use o ambiente separado.
 
 ## 7. Evidências da task
 
+### Registro histórico — Sprint 2
+
 **Resultado informado pela equipe em 08/11/2026:** os sete testes de integração
 PostgreSQL foram aprovados usando o ambiente `compose.test.yaml`. O commit
 específico dessa execução não foi informado.
 
-Em futuras execuções, registre a data, o commit testado, o comando e o resumo
-dos testes aprovados. Execute também as suítes comuns do backend e frontend e
-registre seus resultados.
+### Regressão registrada — Sprint 3
+
+| Campo | Registro |
+| --- | --- |
+| Data da execução | 21/11/2026 |
+| Ambiente | Projeto Docker `greener-tests`, banco exclusivo `greener_test` |
+| Comando | `docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test` |
+| Resultado | **Um arquivo aprovado; sete testes aprovados; código de saída 0** |
+| Referência | [Consolidação dos testes da Sprint 3](./consolidacao_testes_sprint3.md) |
+| Commit da execução | Não identificado no registro disponível; não atribuir automaticamente o commit atual à execução anterior. |
+
+O teste de rollback provocou intencionalmente o erro PostgreSQL `23514`, por violação da restrição `chk_metrics_collection_interval_seconds`. A suíte terminou aprovada; essa mensagem não representa falha da execução.
+
+Para uma nova execução, registre data, commit testado, comando, resumo e código de saída. Os resultados das suítes comuns de backend e frontend devem ser registrados separadamente, sem substituir a execução dedicada com PostgreSQL real.
+
 A verificação manual de preservação após restart continua sendo outra evidência:
 o banco temporário de testes foi projetado para ser descartado ao parar.
+
+## 8. Documentação relacionada
+
+- [Manual de execução dos testes automatizados](./manual_teste_unitario.md): inventário, testes comuns, typechecks e builds.
+- [Manual de validação do fluxo de dados](./manualdevalidacao.md): roteiros e evidências de API, banco, frontend e reinicialização da aplicação.
+- [Consolidação dos testes e entregas da Sprint 3](./consolidacao_testes_sprint3.md): resultados e limites das evidências finais.
+- [Documentação do banco](../../database/README.md): schema, migrations e persistência no volume da aplicação.

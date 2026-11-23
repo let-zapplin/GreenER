@@ -195,6 +195,36 @@ As principais decisões efetivamente registradas durante a Sprint foram:
 - tratar projeções e redistribuição como apoio à decisão, sem executar migração real;
 - apresentar a **Karma** como protótipo experimental adicional ao MVP obrigatório.
 
+---
+## 8 · Acompanhamento da sprint
+
+O burndown registra a evolução do trabalho ao longo da Sprint 3, permitindo visualizar a redução das atividades planejadas e os impactos causados por dependências, bloqueios e alterações de escopo durante o período.
+
+<div align="center">
+
+<img src="burning_down_sp3.jpeg" alt="Gráfico burndown da Sprint 3" width="82%" />
+
+*Burndown — Sprint 3.*
+
+</div>
+
+---
+## 9 · Demonstração Final
+
+Nesta demonstração, apresentamos a versão final do GreenER, com monitoramento, análises, ranking, comparação, projeções e Workspace personalizável, além da Karma, nosso protótipo de assistente inteligente. 
+
+<div align="center">
+
+<a href="https://youtu.be/eA8kPQe3600">
+  <img src="thumbnail_sp2.png"
+       width="560"
+       alt="Assistir à demonstração da Sprint 3 no YouTube" />
+</a>
+
+**[▶ Assistir à demonstração da Sprint 3](https://youtu.be/eA8kPQe3600)**
+
+</div>
+
 ### Fechamento
 
 A **Sprint 3 foi concluída em 23/11/2026**, encerrando o ciclo de três entregas do GreenER. O produto final reúne monitoramento, histórico, análise temporal, ranking, comparação, mapa, projeções, Workspace personalizável, autenticação, tolerância a falhas, documentação reproduzível e o protótipo da Karma.
