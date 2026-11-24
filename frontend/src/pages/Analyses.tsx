@@ -1,55 +1,68 @@
-import "./ui.css";
+//react /router
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+
+//Componentes
 import { HistoryChart } from "../components/HistoryChart";
-import { useMonitoring } from "../hooks/useMonitoring";
-import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
 import { ServiceHistoryPreview } from "../components/ServiceHistoryPreview";
-import { useAnalysisPeriod } from "../hooks/useAnalysisPeriod";
-import { useServiceIndicators } from "../hooks/useServiceIndicators";
 import { ImpactRanking, type RankingMetric } from "../components/ImpactRanking";
 import { ComparisonMetricSelector } from "../components/ComparisonMetricSelector";
-import { useComparisonHistories } from "../hooks/useComparisonHistories";
-import { buildComparisonSeries } from "../lib/comparisonSeries";
 import { ComparisonChart } from "../components/ComparisonChart";
 import { ComparisonSummary } from "../components/ComparisonSummary";
-import type {
-  ComparisonMetric,
-  ComparisonVisualization,
-} from "../types/comparison";
-import { ComparisonPeriodChart } from "../components/ComparisonPeriodChart";
-
-import "./Analyses.css";
 import { ComparisonServiceSelector } from "../components/ComparisonServiceSelector";
-import { formatServicePlace } from "../lib/serviceLocation";
-import { useProjectionRegions } from "../hooks/useProjectionRegions";
-import { useLocationProjection } from "../hooks/useLocationProjection";
+import { ComparisonPeriodChart } from "../components/ComparisonPeriodChart";
 import { LocationProjectionSummary } from "../components/LocationProjectionSummary";
 import { LocationProjectionChart } from "../components/LocationProjectionChart";
 import { LocationProjectionMap } from "../components/LocationProjectionMap";
 import { ProjectionServiceCard } from "../components/ProjectionServiceCard";
 import { ServiceRedistributionPanel } from "../components/ServiceRedistributionPanel";
-import iconeBusca from "../assets/icones/icone-busca.png";
-import iconeCompara from "../assets/icones/icone-compara.png";
-import iconeRedistribui from "../assets/icones/icone-redistribui.png";
+
+//Hooks
+import { useMonitoring } from "../hooks/useMonitoring";
+import { useServiceIndicatorHistory } from "../hooks/useServiceIndicatorHistory";
+import { useAnalysisPeriod } from "../hooks/useAnalysisPeriod";
+import { useServiceIndicators } from "../hooks/useServiceIndicators";
+import { useComparisonHistories } from "../hooks/useComparisonHistories";
+import { useProjectionRegions } from "../hooks/useProjectionRegions";
+import { useLocationProjection } from "../hooks/useLocationProjection";
+
+//types
+import type {
+  ComparisonMetric,
+  ComparisonVisualization,
+} from "../types/comparison";
+
+//helpers / libs
+import { buildComparisonSeries } from "../lib/comparisonSeries";
+import { formatServicePlace } from "../lib/serviceLocation";
 import {
   MAX_COMPARISON_SERVICES,
   MIN_COMPARISON_SERVICES,
 } from "../lib/comparisonLimits";
 
+//Estilos / assets
+import "./ui.css";
+import "./Analyses.css";
+import iconeBusca from "../assets/icones/icone-busca.png";
+import iconeCompara from "../assets/icones/icone-compara.png";
+import iconeRedistribui from "../assets/icones/icone-redistribui.png";
+
+//Tipos e constantes
+//Modos válidos da interface, restritos por union types.
 type AnalysisLayout = "focus" | "overview" | "side";
 type OverviewView = "charts" | "ranking";
 type AnalysisMode = "explore" | "compare" | "project";
 type ProjectionView = "location" | "redistribution";
 
+// Chaves do localStorage - objetivo de persistência da interface
+// as keys são utilizadas para preservar as preferências do usuário entre o carregamento da página
 const ANALYSES_LAYOUT_STORAGE_KEY = "greener:analyses:layout";
-
 const ANALYSES_OVERVIEW_STORAGE_KEY = "greener:analyses:overview-collapsed";
-
 const ANALYSES_MODE_STORAGE_KEY = "greener:analyses:mode";
-
 const ANALYSES_PROJECTION_VIEW_STORAGE_KEY = "greener:analyses:projection-view";
 
+//Funções auxiliares
+//verifica se há alguma preferência salva, ele checa qual modo de  analise a pagina se encontra
 function getInitialAnalysisMode(): AnalysisMode {
   const savedMode = localStorage.getItem(ANALYSES_MODE_STORAGE_KEY);
 
@@ -63,7 +76,7 @@ function getInitialAnalysisMode(): AnalysisMode {
 
   return "explore";
 }
-
+// Recupera a última visualização usada nas projeções.
 function getInitialProjectionView(): ProjectionView {
   const savedView = localStorage.getItem(ANALYSES_PROJECTION_VIEW_STORAGE_KEY);
 
@@ -74,6 +87,7 @@ function getInitialProjectionView(): ProjectionView {
   return "location";
 }
 
+// Função que define as iniciais dos serviços nos hexagonos, quando eles mudam os botões atualizam automaticamente.
 function getServiceInitials(name: string): string {
   return name
     .replace(/[^a-zA-Z0-9]/g, "")
@@ -81,18 +95,22 @@ function getServiceInitials(name: string): string {
     .toUpperCase();
 }
 
+//Componente Analyses
 export function Analyses() {
+  // 1- URL e serviços monitorados
   const [searchParams] = useSearchParams();
-
   const requestedServiceIdParam = searchParams.get("serviceId");
-
+  //validação de entrada do frontend
   const requestedServiceId =
     requestedServiceIdParam !== null &&
     Number.isInteger(Number(requestedServiceIdParam))
       ? Number(requestedServiceIdParam)
       : null;
 
+  // useRef guarda um valor sem provocar renderização , aqui utilizamos para verificar se  ja foi aplicado  o serviceId vindo da URL
   const appliedQueryServiceRef = useRef<number | null>(null);
+
+  //O nosso Hook useMonitoring retorna os seguinte valores e alteramos o nome de loading, pois temos outros loadings no componente
   const {
     snapshot,
     loading: servicesLoading,
@@ -105,6 +123,8 @@ export function Analyses() {
     null,
   );
 
+  //2- Periodo de Análise e indicadores
+  //O hook centraliza a janela temporal
   const {
     periods: analysisPeriods,
     durationMs: historyPeriodMs,
@@ -122,6 +142,7 @@ export function Analyses() {
     analysisPeriods.find((period) => period.value === historyPeriodMs)?.label ??
     "Período atual";
 
+  // Evita exibir indicadores de uma janela anterior enquanto os dados do novo período ainda estão carregando.
   const indicatorsPeriodDurationMs = serviceIndicators
     ? new Date(serviceIndicators.period.end).getTime() -
       new Date(serviceIndicators.period.start).getTime()
@@ -133,34 +154,40 @@ export function Analyses() {
       ? serviceIndicators
       : null;
 
+  // 3 - Estado da Interface
+
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(
     getInitialAnalysisMode,
   );
 
-  const [projectionView, setProjectionView] = useState<ProjectionView>(
-    getInitialProjectionView,
-  );
+  const [analysisLayout, setAnalysisLayout] = useState<AnalysisLayout>(() => {
+    const savedLayout = localStorage.getItem(ANALYSES_LAYOUT_STORAGE_KEY);
 
-  const [projectionServiceId, setProjectionServiceId] = useState<number | null>(
-    null,
-  );
+    if (
+      savedLayout === "focus" ||
+      savedLayout === "overview" ||
+      savedLayout === "side"
+    ) {
+      return savedLayout;
+    }
 
-  const [projectionRegionCodes, setProjectionRegionCodes] = useState<string[]>(
-    [],
-  );
-
-  const {
-    regions: projectionRegions,
-    loading: projectionRegionsLoading,
-    error: projectionRegionsError,
-  } = useProjectionRegions(
-    analysisMode === "project" && projectionView === "location",
-  );
+    return "focus";
+  });
 
   const [overviewView, setOverviewView] = useState<OverviewView>("charts");
 
-  const [rankingMetric, setRankingMetric] = useState<RankingMetric>("energy");
+  const [isOverviewCollapsed, setIsOverviewCollapsed] = useState(() => {
+    return localStorage.getItem(ANALYSES_OVERVIEW_STORAGE_KEY) === "true";
+  });
 
+  const overviewScrollRef = useRef<HTMLDivElement | null>(null);
+
+  const [isChartTransitioning, setIsChartTransitioning] = useState(false);
+
+  //  // 4. COMPARAÇÃO DE SERVIÇOS
+  // Seleção, métrica, visualização e dados comparados.
+
+  // trecho de Comparação de serviços : Seleção, métrica, visualização e históricos comparados.
   const [comparisonServiceIds, setComparisonServiceIds] = useState<number[]>(
     [],
   );
@@ -190,6 +217,7 @@ export function Analyses() {
     });
   }
 
+  //Esses dois não são estados comuns e sim ESTADOS DERIVADOS
   const canCompare = comparisonServiceIds.length >= MIN_COMPARISON_SERVICES;
 
   const comparisonLimitReached =
@@ -242,27 +270,112 @@ export function Analyses() {
   const isPeriodRefreshing =
     canCompare && indicatorsLoading && comparisonIndicators.length > 0;
 
-  const [analysisLayout, setAnalysisLayout] = useState<AnalysisLayout>(() => {
-    const savedLayout = localStorage.getItem(ANALYSES_LAYOUT_STORAGE_KEY);
+  //5- PROJEÇÕES REGIONAIS
 
-    if (
-      savedLayout === "focus" ||
-      savedLayout === "overview" ||
-      savedLayout === "side"
-    ) {
-      return savedLayout;
+  const [projectionView, setProjectionView] = useState<ProjectionView>(
+    getInitialProjectionView,
+  );
+
+  const [projectionServiceId, setProjectionServiceId] = useState<number | null>(
+    null,
+  );
+
+  const [projectionRegionCodes, setProjectionRegionCodes] = useState<string[]>(
+    [],
+  );
+
+  const {
+    regions: projectionRegions,
+    loading: projectionRegionsLoading,
+    error: projectionRegionsError,
+  } = useProjectionRegions(
+    analysisMode === "project" && projectionView === "location",
+  );
+
+  const projectionService =
+    services.find((service) => service.serviceId === projectionServiceId) ??
+    null;
+
+  const currentProjectionRegionCode =
+    projectionService?.location.region_code ?? null;
+
+  function toggleProjectionRegion(regionCode: string) {
+    setProjectionRegionCodes((currentCodes) => {
+      const isSelected = currentCodes.includes(regionCode);
+
+      if (isSelected) {
+        return currentCodes.filter((currentCode) => currentCode !== regionCode);
+      }
+
+      return [...currentCodes, regionCode];
+    });
+  }
+
+  function changeProjectionService(serviceId: number) {
+    setProjectionServiceId(serviceId);
+    setProjectionRegionCodes([]);
+  }
+
+  const {
+    projection,
+    loading: projectionLoading,
+    error: projectionError,
+  } = useLocationProjection(
+    projectionServiceId,
+    analysisPeriod,
+    projectionRegionCodes,
+    analysisMode === "project" && projectionView === "location",
+  );
+
+  // 6 - HISTÓRICO DO SERVIÇO EM DESTAQUE
+
+  const selectedService =
+    services.find((service) => service.serviceId === selectedServiceId) ?? null;
+
+  const selectedServiceIndex = services.findIndex(
+    (service) => service.serviceId === selectedServiceId,
+  );
+
+  function selectPreviousService() {
+    if (services.length === 0 || selectedServiceIndex < 0) {
+      return;
     }
 
-    return "focus";
-  });
+    const previousIndex =
+      selectedServiceIndex === 0
+        ? services.length - 1
+        : selectedServiceIndex - 1;
 
-  const overviewScrollRef = useRef<HTMLDivElement | null>(null);
+    setSelectedServiceId(services[previousIndex].serviceId);
+  }
 
-  const [isOverviewCollapsed, setIsOverviewCollapsed] = useState(() => {
-    return localStorage.getItem(ANALYSES_OVERVIEW_STORAGE_KEY) === "true";
-  });
+  function selectNextService() {
+    if (services.length === 0 || selectedServiceIndex < 0) {
+      return;
+    }
 
-  const [isChartTransitioning, setIsChartTransitioning] = useState(false);
+    const nextIndex =
+      selectedServiceIndex === services.length - 1
+        ? 0
+        : selectedServiceIndex + 1;
+
+    setSelectedServiceId(services[nextIndex].serviceId);
+  }
+
+  const {
+    history,
+    loading: historyLoading,
+    error: historyError,
+  } = useServiceIndicatorHistory(selectedServiceId, analysisPeriod);
+
+  const [previousHistory, setPreviousHistory] = useState<typeof history>(null);
+
+  
+  const visibleHistory = history ?? (historyLoading ? previousHistory : null);
+
+  // 7 - SINCRONIZAÇÕES E EFEITOS
+
+  //mantém o foco da comparação válido
 
   useEffect(() => {
     if (comparisonServiceIds.length === 0) {
@@ -278,6 +391,9 @@ export function Analyses() {
       setComparisonFocusServiceId(comparisonServiceIds[0]);
     }
   }, [comparisonServiceIds, comparisonFocusServiceId]);
+
+  // Sincroniza o serviço selecionado com a URL e com
+  // a lista atual de serviços monitorados.
 
   useEffect(() => {
     if (services.length === 0) {
@@ -312,6 +428,10 @@ export function Analyses() {
       return services[0].serviceId;
     });
   }, [services, requestedServiceId]);
+
+// Ativa a transição visual quando o serviço ou
+// o período do histórico é alterado. 
+
   useEffect(() => {
     if (selectedServiceId === null) {
       return;
@@ -327,6 +447,9 @@ export function Analyses() {
       window.clearTimeout(timeoutId);
     };
   }, [selectedServiceId, historyPeriodMs]);
+
+// No layout lateral, mantém o card do serviço selecionado
+// centralizado dentro da área de rolagem.
 
   useEffect(() => {
     if (
@@ -375,6 +498,9 @@ export function Analyses() {
     };
   }, [selectedServiceId, analysisLayout, isOverviewCollapsed]);
 
+// Mantém um serviço válido selecionado nas projeções.
+// Se o serviço atual não existir mais, reutiliza o serviço
+
   useEffect(() => {
     if (services.length === 0) {
       setProjectionServiceId(null);
@@ -394,40 +520,16 @@ export function Analyses() {
     });
   }, [services, selectedServiceId]);
 
-  const projectionService =
-    services.find((service) => service.serviceId === projectionServiceId) ??
-    null;
+  // Preserva o último histórico válido.
+// Isso evita que o gráfico desapareça durante uma atualização.
 
-  const currentProjectionRegionCode =
-    projectionService?.location.region_code ?? null;
+useEffect(() => {
+    if (history) {
+      setPreviousHistory(history);
+    }
+  }, [history]);
 
-  function toggleProjectionRegion(regionCode: string) {
-    setProjectionRegionCodes((currentCodes) => {
-      const isSelected = currentCodes.includes(regionCode);
-
-      if (isSelected) {
-        return currentCodes.filter((currentCode) => currentCode !== regionCode);
-      }
-
-      return [...currentCodes, regionCode];
-    });
-  }
-
-  function changeProjectionService(serviceId: number) {
-    setProjectionServiceId(serviceId);
-    setProjectionRegionCodes([]);
-  }
-
-  const {
-    projection,
-    loading: projectionLoading,
-    error: projectionError,
-  } = useLocationProjection(
-    projectionServiceId,
-    analysisPeriod,
-    projectionRegionCodes,
-    analysisMode === "project" && projectionView === "location",
-  );
+// Persistência das preferências da interface
 
   useEffect(() => {
     localStorage.setItem(ANALYSES_MODE_STORAGE_KEY, analysisMode);
@@ -448,54 +550,10 @@ export function Analyses() {
     );
   }, [isOverviewCollapsed]);
 
-  const selectedService =
-    services.find((service) => service.serviceId === selectedServiceId) ?? null;
 
-  const selectedServiceIndex = services.findIndex(
-    (service) => service.serviceId === selectedServiceId,
-  );
+  const [rankingMetric, setRankingMetric] = useState<RankingMetric>("energy");
 
-  function selectPreviousService() {
-    if (services.length === 0 || selectedServiceIndex < 0) {
-      return;
-    }
-
-    const previousIndex =
-      selectedServiceIndex === 0
-        ? services.length - 1
-        : selectedServiceIndex - 1;
-
-    setSelectedServiceId(services[previousIndex].serviceId);
-  }
-
-  function selectNextService() {
-    if (services.length === 0 || selectedServiceIndex < 0) {
-      return;
-    }
-
-    const nextIndex =
-      selectedServiceIndex === services.length - 1
-        ? 0
-        : selectedServiceIndex + 1;
-
-    setSelectedServiceId(services[nextIndex].serviceId);
-  }
-
-  const {
-    history,
-    loading: historyLoading,
-    error: historyError,
-  } = useServiceIndicatorHistory(selectedServiceId, analysisPeriod);
-
-  const [previousHistory, setPreviousHistory] = useState<typeof history>(null);
-
-  useEffect(() => {
-    if (history) {
-      setPreviousHistory(history);
-    }
-  }, [history]);
-
-  const visibleHistory = history ?? (historyLoading ? previousHistory : null);
+  // 8 - DADOS DERIVADOS PARA RENDERIZAÇÃO
 
   const validEnergySamples =
     visibleHistory?.samples.filter((sample) => sample.energyKwh !== null)
@@ -507,15 +565,19 @@ export function Analyses() {
     servicePlaces[service.serviceId] = formatServicePlace(service.location);
   }
 
+  //9 - JSX
+
   return (
     <div className="analyses-screen">
-      <main
+        <main
         className={
           analysisMode === "compare"
             ? "analyses-page analyses-page-compare"
             : "analyses-page"
         }
       >
+            {/* =========== CABEÇALHO DA PÁGINA ========================= */}
+
         <header className="analyses-header">
           <p className="analyses-eyebrow">ANÁLISE TEMPORAL</p>
 
@@ -528,14 +590,14 @@ export function Analyses() {
             tempo a partir das coletas realizadas pelo GreenER.
           </p>
         </header>
+
+      {/* =============== SELETOR DO MODO DE ANÁLISE ==================== */}
         <div
           className="analyses-mode-switch"
           role="group"
           aria-label="Modo de análise"
         >
-          {/* =====================================================
-      EXPLORAR
-      ===================================================== */}
+          {/* =========== EXPLORAR ================= */}
 
           <button
             type="button"
@@ -565,9 +627,7 @@ export function Analyses() {
             </span>
           </button>
 
-          {/* =====================================================
-      COMPARAR
-      ===================================================== */}
+          {/*============== COMPARAR ================*/}
 
           <button
             type="button"
@@ -597,9 +657,7 @@ export function Analyses() {
             </span>
           </button>
 
-          {/* =====================================================
-      PROJEÇÕES REGIONAIS
-      ===================================================== */}
+          {/* ======= PROJEÇÕES REGIONAIS =========== */}
 
           <button
             type="button"
@@ -629,7 +687,9 @@ export function Analyses() {
             </span>
           </button>
         </div>
-
+      {/* ================= CONTROLES GLOBAIS
+          Período analisado e layout da exploração 
+      ===================================================== */} 
         <section
           className="analyses-controls analyses-global-controls"
           aria-labelledby="analysis-period-title"
@@ -726,6 +786,11 @@ export function Analyses() {
           </div>
         </section>
 
+      {/* =====================================================
+          ESTADOS GERAIS DOS SERVIÇOS
+          Loading | erro | nenhum serviço disponível
+      ===================================================== */}
+
         {servicesLoading && services.length === 0 && (
           <section className="analyses-state" role="status">
             <span className="analyses-loader" aria-hidden="true" />
@@ -750,6 +815,10 @@ export function Analyses() {
             </p>
           </section>
         )}
+
+        {/* =====================================================
+          MODO: PROJEÇÕES REGIONAIS
+         ===================================================== */}
 
         {analysisMode === "project" && services.length > 0 && (
           <section
@@ -956,6 +1025,10 @@ export function Analyses() {
           </section>
         )}
 
+          {/* =====================================================
+          MODO: COMPARAÇÃO DE SERVIÇOS
+          ===================================================== */}
+
         {analysisMode === "compare" && services.length > 0 && (
           <div className="analyses-comparison-workspace">
             <div className="analyses-comparison-controls">
@@ -1012,8 +1085,9 @@ export function Analyses() {
                 <h3>Selecione pelo menos 2 serviços</h3>
 
                 <p>
-                  A comparação ficará disponível quando houver entre 2 e 4
-                  serviços selecionados.
+                  A comparação ficará disponível quando houver entre{" "}
+                  {MIN_COMPARISON_SERVICES} e {MAX_COMPARISON_SERVICES} serviços
+                  selecionados.
                 </p>
               </div>
             )}
@@ -1147,6 +1221,11 @@ export function Analyses() {
             )}
           </div>
         )}
+
+        {/* =====================================================
+          MODO: EXPLORAÇÃO
+        ===================================================== */}
+
         {analysisMode === "explore" && (
           <div className={`analyses-layout analyses-layout-${analysisLayout}`}>
             {services.length > 0 && (
@@ -1568,6 +1647,10 @@ export function Analyses() {
             )}
           </div>
         )}
+       {/* =====================================================
+          BANDEJA DE SERVIÇOS SELECIONADOS
+      ===================================================== */}
+
 
         {analysisMode === "explore" && comparisonServiceIds.length > 0 && (
           <aside
@@ -1616,6 +1699,11 @@ export function Analyses() {
           </aside>
         )}
       </main>
+
+
+    {/* =====================================================
+        ELEMENTO VISUAL DE FUNDO
+    ===================================================== */}
 
       <div className="analyses-waves" aria-hidden="true" />
     </div>

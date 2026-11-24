@@ -25,6 +25,7 @@ import {
   getComparisonServiceOpacity,
 } from "../lib/comparisonVisual";
 
+
 import "./ComparisonPeriodChart.css";
 
 type ComparisonPeriodChartData = {

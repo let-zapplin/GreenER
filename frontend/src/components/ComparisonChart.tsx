@@ -16,6 +16,10 @@ import {
   formatComparisonValue,
   getComparisonMetricDefinition,
 } from "../lib/comparisonMetrics";
+import {
+  getComparisonServiceColor,
+  getComparisonServiceOpacity,
+} from "../lib/comparisonVisual";
 
 import "./ComparisonChart.css";
 
@@ -31,13 +35,6 @@ type ComparisonChartProps = {
 
   onFocusServiceChange: (serviceId: number) => void;
 };
-
-const SERIES_COLORS = [
-  "#8BFF5D", // verde-limão
-  "#36D9FF", // azul-ciano
-  "#FFB347", // laranja
-  "#FF66D8", // magenta
-];
 
 function formatTime(value: number): string {
   return new Date(value).toLocaleTimeString("pt-BR", {
@@ -83,20 +80,6 @@ export function ComparisonChart({
     (serviceSeries) => serviceSeries.serviceId !== focusServiceId,
   );
 
-  function getSeriesOpacity(serviceId: number): number {
-    if (serviceId === focusServiceId) {
-      return 1;
-    }
-
-    const secondaryIndex = secondarySeries.findIndex(
-      (serviceSeries) => serviceSeries.serviceId === serviceId,
-    );
-
-    const opacityLevels = [0.7, 0.5, 0.3];
-
-    return opacityLevels[secondaryIndex] ?? 0.3;
-  }
-
   function getSeriesStrokeWidth(serviceId: number): number {
     if (serviceId === focusServiceId) {
       return 3.4;
@@ -122,6 +105,8 @@ export function ComparisonChart({
 
     return 0;
   });
+
+  const serviceIds = series.map((serviceSeries) => serviceSeries.serviceId);
 
   return (
     <section
@@ -160,7 +145,11 @@ export function ComparisonChart({
         role="img"
         aria-label={`Comparação de ${metricDefinition.label} entre os serviços selecionados`}
       >
-        <ResponsiveContainer width="100%" height="100%" onResize={(width: number) => setIsCompact(width < 420)}>
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          onResize={(width: number) => setIsCompact(width < 420)}
+        >
           <LineChart
             margin={{
               top: 16,
@@ -198,7 +187,13 @@ export function ComparisonChart({
               width={isCompact ? 56 : 78}
               tickFormatter={(value: number) =>
                 isCompact
-                  ? value.toLocaleString("pt-BR", { maximumSignificantDigits: 3, notation: value !== 0 && Math.abs(value) < 0.001 ? "scientific" : "compact" })
+                  ? value.toLocaleString("pt-BR", {
+                      maximumSignificantDigits: 3,
+                      notation:
+                        value !== 0 && Math.abs(value) < 0.001
+                          ? "scientific"
+                          : "compact",
+                    })
                   : formatComparisonValue(value, metric)
               }
               tickLine={false}
@@ -231,10 +226,6 @@ export function ComparisonChart({
             />
 
             {orderedSeries.map((serviceSeries) => {
-              const originalIndex = series.findIndex(
-                (item) => item.serviceId === serviceSeries.serviceId,
-              );
-
               const isFocused = serviceSeries.serviceId === focusServiceId;
 
               return (
@@ -244,9 +235,16 @@ export function ComparisonChart({
                   dataKey="value"
                   name={serviceSeries.name}
                   type="monotone"
-                  stroke={SERIES_COLORS[originalIndex % SERIES_COLORS.length]}
+                  stroke={getComparisonServiceColor(
+                    serviceSeries.serviceId,
+                    series.map((item) => item.serviceId),
+                  )}
                   strokeWidth={getSeriesStrokeWidth(serviceSeries.serviceId)}
-                  strokeOpacity={getSeriesOpacity(serviceSeries.serviceId)}
+                  strokeOpacity={getComparisonServiceOpacity(
+                    serviceSeries.serviceId,
+                    serviceIds,
+                    focusServiceId,
+                  )}
                   strokeLinecap="round"
                   dot={false}
                   activeDot={{
@@ -283,7 +281,7 @@ export function ComparisonChart({
         </div>
 
         <div className="comparison-chart-legend-options">
-          {series.map((serviceSeries, index) => {
+          {series.map((serviceSeries) => {
             const isFocused = serviceSeries.serviceId === focusServiceId;
 
             return (
@@ -301,7 +299,10 @@ export function ComparisonChart({
                 <span
                   className="comparison-chart-legend-line"
                   style={{
-                    background: SERIES_COLORS[index % SERIES_COLORS.length],
+                    background: getComparisonServiceColor(
+                      serviceSeries.serviceId,
+                      serviceIds,
+                    ),
                   }}
                 />
 
