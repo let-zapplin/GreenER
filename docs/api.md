@@ -47,6 +47,7 @@ flowchart LR
 | `POST` | `/api/projecoes/localizacao` | Projetar emissões do serviço em regiões alternativas | US17 / RF16 |
 | `POST` | `/api/projecoes/redistribuicao` | Sugerir distribuição de serviços entre regiões com menores emissões estimadas | Redistribuição regional |
 | `POST` | `/api/chat` | Consultar o Assistente Karma com dados monitorados e conhecimento do GreenER | Assistente Karma |
+| `GET` | `/api/relatorios/analise-individual/:serviceId?start=<ISO>&end=<ISO>` | Gerar relatório ambiental individual em PDF | TEC40 |
 
 **Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
 
@@ -1191,6 +1192,89 @@ históricos longos para até aproximadamente 500 pontos antes de devolvê-los.
 Consequentemente, em períodos com mais de 500 amostras, `energyKwh` e os cenários
 da projeção são calculados sobre as amostras reduzidas, não sobre todas as coletas
 brutas. Considere esse resultado parcial ao interpretar a projeção.
+
+## Relatórios ambientais
+
+### `GET /api/relatorios/analise-individual/:serviceId`
+
+Gera um relatório ambiental em PDF para um serviço monitorado no período informado.
+
+A geração reutiliza os cálculos e regras de negócio já existentes no módulo de indicadores. O módulo de relatórios não recalcula energia ou emissões de forma independente.
+
+**Autenticação:** obrigatória via JWT.
+
+**Parâmetros de rota:**
+
+- `serviceId`: identificador numérico do serviço.
+
+**Query parameters:**
+
+- `start`: início do período em formato ISO 8601.
+- `end`: fim do período em formato ISO 8601.
+
+**Exemplo:**
+
+```http
+GET /api/relatorios/analise-individual/7?start=2026-11-24T00:00:00.000Z&end=2026-11-25T00:00:00.000Z
+Authorization: Bearer <token>
+```
+
+**Resposta de sucesso:** `200 OK`
+
+```http
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="greener-relatorio-servico-7.pdf"
+Cache-Control: no-store
+```
+
+O corpo da resposta contém o arquivo PDF.
+
+O relatório apresenta, quando disponíveis:
+
+- identificação e localização do serviço;
+- período analisado;
+- energia estimada;
+- emissões estimadas em gCO2e;
+- histórico temporal de energia;
+- resumo de CPU, memória, disco e rede;
+- cobertura de métricas;
+- cobertura de intensidade de carbono;
+- indicação de análise parcial e lacunas de dados.
+
+As lacunas do histórico são preservadas na representação gráfica e não são conectadas artificialmente entre amostras válidas.
+
+**Erros possíveis:**
+
+`400 Bad Request` quando o identificador do serviço ou período informado é inválido.
+
+```json
+{
+  "error": "O identificador do serviço deve ser um número inteiro positivo",
+  "code": "INVALID_REPORT_SERVICE_ID"
+}
+```
+
+ou:
+
+```json
+{
+  "error": "Informe o parâmetro start como uma única data ISO",
+  "code": "INVALID_REPORT_PERIOD"
+}
+```
+
+`401 Unauthorized` quando o token está ausente, inválido ou expirado.
+
+`404 Not Found` quando o serviço solicitado não é encontrado.
+
+```json
+{
+  "error": "Serviço não encontrado para geração do relatório",
+  "code": "REPORT_SERVICE_NOT_FOUND"
+}
+```
+
+> Os valores apresentados no documento são estimativas produzidas pelo modelo ambiental do GreenER e não representam medição elétrica direta.
 
 ## 05. Coleta de métricas — US03 / US04 / US05
 A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`. Falhas de comunicação (timeout ou conexão recusada) são registradas como `unavailable`, sem interromper a coleta dos demais serviços.

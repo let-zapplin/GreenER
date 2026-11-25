@@ -1765,6 +1765,86 @@
 }
 
 /* =========================================================
+   EXPORTAÇÃO DE RELATÓRIO
+   ========================================================= */
+
+.analyses-report-control {
+  min-width: max-content;
+}
+
+.analyses-report-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  min-height: 36px;
+
+  padding: 7px 12px;
+
+  border: 1px solid rgba(139, 255, 93, 0.5);
+  border-radius: 9px;
+
+  background: rgba(139, 255, 93, 0.08);
+
+  color: #dffff0;
+
+  font: inherit;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    opacity 160ms ease;
+}
+
+.analyses-report-button:hover:not(:disabled) {
+  background: #8bff5d;
+
+  border-color: #8bff5d;
+
+  color: #082627;
+
+  transform: translateY(-1px);
+}
+
+.analyses-report-button:focus-visible {
+  outline: 2px solid #8bff5d;
+  outline-offset: 2px;
+}
+
+.analyses-report-button:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.5;
+
+  transform: none;
+}
+
+.analyses-report-error {
+  margin: -10px 0 20px;
+
+  padding: 9px 12px;
+
+  border: 1px solid rgba(255, 180, 90, 0.3);
+  border-radius: 9px;
+
+  background: rgba(255, 180, 90, 0.08);
+
+  color: #ffd5a0;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* =========================================================
 
    MODOS DA PÁGINA DE ANÁLISES
 
@@ -3392,6 +3472,15 @@
   .analyses-projection-region-chip-impact {
     margin-left: auto;
   }
+
+.analyses-report-control {
+  width: 100%;
+  min-width: 0;
+}
+
+.analyses-report-button {
+  width: 100%;
+}
 }
 
 /* =========================================================

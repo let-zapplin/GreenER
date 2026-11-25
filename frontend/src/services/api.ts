@@ -48,3 +48,64 @@ export async function apiRequest<T>(
   }
   return data as T;
 }
+
+export async function apiFileRequest(
+  path: string,
+  options: RequestInit = {},
+  token?: string,
+): Promise<Blob> {
+  const headers = new Headers(options.headers);
+
+  headers.set("Accept", "application/pdf");
+
+  if (token) {
+    headers.set(
+      "Authorization",
+      `Bearer ${token}`,
+    );
+  }
+
+  const response = await fetch(
+    `${API_URL}${path}`,
+    {
+      ...options,
+      headers,
+
+      signal:
+        options.signal ??
+        AbortSignal.timeout(30_000),
+    },
+  );
+
+  if (!response.ok) {
+    let message =
+      "Não foi possível gerar o relatório. Tente novamente.";
+
+    try {
+      const data: unknown =
+        await response.json();
+
+      if (
+        data &&
+        typeof data === "object" &&
+        "error" in data &&
+        typeof data.error ===
+          "string"
+      ) {
+        message = data.error;
+      }
+    } catch {
+      /*
+       * Se a resposta de erro não for JSON,
+       * mantemos a mensagem padrão.
+       */
+    }
+
+    throw new ApiError(
+      message,
+      response.status,
+    );
+  }
+
+  return response.blob();
+}
