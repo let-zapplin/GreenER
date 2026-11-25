@@ -1,7 +1,7 @@
 # Documentação da API — GreenER
-> _**Referência técnica | Versão revisada no fechamento da Sprint 3 — 23/11/2026**_
+> _**Referência técnica | Revisada após o fechamento da Sprint 3 — 25/11/2026**_
 
-> Esta documentação separa endpoints **já implementados** dos endpoints **planejados**. Ranking e comparação não possuem endpoints exclusivos; são calculados pela combinação dos endpoints existentes de indicadores e histórico. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução.
+> Esta documentação descreve os endpoints implementados pelo GreenER. O ranking e as visualizações interativas de comparação continuam sendo calculados a partir dos endpoints de indicadores e histórico. A TEC40 adicionou endpoints específicos para **exportação de relatórios ambientais em PDF**, sem substituir os endpoints utilizados pelas visualizações da interface. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução.
 
 ## 01. Visão geral
 O backend do **GreenER** utiliza **Node.js, Express e TypeScript** para fornecer uma API REST que conecta a interface React, o banco de dados PostgreSQL e serviços externos de monitoramento.
@@ -51,7 +51,7 @@ flowchart LR
 
 **Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
 
-O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me`, as rotas de intensidades e as rotas de projeção. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
+O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me`, as rotas de intensidades, projeções e relatórios. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
 
 ---
 
@@ -1193,88 +1193,190 @@ Consequentemente, em períodos com mais de 500 amostras, `energyKwh` e os cenár
 da projeção são calculados sobre as amostras reduzidas, não sobre todas as coletas
 brutas. Considere esse resultado parcial ao interpretar a projeção.
 
-## Relatórios ambientais
+### Relatórios ambientais — TEC40
 
-### `GET /api/relatorios/analise-individual/:serviceId`
+A TEC40 adiciona exportação das análises do GreenER em arquivos PDF. A funcionalidade foi incorporada após o fechamento da Sprint 3, a partir de uma necessidade identificada durante a apresentação do projeto na Feira de Projetos.
 
-Gera um relatório ambiental em PDF para um serviço monitorado no período informado.
+A geração dos documentos ocorre no backend e reutiliza os serviços de indicadores já existentes. O módulo de relatórios não mantém fórmulas próprias para energia, emissões ou métricas computacionais, evitando duplicação das regras de cálculo.
 
-A geração reutiliza os cálculos e regras de negócio já existentes no módulo de indicadores. O módulo de relatórios não recalcula energia ou emissões de forma independente.
+As rotas exigem autenticação JWT e retornam `application/pdf` em vez de JSON.
 
-**Autenticação:** obrigatória via JWT.
+#### `GET /api/relatorios/analise-individual/:serviceId`
 
-**Parâmetros de rota:**
+Gera um relatório ambiental de um único serviço no período informado.
 
-- `serviceId`: identificador numérico do serviço.
+**Parâmetro de rota:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `serviceId` | `number` | Identificador interno do serviço |
 
 **Query parameters:**
 
-- `start`: início do período em formato ISO 8601.
-- `end`: fim do período em formato ISO 8601.
+| Parâmetro | Obrigatório | Descrição |
+|---|---|---|
+| `start` | Sim | Início do período em formato ISO |
+| `end` | Sim | Fim do período em formato ISO e posterior a `start` |
 
 **Exemplo:**
 
-```http
-GET /api/relatorios/analise-individual/7?start=2026-11-24T00:00:00.000Z&end=2026-11-25T00:00:00.000Z
-Authorization: Bearer <token>
+```bash
+curl -G \
+  "http://localhost:3000/api/relatorios/analise-individual/7" \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "start=2026-11-24T00:00:00.000Z" \
+  --data-urlencode "end=2026-11-25T00:00:00.000Z" \
+  --output greener-relatorio-servico-7.pdf
 ```
 
-**Resposta de sucesso:** `200 OK`
+**Sucesso:** `200 OK`.
+
+Principais headers da resposta:
 
 ```http
 Content-Type: application/pdf
 Content-Disposition: attachment; filename="greener-relatorio-servico-7.pdf"
 Cache-Control: no-store
+X-Content-Type-Options: nosniff
 ```
 
-O corpo da resposta contém o arquivo PDF.
-
-O relatório apresenta, quando disponíveis:
+O relatório individual apresenta:
 
 - identificação e localização do serviço;
 - período analisado;
 - energia estimada;
-- emissões estimadas em gCO2e;
-- histórico temporal de energia;
-- resumo de CPU, memória, disco e rede;
-- cobertura de métricas;
-- cobertura de intensidade de carbono;
+- emissões estimadas em gCO₂e;
+- evolução temporal da energia;
+- CPU, memória, disco e rede;
+- cobertura das métricas;
+- cobertura da intensidade de carbono;
 - indicação de análise parcial e lacunas de dados.
 
-As lacunas do histórico são preservadas na representação gráfica e não são conectadas artificialmente entre amostras válidas.
+As lacunas do histórico interrompem a série visual. O relatório não conecta artificialmente pontos separados por amostras indisponíveis.
 
-**Erros possíveis:**
+**Erros principais:**
 
-`400 Bad Request` quando o identificador do serviço ou período informado é inválido.
+| HTTP | Código | Situação |
+|---|---|---|
+| `400` | `INVALID_REPORT_SERVICE_ID` | Identificador do serviço inválido |
+| `400` | `INVALID_REPORT_PERIOD` | Data ausente ou inválida |
+| `400` | `INVALID_INDICATOR_PERIOD` | Período válido individualmente, mas com `end` não posterior a `start` |
+| `401` | `UNAUTHORIZED` | JWT ausente, inválido ou expirado |
+| `404` | `SERVICE_NOT_FOUND` / `REPORT_SERVICE_NOT_FOUND` | Serviço não encontrado durante a montagem do relatório |
 
-```json
-{
-  "error": "O identificador do serviço deve ser um número inteiro positivo",
-  "code": "INVALID_REPORT_SERVICE_ID"
-}
+---
+
+#### `GET /api/relatorios/comparacao`
+
+Gera um relatório comparativo entre os serviços selecionados na página de Análises.
+
+A comparação aceita de **2 a 8 serviços** e utiliza a mesma janela temporal para todos eles.
+
+**Query parameters:**
+
+| Parâmetro | Obrigatório | Descrição |
+|---|---|---|
+| `serviceIds` | Sim | IDs dos serviços separados por vírgula |
+| `metric` | Sim | Métrica utilizada na comparação |
+| `start` | Sim | Início do período em formato ISO |
+| `end` | Sim | Fim do período em formato ISO e posterior a `start` |
+
+**Métricas aceitas:**
+
+| Valor | Interpretação no período |
+|---|---|
+| `energy` | Energia total em kWh |
+| `emissions` | Emissões totais em gCO₂e |
+| `cpu` | CPU média em % |
+| `memory` | Memória média em GB |
+| `disk` | Disco médio em GB |
+| `network` | Rede total em GB |
+
+**Exemplo:**
+
+```bash
+curl -G \
+  "http://localhost:3000/api/relatorios/comparacao" \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "serviceIds=1,3,5" \
+  --data-urlencode "metric=energy" \
+  --data-urlencode "start=2026-11-24T00:00:00.000Z" \
+  --data-urlencode "end=2026-11-25T00:00:00.000Z" \
+  --output greener-relatorio-comparacao-energy.pdf
 ```
 
-ou:
+**Sucesso:** `200 OK`.
 
-```json
-{
-  "error": "Informe o parâmetro start como uma única data ISO",
-  "code": "INVALID_REPORT_PERIOD"
-}
+```http
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="greener-relatorio-comparacao-energy.pdf"
+Cache-Control: no-store
+X-Content-Type-Options: nosniff
 ```
 
-`401 Unauthorized` quando o token está ausente, inválido ou expirado.
+O documento comparativo é organizado em duas partes:
 
-`404 Not Found` quando o serviço solicitado não é encontrado.
+1. resumo consolidado e ranking dos serviços no período;
+2. evolução temporal da métrica selecionada.
 
-```json
-{
-  "error": "Serviço não encontrado para geração do relatório",
-  "code": "REPORT_SERVICE_NOT_FOUND"
-}
+O resumo identifica o maior valor, o menor valor e a diferença entre os extremos.
+
+O histórico preserva lacunas reais e também identifica intervalos temporais sem coleta. Quando existe uma lacuna, a linha daquele serviço é interrompida em vez de conectar artificialmente os pontos anteriores e posteriores.
+
+##### Tolerância a falhas
+
+A coleta dos dados de cada serviço é tratada de forma independente.
+
+Se um dos serviços selecionados falhar, mas ainda existirem pelo menos dois serviços com dados disponíveis, o GreenER gera um **relatório comparativo parcial** com os resultados restantes e identifica os serviços que não puderam participar.
+
+Exemplo conceitual:
+
+```text
+Billing API          ✅
+Checkout Worker      ❌
+Recommendation AI    ✅
+Inventory Sync       ✅
 ```
 
-> Os valores apresentados no documento são estimativas produzidas pelo modelo ambiental do GreenER e não representam medição elétrica direta.
+O relatório é produzido com os três serviços disponíveis e marcado como parcial.
+
+Se menos de dois serviços puderem ser analisados, a comparação não possui dados suficientes para ser produzida.
+
+**Erros principais:**
+
+| HTTP | Código | Situação |
+|---|---|---|
+| `400` | `INVALID_REPORT_COMPARISON_SERVICES` | IDs ausentes, inválidos, duplicados ou quantidade fora do intervalo de 2 a 8 |
+| `400` | `INVALID_REPORT_COMPARISON_METRIC` | Métrica não suportada |
+| `400` | `INVALID_REPORT_PERIOD` | Período ausente, inválido ou invertido |
+| `401` | `UNAUTHORIZED` | JWT ausente, inválido ou expirado |
+| `422` | `REPORT_COMPARISON_INSUFFICIENT_DATA` | Menos de dois serviços puderam participar da comparação |
+
+#### Interpretação dos relatórios
+
+Os PDFs representam os mesmos dados ambientais e computacionais utilizados pela aplicação. Eles não constituem uma nova fonte de cálculo.
+
+O fluxo utilizado é, de forma simplificada:
+
+```text
+Relatório
+   ↓
+RelatoriosService
+   ↓
+IndicadoresService
+   ↓
+coletas persistidas
+   ↓
+cálculos ambientais existentes
+   ↓
+DTO do relatório
+   ↓
+PDF
+```
+
+Energia e CO₂e continuam sendo **estimativas produzidas pelo modelo ambiental do GreenER**, e não medições elétricas ou físicas diretas.
+
+Os arquivos são gerados sob demanda e não são persistidos pelo backend.
 
 ## 05. Coleta de métricas — US03 / US04 / US05
 A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`. Falhas de comunicação (timeout ou conexão recusada) são registradas como `unavailable`, sem interromper a coleta dos demais serviços.
@@ -1567,7 +1669,9 @@ No fechamento da Sprint 3 estão implementados e integrados ao produto:
 A validação técnica inicial em 09/11/2026 confirmou o fluxo com dados persistidos e atualização automática. Na consolidação da Sprint 3, a implementação final de ranking, comparação e projeção foi integrada e validada por testes e evidências técnicas; os detalhes estão em [`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md) e [`docs/testes/consolidacao_testes_sprint3.md`](testes/consolidacao_testes_sprint3.md).
 
 ## 09. Recursos de análise disponíveis
-O ranking por energia ou CO₂e e a comparação entre serviços são apresentados na página de Análises usando os endpoints existentes `GET /api/indicadores?start=<ISO>&end=<ISO>` e `GET /api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>`. Não há endpoints exclusivos para ranking ou comparação. A interface sinaliza dados parciais; serviços removidos com dados no período permanecem disponíveis nas análises, e o ranking os identifica como “Removido”.
+O ranking por energia ou CO₂e e as visualizações interativas de comparação entre serviços são apresentados na página de Análises usando os endpoints existentes `GET /api/indicadores?start=<ISO>&end=<ISO>` e `GET /api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>`. Essas visualizações não possuem endpoints próprios de ranking ou comparação. A interface sinaliza dados parciais; serviços removidos com dados no período permanecem disponíveis nas análises, e o ranking os identifica como “Removido”.
+
+A TEC40 acrescenta endpoints de **exportação em PDF** para a análise individual e para a comparação entre serviços. Esses endpoints reutilizam os mesmos indicadores e históricos e não alteram a origem dos dados utilizada pelas visualizações da interface. 
 
 A visualização geográfica (`US13`) utiliza os dados de localização expostos por
 `GET /api/servicos`; o mapa não exige um endpoint próprio.

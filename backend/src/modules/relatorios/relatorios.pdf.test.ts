@@ -4,7 +4,9 @@ import {
   it,
 } from "vitest";
 
-import { renderIndividualAnalysisPdf } from "./relatorios.pdf.js";
+
+
+import {  renderComparisonAnalysisPdf, renderIndividualAnalysisPdf } from "./relatorios.pdf.js";
 
 import type { IndividualAnalysisReportData } from "./relatorios.types.js";
 
@@ -243,6 +245,350 @@ describe(
         expect(
           pdf.length,
         ).toBeGreaterThan(1000);
+      },
+    );
+  },
+);
+
+describe(
+  "renderComparisonAnalysisPdf",
+  () => {
+    it(
+      "gera um PDF comparativo válido",
+      async () => {
+        const pdf =
+          await renderComparisonAnalysisPdf({
+            generatedAt:
+              new Date(
+                "2026-11-25T15:00:00.000Z",
+              ),
+
+            period: {
+              start:
+                "2026-11-24T10:00:00.000Z",
+
+              end:
+                "2026-11-24T10:10:00.000Z",
+            },
+
+            metric: {
+              value: "energy",
+
+              label: "Energia",
+
+              unit: "kWh",
+
+              periodAggregationLabel:
+                "Total no período",
+            },
+
+            services: [
+              {
+                serviceId: 1,
+
+                name: "Billing API",
+
+                status: "active",
+
+                regionCode: "BR-SP",
+
+                periodValue: 0.1,
+
+                isPartial: false,
+
+                history: [
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:00:00.000Z",
+
+                    value: 0.01,
+
+                    gapReason: null,
+
+                    temporalGap: false,
+                  },
+
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:01:00.000Z",
+
+                    value: 0.015,
+
+                    gapReason: null,
+
+                    temporalGap: false,
+                  },
+
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:02:00.000Z",
+
+                    value: null,
+
+                    gapReason: null,
+
+                    temporalGap: true,
+                  },
+
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:04:00.000Z",
+
+                    value: 0.02,
+
+                    gapReason: null,
+
+                    temporalGap: false,
+                  },
+                ],
+              },
+
+              {
+                serviceId: 2,
+
+                name:
+                  "Checkout Worker",
+
+                status: "active",
+
+                regionCode: "BR-SP",
+
+                periodValue: 0.3,
+
+                isPartial: false,
+
+                history: [
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:00:00.000Z",
+
+                    value: 0.03,
+
+                    gapReason: null,
+
+                    temporalGap: false,
+                  },
+
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:01:00.000Z",
+
+                    value: 0.035,
+
+                    gapReason: null,
+
+                    temporalGap: false,
+                  },
+
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:04:00.000Z",
+
+                    value: 0.04,
+
+                    gapReason: null,
+
+                    temporalGap: false,
+                  },
+                ],
+              },
+
+              {
+                serviceId: 3,
+
+                name:
+                  "Recommendation AI",
+
+                status: "active",
+
+                regionCode: "BR-SP",
+
+                periodValue: 0.2,
+
+                isPartial: true,
+
+                history: [
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:00:00.000Z",
+
+                    value: 0.02,
+
+                    gapReason: null,
+
+                    temporalGap: false,
+                  },
+
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:01:00.000Z",
+
+                    value: null,
+
+                    gapReason:
+                      "unavailable",
+
+                    temporalGap: false,
+                  },
+
+                  {
+                    attemptedAt:
+                      "2026-11-24T10:04:00.000Z",
+
+                    value: 0.025,
+
+                    gapReason: null,
+
+                    temporalGap: false,
+                  },
+                ],
+              },
+            ],
+
+            failedServices: [],
+
+            summary: {
+              highestServiceId: 2,
+
+              lowestServiceId: 1,
+
+              highestValue: 0.3,
+
+              lowestValue: 0.1,
+
+              difference: 0.2,
+
+              isPartial: true,
+            },
+          });
+
+        expect(
+          Buffer.isBuffer(pdf),
+        ).toBe(true);
+
+        expect(
+          pdf.length,
+        ).toBeGreaterThan(
+          1_000,
+        );
+
+        expect(
+          pdf.subarray(
+            0,
+            5,
+          ).toString(),
+        ).toBe("%PDF-");
+
+        expect(
+          pdf
+            .toString("latin1")
+            .includes("%%EOF"),
+        ).toBe(true);
+      },
+    );
+
+    it(
+      "gera PDF mesmo quando um serviço falhou na comparação",
+      async () => {
+        const pdf =
+          await renderComparisonAnalysisPdf({
+            generatedAt:
+              new Date(),
+
+            period: {
+              start:
+                "2026-11-24T10:00:00.000Z",
+
+              end:
+                "2026-11-24T10:10:00.000Z",
+            },
+
+            metric: {
+              value: "energy",
+
+              label: "Energia",
+
+              unit: "kWh",
+
+              periodAggregationLabel:
+                "Total no período",
+            },
+
+            services: [
+              {
+                serviceId: 1,
+
+                name: "Billing API",
+
+                status: "active",
+
+                regionCode: "BR-SP",
+
+                periodValue: 0.1,
+
+                isPartial: false,
+
+                history: [],
+              },
+
+              {
+                serviceId: 3,
+
+                name:
+                  "Recommendation AI",
+
+                status: "active",
+
+                regionCode: "BR-SP",
+
+                periodValue: 0.2,
+
+                isPartial: false,
+
+                history: [],
+              },
+            ],
+
+            failedServices: [
+              {
+                serviceId: 2,
+
+                name:
+                  "Checkout Worker",
+              },
+            ],
+
+            summary: {
+              highestServiceId: 3,
+
+              lowestServiceId: 1,
+
+              highestValue: 0.2,
+
+              lowestValue: 0.1,
+
+              difference: 0.1,
+
+              isPartial: true,
+            },
+          });
+
+        expect(
+          Buffer.isBuffer(pdf),
+        ).toBe(true);
+
+        expect(
+          pdf.length,
+        ).toBeGreaterThan(
+          1_000,
+        );
+
+        expect(
+          pdf.subarray(
+            0,
+            5,
+          ).toString(),
+        ).toBe("%PDF-");
       },
     );
   },

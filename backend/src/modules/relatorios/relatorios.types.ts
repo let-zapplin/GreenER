@@ -59,3 +59,69 @@ export interface IndividualAnalysisReportData {
     gapReason: string | null;
   }>;
 }
+
+/* ======================================================
+   RELATÓRIO COMPARATIVO
+====================================================== */
+
+export type ComparisonReportMetric =
+  | "energy"
+  | "emissions"
+  | "cpu"
+  | "memory"
+  | "disk"
+  | "network";
+
+export interface ComparisonAnalysisReportData {
+  generatedAt: Date;
+
+  period: {
+    start: string;
+    end: string;
+  };
+
+  metric: {
+    value: ComparisonReportMetric;
+    label: string;
+    unit: string;
+    periodAggregationLabel: string;
+  };
+
+  services: Array<{
+    serviceId: number;
+    name: string;
+    status: string;
+    regionCode: string;
+
+    periodValue: number | null;
+
+    isPartial: boolean;
+
+    history: Array<{
+      attemptedAt: string;
+
+      value: number | null;
+
+      gapReason: string | null;
+
+      temporalGap: boolean;
+    }>;
+  }>;
+
+  failedServices: Array<{
+    serviceId: number;
+    name: string | null;
+  }>;
+
+  summary: {
+    highestServiceId: number | null;
+    lowestServiceId: number | null;
+
+    highestValue: number | null;
+    lowestValue: number | null;
+
+    difference: number | null;
+
+    isPartial: boolean;
+  };
+}

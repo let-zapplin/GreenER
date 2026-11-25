@@ -4,7 +4,7 @@
 
 > Artefato mantido pelo **Product Owner** e refinado a cada Sprint.  
 > **Atualização da consolidação da Sprint 3 — 23/11/2026.**
-> Este registro consolida a implementação e as evidências técnicas da entrega final. Feedback externo recebido posteriormente deve ser registrado separadamente.
+>  Este registro consolida a implementação e as evidências técnicas da entrega final. Evoluções originadas de feedback externo após o fechamento das sprints são registradas separadamente, sem alterar retroativamente o escopo das entregas concluídas.
 >
 > A matriz RF01–RF15, as referências de implementação/testes e as evidências de autenticação e Docker estão no [manual de validação final](testes/manualdevalidacao.md).
 >
@@ -61,7 +61,7 @@
 | TS04 | equipe técnica | encontrar documentação coerente e reproduzível | executar, compreender e manter o projeto | RNF05 | 🔴 Alta | S1-S3 | ✅ Concluído — documentação da entrega final revisada e reconciliada |
 | TEC34 | usuário da plataforma | personalizar páginas de acompanhamento com blocos adaptáveis | organizar o Workspace de acordo com o que desejo monitorar ou analisar | RF09, RNF01 | 🟡 Média | S3 | ✅ Concluído — Workspace com páginas personalizadas, widgets móveis/redimensionáveis e persistência de layout |
 | TEC39 | usuário da plataforma | interagir com um assistente inteligente sobre os dados do GreenER | consultar informações da plataforma em linguagem natural | Incremento adicional | 🟢 Baixa | S3 | 🧪 Protótipo — Karma entregue como demonstração experimental e documentada separadamente |
-
+| TEC40 | usuário da plataforma | exportar análises ambientais em PDF | compartilhar, arquivar e consultar resultados fora da interface do GreenER | Incremento pós-Sprint 3 | 🟡 Média | Pós-S3 | ✅ Concluído — exportação individual e comparativa integrada ao frontend e backend |
 ---
 
 ## 3. Critérios de Aceitação
@@ -330,6 +330,44 @@ A persistência do layout é local ao navegador e à origem da aplicação; não
 
 ---
 
+### Épico 12 - Relatórios ambientais em PDF
+
+#### TEC40 - Exportação de relatórios de análise ambiental
+
+- [x] permitir exportar em PDF a análise individual de um serviço;
+- [x] utilizar o mesmo período selecionado na página de Análises;
+- [x] apresentar no relatório individual energia estimada, emissões, recursos computacionais, histórico e cobertura dos dados;
+- [x] permitir exportar a comparação entre dois e oito serviços;
+- [x] suportar comparação por energia, emissões, CPU, memória, disco e rede;
+- [x] apresentar resumo comparativo, maior valor, menor valor e diferença entre os extremos;
+- [x] apresentar ranking consolidado dos serviços no período;
+- [x] apresentar evolução temporal da métrica escolhida;
+- [x] preservar lacunas e indisponibilidades sem conectar artificialmente pontos ausentes;
+- [x] manter resultados válidos quando um dos serviços da comparação falhar isoladamente;
+- [x] sinalizar o relatório como parcial quando houver falha ou cobertura incompleta;
+- [x] reutilizar os cálculos existentes do `IndicadoresService`, sem duplicar fórmulas ambientais no módulo de relatórios;
+- [x] gerar os arquivos no backend e retorná-los como `application/pdf`;
+- [x] proteger os endpoints de relatório com autenticação JWT;
+- [x] integrar a geração e o download dos relatórios à página de Análises;
+- [x] cobrir a funcionalidade com testes de serviço, geração de PDF e HTTP.
+
+**Classificação:** evolução pós-Sprint 3 originada de feedback externo.
+
+**Origem da necessidade:** após a apresentação do GreenER na Feira de Projetos, potenciais usuários demonstraram interesse em utilizar os resultados das análises fora da aplicação. A TEC40 foi criada para permitir que os dados já calculados e visualizados pelo GreenER possam ser registrados, compartilhados e apresentados em documentos independentes.
+
+**Resultado entregue:** a primeira versão da TEC40 disponibiliza dois formatos de relatório:
+
+1. **Relatório individual**, associado ao serviço e período selecionados;
+2. **Relatório comparativo**, associado aos serviços, período e métrica escolhidos na comparação.
+
+A geração é realizada no backend utilizando os dados fornecidos pelos serviços de indicadores já existentes. O módulo de relatórios é responsável por organizar e apresentar os resultados, e não por recalcular energia, emissões ou métricas computacionais.
+
+No relatório comparativo, falhas isoladas são tratadas de forma independente. Quando pelo menos dois serviços permanecem disponíveis, o documento ainda pode ser gerado e é identificado como parcial.
+
+**Evolução futura:** a exportação específica dos cenários de **projeção ambiental e redistribuição** não faz parte desta primeira versão da TEC40. Esses relatórios poderão ser incorporados posteriormente, reutilizando a mesma arquitetura de geração de documentos.
+
+> **Observação de escopo:** a TEC40 foi implementada após o encerramento formal da Sprint 3. Seu registro no Product Backlog documenta uma evolução efetiva do produto motivada por feedback externo e não altera retroativamente o escopo ou a avaliação da Sprint 3.
+
 ## 4. Technical Stories / Requisitos Não Funcionais
 
 ### TS01 - Responsividade
@@ -411,9 +449,14 @@ Durante a execução da Sprint 3, o Product Backlog evoluiu além do núcleo ori
 2. **US17 — projeção ambiental por localização:** a funcionalidade foi concluída na Sprint 3 e passou a permitir comparação de cenários regionais mantendo constante o consumo energético observado;
 3. **TEC39 — Karma:** foi desenvolvido um protótipo experimental de assistente inteligente para consultas em linguagem natural sobre os dados e recursos do GreenER.
 
-Esses incrementos são registrados porque fazem parte da versão final demonstrada do produto. **TEC34 e TEC39 não devem ser interpretadas automaticamente como critérios adicionais de pontuação da rubrica**; sua documentação assegura rastreabilidade entre planejamento, implementação e entrega.
-
 ---
+### Evolução posterior ao fechamento da Sprint 3
+
+Após a apresentação final do GreenER e o encerramento da Sprint 3, feedbacks recebidos durante a Feira de Projetos originaram uma nova evolução do produto:
+
+- **TEC40 — Relatórios ambientais em PDF:** implementação de exportação da análise individual e da comparação entre serviços, permitindo registrar e compartilhar os resultados produzidos pelo GreenER fora da interface da aplicação.
+
+A funcionalidade foi desenvolvida como evolução pós-entrega e utiliza a arquitetura e os cálculos ambientais já consolidados no MVP. O registro não altera retroativamente o escopo da Sprint 3.
 
 ## 8. Histórico de alterações
 
@@ -426,6 +469,7 @@ Esses incrementos são registrados porque fazem parte da versão final demonstra
 | 21/11/2026 | Registro das evidências e da decisão de interpretação para RF14/RF15; validação final RF01–RF15 e pendências mantidas explicitamente | Gustavo (Product Owner) |
 | 23/11/2026 | Consolidação da Sprint 3: estados finais de US12/US13/US17 e RNF01–RNF05; registro do Workspace adaptativo (TEC34), do protótipo Karma (TEC39) e das limitações/evoluções não bloqueantes | Gustavo (Product Owner) |
 | 23/11/2026 | Revisão de coerência documental: referências de histórico/ranking/comparação, critérios da redistribuição, persistência local e minimização do Workspace e descrição do protótipo Karma | Equipe GreenER |
+| 25/11/2026 | Registro da TEC40 após feedback da Feira de Projetos: exportação de análises individuais e comparativas em PDF, com integração frontend/backend, tolerância a dados parciais e testes automatizados | Vitor |
 
 ---
 

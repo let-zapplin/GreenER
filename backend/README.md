@@ -4,7 +4,7 @@ API do GreenER, responsável por integrar os serviços auxiliares da Unilaunch, 
 
 [← Voltar para o README principal](../README.md)
 
-> **Referência atualizada no fechamento da Sprint 3 — entrega final.**  
+> **Referência revisada após o fechamento da Sprint 3 — 25/11/2026.**
 > O backend concentra as regras de negócio, cálculos ambientais, jobs periódicos, persistência, projeções, segurança e contratos HTTP do GreenER.
 
 ---
@@ -38,6 +38,7 @@ API do GreenER, responsável por integrar os serviços auxiliares da Unilaunch, 
 - **Vitest** para testes automatizados
 - **Supertest** para testes HTTP
 - **Docker** e Docker Compose
+- **PDFKit** para geração de relatórios PDF no backend
 
 ---
 
@@ -76,6 +77,7 @@ backend/
     │   ├── localidades/
     │   ├── projecoes/
     │   └── servicos/
+    │   ├── relatorios/
     └── shared/
         ├── errors/
         ├── middlewares/
@@ -136,6 +138,8 @@ snapshots regionais persistidos
 cálculo de energia + CO₂e
         ↓
 indicadores / dashboard / histórico
+        ↓
+relatórios PDF
         ↓
 Monitoramento + Análises
         ↓
@@ -335,6 +339,10 @@ As respostas do chat podem reutilizar indicadores já calculados e conhecimento 
 
 ---
 
+Após o fechamento da Sprint 3, a **TEC40** adicionou um terceiro fluxo de alto nível:
+
+**Relatórios ambientais:** geração sob demanda de documentos PDF individuais e comparativos, reutilizando os indicadores e históricos já calculados pelo backend. O módulo de relatórios não implementa fórmulas ambientais próprias e não persiste os arquivos gerados.
+
 ## 🗄 PostgreSQL
 
 A conexão fica em:
@@ -408,6 +416,8 @@ POST /api/chat
 GET /api/projecoes/regioes
 POST /api/projecoes/localizacao
 POST /api/projecoes/redistribuicao
+GET /api/relatorios/analise-individual/:serviceId
+GET /api/relatorios/comparacao
 ```
 
 O `authMiddleware` exige o cabeçalho `Authorization: Bearer <token>`, verifica a assinatura e a expiração do JWT e adiciona o usuário autenticado ao contexto da requisição. O middleware não aceita outro esquema de autorização.
