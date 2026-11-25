@@ -445,13 +445,13 @@ Evidências:
 
 ## 👥 Equipe
 
-| Nome | Papel | GitHub |
-| --- | --- | --- |
-| **Vitor Hirch** | Scrum Master | [@vitorhirch](https://github.com/vitorhirch) |
-| **Gustavo Koiti** | Product Owner | [@gustavokoitiyoshimura](https://github.com/gustavokoitiyoshimura) |
-| **Igor Souza** | Desenvolvedor | [@igorcsouzaa](https://github.com/igorcsouzaa) |
-| **Marcello Campbell** | Desenvolvedor | [@mparise28-dev](https://github.com/mparise28-dev) |
-| **Patricia R. Maidana** | Desenvolvedora | [@PatyMaidana](https://github.com/PatyMaidana) |
+| Nome | Papel | GitHub | LinkedIn |
+| --- | --- | --- | --- |
+| **Vitor Hirch** | Scrum Master | [@vitorhirch](https://github.com/vitorhirch) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/vitor-hirch/) |
+| **Gustavo Koiti** | Product Owner | [@gustavokoitiyoshimura](https://github.com/gustavokoitiyoshimura) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/gustavo-yoshimura-9b6353403/) |
+| **Igor Souza** | Desenvolvedor | [@igorcsouzaa](https://github.com/igorcsouzaa) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/igor-correa-de-souza) |
+| **Marcello Campbell** | Desenvolvedor | [@mparise28-dev](https://github.com/mparise28-dev) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/marcello-parise-campbell-fonseca-147965194/) |
+| **Patricia R. Maidana** | Desenvolvedora | [@PatyMaidana](https://github.com/PatyMaidana) | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/patricia-rosa-maidana) |
 
 **Instituição:** FATEC Jacareí — Desenvolvimento de Software Multiplataforma (DSM)  
 **Parceiro:** Unilaunch
