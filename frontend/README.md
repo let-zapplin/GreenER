@@ -4,8 +4,8 @@ Aplicação web do GreenER, responsável por apresentar e organizar os serviços
 
 ← [Voltar para o README principal](../README.md)
 
-> **Referência atualizada no fechamento da Sprint 3 — 23/11/2026.**
-> O frontend consome dados reais fornecidos pelo backend. Cálculos de energia e CO₂e permanecem centralizados na API GreenER.
+> **Referência revisada após o fechamento da Sprint 3 — 25/11/2026.**
+> O frontend consome dados reais fornecidos pelo backend. Cálculos de energia e CO₂e permanecem centralizados na API GreenER. Evoluções pós-Sprint 3 são registradas separadamente, sem alterar retroativamente o escopo da entrega final.
 
 ---
 
@@ -302,6 +302,8 @@ Ela utiliza principalmente:
 ```text
 GET /api/indicadores
 GET /api/indicadores/:serviceId/historico
+GET /api/relatorios/analise-individual/:serviceId
+GET /api/relatorios/comparacao
 GET /api/projecoes/regioes
 POST /api/projecoes/localizacao
 POST /api/projecoes/redistribuicao
@@ -327,6 +329,7 @@ Principais recursos:
 - ranking de impacto por energia ou CO₂e;
 - identificação de serviços removidos com dados históricos como **Removido** no ranking;
 - sinalização de dados parciais.
+- exportação da análise ambiental do serviço selecionado em PDF, respeitando a janela temporal atual.
 
 ### Comparar
 
@@ -334,7 +337,7 @@ Permite selecionar múltiplos serviços e analisá-los sob a mesma janela tempor
 
 Principais recursos:
 
-- seleção de dois a quatro serviços;
+- seleção de dois a oito serviços;
 - comparação usando exatamente o mesmo período;
 - troca entre métricas de energia, CO₂e e recursos computacionais suportados;
 - visualização da evolução temporal;
@@ -342,6 +345,7 @@ Principais recursos:
 - preservação dos históricos válidos quando uma consulta individual falha;
 - identificação dos serviços cujo histórico não pôde ser carregado;
 - sinalização de comparação parcial sem transformar ausência de dados em zero.
+- exportação da comparação em PDF usando os serviços, a métrica e o período atualmente selecionados.
 
 ### Projetar
 
@@ -386,6 +390,20 @@ O frontend permite:
 Os cálculos das projeções são realizados pelo backend. O frontend apenas envia as escolhas do usuário e apresenta os resultados estruturados da API.
 
 As projeções constituem **apoio à decisão** e não representam uma ação automática sobre a infraestrutura monitorada.
+
+### Exportação de relatórios — TEC40
+
+A partir da TEC40, a página de Análises permite registrar os resultados em documentos PDF.
+
+No modo **Explorar**, o relatório representa o serviço atualmente selecionado e apresenta o resumo ambiental, recursos computacionais, evolução temporal e cobertura dos dados.
+
+No modo **Comparar**, o relatório utiliza de dois a oito serviços selecionados, a métrica atual e o mesmo período da interface. O documento apresenta resumo comparativo, ranking e evolução temporal.
+
+A geração ocorre no backend. O frontend apenas encaminha o contexto selecionado pelo usuário e realiza o download do arquivo retornado.
+
+Falhas parciais na comparação podem resultar em um relatório ainda utilizável quando pelo menos dois serviços permanecem disponíveis. O documento sinaliza essa condição em vez de assumir valores ausentes como zero.
+
+A exportação específica das visualizações de **Projetar** não faz parte da primeira versão da TEC40.
 
 ---
 

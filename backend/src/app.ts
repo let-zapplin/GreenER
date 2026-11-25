@@ -7,8 +7,9 @@ import intensidadesRoutes from "./modules/intensidades/intensidades.routes.js";
 import indicadoresRoutes from "./modules/indicadores/indicadores.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import chatRoutes from "./modules/chat/chat.routes.js";
-import { errorMiddleware } from "./shared/middlewares/error.middleware.js";
 import projecoesRoutes from "./modules/projecoes/projecoes.routes.js";
+import relatoriosRoutes from "./modules/relatorios/relatorios.routes.js";
+import { errorMiddleware } from "./shared/middlewares/error.middleware.js";
 
 const app = express();
 
@@ -35,6 +36,8 @@ app.use("/api/indicadores", indicadoresRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/projecoes", projecoesRoutes);
+//usamos o get pois estamos acessando algo existente, futuramente caso sejam inseridas funções de editar relatório, salvar e etc... considero muda para o método POST
+app.use("/api/relatorios", relatoriosRoutes);
 
 app.use(errorMiddleware);
 

@@ -1,6 +1,7 @@
 //react /router
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { FilePdf } from "@phosphor-icons/react";
 
 //Componentes
 import { HistoryChart } from "../components/HistoryChart";
@@ -25,6 +26,7 @@ import { useServiceIndicators } from "../hooks/useServiceIndicators";
 import { useComparisonHistories } from "../hooks/useComparisonHistories";
 import { useProjectionRegions } from "../hooks/useProjectionRegions";
 import { useLocationProjection } from "../hooks/useLocationProjection";
+import { useAnalysisReport } from "../hooks/useAnalysisReport";
 
 //types
 import type {
@@ -332,6 +334,37 @@ export function Analyses() {
   const selectedService =
     services.find((service) => service.serviceId === selectedServiceId) ?? null;
 
+  const {
+    downloadIndividualReport,
+    downloadComparisonReport,
+    isGeneratingReport,
+    reportError,
+  } = useAnalysisReport();
+
+  function handleDownloadReport() {
+    if (analysisMode === "explore") {
+      if (!selectedService) {
+        return;
+      }
+
+      void downloadIndividualReport(
+        selectedService.serviceId,
+        selectedService.name,
+        analysisPeriod,
+      );
+
+      return;
+    }
+
+    if (analysisMode === "compare" && canCompare) {
+      void downloadComparisonReport(
+        comparisonServiceIds,
+        comparisonMetric,
+        analysisPeriod,
+      );
+    }
+  }
+
   const selectedServiceIndex = services.findIndex(
     (service) => service.serviceId === selectedServiceId,
   );
@@ -370,7 +403,6 @@ export function Analyses() {
 
   const [previousHistory, setPreviousHistory] = useState<typeof history>(null);
 
-  
   const visibleHistory = history ?? (historyLoading ? previousHistory : null);
 
   // 7 - SINCRONIZAÇÕES E EFEITOS
@@ -429,8 +461,8 @@ export function Analyses() {
     });
   }, [services, requestedServiceId]);
 
-// Ativa a transição visual quando o serviço ou
-// o período do histórico é alterado. 
+  // Ativa a transição visual quando o serviço ou
+  // o período do histórico é alterado.
 
   useEffect(() => {
     if (selectedServiceId === null) {
@@ -448,8 +480,8 @@ export function Analyses() {
     };
   }, [selectedServiceId, historyPeriodMs]);
 
-// No layout lateral, mantém o card do serviço selecionado
-// centralizado dentro da área de rolagem.
+  // No layout lateral, mantém o card do serviço selecionado
+  // centralizado dentro da área de rolagem.
 
   useEffect(() => {
     if (
@@ -498,8 +530,8 @@ export function Analyses() {
     };
   }, [selectedServiceId, analysisLayout, isOverviewCollapsed]);
 
-// Mantém um serviço válido selecionado nas projeções.
-// Se o serviço atual não existir mais, reutiliza o serviço
+  // Mantém um serviço válido selecionado nas projeções.
+  // Se o serviço atual não existir mais, reutiliza o serviço
 
   useEffect(() => {
     if (services.length === 0) {
@@ -521,15 +553,15 @@ export function Analyses() {
   }, [services, selectedServiceId]);
 
   // Preserva o último histórico válido.
-// Isso evita que o gráfico desapareça durante uma atualização.
+  // Isso evita que o gráfico desapareça durante uma atualização.
 
-useEffect(() => {
+  useEffect(() => {
     if (history) {
       setPreviousHistory(history);
     }
   }, [history]);
 
-// Persistência das preferências da interface
+  // Persistência das preferências da interface
 
   useEffect(() => {
     localStorage.setItem(ANALYSES_MODE_STORAGE_KEY, analysisMode);
@@ -550,7 +582,6 @@ useEffect(() => {
     );
   }, [isOverviewCollapsed]);
 
-
   const [rankingMetric, setRankingMetric] = useState<RankingMetric>("energy");
 
   // 8 - DADOS DERIVADOS PARA RENDERIZAÇÃO
@@ -569,14 +600,14 @@ useEffect(() => {
 
   return (
     <div className="analyses-screen">
-        <main
+      <main
         className={
           analysisMode === "compare"
             ? "analyses-page analyses-page-compare"
             : "analyses-page"
         }
       >
-            {/* =========== CABEÇALHO DA PÁGINA ========================= */}
+        {/* =========== CABEÇALHO DA PÁGINA ========================= */}
 
         <header className="analyses-header">
           <p className="analyses-eyebrow">ANÁLISE TEMPORAL</p>
@@ -591,7 +622,7 @@ useEffect(() => {
           </p>
         </header>
 
-      {/* =============== SELETOR DO MODO DE ANÁLISE ==================== */}
+        {/* =============== SELETOR DO MODO DE ANÁLISE ==================== */}
         <div
           className="analyses-mode-switch"
           role="group"
@@ -687,9 +718,9 @@ useEffect(() => {
             </span>
           </button>
         </div>
-      {/* ================= CONTROLES GLOBAIS
-          Período analisado e layout da exploração 
-      ===================================================== */} 
+        {/* ================= CONTROLES GLOBAIS
+    Período analisado, layout e exportação
+===================================================== */}
         <section
           className="analyses-controls analyses-global-controls"
           aria-labelledby="analysis-period-title"
@@ -709,6 +740,7 @@ useEffect(() => {
           </div>
 
           <div className="analyses-global-actions">
+            {/* ================= PERÍODO ================= */}
             <div className="analyses-control-group">
               <span>Período</span>
 
@@ -737,6 +769,8 @@ useEffect(() => {
                 })}
               </div>
             </div>
+
+            {/* ================= LAYOUT ================= */}
             {analysisMode === "explore" && (
               <div className="analyses-control-group">
                 <span>Layout</span>
@@ -783,10 +817,48 @@ useEffect(() => {
                 </div>
               </div>
             )}
+
+            {/* ================= RELATÓRIO ================= */}
+            {(analysisMode === "explore" || analysisMode === "compare") && (
+              <div className="analyses-control-group analyses-report-control">
+                <span>Relatório</span>
+
+                <button
+                  type="button"
+                  className="analyses-report-button"
+                  onClick={handleDownloadReport}
+                  disabled={
+                    isGeneratingReport ||
+                    (analysisMode === "explore"
+                      ? selectedService === null
+                      : !canCompare)
+                  }
+                  aria-busy={isGeneratingReport}
+                >
+                  <FilePdf size={16} weight="bold" aria-hidden="true" />
+
+                  <span>
+                    {isGeneratingReport
+                      ? "Gerando..."
+                      : analysisMode === "compare"
+                        ? "Exportar comparação"
+                        : "Exportar relatório"}
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
-      {/* =====================================================
+        {/* ================= ERRO DO RELATÓRIO ================= */}
+        {(analysisMode === "explore" || analysisMode === "compare") &&
+          reportError && (
+            <div className="analyses-report-error" role="alert">
+              {reportError}
+            </div>
+          )}
+
+        {/* =====================================================
           ESTADOS GERAIS DOS SERVIÇOS
           Loading | erro | nenhum serviço disponível
       ===================================================== */}
@@ -1025,7 +1097,7 @@ useEffect(() => {
           </section>
         )}
 
-          {/* =====================================================
+        {/* =====================================================
           MODO: COMPARAÇÃO DE SERVIÇOS
           ===================================================== */}
 
@@ -1647,10 +1719,9 @@ useEffect(() => {
             )}
           </div>
         )}
-       {/* =====================================================
+        {/* =====================================================
           BANDEJA DE SERVIÇOS SELECIONADOS
       ===================================================== */}
-
 
         {analysisMode === "explore" && comparisonServiceIds.length > 0 && (
           <aside
@@ -1700,8 +1771,7 @@ useEffect(() => {
         )}
       </main>
 
-
-    {/* =====================================================
+      {/* =====================================================
         ELEMENTO VISUAL DE FUNDO
     ===================================================== */}
 

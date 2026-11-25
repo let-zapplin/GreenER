@@ -63,6 +63,8 @@ emissão estimada de CO₂e
 
 ---
 
+> **Evolução pós-Sprint 3:** a TEC40, originada a partir de feedback recebido na Feira de Projetos, adicionou exportação de análises ambientais individuais e comparativas em PDF. A evolução não altera retroativamente o escopo das três sprints.
+
 ## ✨ O que o GreenER já faz
 
 <table>
@@ -92,7 +94,9 @@ emissão estimada de CO₂e
 - identificação de lacunas;
 - navegação a partir do Monitoramento;
 - ranking por energia ou CO₂e no período selecionado;
-- comparação de dois a quatro serviços no mesmo período, por evolução temporal ou valores consolidados;
+- comparação de dois a oito serviços no mesmo período, por evolução temporal ou valores consolidados;
+- exportação da análise individual em PDF;
+- exportação da comparação entre serviços em PDF, preservando período e métrica selecionados;
 - sinalização de dados parciais e identificação de serviços removidos com histórico no período como “Removido” no ranking.
 
 </td>
@@ -148,7 +152,7 @@ Backend Node.js / Express / TypeScript
         │
         ▼
 Frontend React / TypeScript / Vite
-  Workspace • Monitoramento • Análises • Ranking • Comparação • Mapa
+  Workspace • Monitoramento • Análises • Ranking • Comparação • Relatórios PDF • Mapa
 ```
 
 O fluxo completo começa na descoberta de serviços e termina na apresentação das informações no frontend:
@@ -193,7 +197,7 @@ O ambiente monitorado é dinâmico: serviços podem surgir, desaparecer, tornar-
 | Camada | Tecnologias |
 | --- | --- |
 | **Frontend** | React 19 · TypeScript · Vite · React Router · Recharts · MapLibre GL · OpenFreeMap · MapTiler SDK · Phosphor Icons |
-| **Backend** | Node.js · Express · TypeScript · JWT · `pg` |
+| **Backend** | Node.js · Express · TypeScript · JWT · `pg` · PDFKit |
 | **Assistente IA** | Karma · Ollama local · `qwen2.5:3b` |
 | **Dados** | PostgreSQL 17 · SQL explícito e parametrizado |
 | **Infraestrutura** | Docker · Docker Compose · Git · GitHub |
