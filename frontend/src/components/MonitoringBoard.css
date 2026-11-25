@@ -1418,8 +1418,10 @@
   height: clamp(440px, 62vh, 680px);
 }
 
-/* Monitoring.css fixa a vista do mapa em 380px; aqui ela preenche o palco. */
-.monitoring-board-widget.is-flow.is-map
+/* Monitoring.css fixa a vista do mapa em 380px; aqui ela preenche o palco
+   (páginas fixas e grade personalizável). Sem isso sobra uma faixa do fundo
+   verde do card embaixo do mapa quando o bloco é mais alto que 380px. */
+.monitoring-board-widget
   .monitoring-map-shell:not(.is-fullscreen)
   .services-map-viewport {
   height: 100%;
