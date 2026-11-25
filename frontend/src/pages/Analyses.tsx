@@ -334,19 +334,35 @@ export function Analyses() {
   const selectedService =
     services.find((service) => service.serviceId === selectedServiceId) ?? null;
 
-  const { downloadIndividualReport, isGeneratingReport, reportError } =
-    useAnalysisReport();
+  const {
+    downloadIndividualReport,
+    downloadComparisonReport,
+    isGeneratingReport,
+    reportError,
+  } = useAnalysisReport();
 
-  function handleDownloadIndividualReport() {
-    if (!selectedService) {
+  function handleDownloadReport() {
+    if (analysisMode === "explore") {
+      if (!selectedService) {
+        return;
+      }
+
+      void downloadIndividualReport(
+        selectedService.serviceId,
+        selectedService.name,
+        analysisPeriod,
+      );
+
       return;
     }
 
-    void downloadIndividualReport(
-      selectedService.serviceId,
-      selectedService.name,
-      analysisPeriod,
-    );
+    if (analysisMode === "compare" && canCompare) {
+      void downloadComparisonReport(
+        comparisonServiceIds,
+        comparisonMetric,
+        analysisPeriod,
+      );
+    }
   }
 
   const selectedServiceIndex = services.findIndex(
@@ -702,162 +718,145 @@ export function Analyses() {
             </span>
           </button>
         </div>
-       {/* ================= CONTROLES GLOBAIS
+        {/* ================= CONTROLES GLOBAIS
     Período analisado, layout e exportação
 ===================================================== */}
-<section
-  className="analyses-controls analyses-global-controls"
-  aria-labelledby="analysis-period-title"
->
-  <div>
-    <p className="analyses-section-label">
-      JANELA DE ANÁLISE
-    </p>
-
-    <h2 id="analysis-period-title">
-      Período analisado
-    </h2>
-
-    <p className="analyses-control-description">
-      {analysisMode === "explore"
-        ? "O período selecionado é aplicado a todos os históricos exibidos na página."
-        : analysisMode === "compare"
-          ? "O período selecionado é aplicado a todos os serviços da comparação."
-          : "O período selecionado define a janela de consumo utilizada na projeção ambiental."}
-    </p>
-  </div>
-
-  <div className="analyses-global-actions">
-    {/* ================= PERÍODO ================= */}
-    <div className="analyses-control-group">
-      <span>Período</span>
-
-      <div
-        className="analyses-period-options"
-        aria-label="Período analisado"
-      >
-        {analysisPeriods.map((period) => {
-          const isActive =
-            historyPeriodMs === period.value;
-
-          return (
-            <button
-              key={period.label}
-              type="button"
-              className={
-                isActive
-                  ? "analyses-period-button is-active"
-                  : "analyses-period-button"
-              }
-              aria-pressed={isActive}
-              onClick={() =>
-                selectPeriod(period.value)
-              }
-            >
-              {period.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-
-    {/* ================= LAYOUT ================= */}
-    {analysisMode === "explore" && (
-      <div className="analyses-control-group">
-        <span>Layout</span>
-
-        <div
-          className="analyses-layout-options"
-          aria-label="Layout da análise"
+        <section
+          className="analyses-controls analyses-global-controls"
+          aria-labelledby="analysis-period-title"
         >
-          <button
-            type="button"
-            className={
-              analysisLayout === "focus"
-                ? "analyses-layout-button is-active"
-                : "analyses-layout-button"
-            }
-            onClick={() =>
-              setAnalysisLayout("focus")
-            }
-          >
-            Foco
-          </button>
+          <div>
+            <p className="analyses-section-label">JANELA DE ANÁLISE</p>
 
-          <button
-            type="button"
-            className={
-              analysisLayout === "overview"
-                ? "analyses-layout-button is-active"
-                : "analyses-layout-button"
-            }
-            onClick={() =>
-              setAnalysisLayout("overview")
-            }
-          >
-            Geral
-          </button>
+            <h2 id="analysis-period-title">Período analisado</h2>
 
-          <button
-            type="button"
-            className={
-              analysisLayout === "side"
-                ? "analyses-layout-button is-active"
-                : "analyses-layout-button"
-            }
-            onClick={() =>
-              setAnalysisLayout("side")
-            }
-          >
-            Lateral
-          </button>
-        </div>
-      </div>
-    )}
+            <p className="analyses-control-description">
+              {analysisMode === "explore"
+                ? "O período selecionado é aplicado a todos os históricos exibidos na página."
+                : analysisMode === "compare"
+                  ? "O período selecionado é aplicado a todos os serviços da comparação."
+                  : "O período selecionado define a janela de consumo utilizada na projeção ambiental."}
+            </p>
+          </div>
 
-    {/* ================= RELATÓRIO ================= */}
-    {analysisMode === "explore" && (
-      <div className="analyses-control-group analyses-report-control">
-        <span>Relatório</span>
+          <div className="analyses-global-actions">
+            {/* ================= PERÍODO ================= */}
+            <div className="analyses-control-group">
+              <span>Período</span>
 
-        <button
-          type="button"
-          className="analyses-report-button"
-          onClick={handleDownloadIndividualReport}
-          disabled={
-            selectedService === null ||
-            isGeneratingReport
-          }
-          aria-busy={isGeneratingReport}
-        >
-          <FilePdf
-            size={16}
-            weight="bold"
-            aria-hidden="true"
-          />
+              <div
+                className="analyses-period-options"
+                aria-label="Período analisado"
+              >
+                {analysisPeriods.map((period) => {
+                  const isActive = historyPeriodMs === period.value;
 
-          <span>
-            {isGeneratingReport
-              ? "Gerando..."
-              : "Exportar relatório"}
-          </span>
-        </button>
-      </div>
-    )}
-  </div>
-</section>
+                  return (
+                    <button
+                      key={period.label}
+                      type="button"
+                      className={
+                        isActive
+                          ? "analyses-period-button is-active"
+                          : "analyses-period-button"
+                      }
+                      aria-pressed={isActive}
+                      onClick={() => selectPeriod(period.value)}
+                    >
+                      {period.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-{/* ================= ERRO DO RELATÓRIO ================= */}
-{analysisMode === "explore" &&
-  reportError && (
-    <div
-      className="analyses-report-error"
-      role="alert"
-    >
-      {reportError}
-    </div>
-  )}
-      
+            {/* ================= LAYOUT ================= */}
+            {analysisMode === "explore" && (
+              <div className="analyses-control-group">
+                <span>Layout</span>
+
+                <div
+                  className="analyses-layout-options"
+                  aria-label="Layout da análise"
+                >
+                  <button
+                    type="button"
+                    className={
+                      analysisLayout === "focus"
+                        ? "analyses-layout-button is-active"
+                        : "analyses-layout-button"
+                    }
+                    onClick={() => setAnalysisLayout("focus")}
+                  >
+                    Foco
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      analysisLayout === "overview"
+                        ? "analyses-layout-button is-active"
+                        : "analyses-layout-button"
+                    }
+                    onClick={() => setAnalysisLayout("overview")}
+                  >
+                    Geral
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      analysisLayout === "side"
+                        ? "analyses-layout-button is-active"
+                        : "analyses-layout-button"
+                    }
+                    onClick={() => setAnalysisLayout("side")}
+                  >
+                    Lateral
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ================= RELATÓRIO ================= */}
+            {(analysisMode === "explore" || analysisMode === "compare") && (
+              <div className="analyses-control-group analyses-report-control">
+                <span>Relatório</span>
+
+                <button
+                  type="button"
+                  className="analyses-report-button"
+                  onClick={handleDownloadReport}
+                  disabled={
+                    isGeneratingReport ||
+                    (analysisMode === "explore"
+                      ? selectedService === null
+                      : !canCompare)
+                  }
+                  aria-busy={isGeneratingReport}
+                >
+                  <FilePdf size={16} weight="bold" aria-hidden="true" />
+
+                  <span>
+                    {isGeneratingReport
+                      ? "Gerando..."
+                      : analysisMode === "compare"
+                        ? "Exportar comparação"
+                        : "Exportar relatório"}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ================= ERRO DO RELATÓRIO ================= */}
+        {(analysisMode === "explore" || analysisMode === "compare") &&
+          reportError && (
+            <div className="analyses-report-error" role="alert">
+              {reportError}
+            </div>
+          )}
 
         {/* =====================================================
           ESTADOS GERAIS DOS SERVIÇOS
