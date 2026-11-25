@@ -1,7 +1,7 @@
 # Documentação da API — GreenER
-> _**Referência técnica | Versão validada no fechamento da Sprint 2 — 09/11/2026**
+> _**Referência técnica | Revisada após o fechamento da Sprint 3 — 25/11/2026**_
 
-> Esta documentação separa endpoints **já implementados**_ de endpoints _**planejados**_. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução._
+> Esta documentação descreve os endpoints implementados pelo GreenER. O ranking e as visualizações interativas de comparação continuam sendo calculados a partir dos endpoints de indicadores e histórico. A TEC40 adicionou endpoints específicos para **exportação de relatórios ambientais em PDF**, sem substituir os endpoints utilizados pelas visualizações da interface. Exemplos de dados são ilustrativos e não substituem a validação da versão em execução.
 
 ## 01. Visão geral
 O backend do **GreenER** utiliza **Node.js, Express e TypeScript** para fornecer uma API REST que conecta a interface React, o banco de dados PostgreSQL e serviços externos de monitoramento.
@@ -43,10 +43,15 @@ flowchart LR
 | `GET` | `/api/indicadores?start=<ISO>&end=<ISO>` | Calcular indicadores ambientais no período | US07 / RF08 |
 | `GET` | `/api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>` | Consultar histórico ambiental calculado de um serviço | TEC23 / RF10 |
 | `GET` | `/api/dashboard` | Obter indicadores consolidados para o dashboard | TEC19 |
+| `GET` | `/api/projecoes/regioes` | Listar regiões com snapshots disponíveis para projeção | US17 / RF16 |
+| `POST` | `/api/projecoes/localizacao` | Projetar emissões do serviço em regiões alternativas | US17 / RF16 |
+| `POST` | `/api/projecoes/redistribuicao` | Sugerir distribuição de serviços entre regiões com menores emissões estimadas | Redistribuição regional |
+| `POST` | `/api/chat` | Consultar o Assistente Karma com dados monitorados e conhecimento do GreenER | Assistente Karma |
+| `GET` | `/api/relatorios/analise-individual/:serviceId?start=<ISO>&end=<ISO>` | Gerar relatório ambiental individual em PDF | TEC40 |
 
 **Situação de acesso:** O backend agora conta com um **middleware de autenticação JWT** (implementado na TEC29).
 
-O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me` e todas as rotas de intensidades. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
+O token gerado no login deve ser enviado no header `Authorization: Bearer <token>` para acessar rotas protegidas, incluindo `/auth/me`, as rotas de intensidades, projeções e relatórios. O backend retorna `401 Unauthorized` caso ele esteja ausente, inválido ou expirado.
 
 ---
 
@@ -234,6 +239,40 @@ Sem o cabeçalho `Authorization: Bearer <token>`:
 **Status:** `401 Unauthorized`.
 
 Token inválido ou expirado também retorna `401`, com mensagem correspondente.
+
+### `POST /api/chat` — Assistente Karma
+Envia uma pergunta ao assistente. A rota exige JWT válido e aceita apenas consultas de
+leitura; o modelo local não acessa o banco de dados.
+
+**Corpo esperado:**
+
+```json
+{
+  "message": "Qual serviço gasta mais energia?",
+  "period": "24h",
+  "conversationId": "8f14e45f-ceea-4a67-9f0b-7d2c1a4e5b10",
+  "context": {
+    "page": "/home",
+    "serviceName": null
+  },
+  "history": []
+}
+```
+
+`message` é obrigatória e aceita até 500 caracteres. `period` é opcional e deve ser
+`1h`, `6h`, `24h` ou `7d` (padrão `24h`). `conversationId`, `context` e `history` são
+opcionais; o histórico recebido aceita até 12 mensagens. O backend aplica regras
+determinísticas primeiro e consulta o Ollama apenas quando necessário para classificar
+uma pergunta ambígua ou redigir uma resposta de conhecimento. Em caso de falha do
+Ollama, o assistente continua em modo regras.
+
+**Sucesso:** `200 OK`. A resposta contém `conversationId`, `answer`, `intent`, `period`,
+`chart`, `clarification`, `suggestions`, `partial`, `disclaimer`, `model` e `degraded`.
+
+**Erros principais:** `400` para entrada inválida, `401` para JWT ausente ou inválido,
+`403` ao tentar acessar uma conversa de outro usuário e `429` quando já existe uma
+pergunta em processamento no processo do backend. O contrato completo está em
+[`docs/assistente-ia.md`](assistente-ia.md).
 
 ---
 
@@ -614,9 +653,8 @@ curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2
 
     "activeServiceCount": 1,
 
-    "energyKwh": 0.001,
-
-    "emissionsGco2e": 0.4,
+    "energyKwh": 0.000636875,
+    "emissionsGco2e": 0.25475,
 
     "collectionCount": 1,
 
@@ -654,21 +692,43 @@ curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2
 
         "collectionIntervalSeconds": 45,
 
-        "energyKwh": 0.001,
-
-        "emissionsGco2e": 0.4,
+        "energyKwh": 0.000636875,
+        "emissionsGco2e": 0.25475,
 
         "carbonIntensityGco2ePerKwh": 400,
-
         "gapReason": null
-
       },
-
+      "resourceSummary": {
+        "cpu": {
+          "averagePercent": 50,
+          "peakPercent": 50
+        },
+        "memory": {
+          "averageGb": 2,
+          "peakGb": 2
+        },
+        "disk": {
+          "averageGb": 10,
+          "peakGb": 10
+        },
+        "network": {
+          "totalGb": 5
+        }
+      },
+      "energyBreakdown": {
+        "cpuKwh": 0.000625,
+        "memoryKwh": 0.000009375,
+        "diskKwh": 0.00000125,
+        "networkKwh": 0.00000125
+      },
+      "regionalContext": {
+        "regionCode": "regiao-exemplo",
+        "carbonIntensityGco2ePerKwh": 400,
+        "renewableSharePercent": 60
+      },
       "periodTotals": {
-
-        "energyKwh": 0.001,
-
-        "emissionsGco2e": 0.4,
+        "energyKwh": 0.000636875,
+        "emissionsGco2e": 0.25475,
 
         "collectionCount": 1,
 
@@ -694,11 +754,213 @@ curl "http://localhost:3000/api/indicadores?start=2026-10-01T00:00:00.000Z&end=2
 
 ```
 
-Os números do exemplo são ilustrativos. A energia é estimada com o modelo de potência retornado em `powerModel` e `latestSampleInPeriod.collectionIntervalSeconds`, que contém a duração da amostra em segundos usada no cálculo. `period.collectionIntervalMs` permanece por compatibilidade e informa somente o intervalo configurado entre ciclos do job (`COLLECTION_INTERVAL_MS`); não é usado para calcular a energia.
+Os números do exemplo correspondem a uma amostra ilustrativa de 45 segundos, com CPU em 50%, memória em 2 GB, disco em 10 GB, rede em 5 GB e intensidade de 400 gCO₂e/kWh. A energia é estimada com o modelo de potência retornado em `powerModel` e `latestSampleInPeriod.collectionIntervalSeconds`, que contém a duração da amostra em segundos usada no cálculo. `period.collectionIntervalMs` permanece por compatibilidade e informa somente o intervalo configurado entre ciclos do job (`COLLECTION_INTERVAL_MS`); não é usado para calcular a energia.
+
+`resourceSummary.cpu.averagePercent` é ponderada pela duração das amostras válidas; memória e disco são médias simples das leituras válidas, pois representam o estado observado no instante da coleta. Os campos `peak*` são os maiores valores válidos do período. `resourceSummary.network.totalGb` soma o volume trafegado em cada janela de coleta (`network_gb`); esse valor não é uma taxa e não deve ser dividido pelo intervalo para calcular energia. As métricas sem dados válidos são representadas por `null`.
+
+`energyBreakdown` soma, por recurso, as contribuições estimadas pelo mesmo `powerModel` e pelos intervalos reais das amostras com energia calculável. Quando houver ao menos uma amostra calculável, a soma de seus componentes corresponde a `periodTotals.energyKwh`, salvo pequenas diferenças de ponto flutuante; lacunas continuam indicadas por `isPartial`. Se nenhuma amostra tiver energia calculável, os componentes são `null` em vez de sugerirem consumo zero. Trata-se de uma decomposição do modelo estimado do GreenER, não de uma medição física dos componentes do hardware. `regionalContext` apresenta o código da região e o snapshot regional mais recente elegível associado às coletas do período, mesmo quando a energia de uma coleta não pôde ser calculada. Intensidade e participação renovável são contexto, não agregações ambientais do período. A intensidade usada para calcular `periodTotals.emissionsGco2e` continua sendo associada individualmente a cada coleta.
 
 `latestSampleInPeriod` é a tentativa mais recente do serviço dentro do período, ou `null` se não houver tentativas. `periodTotals` agrega as tentativas registradas. `isPartial`, as coberturas e `gaps` indicam tentativas sem métricas válidas, duração de amostra ou intensidade de carbono utilizável; os motivos podem incluir `no_metrics`, `unavailable`, `error`, `invalid_metrics`, `collection_interval_unavailable` e `carbon_intensity_unavailable`. Amostras históricas sem intervalo retornam `collectionIntervalSeconds: null` e geram uma lacuna, sem usar `COLLECTION_INTERVAL_MS` como fallback. Uma tentativa sem intensidade ainda pode contribuir para energia, mas não para emissões. A cobertura considera as tentativas registradas no banco e não detecta intervalos em que nenhuma tentativa foi registrada.
 
+Por compatibilidade com o contrato existente, `periodTotals.energyKwh` é `0` quando nenhuma amostra tem energia calculável; `periodTotals.emissionsGco2e` é `0` quando nenhuma amostra tem emissão calculável. Nesses casos, zero é a soma vazia dos valores disponíveis e **não confirma consumo ou emissão reais iguais a zero**. Interprete os totais junto com `validMetricCount`, `validCarbonIntensityCount`, `gaps` e `isPartial`: uma contagem válida igual a zero indica ausência de amostras calculáveis para aquele indicador; com contagem válida maior que zero, o total zero pode ser um resultado calculado. Totais parciais também somam apenas as amostras calculáveis e não devem ser comparados como completos sem considerar `isPartial` e a cobertura. Em ranking ou comparação, não classifique ausência de dados como melhor resultado apenas porque o total legado é `0`.
+
 Períodos inválidos, parâmetros ausentes ou parâmetros repetidos retornam `400 Bad Request` com `code: "INVALID_INDICATOR_PERIOD"`. A ausência de JWT válido retorna `401 Unauthorized`; falhas inesperadas, inclusive de acesso ao banco, são encaminhadas ao middleware global.
+
+### Projeção ambiental por localização — US17 / RF16
+
+As rotas de projeção estimam como as emissões do consumo energético observado de um serviço seriam diferentes se esse mesmo consumo fosse associado a outras regiões. São cenários hipotéticos: a projeção mantém a energia constante e altera o snapshot regional de intensidade de carbono. Não executa nem garante uma migração real do serviço e não considera mudanças de hardware, carga, desempenho ou viabilidade operacional.
+
+As duas rotas exigem JWT:
+
+#### `GET /api/projecoes/regioes`
+
+Lista as regiões para as quais há snapshots de intensidade de carbono persistidos. Para cada região, retorna o snapshot mais recente disponível, incluindo `snapshotRegisteredAt`, que indica quando o dado foi registrado. A consulta não aplica limite de idade ao snapshot; consumidores devem verificar essa data antes de interpretar a atualidade dos fatores.
+
+#### `POST /api/projecoes/localizacao`
+
+Calcula os cenários para o consumo de um serviço no período informado. A região atual do serviço é incluída automaticamente; `regionCodes` informa de uma a quatro regiões alternativas. Códigos repetidos são deduplicados. Regiões sem snapshot são listadas em `unavailableRegionCodes` e não recebem cenário.
+
+**Corpo da requisição:**
+
+```json
+{
+  "serviceId": 7,
+  "start": "2026-11-16T00:00:00.000Z",
+  "end": "2026-11-17T00:00:00.000Z",
+  "regionCodes": ["CA-QC"]
+}
+```
+
+**Exemplo:**
+
+```bash
+curl "http://localhost:3000/api/projecoes/localizacao" \
+  -X POST \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d "{\"serviceId\":7,\"start\":\"2026-11-16T00:00:00.000Z\",\"end\":\"2026-11-17T00:00:00.000Z\",\"regionCodes\":[\"CA-QC\"]}"
+```
+
+**Resposta `200 OK` (estrutura resumida):**
+
+```json
+{
+  "message": "Projeção ambiental calculada",
+  "service": {
+    "serviceId": 7,
+    "name": "Billing API",
+    "currentRegionCode": "BR-SP"
+  },
+  "period": {
+    "start": "2026-11-16T00:00:00.000Z",
+    "end": "2026-11-17T00:00:00.000Z"
+  },
+  "energyKwh": 1,
+  "validEnergySampleCount": 2,
+  "totalSampleCount": 2,
+  "isPartial": false,
+  "scenarios": [
+    {
+      "regionCode": "BR-SP",
+      "country": "Brasil",
+      "region": "São Paulo",
+      "city": null,
+      "latitude": -23.55,
+      "longitude": -46.63,
+      "carbonIntensityGco2ePerKwh": 100,
+      "renewableSharePercent": 80,
+      "projectedEmissionsGco2e": 100,
+      "differenceGco2e": 0,
+      "differencePercent": 0,
+      "isCurrent": true,
+      "snapshotRegisteredAt": "2026-11-17T00:00:00.000Z"
+    },
+    {
+      "regionCode": "CA-QC",
+      "country": "Canadá",
+      "region": "Quebec",
+      "city": null,
+      "latitude": 46.81,
+      "longitude": -71.21,
+      "carbonIntensityGco2ePerKwh": 25,
+      "renewableSharePercent": 95,
+      "projectedEmissionsGco2e": 25,
+      "differenceGco2e": -75,
+      "differencePercent": -75,
+      "isCurrent": false,
+      "snapshotRegisteredAt": "2026-11-17T00:00:00.000Z"
+    }
+  ],
+  "unavailableRegionCodes": []
+}
+```
+
+`projectedEmissionsGco2e` é calculado como `energyKwh × carbonIntensityGco2ePerKwh`. `differenceGco2e` e `differencePercent` comparam cada cenário com a região atual; a diferença percentual é `null` quando não há energia calculável ou quando as emissões projetadas atuais são zero. `energyKwh` é `null` se não houver amostras calculáveis, e `isPartial` indica que nem todas as amostras consideradas tinham energia calculável. O endpoint reutiliza o histórico ambiental, cuja série pode ser reduzida para exibição; assim, projeções em períodos com mais de 500 pontos podem ser estimativas baseadas na série reduzida, não na soma de todas as coletas originais.
+
+`snapshotRegisteredAt` documenta a data do fator usado em cada cenário. A projeção utiliza o snapshot mais recente persistido para cada região, sem limite de idade aplicado nesta consulta; portanto, períodos de consumo históricos são comparados com esses snapshots mais recentes, não necessariamente com fatores registrados durante o período analisado.
+
+**Erros possíveis em `POST /api/projecoes/localizacao`:**
+
+| HTTP | Código | Situação |
+|---|---|---|
+| `400` | `INVALID_JSON_BODY` | O JSON está malformado ou o valor de nível superior é primitivo, como `null`. |
+| `400` | `INVALID_PROJECTION_REQUEST` | O corpo é um array em vez de um objeto JSON ou `start`/`end` estão ausentes ou vazios. |
+| `400` | `INVALID_PROJECTION_SERVICE_ID` | `serviceId` não é um inteiro positivo. |
+| `400` | `INVALID_INDICATOR_PERIOD` | Uma data é inválida ou `end` não é posterior a `start`. |
+| `400` | `INVALID_PROJECTION_REGIONS` | `regionCodes` não é uma lista de textos ou não contém região selecionável. |
+| `400` | `PROJECTION_REGION_LIMIT_EXCEEDED` | Foram informadas mais de quatro regiões alternativas. |
+| `401` | — | JWT ausente, inválido ou expirado. |
+
+JSON malformado e valores primitivos de nível superior, como `null`, são rejeitados pelo parser antes de alcançar o controller e retornam `INVALID_JSON_BODY`. Um array JSON é aceito pelo parser, mas rejeitado pelo controller com `INVALID_PROJECTION_REQUEST`. Falhas inesperadas, inclusive de acesso ao banco, são encaminhadas ao middleware global.
+
+#### `POST /api/projecoes/redistribuicao`
+
+Calcula uma distribuição hipotética de serviços ativos entre as regiões com snapshots de intensidade de carbono atualizados. A energia de cada serviço é agregada sobre todas as coletas do intervalo informado, antes de qualquer redução visual do histórico. A otimização minimiza a soma de `energia observada × intensidade de carbono`; não executa migrações nem considera capacidade, custo ou desempenho operacional.
+
+A busca de alocações com restrições é atualmente recursiva, decisão tomada considerando o volume atual esperado de serviços e regiões. O custo pode crescer rapidamente se esse volume aumentar; antes de expandir o uso, reavalie a abordagem e considere um algoritmo de atribuição com melhor escalabilidade.
+
+Snapshots mais antigos que `CARBON_INTENSITY_MAX_AGE_MS` (15 minutos por padrão) são excluídos das regiões elegíveis. Se não houver nenhuma região elegível, a requisição retorna `503`. Somente serviços com status `active` participam. Sem nenhuma amostra de energia válida, o serviço permanece na região atual, com energia e emissões projetadas como `null`. `allocations[].isPartial` indica cobertura incompleta de energia; o `isPartial` geral também fica `true` quando há cobertura incompleta das emissões observadas.
+
+A resposta diferencia a projeção total da projeção comparável. projectedEmissionsGco2e considera toda a energia calculável do serviço, enquanto comparableProjectedEmissionsGco2e considera apenas a energia das amostras que também possuem intensidade de carbono válida. Essa segunda medida permite comparar o cenário observado e o projetado sobre a mesma cobertura de dados, mesmo quando a intensidade de carbono está disponível apenas para parte das coletas.
+
+validEnergySampleCount informa quantas amostras possuem energia calculável e validObservedEmissionSampleCount quantas delas também permitem calcular emissão observada. A comparação percentual é possível quando existe ao menos uma amostra com emissão observada válida; não é necessário que as duas contagens sejam iguais.
+
+**Corpo da requisição:**
+
+```json
+{
+  "start": "2026-11-16T00:00:00.000Z",
+  "end": "2026-11-17T00:00:00.000Z",
+  "occupancyPolicy": "balanced"
+}
+```
+
+`occupancyPolicy` define a regra de ocupação aplicada durante a otimização:
+
+- `preserve_current_counts`: mantém exatamente a quantidade atual de serviços ativos em cada região. Retorna `422` se alguma região atual não for elegível por falta de snapshot atualizado.
+- `balanced`: distribui os serviços ativos entre as regiões elegíveis com contagens que diferem no máximo em um. Se houver menos serviços que regiões, algumas regiões podem ficar vazias. Serviços sem energia calculável permanecem fixos na região atual e contam para a ocupação; a política retorna `422` se não puder ser cumprida.
+- `unconstrained`: não impõe limites de ocupação; cada serviço com energia calculável pode ser atribuído à região de menor emissão projetada. Serviços sem energia calculável permanecem fixos na região atual.
+
+Durante a transição dos consumidores da API, `requireServicePerRegion` ainda pode ser enviado no lugar de `occupancyPolicy`: `true` equivale a `balanced` e `false` a `unconstrained`. A resposta também mantém esse campo booleano como metadado de compatibilidade. Essa compatibilidade é temporária: após confirmar que os consumidores migraram para `occupancyPolicy`, remova `requireServicePerRegion` da requisição e da resposta antes da entrega final. Enviar os dois campos, ou um valor diferente dos três identificadores aceitos, retorna `400`.
+
+**Resposta `200 OK` (estrutura resumida):**
+
+```json
+{
+  "message": "Redistribuição de serviços calculada",
+  "period": {
+    "start": "2026-11-16T00:00:00.000Z",
+    "end": "2026-11-17T00:00:00.000Z"
+  },
+  "occupancyPolicy": "balanced",
+  "requireServicePerRegion": true,
+  "allocations": [
+    {
+      "serviceId": 7,
+      "name": "Billing API",
+      "currentRegionCode": "BR-SP",
+      "assignedRegionCode": "CA-QC",
+      "energyKwh": 1,
+      "validEnergySampleCount": 2,
+      "observedEmissionsGco2e": 100,
+      "validObservedEmissionSampleCount": 2,
+      "totalSampleCount": 2,
+      "isPartial": false,
+      "projectedEmissionsGco2e": 25
+    }
+  ],
+  "regions": [
+    {
+      "regionCode": "CA-QC",
+      "serviceCount": 1,
+      "carbonIntensityGco2ePerKwh": 25,
+      "renewableSharePercent": 95,
+      "snapshotRegisteredAt": "2026-11-17T00:00:00.000Z"
+    }
+  ],
+  "knownProjectedEmissionsGco2e": 25,
+  "isPartial": false,
+  "unavailableRegionCodes": []
+}
+```
+
+`observedEmissionsGco2e` soma as emissões calculadas a partir das coletas do período e das intensidades de carbono registradas nelas; é uma estimativa baseada nos dados coletados, não uma medição direta de CO₂. O campo é `null` quando nenhuma coleta tem intensidade válida. `validObservedEmissionSampleCount` informa quantas coletas contribuíram para esse total, enquanto `totalSampleCount` informa o total de coletas no período. Quando a cobertura é parcial, a emissão observada inclui somente as coletas válidas.
+
+`projectedEmissionsGco2e` usa a energia calculável do serviço e a intensidade da região sugerida. `knownProjectedEmissionsGco2e` soma as emissões projetadas dos serviços com energia calculável; serviços sem energia válida não são tratados como consumo zero. Na interface, o percentual e o subtotal comparativo só incluem serviços cuja `validObservedEmissionSampleCount` seja igual a `validEnergySampleCount`, para comparar emissões calculadas sobre a mesma quantidade de coletas. Se as contagens diferirem, o percentual é indicado como não comparável e o serviço fica fora do subtotal. A comparação ainda pode ser parcial quando as duas contagens coincidem, mas são menores que `totalSampleCount`.
+
+`requireServicePerRegion` é mantido na resposta como metadado de compatibilidade e indica se todas as regiões elegíveis receberam algum serviço. `unavailableRegionCodes` lista regiões cujos snapshots existem, mas estão vencidos ou são inválidos. Os resultados são cenários estimados com dados observados e podem ser parciais.
+
+**Erros possíveis em `POST /api/projecoes/redistribuicao`:**
+
+| HTTP | Código | Situação |
+|---|---|---|
+| `400` | `INVALID_JSON_BODY` | O JSON está malformado ou o valor de nível superior é primitivo, como `null`. |
+| `400` | `INVALID_REDISTRIBUTION_REQUEST` | O corpo não é um objeto JSON ou `start`/`end` estão ausentes ou vazios. |
+| `400` | `INVALID_REDISTRIBUTION_CONSTRAINT` | `occupancyPolicy` é inválida, `requireServicePerRegion` não é booleano ou os dois campos foram enviados juntos. |
+| `400` | `INVALID_INDICATOR_PERIOD` | Uma data é inválida ou `end` não é posterior a `start`. |
+| `422` | `REDISTRIBUTION_INFEASIBLE` | Não é possível cumprir a política de ocupação escolhida com as regiões elegíveis e os serviços sem energia, que permanecem fixos. |
+| `503` | `NO_FRESH_REDISTRIBUTION_REGIONS` | Nenhuma região possui snapshot atual e válido. |
+| `401` | — | JWT ausente, inválido ou expirado. |
 
 #### `GET /api/indicadores/:serviceId/historico` — TEC23 / RF10
 Retorna o histórico ambiental calculado de um serviço em um período informado. A rota utiliza as coletas persistidas no PostgreSQL e reaproveita o mesmo modelo de cálculo de energia e CO₂e usado pelos demais indicadores do GreenER.
@@ -828,6 +1090,293 @@ A interface diferencia ausência de histórico, coletas sem energia calculável 
 | `404 Not Found` | `SERVICE_NOT_FOUND` | serviço informado não existe |
 
 O frontend consome esta rota na página **Análises**, permitindo seleção do serviço, seleção de período, atualização automática e exploração do histórico por zoom. O cálculo ambiental permanece centralizado no backend; o gráfico apenas representa os valores retornados pela API.
+
+### Projeções ambientais por localização
+
+As duas rotas exigem JWT válido. A projeção reutiliza o histórico ambiental do
+serviço e os snapshots regionais persistidos; não consulta as APIs externas durante
+a requisição.
+
+#### `GET /api/projecoes/regioes`
+
+Lista a intensidade de carbono mais recente disponível para cada região.
+
+**Sucesso:** `200 OK`.
+
+```json
+{
+  "message": "2 regiões disponíveis para projeção",
+  "regions": [
+    {
+      "regionCode": "BR-SP",
+      "country": "Brasil",
+      "region": "São Paulo",
+      "city": null,
+      "latitude": -23.55,
+      "longitude": -46.63,
+      "carbonIntensityGco2ePerKwh": 200,
+      "renewableSharePercent": 80,
+      "snapshotRegisteredAt": "2026-11-17T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### `POST /api/projecoes/localizacao`
+
+**Corpo esperado:**
+
+```json
+{
+  "serviceId": 7,
+  "start": "2026-11-16T00:00:00.000Z",
+  "end": "2026-11-17T00:00:00.000Z",
+  "regionCodes": ["CA-QC"]
+}
+```
+
+`serviceId` deve identificar um serviço existente; `start` e `end` devem formar um
+período válido. `regionCodes` deve conter de 1 a 4 códigos não vazios. O backend
+normaliza e remove duplicatas e inclui automaticamente a região atual do serviço
+entre os cenários.
+
+**Sucesso:** `200 OK`. A resposta contém o serviço, o período, a energia usada no
+cálculo, as contagens de amostras, a indicação de dados parciais, os cenários
+disponíveis e os códigos de regiões sem snapshot:
+
+```json
+{
+  "message": "Projeção ambiental calculada",
+  "service": {
+    "serviceId": 7,
+    "name": "Billing API",
+    "currentRegionCode": "BR-SP"
+  },
+  "period": {
+    "start": "2026-11-16T00:00:00.000Z",
+    "end": "2026-11-17T00:00:00.000Z"
+  },
+  "energyKwh": 0.000849,
+  "validEnergySampleCount": 1,
+  "totalSampleCount": 1,
+  "isPartial": false,
+  "scenarios": [
+    {
+      "regionCode": "CA-QC",
+      "country": "Canadá",
+      "region": "Quebec",
+      "city": null,
+      "latitude": 46.81,
+      "longitude": -71.21,
+      "carbonIntensityGco2ePerKwh": 25,
+      "renewableSharePercent": 95,
+      "projectedEmissionsGco2e": 0.021225,
+      "differenceGco2e": -0.148575,
+      "differencePercent": -87.5,
+      "isCurrent": false,
+      "snapshotRegisteredAt": "2026-11-17T00:00:00.000Z"
+    }
+  ],
+  "unavailableRegionCodes": []
+}
+```
+
+**Erros principais:** `400` para serviço, período ou lista de regiões inválidos
+(`INVALID_PROJECTION_SERVICE_ID`, `INVALID_PROJECTION_REQUEST`,
+`INVALID_INDICATOR_PERIOD`, `INVALID_PROJECTION_REGIONS` ou
+`PROJECTION_REGION_LIMIT_EXCEEDED`); `401` para JWT ausente ou inválido; `404`
+(`SERVICE_NOT_FOUND`) quando o serviço não existe.
+
+**Limitação atual:** a projeção reutiliza o histórico de indicadores, que reduz
+históricos longos para até aproximadamente 500 pontos antes de devolvê-los.
+Consequentemente, em períodos com mais de 500 amostras, `energyKwh` e os cenários
+da projeção são calculados sobre as amostras reduzidas, não sobre todas as coletas
+brutas. Considere esse resultado parcial ao interpretar a projeção.
+
+### Relatórios ambientais — TEC40
+
+A TEC40 adiciona exportação das análises do GreenER em arquivos PDF. A funcionalidade foi incorporada após o fechamento da Sprint 3, a partir de uma necessidade identificada durante a apresentação do projeto na Feira de Projetos.
+
+A geração dos documentos ocorre no backend e reutiliza os serviços de indicadores já existentes. O módulo de relatórios não mantém fórmulas próprias para energia, emissões ou métricas computacionais, evitando duplicação das regras de cálculo.
+
+As rotas exigem autenticação JWT e retornam `application/pdf` em vez de JSON.
+
+#### `GET /api/relatorios/analise-individual/:serviceId`
+
+Gera um relatório ambiental de um único serviço no período informado.
+
+**Parâmetro de rota:**
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `serviceId` | `number` | Identificador interno do serviço |
+
+**Query parameters:**
+
+| Parâmetro | Obrigatório | Descrição |
+|---|---|---|
+| `start` | Sim | Início do período em formato ISO |
+| `end` | Sim | Fim do período em formato ISO e posterior a `start` |
+
+**Exemplo:**
+
+```bash
+curl -G \
+  "http://localhost:3000/api/relatorios/analise-individual/7" \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "start=2026-11-24T00:00:00.000Z" \
+  --data-urlencode "end=2026-11-25T00:00:00.000Z" \
+  --output greener-relatorio-servico-7.pdf
+```
+
+**Sucesso:** `200 OK`.
+
+Principais headers da resposta:
+
+```http
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="greener-relatorio-servico-7.pdf"
+Cache-Control: no-store
+X-Content-Type-Options: nosniff
+```
+
+O relatório individual apresenta:
+
+- identificação e localização do serviço;
+- período analisado;
+- energia estimada;
+- emissões estimadas em gCO₂e;
+- evolução temporal da energia;
+- CPU, memória, disco e rede;
+- cobertura das métricas;
+- cobertura da intensidade de carbono;
+- indicação de análise parcial e lacunas de dados.
+
+As lacunas do histórico interrompem a série visual. O relatório não conecta artificialmente pontos separados por amostras indisponíveis.
+
+**Erros principais:**
+
+| HTTP | Código | Situação |
+|---|---|---|
+| `400` | `INVALID_REPORT_SERVICE_ID` | Identificador do serviço inválido |
+| `400` | `INVALID_REPORT_PERIOD` | Data ausente ou inválida |
+| `400` | `INVALID_INDICATOR_PERIOD` | Período válido individualmente, mas com `end` não posterior a `start` |
+| `401` | `UNAUTHORIZED` | JWT ausente, inválido ou expirado |
+| `404` | `SERVICE_NOT_FOUND` / `REPORT_SERVICE_NOT_FOUND` | Serviço não encontrado durante a montagem do relatório |
+
+---
+
+#### `GET /api/relatorios/comparacao`
+
+Gera um relatório comparativo entre os serviços selecionados na página de Análises.
+
+A comparação aceita de **2 a 8 serviços** e utiliza a mesma janela temporal para todos eles.
+
+**Query parameters:**
+
+| Parâmetro | Obrigatório | Descrição |
+|---|---|---|
+| `serviceIds` | Sim | IDs dos serviços separados por vírgula |
+| `metric` | Sim | Métrica utilizada na comparação |
+| `start` | Sim | Início do período em formato ISO |
+| `end` | Sim | Fim do período em formato ISO e posterior a `start` |
+
+**Métricas aceitas:**
+
+| Valor | Interpretação no período |
+|---|---|
+| `energy` | Energia total em kWh |
+| `emissions` | Emissões totais em gCO₂e |
+| `cpu` | CPU média em % |
+| `memory` | Memória média em GB |
+| `disk` | Disco médio em GB |
+| `network` | Rede total em GB |
+
+**Exemplo:**
+
+```bash
+curl -G \
+  "http://localhost:3000/api/relatorios/comparacao" \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "serviceIds=1,3,5" \
+  --data-urlencode "metric=energy" \
+  --data-urlencode "start=2026-11-24T00:00:00.000Z" \
+  --data-urlencode "end=2026-11-25T00:00:00.000Z" \
+  --output greener-relatorio-comparacao-energy.pdf
+```
+
+**Sucesso:** `200 OK`.
+
+```http
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="greener-relatorio-comparacao-energy.pdf"
+Cache-Control: no-store
+X-Content-Type-Options: nosniff
+```
+
+O documento comparativo é organizado em duas partes:
+
+1. resumo consolidado e ranking dos serviços no período;
+2. evolução temporal da métrica selecionada.
+
+O resumo identifica o maior valor, o menor valor e a diferença entre os extremos.
+
+O histórico preserva lacunas reais e também identifica intervalos temporais sem coleta. Quando existe uma lacuna, a linha daquele serviço é interrompida em vez de conectar artificialmente os pontos anteriores e posteriores.
+
+##### Tolerância a falhas
+
+A coleta dos dados de cada serviço é tratada de forma independente.
+
+Se um dos serviços selecionados falhar, mas ainda existirem pelo menos dois serviços com dados disponíveis, o GreenER gera um **relatório comparativo parcial** com os resultados restantes e identifica os serviços que não puderam participar.
+
+Exemplo conceitual:
+
+```text
+Billing API          ✅
+Checkout Worker      ❌
+Recommendation AI    ✅
+Inventory Sync       ✅
+```
+
+O relatório é produzido com os três serviços disponíveis e marcado como parcial.
+
+Se menos de dois serviços puderem ser analisados, a comparação não possui dados suficientes para ser produzida.
+
+**Erros principais:**
+
+| HTTP | Código | Situação |
+|---|---|---|
+| `400` | `INVALID_REPORT_COMPARISON_SERVICES` | IDs ausentes, inválidos, duplicados ou quantidade fora do intervalo de 2 a 8 |
+| `400` | `INVALID_REPORT_COMPARISON_METRIC` | Métrica não suportada |
+| `400` | `INVALID_REPORT_PERIOD` | Período ausente, inválido ou invertido |
+| `401` | `UNAUTHORIZED` | JWT ausente, inválido ou expirado |
+| `422` | `REPORT_COMPARISON_INSUFFICIENT_DATA` | Menos de dois serviços puderam participar da comparação |
+
+#### Interpretação dos relatórios
+
+Os PDFs representam os mesmos dados ambientais e computacionais utilizados pela aplicação. Eles não constituem uma nova fonte de cálculo.
+
+O fluxo utilizado é, de forma simplificada:
+
+```text
+Relatório
+   ↓
+RelatoriosService
+   ↓
+IndicadoresService
+   ↓
+coletas persistidas
+   ↓
+cálculos ambientais existentes
+   ↓
+DTO do relatório
+   ↓
+PDF
+```
+
+Energia e CO₂e continuam sendo **estimativas produzidas pelo modelo ambiental do GreenER**, e não medições elétricas ou físicas diretas.
+
+Os arquivos são gerados sob demanda e não são persistidos pelo backend.
 
 ## 05. Coleta de métricas — US03 / US04 / US05
 A coleta consulta `GET {METRICS_API_URL}/metrics/{id_servico}` para cada serviço com status `active` e registra uma tentativa por serviço na tabela `collection`. Quando há dados válidos, a amostra também é gravada em `metrics`. Falhas de comunicação (timeout ou conexão recusada) são registradas como `unavailable`, sem interromper a coleta dos demais serviços.
@@ -1092,8 +1641,8 @@ Exemplo sem JWT:
 
 ---
 
-## 08. Situação funcional no fechamento da Sprint 2
-No fechamento da Sprint 2 estão implementados e integrados ao produto:
+## 08. Situação funcional no fechamento da Sprint 3
+No fechamento da Sprint 3 estão implementados e integrados ao produto:
 
 - descoberta e sincronização do catálogo de serviços;
 
@@ -1108,19 +1657,24 @@ No fechamento da Sprint 2 estão implementados e integrados ao produto:
 - histórico ambiental por serviço;
 
 - resumo consolidado do dashboard;
-
+- ranking de impacto por energia ou CO₂e;
+- comparação de serviços no mesmo período;
+- projeção ambiental por localização;
 - autenticação JWT;
 
 - autorização administrativa para coleta manual;
 
 - consumo dos endpoints pelo Monitoramento e pela página de Análises.
 
-A validação de 09/11/2026 confirmou o fluxo com dados persistidos e atualização automática. Os detalhes estão em [`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md).
+A validação técnica inicial em 09/11/2026 confirmou o fluxo com dados persistidos e atualização automática. Na consolidação da Sprint 3, a implementação final de ranking, comparação e projeção foi integrada e validada por testes e evidências técnicas; os detalhes estão em [`docs/testes/manualdevalidacao.md`](testes/manualdevalidacao.md) e [`docs/testes/consolidacao_testes_sprint3.md`](testes/consolidacao_testes_sprint3.md).
 
-## 09. Recursos previstos para a Sprint 3
-Ranking de impacto e comparação entre serviços continuam no planejamento da Sprint 3. Os caminhos HTTP desses recursos só devem ser documentados quando seus contratos forem definidos no código.
+## 09. Recursos de análise disponíveis
+O ranking por energia ou CO₂e e as visualizações interativas de comparação entre serviços são apresentados na página de Análises usando os endpoints existentes `GET /api/indicadores?start=<ISO>&end=<ISO>` e `GET /api/indicadores/:serviceId/historico?start=<ISO>&end=<ISO>`. Essas visualizações não possuem endpoints próprios de ranking ou comparação. A interface sinaliza dados parciais; serviços removidos com dados no período permanecem disponíveis nas análises, e o ranking os identifica como “Removido”.
 
-A visualização geográfica (`US13`) foi antecipada para o frontend na Sprint 2 e utiliza os dados de localização já expostos por `GET /api/servicos`; ela não exige um novo endpoint específico de mapa.
+A TEC40 acrescenta endpoints de **exportação em PDF** para a análise individual e para a comparação entre serviços. Esses endpoints reutilizam os mesmos indicadores e históricos e não alteram a origem dos dados utilizada pelas visualizações da interface. 
+
+A visualização geográfica (`US13`) utiliza os dados de localização expostos por
+`GET /api/servicos`; o mapa não exige um endpoint próprio.
 
 ---
 
@@ -1176,14 +1730,21 @@ backend/src/
 │   │   └── intensidades.repository.ts # Histórico e seleção temporal
 
 │   ├── dashboard/
-
 │   │   ├── dashboard.routes.ts      # GET / (protegido por JWT)
-
 │   │   ├── dashboard.controller.ts  # Validação do período e resposta HTTP
-
 │   │   ├── dashboard.service.ts     # Consolidação dos indicadores
-
 │   │   └── dashboard.repository.ts  # Contagem do estado dos serviços
+│   ├── projecoes/
+│   │   ├── projecoes.routes.ts      # GET /regioes e POST /localizacao (JWT)
+│   │   ├── projecoes.controller.ts  # Validação HTTP e resposta da projeção
+│   │   ├── projecoes.service.ts     # Cálculo dos cenários regionais
+│   │   └── projecoes.repository.ts  # Snapshots regionais mais recentes
+│   ├── chat/
+│   │   ├── chat.routes.ts           # POST /api/chat (protegido por JWT)
+│   │   ├── chat.controller.ts       # Validação HTTP e titularidade da conversa
+│   │   ├── chat.service.ts          # Regras, fatos, fallback e resposta
+│   │   ├── chat.prompt.ts           # Prompts de classificação e redação
+│   │   └── ollama.client.ts         # Cliente HTTP do Ollama local
 
 ├── integrations/
 
@@ -1222,4 +1783,4 @@ Sempre que um endpoint for criado ou alterado, atualizar:
 
 - Estado de implementação e vínculo com a user story correspondente.
 
-**Código-fonte de referência:** branch `develop`, revisada em 09/11/2026 durante o fechamento da Sprint 2.
+**Código-fonte de referência:** implementação revisada no fechamento da Sprint 3 — 23/11/2026.

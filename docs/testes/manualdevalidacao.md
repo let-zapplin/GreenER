@@ -4,7 +4,22 @@
 
 ## Objetivo
 
-Validar o fluxo funcional do GreenER e fornecer roteiros reproduzíveis para as integrações e funcionalidades do backend.
+Validar o fluxo funcional do GreenER e fornecer roteiros reproduzíveis para as integrações, funcionalidades do backend e fluxos da interface.
+
+## Como consultar este manual
+
+- [Fechamento atual — Sprint 3](#registro-da-validação-final-do-mvp--sprint-3).
+- [Complementos da entrega final](#complementos-validados-na-entrega-final-da-sprint-3).
+- [Registro histórico — Sprint 2](#registro-da-validação--fechamento-da-sprint-2).
+- [Preparação do ambiente](#1-iniciar-o-ambiente).
+- [Indicadores ambientais](#11-validar-indicadores-ambientais--backend).
+- [Coleta e históricos](#12-validar-coleta-manual-e-histórico-por-serviço).
+- [Dashboard consolidado](#13-validar-dados-consolidados-do-dashboard--tec19).
+- [Redistribuição regional](#14-validar-redistribuição-regional--api-e-frontend).
+- [Roteiros complementares da interface — Sprint 3](#15-reproduzir-os-fluxos-finais-da-interface--sprint-3).
+- [Typechecks e builds](#16-verificações-técnicas-complementares).
+
+**Leitura dos resultados:** o fechamento da Sprint 3 está no início. As seções datadas de 09/11/2026 preservam evidências históricas da Sprint 2, incluindo suas contagens, valores e limitações. Um roteiro descreve como verificar um comportamento; somente os registros de execução comprovam o que foi efetivamente observado.
 
 Fluxo de cálculo documentado:
 
@@ -17,6 +32,88 @@ Carbon API ───→ snapshots regionais ──→ PostgreSQL
 
 O endpoint de indicadores calcula energia e CO₂e no backend a partir dos dados persistidos. A validação manual descrita neste documento deve ser realizada contra o ambiente em execução; testes unitários isolados não comprovam a integração com PostgreSQL, as APIs externas ou o frontend.
 
+## Registro da validação final do MVP — Sprint 3
+
+| Campo | Registro |
+|---|---|
+| Data | 23/11/2026 |
+| Responsável | Equipe GreenER — TEC31 |
+| Branch / referência final | `develop` — fechamento documental após integração das entregas da Sprint 3 |
+| Commit da execução final | Não identificado neste registro. Recuperar a referência nas evidências da execução; não atribuir automaticamente o commit atual a uma validação anterior. |
+| Ambiente | Windows + Docker Compose já em execução; frontend autenticado em `http://localhost:5173` |
+| Fonte dos requisitos | PDF local `edital/Desafio 2DSM - 2026-2.pdf` (RF01–RF15; arquivo fora do repositório e não versionado) |
+| Situação | **Validação final consolidada.** RF01–RF15 revisados; ranking, comparação, mapa, autenticação, Workspace, projeções, Karma e runtime documentados. Limites de evidência permanecem explícitos abaixo. |
+
+Esta validação não parou nem recriou containers, para preservar a coleta em andamento. Ela comprova o runtime Docker atual, mas não uma reconstrução limpa em máquina vazia. A sessão autenticada foi usada sem registrar credenciais ou tokens.
+
+### Evidências automatizadas
+
+- Backend: **300 testes aprovados e 7 ignorados**; 34 arquivos de teste aprovados e 1 ignorado.
+- Frontend: **101 testes aprovados** na varredura atualizada de 23/11/2026, conforme fechamento documentado no `frontend/README.md`.
+- `typecheck` do backend e do frontend: aprovado.
+- Build do backend: aprovado na última execução registrada no [consolidado de testes](./consolidacao_testes_sprint3.md); não representa nova execução nesta revisão documental.
+- Build de produção do frontend: aprovado. O bundle JavaScript principal permanece acima do limite recomendado pelo Vite: cerca de **2,25 MB minificado / 615 kB gzip**.
+
+Os testes automatizados verificam comportamento de módulos e regras; não substituem as verificações de interface registradas a seguir.
+
+O typecheck atual verifica o código da aplicação: o backend exclui `src/**/*.test.ts` e o frontend inclui `src` e `vite.config.ts`, sem a pasta `tests`. Sua aprovação não comprova verificação estática dos arquivos de teste.
+
+### Evidências do runtime e da interface
+
+- Compose: `postgres` e `backend` em estado `healthy`; `frontend` em execução. Frontend e `/health` responderam HTTP `200`.
+- `GET /api/indicadores` sem token respondeu HTTP `401` (`UNAUTHORIZED`). Em seguida, a sessão autenticada abriu Monitoramento e Análises com dados reais.
+- **Ranking, período de 24 horas:** a ordenação por energia foi Recommendation AI, Checkout Worker, Fraud Detector, Billing API, Reporting Batch, Audit Stream, Inventory Sync e Email Dispatcher. Por CO₂e foi Checkout Worker, Fraud Detector, Recommendation AI, Audit Stream, Billing API, Email Dispatcher, Reporting Batch e Inventory Sync. O período e a métrica foram exibidos; os itens estavam sinalizados como **dados parciais**.
+- **Comparação, período de 24 horas:** Audit Stream e Checkout Worker foram selecionados. A série temporal, os totais do período e métricas de recursos carregaram; foram observados 0,621555 kWh e 289,02 gCO₂e para Audit Stream e 0,962584 kWh e 363,86 gCO₂e para Checkout Worker. O modo “Comparação do período” e a métrica CO₂e também foram selecionados, e o gráfico consolidado renderizou.
+- **Mapa:** foram exibidos 8 de 8 serviços localizados. Selecionar Audit Stream moveu o foco para Tokyo, abriu o popup do ponto e mostrou o painel de detalhes com localização e indicadores.
+
+### Rastreabilidade RF01–RF15
+
+Os requisitos foram transcritos do edital local. A evidência manual histórica da Sprint 1/2 é citada quando a comprovação já havia sido registrada; “revisado” não significa que todos os cenários tenham sido repetidos nesta sessão.
+
+| RF | Implementação e teste automatizado | Evidência e resultado |
+|---|---|---|
+| RF01 — Descoberta de serviços | [servicos.service.ts](../../backend/src/modules/servicos/servicos.service.ts), [service-sync.job.ts](../../backend/src/jobs/service-sync.job.ts), [metrics-api.test.ts](../../backend/src/integrations/metrics-api.test.ts), [service-sync.job.test.ts](../../backend/src/jobs/service-sync.job.test.ts) | Revisado. Descoberta e listagem persistida constam no registro da Sprint 1 e no roteiro manual acima. |
+| RF02 — Inclusão, remoção, indisponibilidade e retorno | [servicos.service.ts](../../backend/src/modules/servicos/servicos.service.ts), [service-sync.job.test.ts](../../backend/src/jobs/service-sync.job.test.ts), [servicos.service.test.ts](../../backend/src/modules/servicos/servicos.service.test.ts) | Revisado. Mudanças de catálogo e preservação do histórico têm cobertura automatizada e registro anterior da Sprint 1. |
+| RF03 — Coleta periódica por serviço | [coletas.service.ts](../../backend/src/modules/coletas/coletas.service.ts), [metrics-collection.job.ts](../../backend/src/jobs/metrics-collection.job.ts), [metrics-collection.job.test.ts](../../backend/src/jobs/metrics-collection.job.test.ts) | Revisado. Coletas recorrentes e persistência foram verificadas no fechamento técnico da Sprint 2. |
+| RF04 — Variação entre respostas de métricas | [coletas.service.ts](../../backend/src/modules/coletas/coletas.service.ts), [coletas.service.test.ts](../../backend/src/modules/coletas/coletas.service.test.ts), [coletas.integration.test.ts](../../backend/src/modules/coletas/coletas.integration.test.ts) | Revisado. A implementação registra amostras sucessivas sem substituir o histórico; testes de serviço e integração aprovados. |
+| RF05 — Detecção de indisponibilidade | [coletas.service.ts](../../backend/src/modules/coletas/coletas.service.ts), [coletas.service.test.ts](../../backend/src/modules/coletas/coletas.service.test.ts), [metrics-collection.job.test.ts](../../backend/src/jobs/metrics-collection.job.test.ts) | Revisado. Estados `unavailable` e motivos foram observados em registros persistidos no roteiro da Sprint 2. |
+| RF06 — Ausência de métricas com serviço ativo | [coletas.service.ts](../../backend/src/modules/coletas/coletas.service.ts), [coletas.service.test.ts](../../backend/src/modules/coletas/coletas.service.test.ts), [metrics-collection.job.test.ts](../../backend/src/jobs/metrics-collection.job.test.ts) | Revisado. `no_metrics` é diferenciado de `unavailable`; há evidência persistida e teste automatizado. |
+| RF07 — Energia e CO₂e por serviço | [indicadores.service.ts](../../backend/src/modules/indicadores/indicadores.service.ts), [indicadores.service.test.ts](../../backend/src/modules/indicadores/indicadores.service.test.ts), [Cálculos](../calculos.md) | Revisado. Fórmulas, unidades e premissas estão documentadas; testes e validação de indicadores da Sprint 2 aprovados. |
+| RF08 — Indicadores agregados | [dashboard.service.ts](../../backend/src/modules/dashboard/dashboard.service.ts), [indicadores.service.ts](../../backend/src/modules/indicadores/indicadores.service.ts), [dashboard.service.test.ts](../../backend/src/modules/dashboard/dashboard.service.test.ts), [indicadores.http.test.ts](../../backend/src/modules/indicadores/indicadores.http.test.ts) | Revisado. Totais ambientais e estados de serviço foram comparados com o dashboard no fechamento da Sprint 2. |
+| RF09 — Dashboard operacional | [Monitoring.tsx](../../frontend/src/pages/Monitoring.tsx), [ServiceIndicator.tsx](../../frontend/src/components/ServiceIndicator.tsx), [dashboard.http.test.ts](../../backend/src/modules/dashboard/dashboard.http.test.ts) | Revisado. Monitoramento exibiu serviços, estado, localização, métricas e impacto; o resumo atual mostrou 8 serviços. |
+| RF10 — Histórico de coletas | [coletas.repository.ts](../../backend/src/modules/coletas/coletas.repository.ts), [coletas.repository.test.ts](../../backend/src/modules/coletas/coletas.repository.test.ts), [HistoryChart.tsx](../../frontend/src/components/HistoryChart.tsx) | Revisado. Histórico consultável e sua persistência após reinicialização sem remover o volume estão registrados na validação da Sprint 2. |
+| RF11 — Atualização periódica sem reload | [useMonitoring.ts](../../frontend/src/hooks/useMonitoring.ts), [useDashboardSummary.ts](../../frontend/src/hooks/useDashboardSummary.ts) | Revisado. Atualização sem recarga manual e intervalos configurados foram observados e registrados em 09/11/2026. |
+| RF12 — País, região e cidade quando disponível | [serviceLocation.ts](../../frontend/src/lib/serviceLocation.ts), [serviceLocation.test.ts](../../frontend/tests/serviceLocation.test.ts) | Revisado. Localizações reais foram exibidas no monitoramento e no painel do mapa; testes cobrem cidade nula e partes ausentes. A revisão final de responsividade foi consolidada na Sprint 3, com evidências nos PRs #180, #187 e #189. |
+| RF13 — Mapa e coordenadas opcionais | [ServicesMap.tsx](../../frontend/src/components/ServicesMap.tsx), [serviceGeoJson.test.ts](../../frontend/tests/serviceGeoJson.test.ts), [mapFocus.test.ts](../../frontend/tests/mapFocus.test.ts) | Mapa visual e seleção/foco validados nesta sessão. Testes cobrem ausência/invalidez de coordenadas sem impedir outros pontos. Integração e responsividade foram consolidadas na Sprint 3; a evidência visual controlada de um serviço sem coordenadas permanece substituída por cobertura automatizada. |
+| RF14 — Ranking por energia ou CO₂e e período | [ImpactRanking.tsx](../../frontend/src/components/ImpactRanking.tsx), [indicadores.repository.ts](../../backend/src/modules/indicadores/indicadores.repository.ts), [indicadores.service.test.ts](../../backend/src/modules/indicadores/indicadores.service.test.ts) | Validado nesta sessão para as duas métricas em 24h; as listas apareceram em ordem decrescente e com indicação de dados parciais. Billing API, removido e com dados no período, foi incluído e identificado como “Removido”. Decisão do Product Owner em 21/11/2026: manter serviços removidos no ranking quando possuírem dados no intervalo selecionado. Não há teste automatizado dedicado ao componente visual do ranking. |
+| RF15 — Comparação de dois ou mais serviços no mesmo período | [Analyses.tsx](../../frontend/src/pages/Analyses.tsx), [ComparisonPeriodChart.tsx](../../frontend/src/components/ComparisonPeriodChart.tsx), [comparisonSeries.test.ts](../../frontend/tests/comparisonSeries.test.ts) | Validado nesta sessão com dois serviços no mesmo período de 24h, série temporal, resumo de indicadores, gráfico agregado e seleção de CO₂e. |
+
+**Ressalva de dados parciais — decisão do Product Owner (21/11/2026):** o indicador “Dados parciais” apresentado no frontend é suficiente para esta etapa. A limitação será explicada ao cliente na apresentação final do MVP; não foi solicitada alteração da interface. As amostras observadas demonstram o fluxo, mas não devem ser tratadas como cobertura completa.
+
+### Limites observados no fechamento
+
+1. O mapa foi validado funcionalmente e recebeu refinamentos posteriores de responsividade. Avisos de configuração/estilo observados anteriormente não impediram renderização ou foco e não permaneceram como bloqueadores da entrega.
+2. US12/US13 foram consolidadas na Sprint 3: contratos opcionais/nulos possuem cobertura automatizada, e a responsividade do mapa/controles foi revisada nos PRs #180 e #187.
+3. A comparação normal foi verificada com dois serviços e janela de 24h. A decisão de manter serviços removidos com dados no período para ranking/comparação histórica permanece registrada.
+4. **Falha HTTP parcial na comparação temporal:** a correção foi integrada (`Promise.allSettled` + preservação dos históricos bem-sucedidos + aviso de comparação parcial), mas **não foi localizada captura ou reprodução manual controlada desse cenário específico** nas evidências finais. A PR #189 registra explicitamente essa ausência. Portanto, o comportamento é tratado como implementado e coberto por revisão de código, mas a evidência visual específica permanece como limite documental.
+5. O Compose em execução foi verificado sem que esta sessão de validação recriasse o ambiente do zero. A integração PostgreSQL dedicada permaneceu aprovada.
+6. O aviso de bundle acima do recomendado pelo Vite permanece como oportunidade de otimização relacionada ao RNF03, sem impedir build ou execução.
+7. Os valores observados em ranking/comparação estavam sinalizados como parciais; eles comprovam o fluxo e a apresentação, não a completude das coletas do ambiente.
+
+**Conclusão TEC31 / fechamento de 23/11/2026:** RF01–RF15 possuem rastreabilidade para implementação, teste e/ou evidência manual. Ranking, comparação, mapa, autenticação e runtime foram verificados; Workspace, projeções e Karma foram incorporados ao fechamento da Sprint 3. As limitações acima permanecem documentadas sem impedir a conclusão da Sprint.
+
+## Complementos validados na entrega final da Sprint 3
+
+Além da rastreabilidade RF01–RF15, a versão final incorporou recursos que ampliaram o MVP:
+
+- **Workspace / TEC34:** páginas personalizadas, catálogo de widgets, movimentação, redimensionamento, minimização e persistência possuem testes em `monitoringBoard.test.ts`, `workspacePages.test.ts` e `workspaceWidgets.test.ts`; a página fixa de Monitoramento foi preservada como visão padrão.
+- **Responsividade / TEC28:** [PR #180](https://github.com/let-zapplin/GreenER/pull/180) registra validação manual em telas pequenas, incluindo aproximadamente 320 × 445 px; a [PR #187](https://github.com/let-zapplin/GreenER/pull/187) complementa o popup de serviços agrupados no mapa.
+- **Tolerância a falhas / TEC25:** a [issue #162](https://github.com/let-zapplin/GreenER/issues/162) contém capturas de suítes automatizadas, interrupção/recuperação do backend e ranking com dados parciais.
+- **Cobertura / TEC30:** a [PR #189](https://github.com/let-zapplin/GreenER/pull/189) contém capturas das execuções de testes e amostras visuais de Explorar, Comparação, Projeções e responsividade.
+- **Projeções e redistribuição:** testes de serviço/HTTP no backend e `redistributionEmissions.test.ts` cobrem regras de cálculo, políticas e cobertura parcial; a navegação de Projeções possui evidência visual no PR #189.
+- **Karma:** o módulo de chat possui testes de serviço, HTTP, conversação, conhecimento, cache e cliente Ollama; a assistente é documentada como protótipo experimental em `docs/assistente-ia.md`.
+
+> A existência das capturas acima foi conferida nos registros do GitHub. Elas não são substituídas por este documento: os links e anexos permanecem nas respectivas issues/PRs para auditoria.
 ## Registro da validação — fechamento da Sprint 2
 
 | Campo | Registro |
@@ -24,9 +121,9 @@ O endpoint de indicadores calcula energia e CO₂e no backend a partir dos dados
 | Data | 09/11/2026 |
 | Responsável | Vitor |
 | Branch de validação | `chore/sprint2-finalizacao` |
-| Commit final validado | A preencher após o fechamento da branch |
+| Commit final validado | `b123a524def9203be7c714ddd65e90ba12c61f31` |
 | Ambiente | Windows 11 + WSL2 + Docker Desktop / Docker Compose |
-| Situação | **Validação funcional da Sprint 2 concluída; pendente apenas registrar o commit final da branch** |
+| Situação | **Validação funcional da Sprint 2 concluída; commit final identificado no fechamento da branch** |
 
 ### Evidências automatizadas confirmadas
 
@@ -417,7 +514,7 @@ Não manter alterações artificiais de teste no código após a validação.
 | React lê API interna | monitoramento consome `/api/servicos` | Validado na Sprint 1 |
 | Loading / erro / vazio | estados tratados | Validado na Sprint 1 |
 | Mudança de catálogo | indisponível/retorno representados | Validado durante evolução da Sprint 1 |
-| Persistência após restart | registros permanecem sem `-v` | Revalidar e registrar evidência na Sprint 2 |
+| Persistência após restart | registros permanecem sem `-v` | Revalidação realizada em 09/11/2026; consultar a seção 8 e o registro histórico da Sprint 2 |
 
 ---
 
@@ -679,6 +776,8 @@ As contagens usam a última tentativa registrada, mesmo que seja anterior ao per
 | `active` | `unavailable` | Indisponível |
 | `removed` | qualquer estado | Excluído das contagens |
 
+**Interpretação:** “Ativo” nesta tabela é a categoria de contagem do dashboard, não uma afirmação de que a última coleta foi bem-sucedida. Uma tentativa `error` continua nessa categoria pela regra atual, enquanto a interface pode sinalizar o erro de coleta separadamente.
+
 ### Consultar período explícito e validar erros
 
 ```bash
@@ -722,7 +821,7 @@ Preencha os dados da execução:
 |---|---|
 | Data e horário | 09/11/2026 |
 | Responsável | Vitor |
-| Branch e commit testado | `chore/sprint2-finalizacao` — commit final a preencher após o fechamento da branch |
+| Branch e commit testado | `chore/sprint2-finalizacao` — `b123a524def9203be7c714ddd65e90ba12c61f31` |
 | Ambiente utilizado | Windows 11 + WSL2 + Docker Desktop / Docker Compose |
 | Período consultado nos indicadores | `2026-11-08T13:59:32.000Z` até `2026-11-09T13:59:32.000Z` |
 
@@ -803,6 +902,137 @@ Resultado: ✅ **Aprovado**.
 
 ---
 
+## 14. Validar redistribuição regional — API e frontend
+
+> **Roteiro pendente de execução.** Esta seção descreve verificações para a redistribuição; não registra que elas já foram executadas manualmente.
+
+### Pré-requisitos
+
+- backend e frontend em execução;
+- usuário autenticado;
+- serviços ativos com coletas no período escolhido;
+- snapshots atuais nas regiões disponíveis para redistribuição;
+- um serviço com cobertura completa e, se possível, outro com energia calculável em mais coletas do que emissões observadas.
+
+Use um período com dados do ambiente. A rota aceita `start`, `end` e uma política de ocupação:
+
+No Insomnia, configure:
+
+```text
+POST http://localhost:3000/api/projecoes/redistribuicao
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+Use o corpo JSON abaixo, substituindo os limites por datas ISO-8601 reais do período escolhido. A rota exige JWT válido, sem necessidade de perfil administrador.
+
+```json
+{
+  "start": "<início ISO-8601>",
+  "end": "<fim ISO-8601>",
+  "occupancyPolicy": "balanced"
+}
+```
+
+### Validar políticas de ocupação
+
+1. Acesse **Análises → Projeção regional → Redistribuir serviços** e aguarde o cálculo automático.
+2. Selecione cada política e confirme que a resposta `200` retorna a mesma `occupancyPolicy`:
+   - `preserve_current_counts`: preserva a contagem atual por região;
+   - `balanced`: distribui os serviços com diferença máxima de um entre as regiões elegíveis;
+   - `unconstrained`: não impõe cotas de ocupação.
+3. Confirme que a tela apresenta a sugestão como cenário hipotético e que nenhuma migração de serviço é executada.
+4. Se houver serviços fixos ou regiões elegíveis incompatíveis com uma política restrita, confirme a resposta `422 REDISTRIBUTION_INFEASIBLE`, sem relaxamento silencioso da regra.
+
+### Validar comparação e subtotal
+
+1. Compare `observedEmissionsGco2e` com `comparableProjectedEmissionsGco2e`. O segundo valor aplica a intensidade da região sugerida à energia das amostras que possuem emissão observada calculável, mantendo a mesma base de comparação. Não use a projeção de toda a energia (`projectedEmissionsGco2e`) para esse percentual quando as coberturas forem diferentes.
+2. Um serviço pode continuar comparável com contagens diferentes: a regra exige `validObservedEmissionSampleCount > 0` e `validObservedEmissionSampleCount <= validEnergySampleCount`, além dos valores observado e projetado comparável disponíveis. Nesse caso, confira o percentual mesmo com cobertura parcial. Sem essa cobertura ou com algum desses valores nulo, não deve haver percentual calculável nem inclusão do serviço no subtotal comparável.
+3. Confirme que a linha de cobertura apresenta valores válidos/total, por exemplo `2/3`.
+4. Confirme que `isPartial` sinaliza cobertura incompleta de energia ou de emissões observadas, inclusive quando a energia está completa, mas faltam intensidades de carbono históricas.
+5. Verifique que o subtotal soma as emissões observadas e as projeções comparáveis dos serviços elegíveis. Seu percentual deve ser calculado a partir dessas somas, e não pela média dos percentuais individuais.
+6. Se a emissão observada for zero, confirme que a variação percentual é indicada como não calculável. Esse serviço ainda pode participar das somas do subtotal quando possui cobertura e valores comparáveis; base zero impede a divisão percentual, não a soma. Se a base observada total do subtotal for zero, seu percentual também não é calculável.
+
+```text
+variação (%) = (emissão projetada comparável − emissão observada)
+              / emissão observada × 100
+```
+
+Por exemplo: três amostras com energia válida e duas com emissão observada não tornam o serviço automaticamente “Não comparável”. A comparação deve usar apenas a energia das duas amostras com cobertura de carbono. As regras estão em [redistributionEmissions.ts](../../frontend/src/lib/redistributionEmissions.ts) e possuem testes em [redistributionEmissions.test.ts](../../frontend/tests/redistributionEmissions.test.ts).
+
+Se o ambiente não tiver naturalmente um serviço com cobertura divergente ou emissão observada zero, use dados de teste controlados; não altere registros da coleta em andamento apenas para produzir esses cenários.
+
+Registre a data, o período, a política, os serviços utilizados, as coberturas observadas, o resultado e evidências visuais/API após executar o roteiro.
+
+---
+
+## 15. Reproduzir os fluxos finais da interface — Sprint 3
+
+Estes roteiros complementam as evidências já registradas; sua inclusão não significa nova execução ou aprovação. Use a versão integrada do projeto, registre data e commit e vincule a captura ou resultado de cada cenário. Não altere registros da coleta em andamento para criar dados artificiais.
+
+### Workspace e persistência local
+
+1. Faça login e abra **Monitoramento**. Confira a página fixa e seus blocos.
+2. Crie uma página personalizada e adicione blocos pelo catálogo.
+3. Mova e redimensione um bloco; minimize e expanda outro. Confira se os controles permanecem utilizáveis e o conteúdo não fica inacessível.
+4. Renomeie a página e recarregue o navegador. O nome e o arranjo devem ser preservados no mesmo navegador/origem, por `localStorage`.
+5. Remova um bloco e, em uma página descartável, confira a exclusão da página com a confirmação da interface. A página fixa deve ser preservada.
+6. Repita a conferência em uma largura de celular e em desktop, registrando as dimensões utilizadas.
+
+A persistência do Workspace é local no navegador; não comprova sincronização entre dispositivos nem gravação do layout no PostgreSQL. Os testes `monitoringBoard.test.ts`, `workspacePages.test.ts` e `workspaceWidgets.test.ts` verificam regras sem renderizar a interface.
+
+### Filtros, ranking e comparação
+
+1. Abra **Análises → Explorar** e alterne 1h, 6h, 24h e 7d. Confira o período apresentado e os parâmetros `start` e `end` nas consultas pela aba Rede do navegador.
+2. Na visão geral, selecione **Ranking**, alterne Energia e CO₂e e confira a ordenação pelos valores exibidos e o aviso de dados parciais quando aplicável.
+3. Em **Comparar serviços**, selecione de dois a quatro serviços. Confira que utilizam a mesma janela temporal.
+4. Alterne **Evolução temporal** e **Comparação do período**, troque a métrica e remova um serviço. Confira unidades, valores, lacunas e ausência de erros de interface.
+5. Caso o ambiente forneça um serviço removido com histórico no período, confira a identificação e disponibilidade nas análises históricas. Sem esse cenário disponível, registre a limitação, sem marcar a execução como aprovada.
+
+Datas de requisições iniciadas antes e depois da atualização automática da janela podem diferir. Compare chamadas da mesma seleção e ciclo de atualização.
+
+### Projeção individual por localização
+
+1. Em **Análises**, abra a área de projeções por localização, selecione um serviço e regiões alternativas.
+2. Confira na aba Rede as consultas a `GET /api/projecoes/regioes` e `POST /api/projecoes/localizacao`, ambas com autenticação.
+3. Confira que a energia observada permanece constante entre os cenários e que a emissão varia conforme a intensidade regional.
+4. Confira intensidade, participação renovável quando disponível, indicação de estimativa e tratamento de dados ausentes.
+5. Confirme que os resultados são sugestões: não ocorre mudança real de localização dos serviços. Para redistribuição, utilize o roteiro da seção 14.
+
+### Login, acesso protegido e logout
+
+1. Na interface, faça login com uma conta válida e abra Monitoramento e Análises.
+2. Copie o endereço de uma dessas páginas protegidas e abra-o em janela anônima, sem sessão. O sistema deve solicitar autenticação, sem disponibilizar dados protegidos.
+3. Na janela autenticada, clique em **Sair**. Tente acessar novamente a página protegida, inclusive após voltar no navegador e recarregar: deve exigir novo login.
+4. Registre os resultados sem incluir senha, token ou credenciais nas capturas. A proteção JWT do backend possui testes próprios; esses passos verificam o fluxo da interface.
+
+### Falha HTTP parcial na comparação temporal
+
+A implementação preserva os históricos recebidos e apresenta aviso com os serviços cujas consultas falharam. Para confirmar visualmente, é necessário um cenário controlado com falha em uma consulta de histórico e sucesso em outra. Desligar o backend ou toda a rede faz todas falharem e não comprova esse caso. Se a simulação isolada não puder ser realizada, mantenha o cenário como não reproduzido manualmente, conforme o limite registrado no fechamento.
+
+## 16. Verificações técnicas complementares
+
+Na raiz do projeto, com os serviços de aplicação iniciados:
+
+```powershell
+docker compose exec backend npm test
+docker compose exec frontend npm test
+docker compose exec backend npm run typecheck
+docker compose exec frontend npm run typecheck
+docker compose exec backend npm run build
+docker compose exec frontend npm run build
+```
+
+A integração PostgreSQL utiliza um ambiente exclusivo e não interrompe o banco da aplicação:
+
+```powershell
+docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test
+```
+
+Registre o resultado efetivo, a data e o commit das execuções. O backend gera sua compilação em `backend/dist`; o frontend gera o pacote de produção em `frontend/dist`. O aviso de tamanho do bundle deve ser registrado separadamente de falhas de compilação. Os comandos de typecheck não incluem os arquivos de teste nas configurações atuais.
+
+Consulte o [manual dos testes automatizados](./manual_teste_unitario.md) e o [consolidado da Sprint 3](./consolidacao_testes_sprint3.md) para o inventário e o contexto dos resultados registrados.
+
 ## Solução de problemas
 
 ### Ver logs
@@ -842,10 +1072,9 @@ Foram aprovados:
 - atualização automática do frontend;
 - diferenciação e persistência de `no_metrics` e `unavailable`.
 
-Pendências documentais antes do commit final:
+Evidências adicionais opcionais não executadas nesta validação histórica:
 
-1. preencher o hash do commit final desta branch;
-2. opcionalmente registrar uma captura final comparando visualmente os valores do frontend com as respostas da API;
-3. opcionalmente executar manualmente a rota de histórico bruto `GET /api/metricas/historico/:serviceId`, embora o comportamento já possua cobertura automatizada.
+1. opcionalmente registrar uma captura final comparando visualmente os valores do frontend com as respostas da API;
+2. opcionalmente executar manualmente a rota de histórico bruto `GET /api/metricas/historico/:serviceId`, embora o comportamento já possua cobertura automatizada.
 
 Não alterar a situação de uma evidência para “Aprovado” sem manter o log, captura ou registro correspondente no material da Sprint.

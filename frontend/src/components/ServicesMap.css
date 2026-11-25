@@ -28,7 +28,6 @@
   font-weight: 600;
   line-height: 1.4;
   cursor: pointer;
-  backdrop-filter: blur(6px);
   transition:
     background 160ms ease,
     border-color 160ms ease;
@@ -44,234 +43,43 @@
   outline-offset: 2px;
 }
 
-.services-map-marker,
-.services-map-group-service,
 .services-map-legend-dot {
   --service-map-status: #74e866;
 }
 
-/* Ativo */
-
-.services-map-marker.active,
-.services-map-group-service.active,
 .services-map-legend-dot.active {
   --service-map-status: #74e866;
 }
 
-/* Novo */
-
-.services-map-marker.new,
-.services-map-group-service.new,
 .services-map-legend-dot.new {
   --service-map-status: #ffd84a;
 }
 
-/* Sem métricas */
-
-.services-map-marker.no_metrics,
-.services-map-group-service.no_metrics,
 .services-map-legend-dot.no_metrics {
   --service-map-status: #ffb84d;
 }
 
-/* Retornou */
-
-.services-map-marker.returned,
-.services-map-group-service.returned,
 .services-map-legend-dot.returned {
   --service-map-status: #59dbe8;
 }
 
-/* Indisponível */
-
-.services-map-marker.unavailable,
-.services-map-group-service.unavailable,
 .services-map-legend-dot.unavailable {
   --service-map-status: #ff5e57;
 }
 
-/* Removido */
+.services-map-legend-dot.error {
+  --service-map-status: #e879f9;
+}
 
-.services-map-marker.removed,
-.services-map-group-service.removed,
 .services-map-legend-dot.removed {
   --service-map-status: #b58cff;
 }
 
-.services-map-marker {
-  border-color:
-    color-mix(
-      in srgb,
-      var(--service-map-status) 60%,
-      transparent
-    );
-
-  background:
-    color-mix(
-      in srgb,
-      var(--service-map-status) 18%,
-      #082f31
-    );
-
-  box-shadow:
-    0 0 8px
-      color-mix(
-        in srgb,
-        var(--service-map-status) 55%,
-        transparent
-      ),
-    0 0 18px
-      color-mix(
-        in srgb,
-        var(--service-map-status) 28%,
-        transparent
-      );
-}
-
-.services-map-marker-dot {
-  background:
-    var(--service-map-status);
-
-  box-shadow:
-    0 0 6px
-      var(--service-map-status),
-    0 0 14px
-      var(--service-map-status);
-}
-
-.services-map-marker-count {
-  background:
-    var(--service-map-status);
-
-  color: #062f32;
-
-  box-shadow:
-    0 0 10px
-      color-mix(
-        in srgb,
-        var(--service-map-status) 55%,
-        transparent
-      );
-}
-
 .services-map-legend-dot {
-  background:
-    var(--service-map-status);
+  background: var(--service-map-status);
 
-  box-shadow:
-    0 0 8px
-      color-mix(
-        in srgb,
-        var(--service-map-status) 60%,
-        transparent
-      );
-}
-
-.services-map-group-popup {
-  display: grid;
-  gap: 10px;
-
-  min-width: 250px;
-}
-
-.services-map-group-popup > strong {
-  color: #f4ffff;
-
-  font-size: 13px;
-}
-
-.services-map-group-popup-place {
-  color: #9bb6af;
-
-  font-size: 11px;
-}
-
-.services-map-group-popup-list {
-  display: grid;
-  gap: 6px;
-
-  margin-top: 4px;
-}
-
-.services-map-group-service {
-  --service-map-status: #74e866;
-
-  display: grid;
-  grid-template-columns:
-    auto minmax(0, 1fr) auto;
-
-  align-items: center;
-  gap: 8px;
-
-  width: 100%;
-
-  padding: 9px 10px;
-
-  border: 1px solid
-    color-mix(
-      in srgb,
-      var(--service-map-status) 28%,
-      #315657
-    );
-
-  border-radius: 8px;
-
-  background:
-    color-mix(
-      in srgb,
-      var(--service-map-status) 7%,
-      #0d3032
-    );
-
-  color: #fff;
-
-  cursor: pointer;
-}
-
-.services-map-group-service:hover {
-  border-color:
-    var(--service-map-status);
-
-  background:
-    color-mix(
-      in srgb,
-      var(--service-map-status) 14%,
-      #0d3032
-    );
-}
-
-.services-map-group-service-dot {
-  width: 7px;
-  height: 7px;
-
-  border-radius: 50%;
-
-  background:
-    var(--service-map-status);
-
-  box-shadow:
-    0 0 8px
-      var(--service-map-status);
-}
-
-.services-map-group-service-name {
-  overflow: hidden;
-
-  font-size: 11px;
-  font-weight: 600;
-
-  text-align: left;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.services-map-group-service-status {
-  color:
-    var(--service-map-status);
-
-  font-size: 9px;
-  font-weight: 700;
+  box-shadow: 0 0 8px
+    color-mix(in srgb, var(--service-map-status) 60%, transparent);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -289,99 +97,11 @@
   border-radius: 6px 0 0;
   background: #0c282bcc;
   font-family: "IBM Plex Sans", sans-serif;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .services-map-canvas .maplibregl-ctrl-attrib a {
   color: #a7c993;
-}
-
-.services-map-marker {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  filter: drop-shadow(0 2px 5px #0009);
-  touch-action: manipulation;
-}
-
-.services-map-marker:focus-visible {
-  outline: 2px solid #f4f8f5;
-  outline-offset: 2px;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .services-map-marker:hover .services-map-marker-dot,
-  .services-map-marker:focus-visible .services-map-marker-dot {
-    transform: scale(1.2);
-  }
-}
-
-.services-map-marker-dot {
-  width: 14px;
-  height: 14px;
-  border: 2px solid #0c282b;
-  border-radius: 50%;
-  background: var(--status-active, #87e46c);
-  transition: transform 160ms ease;
-}
-
-.services-map-marker.active .services-map-marker-dot {
-  background: var(--status-active, #87e46c);
-  box-shadow: 0 0 0 4px #87e46c26;
-}
-
-.services-map-marker.new .services-map-marker-dot {
-  background: var(--status-new, #e5e65d);
-  box-shadow: 0 0 0 4px #e5e65d26;
-}
-
-.services-map-marker.returned .services-map-marker-dot {
-  background: var(--status-returned, #7dd3fc);
-  box-shadow: 0 0 0 4px #7dd3fc26;
-}
-
-.services-map-marker.no_metrics .services-map-marker-dot {
-  background: var(--status-no-metrics, #facc15);
-  box-shadow: 0 0 0 4px #facc1526;
-}
-
-.services-map-marker.unavailable .services-map-marker-dot {
-  background: var(--status-unavailable, #ee1e41);
-  box-shadow: 0 0 0 4px #ee1e4126;
-}
-
-.services-map-marker.removed .services-map-marker-dot {
-  background: var(--status-removed, #323261);
-  box-shadow: 0 0 0 4px #32326140;
-}
-
-.services-map-marker-count {
-  position: absolute;
-  top: -6px;
-  right: -8px;
-  display: grid;
-  place-items: center;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  border: 1px solid #0c282b;
-  border-radius: 999px;
-  background: #f4f8f5;
-  color: #0c282b;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
 }
 
 .services-map-empty {
@@ -453,6 +173,10 @@
   background: var(--status-unavailable, #ee1e41);
 }
 
+.services-map-legend-dot.error {
+  background: #e879f9;
+}
+
 .services-map-legend-dot.removed {
   background: var(--status-removed, #323261);
 }
@@ -463,15 +187,6 @@
   font-size: var(--font-size-small, 13px);
   font-weight: 500;
   line-height: 1.5;
-}
-
-.services-map-popup .maplibregl-popup-content {
-  padding: 10px 30px 10px 12px;
-  border: 1px solid #426c60;
-  border-radius: 10px;
-  background: #0c282bf2;
-  color: #f4f8f5;
-  box-shadow: 0 10px 24px #0006;
 }
 
 .services-map-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
@@ -500,14 +215,14 @@
 }
 
 .services-map-popup-content strong {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
   font-weight: 600;
 }
 
 .services-map-popup-content span {
   color: var(--text-muted, #a7c993);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.4;
   font-weight: 500;
 }
@@ -543,4 +258,357 @@
   background: #0c282b;
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.92em;
+}
+
+/* =========================================================
+   POPUP DO MAPA
+   ========================================================= */
+
+.services-map-popup .maplibregl-popup-content {
+  min-width: 250px;
+  padding: 0;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(135, 228, 108, 0.3);
+  border-radius: 14px;
+
+  background: linear-gradient(
+    145deg,
+    rgba(10, 38, 40, 0.98),
+    rgba(6, 27, 29, 0.98)
+  );
+
+  color: #f4f8f5;
+
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  animation: services-map-popup-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Triângulo que aponta para o local no mapa */
+
+.services-map-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: rgba(8, 33, 35, 0.96);
+}
+
+.services-map-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: rgba(8, 33, 35, 0.96);
+}
+
+.services-map-popup.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: rgba(8, 33, 35, 0.96);
+}
+
+.services-map-popup.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: rgba(8, 33, 35, 0.96);
+}
+
+/* Botão X */
+
+.services-map-popup .maplibregl-popup-close-button {
+  top: 8px;
+  right: 8px;
+
+  width: 28px;
+  height: 28px;
+
+  border-radius: 8px;
+
+  color: #a7c2bd;
+
+  font-size: 20px;
+  line-height: 24px;
+
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.services-map-popup .maplibregl-popup-close-button:hover {
+  background: rgba(135, 228, 108, 0.1);
+
+  color: #87e46c;
+
+  transform: scale(1.06);
+}
+
+/* Conteúdo interno */
+
+.services-map-popup-content {
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+
+  padding: 16px;
+}
+
+.services-map-popup-content > strong {
+  padding-right: 28px;
+
+  color: #f4fff4;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  letter-spacing: 0.02em;
+}
+
+.services-map-popup-content > span {
+  color: #8fa9a5;
+
+  font-size: 14px;
+}
+
+/* Lista de serviços agrupados */
+
+.services-map-popup-service-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+
+  margin-top: 2px;
+}
+
+/* Serviço */
+
+.services-map-popup-service {
+  --service-status-color: #87e46c;
+
+  position: relative;
+
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+
+  gap: 12px;
+
+  width: 100%;
+
+  padding: 10px 11px;
+
+  border: 1px solid rgba(88, 154, 144, 0.2);
+  border-radius: 9px;
+
+  background: rgba(18, 57, 59, 0.58);
+
+  color: #f2f8f4;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background 170ms ease,
+    border-color 170ms ease,
+    transform 170ms ease,
+    box-shadow 170ms ease;
+}
+
+.services-map-popup-service::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+
+  width: 2px;
+
+  border-radius: 999px;
+
+  background: var(--service-status-color);
+
+  opacity: 0.75;
+}
+
+.services-map-popup-service > span {
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: #eef7f1;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.services-map-popup-service small {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 5px;
+
+  color: #9fb5b1;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+.services-map-popup-service small::before {
+  content: "";
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: var(--service-status-color);
+
+  box-shadow: 0 0 8px
+    color-mix(in srgb, var(--service-status-color) 60%, transparent);
+}
+
+/* Hover */
+
+.services-map-popup-service:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--service-status-color) 50%,
+    transparent
+  );
+
+  background: rgba(27, 79, 73, 0.72);
+
+  transform: translateX(3px);
+
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+}
+
+.services-map-popup-service:focus-visible {
+  outline: 2px solid var(--service-status-color);
+
+  outline-offset: 2px;
+}
+
+/* Status */
+
+.services-map-popup-service.active {
+  --service-status-color: #87e46c;
+}
+
+.services-map-popup-service.new {
+  --service-status-color: #e5e65d;
+}
+
+.services-map-popup-service.returned {
+  --service-status-color: #7dd3fc;
+}
+
+.services-map-popup-service.no_metrics {
+  --service-status-color: #facc15;
+}
+
+.services-map-popup-service.unavailable {
+  --service-status-color: #ee1e41;
+}
+
+.services-map-popup-service.error {
+  --service-status-color: #e879f9;
+}
+
+.services-map-popup-service.removed {
+  --service-status-color: #8b7fd6;
+}
+
+/* Entrada do popup */
+
+@keyframes services-map-popup-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Center the grouped list independently of the marker position on mobile. */
+@media (max-width: 700px) {
+  .monitoring-map-shell .services-map-group-popup {
+    top: 50%;
+    left: 50%;
+    bottom: auto;
+    right: auto;
+    width: calc(100% - 24px);
+    max-width: 320px !important;
+    max-height: calc(100% - 24px);
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .services-map-group-popup .maplibregl-popup-tip {
+    display: none;
+  }
+
+  .services-map-group-popup .maplibregl-popup-content {
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .services-map-group-popup .services-map-popup-content {
+    min-height: 0;
+    max-height: min(240px, 45vh);
+    max-height: min(240px, 45dvh);
+    padding: clamp(8px, 2.5vw, 12px);
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .services-map-group-popup .services-map-popup-content > strong {
+    flex-shrink: 0;
+    padding-right: 36px;
+    font-size: clamp(11px, 3vw, 13px);
+    overflow-wrap: anywhere;
+  }
+
+  .services-map-group-popup .services-map-popup-service-list {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    scrollbar-width: thin;
+  }
+
+  .services-map-group-popup .services-map-popup-service {
+    flex-shrink: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 40px;
+    padding: 7px 8px;
+    gap: 6px;
+  }
+
+  .services-map-group-popup .services-map-popup-service > span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+  }
+
+  .services-map-group-popup .services-map-popup-service small {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+  }
+
+  .services-map-group-popup .maplibregl-popup-close-button {
+    top: 2px;
+    right: 2px;
+    width: 32px;
+    height: 32px;
+  }
 }

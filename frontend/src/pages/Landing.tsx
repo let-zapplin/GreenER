@@ -1,3 +1,4 @@
+import "./ui.css";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -279,7 +280,7 @@ export function Landing() {
             </h2>
             <p>
               Estimamos a energia consumida a partir das métricas de CPU,
-              memória e disco. Depois, multiplicamos esse consumo pela
+              memória, disco e rede. Depois, multiplicamos esse consumo pela
               intensidade de carbono da região onde o serviço roda.
             </p>
             <div className="landing-calculation">
@@ -388,13 +389,6 @@ export function Landing() {
               </span>
             </div>
           </div>
-          <footer className="landing-footer landing-container">
-            <Link to="/sobre">
-              <img src={logo} alt="GreenER" width="76" height="51" />
-            </Link>
-            <p>Mais tecnologia, menos impacto.</p>
-            <span>FATEC Jacareí × Unilaunch</span>
-          </footer>
         </section>
       </main>
     </div>

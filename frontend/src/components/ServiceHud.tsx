@@ -2,6 +2,10 @@ import type {
   MonitoredService,
   ServiceStatus,
 } from "../types/service";
+import {
+  formatServicePlace,
+  hasServiceCoordinates,
+} from "../lib/serviceLocation";
 
 import "./ServiceHud.css";
 
@@ -20,6 +24,7 @@ const STATUS_LABELS: Record<
   returned: "Retornou",
   unavailable: "Indisponível",
   no_metrics: "Sem métricas",
+  error: "Erro na coleta",
   removed: "Removido",
 };
 
@@ -46,9 +51,13 @@ export function ServiceHud({
         const isSelected =
           selectedServiceId === service.id;
 
-        const hasLocation =
-          service.location.latitude !== null &&
-          service.location.longitude !== null;
+        const hasLocation = hasServiceCoordinates(
+          service.location,
+        );
+
+        const place = formatServicePlace(
+          service.location,
+        );
 
         return (
           <button
@@ -65,15 +74,15 @@ export function ServiceHud({
             onClick={() =>
               onSelect(service.id)
             }
-            title={`${service.name} · ${
+            title={`${service.name} · ${place} · ${
               STATUS_LABELS[service.status]
             }`}
-            aria-label={`${service.name}. ${
+            aria-label={`${service.name}. ${place}. ${
               STATUS_LABELS[service.status]
             }${
               hasLocation
                 ? ". Ver no mapa."
-                : ". Localização indisponível."
+                : ". Sem coordenadas no mapa; abre os detalhes."
             }`}
             aria-pressed={isSelected}
           >

@@ -39,6 +39,13 @@ test("indisponibilidade não é confundida com ausência de métricas", () => {
   );
 });
 
+test("erro na coleta não é apresentado como serviço ativo", () => {
+  assert.equal(
+    getMonitoringStatus({ ...stored, last_collection_status: "error" }),
+    "error",
+  );
+});
+
 test("remoção no catálogo prevalece sobre o estado da coleta", () => {
   assert.equal(
     getMonitoringStatus({ ...stored, status: "removed" }),

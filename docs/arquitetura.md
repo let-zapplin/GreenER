@@ -2,8 +2,8 @@
 
 ← [Voltar ao índice da documentação](../README.md)
 
-> **Referência arquitetural atualizada no fechamento da Sprint 2 — 09/11/2026.**  
-> Este documento descreve a arquitetura efetivamente utilizada pelo GreenER e separa o que já compõe o incremento funcional do que permanece planejado para a Sprint 3.
+> **Referência arquitetural atualizada no fechamento da Sprint 3 — 21/11/2026.**
+> Este documento descreve a arquitetura efetivamente utilizada pelo GreenER e distingue as entregas concluídas das melhorias técnicas remanescentes.
 
 ---
 
@@ -16,6 +16,8 @@ O GreenER utiliza uma arquitetura web cliente-servidor com:
 - **Banco de dados:** PostgreSQL;
 - **Execução:** Docker Compose;
 - **APIs auxiliares:** Metrics Aggregator API e Carbon Intensity API;
+- **Assistente:** Karma, com regras determinísticas e Ollama local para classificação e
+  redação de conhecimento;
 - **Visualizações:** Recharts para histórico e MapLibre GL com OpenFreeMap para o mapa do Monitoramento.
 
 A aplicação mantém as regras de negócio e os cálculos ambientais no backend. O frontend consome respostas estruturadas e não recalcula energia ou CO₂e.
@@ -29,6 +31,12 @@ flowchart LR
     F -->|HTTP / JSON + JWT| B[Backend Express :3000]
 
     B -->|SQL explícito e parametrizado| P[(PostgreSQL 17)]
+    B --> K[ChatController / ChatService]
+    K -->|Consulta de indicadores| I
+    K -->|Panorama ambiental| D[Dashboard]
+    K -->|Quando necessário: classificar ou redigir conhecimento| O[Ollama local]
+    O --> K
+    K -->|Resposta estruturada| F
 
     B -->|GET /services| M[Metrics Aggregator API]
     B -->|GET /metrics/:id| M
@@ -46,7 +54,7 @@ flowchart LR
     ANA --> CHART[Histórico Recharts]
 ```
 
-O fluxo principal validado ao final da Sprint 2 é:
+O fluxo principal validado no fechamento da Sprint 3 é:
 
 ```text
 descoberta de serviços
@@ -66,7 +74,7 @@ indicadores e consolidação
 Monitoramento + Análises
 ```
 
-A visualização geográfica da US13 foi antecipada da Sprint 3 e incorporada ao Monitoramento durante o fechamento da Sprint 2. Como a tarefa ainda estava em revisão no fechamento documental, seus refinamentos finais permanecem sujeitos à integração definitiva.
+A visualização geográfica da US13 foi antecipada da Sprint 3, integrada ao Monitoramento e concluída durante a Sprint 3.
 
 ---
 
@@ -128,7 +136,8 @@ O mesmo princípio é utilizado nos módulos de:
 - coletas;
 - intensidades de carbono;
 - indicadores;
-- dashboard.
+- dashboard;
+- chat (Assistente Karma).
 
 Estrutura conceitual:
 
@@ -140,7 +149,8 @@ backend/src/
 │   ├── coletas/
 │   ├── intensidades/
 │   ├── indicadores/
-│   └── dashboard/
+│   ├── dashboard/
+│   └── chat/
 ├── integrations/
 ├── jobs/
 └── shared/
@@ -493,6 +503,15 @@ hooks / services
 API GreenER
 ```
 
+### Assistente Karma
+
+Na Home autenticada, `AssistantChat` envia perguntas a `POST /api/chat` com JWT. O
+backend aplica regras determinísticas, consulta indicadores/dashboard e monta fatos e
+gráficos. O Ollama local é acionado apenas quando a classificação precisa de ajuda ou
+para redigir respostas sobre o projeto e a metodologia; ele não acessa o PostgreSQL.
+Se o Ollama falhar, o backend responde pelo modo regras. O fluxo e o contrato estão em
+[`docs/assistente-ia.md`](assistente-ia.md).
+
 ### Monitoramento
 
 A página de **Monitoramento** concentra a leitura operacional do ambiente:
@@ -519,7 +538,7 @@ A página de **Análises** concentra exploração temporal:
 - lacunas no histórico;
 - navegação entre serviços.
 
-Ranking e comparação permanecem planejados para a Sprint 3.
+Ranking e comparação estão implementados na página de Análises. O ranking ordena os serviços por energia ou CO₂e no período selecionado, e a comparação permite analisar dois ou mais serviços no mesmo período; ambos usam os indicadores e históricos existentes, sem endpoints exclusivos. A interface sinaliza dados parciais e mantém serviços removidos com dados no período; no ranking, eles aparecem como “Removido”.
 
 ### Atualização automática
 
@@ -541,11 +560,33 @@ agenda próxima consulta
 
 Esse comportamento evita apagar a interface durante uma falha temporária de rede/backend.
 
+### Arquitetura de desempenho — TEC26
+
+As páginas `Home`, `Monitoring` e `Analyses` são carregadas sob demanda com
+`React.lazy` e `Suspense`. Enquanto o módulo da rota é carregado, `RouteLoading`
+mantém o fundo escuro e o shell da aplicação visíveis.
+
+Os hooks de monitoramento, dashboard e indicadores atualizam em intervalos de
+60 segundos. **Na revisão do código deste fechamento, o polling ainda não pausa
+quando a aba fica oculta**: não há verificação de `document.hidden` nem listener de
+`visibilitychange` nesses hooks. O navegador pode aplicar throttling aos timers em
+segundo plano, mas a aplicação não suspende nem reagenda explicitamente as consultas.
+O uso de `document.hidden` no `LandingGlobe` pausa somente a animação do globo. A
+pausa das consultas em segundo plano permanece uma melhoria técnica, não uma
+otimização concluída.
+
+Na página de Monitoramento, o resumo do dashboard e os indicadores por serviço são
+buscados separadamente; o resumo também reutiliza o cálculo de indicadores no
+backend. A atualização periódica pode, portanto, repetir parte do trabalho analítico.
+Na comparação, o frontend consulta cada histórico individualmente (até quatro
+serviços). A lista de serviços também procura indicadores por serviço durante a
+renderização. Esses pontos permanecem candidatos a otimização após medição.
+
 ---
 
 ## 11. Visualização geográfica — US13
 
-A US13 foi antecipada da Sprint 3 durante a reformulação do Monitoramento.
+A US13 foi antecipada da Sprint 3 e concluída com a integração do mapa ao Monitoramento.
 
 O mapa utiliza:
 
@@ -566,7 +607,22 @@ flowchart LR
 
 A ausência de coordenadas não remove o serviço do Monitoramento. O mapa é uma visualização complementar, atendendo ao RF13 sem tornar a localização geográfica a única forma de consultar os serviços.
 
-No fechamento documental da Sprint 2, a US13 permanece em revisão antes de ser considerada definitivamente integrada.
+A US13 está integrada ao Monitoramento. Serviços sem coordenadas continuam disponíveis nas demais visualizações.
+
+### Localização consolidada — US12
+
+O texto de localização segue um único formatador (`frontend/src/lib/serviceLocation.ts`),
+que combina cidade, região e país apenas quando existem e usa o fallback “Localização
+não informada”. O mesmo texto aparece no Monitoramento (cards, popover, HUD, painel de
+detalhes e popups do mapa) e nas Análises (destaque do serviço, seletor de comparação,
+previews, ranking e resumo comparativo).
+
+- `city` é opcional no contrato; cidade, região e país aparecem na ordem em que existirem.
+- `latitude`/`longitude` são opcionais e controlam apenas a presença no mapa; o serviço
+  continua listado, selecionável e analisável fora dele.
+- Campos nulos ou vazios são descartados antes da exibição, sem separadores sobrando.
+- Rótulos de localização usam `overflow-wrap` para não romper cards e painéis em telas
+  estreitas.
 
 ---
 
@@ -681,7 +737,7 @@ Os hooks preservam os últimos dados válidos quando uma atualização falha e t
 
 ### Dados incompletos
 
-O backend utiliza `isPartial`, coberturas e lacunas para comunicar que um resultado não está completo, evitando apresentar ausência como valor zero.
+O backend utiliza `isPartial`, coberturas e lacunas para comunicar que um resultado não está completo. Por compatibilidade, os totais ambientais agregados existentes podem retornar `0` quando nenhuma amostra contribuiu para aquele indicador; esse valor deve ser interpretado junto às contagens e lacunas, não como confirmação de consumo ou emissão reais iguais a zero. Os novos campos que podem não ter amostras válidas, como `energyBreakdown`, representam essa ausência com `null`.
 
 ---
 
@@ -703,6 +759,9 @@ Principais fluxos:
 | `GET` | `/api/indicadores` | Indicadores ambientais por período |
 | `GET` | `/api/indicadores/:serviceId/historico` | Histórico ambiental |
 | `GET` | `/api/dashboard` | Resumo operacional |
+| `GET` | `/api/projecoes/regioes` | Regiões com snapshot de carbono disponível, protegido por JWT |
+| `POST` | `/api/projecoes/localizacao` | Projeção ambiental por localização, protegida por JWT |
+| `POST` | `/api/chat` | Assistente Karma, protegido por JWT |
 
 ---
 
@@ -729,21 +788,26 @@ As evidências e comandos estão registrados em:
 
 ---
 
-## 18. Evolução planejada para a Sprint 3
+## 18. Fechamento da Sprint 3 e melhorias remanescentes
 
-A arquitetura base necessária para a Sprint 3 já está disponível.
+O fechamento da Sprint 3 concluiu os recursos de ranking, comparação de serviços,
+filtros temporais, projeção por localização e integração da visualização geográfica.
+O roteamento das páginas pesadas também passou a usar lazy loading.
 
-Os principais recursos ainda previstos são:
+O build de produção após a divisão de rotas reduziu o chunk de entrada de 2,25 MB
+para 563 KB (168 KB gzip). O build ainda avisa sobre chunks acima de 500 KB: o
+chunk compartilhado do MapLibre tem aproximadamente 1,1 MB e o chunk de entrada
+permanece ligeiramente acima do limite. A divisão reduziu o carregamento inicial,
+mas não eliminou o aviso.
 
-- filtros analíticos reutilizáveis;
-- ranking por energia e CO₂e;
-- comparação entre dois ou mais serviços no mesmo período;
-- refinamentos de responsividade;
-- consolidação do mapa antecipado na Sprint 2;
-- otimizações de desempenho;
-- ampliação de testes e validação final do MVP.
+Melhorias técnicas que permanecem para avaliação pós-Sprint:
 
-Essas funcionalidades devem reutilizar os dados históricos e cálculos existentes, evitando criar fluxos paralelos ou duplicar regras já consolidadas no backend.
+- pausar os hooks de polling quando `document.hidden` for verdadeiro;
+- avaliar um endpoint em lote para os históricos usados na comparação, que hoje são
+  consultados individualmente por serviço;
+- medir as consultas analíticas com planos `EXPLAIN ANALYZE` e volume representativo;
+- avaliar indexação em memória dos indicadores e memoização dos cards após profiling;
+- reduzir ou subdividir os chunks grandes sem apenas aumentar o limite de aviso do Vite.
 
 ---
 

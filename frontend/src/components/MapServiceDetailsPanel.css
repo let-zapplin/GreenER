@@ -55,6 +55,10 @@ backdrop-filter: blur(14px);
   --panel-status-color: #ff5e57;
 }
 
+.map-service-panel.error {
+  --panel-status-color: #e879f9;
+}
+
 .map-service-panel.removed {
   --panel-status-color: #796493;
 }
@@ -85,11 +89,15 @@ backdrop-filter: blur(14px);
   justify-content: space-between;
   gap: 16px;
 }
+.map-service-panel-header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 .map-service-panel-eyebrow {
   color: var(--monitoring-muted);
 
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.09em;
 }
@@ -107,7 +115,7 @@ backdrop-filter: blur(14px);
   color: var(--panel-status-color);
 
   font-family: "IBM Plex Mono", monospace;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .map-service-panel-close {
@@ -162,7 +170,7 @@ backdrop-filter: blur(14px);
 
   color: var(--panel-status-color);
 
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -181,7 +189,7 @@ backdrop-filter: blur(14px);
 .map-service-panel-partial {
   color: #e7cf55;
 
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -201,7 +209,7 @@ backdrop-filter: blur(14px);
 .map-service-panel-metrics span {
   color: var(--monitoring-muted);
 
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -210,13 +218,14 @@ backdrop-filter: blur(14px);
 .map-service-panel-location strong {
   color: #f1f8f5;
 
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .map-service-panel-impact {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
 
   margin-top: 18px;
@@ -265,10 +274,11 @@ backdrop-filter: blur(14px);
 .map-service-panel-metrics strong {
   color: #f4ffff;
 
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .map-service-panel-updated {
+  flex-wrap: wrap;
   display: flex;
   justify-content: space-between;
   gap: 10px;
@@ -277,7 +287,7 @@ backdrop-filter: blur(14px);
 
   color: var(--monitoring-muted);
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .map-service-panel-updated time {
@@ -289,7 +299,7 @@ backdrop-filter: blur(14px);
 
   color: var(--monitoring-muted);
 
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .map-service-panel-analysis {
@@ -311,7 +321,7 @@ backdrop-filter: blur(14px);
 
   color: #f4ffff;
 
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   text-decoration: none;
 
@@ -330,4 +340,21 @@ backdrop-filter: blur(14px);
 
   border-color:
     var(--panel-status-color);
+}
+
+@media (max-width: 900px) {
+  .map-service-panel {
+    padding: 16px;
+    border-radius: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .map-service-panel-close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .map-service-panel-metrics > div {
+    min-width: 0;
+  }
 }

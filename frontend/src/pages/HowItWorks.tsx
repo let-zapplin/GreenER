@@ -1,3 +1,4 @@
+import "./ui.css";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./HowItWorks.css";
@@ -246,9 +247,6 @@ export function HowItWorks() {
           </Link>
         </section>
       </main>
-      <footer className="how-footer">
-        GreenER. Mais tecnologia, menos impacto.
-      </footer>
     </div>
   );
 }

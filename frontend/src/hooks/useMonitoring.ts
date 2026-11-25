@@ -48,6 +48,13 @@ export function useMonitoring() {
         return;
       }
 
+      if (document.hidden) {
+        refreshTimer = window.setTimeout(() => {
+          void loadServices();
+        }, MONITORING_REFRESH_INTERVAL_MS);
+        return;
+      }
+
       const requestController =
         new AbortController();
 

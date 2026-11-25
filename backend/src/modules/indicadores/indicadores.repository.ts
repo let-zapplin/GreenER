@@ -19,6 +19,7 @@ export interface IndicatorCollection {
   collection_interval_seconds: number | null;
   carbon_intensity_id: number | null;
   carbon_intensity_gco2e_per_kwh: number | null;
+  renewable_share_percent?: number | null;
 }
 
 export interface ServiceIndicatorData {
@@ -46,6 +47,7 @@ interface IndicatorRow {
   collection_interval_seconds: number | null;
   carbon_intensity_id: number | null;
   carbon_intensity_gco2e_per_kwh: number | null;
+  renewable_share_percent: number | null;
 }
 
 export class IndicadoresRepository {
@@ -75,7 +77,8 @@ export class IndicadoresRepository {
          m.network_gb,
          m.collection_interval_seconds,
          intensity.id_carbon_intensity AS carbon_intensity_id,
-         intensity.carbon_intensity_gco2e_per_kwh
+         intensity.carbon_intensity_gco2e_per_kwh,
+         intensity.renewable_share_percent
        FROM service s
        INNER JOIN location service_location
          ON service_location.id_location = s.location_id_location
@@ -90,7 +93,8 @@ export class IndicadoresRepository {
          -- attempted_at e dentro da idade máxima configurada em milissegundos.
          SELECT
            ci.id_carbon_intensity,
-           ci.carbon_intensity_gco2e_per_kwh
+           ci.carbon_intensity_gco2e_per_kwh,
+           ci.renewable_share_percent
          FROM carbon_intensity ci
          INNER JOIN location intensity_location
            ON intensity_location.id_location = ci.location_id_location
@@ -148,6 +152,7 @@ export class IndicadoresRepository {
         carbon_intensity_id: row.carbon_intensity_id,
         carbon_intensity_gco2e_per_kwh:
           row.carbon_intensity_gco2e_per_kwh,
+        renewable_share_percent: row.renewable_share_percent,
       });
     }
 

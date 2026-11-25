@@ -1,4 +1,5 @@
 import type { MonitoredService } from "../types/service";
+import { formatServicePlace } from "../lib/serviceLocation";
 import "./ServicePopover.css";
 
 type ServicePopoverProps = {
@@ -21,6 +22,9 @@ function getStatusLabel(status: MonitoredService["status"]) {
 
     case "unavailable":
       return "Indisponível";
+
+    case "error":
+      return "Erro na coleta";
 
     case "removed":
       return "Removido";
@@ -45,11 +49,7 @@ export function ServicePopover({ service }: ServicePopoverProps) {
       )}
 
       <div className="service-popover-location">
-        <span>{service.location.city ?? "Cidade não informada"}</span>
-
-        <span>
-          {service.location.region}, {service.location.country}
-        </span>
+        <span>{formatServicePlace(service.location)}</span>
 
         <small>{service.location.region_code}</small>
       </div>
