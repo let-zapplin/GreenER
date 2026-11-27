@@ -91,13 +91,9 @@
 
   max-width: none;
 
-
-
   margin: 16px 0 20px;
 
-
-
-  font-size: clamp(36px, 4.2vw, 56px);
+  font-size: clamp(30px, 4.2vw, 48px);
 
   line-height: 1.08;
 

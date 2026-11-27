@@ -554,7 +554,7 @@ export function Monitoring() {
           </p>
 
           <h1>
-            O impacto do seu ambiente, <br /><span>em foco.</span>
+            O impacto do seu ambiente <span>em foco.</span>
           </h1>
 
           <p className="monitoring-description">
