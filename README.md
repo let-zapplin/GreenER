@@ -459,3 +459,19 @@ Evidências:
 
 **Instituição:** FATEC Jacareí — Desenvolvimento de Software Multiplataforma (DSM)  
 **Parceiro:** Unilaunch
+
+## 🏆 Feira de Projetos
+
+Como encerramento deste ciclo, o **GreenER** foi apresentado na **Feira de Projetos da FATEC Jacareí**, onde recebeu o reconhecimento de **Projeto Destaque do 2º semestre de DSM no contexto do evento**.
+
+Durante a apresentação, recebemos feedbacks positivos dos professores especialmente pela **clareza da proposta**, pela **facilidade de compreensão das funcionalidades** e pela **navegabilidade da aplicação**.
+
+O reconhecimento refere-se especificamente à participação na Feira de Projetos e não representa uma classificação oficial dos projetos no âmbito da disciplina, das Sprint Reviews ou do cliente parceiro.
+
+<div align="center">
+
+<img src="docs/assets/equipe-feira-projetos.jpeg" alt="Equipe Let:zApplin apresentando o GreenER na Feira de Projetos da FATEC Jacareí" width="850"/>
+
+<sub>Equipe Let:zApplin durante a apresentação do GreenER na Feira de Projetos — 2026.</sub>
+
+</div>

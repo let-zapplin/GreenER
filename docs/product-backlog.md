@@ -452,11 +452,11 @@ Durante a execução da Sprint 3, o Product Backlog evoluiu além do núcleo ori
 ---
 ### Evolução posterior ao fechamento da Sprint 3
 
-Após a apresentação final do GreenER e o encerramento da Sprint 3, feedbacks recebidos durante a Feira de Projetos originaram uma nova evolução do produto:
+Durante a apresentação na feira de projeto originaram uma nova evolução do produto:
 
 - **TEC40 — Relatórios ambientais em PDF:** implementação de exportação da análise individual e da comparação entre serviços, permitindo registrar e compartilhar os resultados produzidos pelo GreenER fora da interface da aplicação.
 
-A funcionalidade foi desenvolvida como evolução pós-entrega e utiliza a arquitetura e os cálculos ambientais já consolidados no MVP. O registro não altera retroativamente o escopo da Sprint 3.
+A funcionalidade foi desenvolvida como evolução pós-entrega, antes da Sprint Review e fechamento oficial da sprint e utiliza a arquitetura e os cálculos ambientais já consolidados no MVP. O registro não altera retroativamente o escopo da Sprint 3.
 
 ## 8. Histórico de alterações
 
@@ -470,6 +470,7 @@ A funcionalidade foi desenvolvida como evolução pós-entrega e utiliza a arqui
 | 23/11/2026 | Consolidação da Sprint 3: estados finais de US12/US13/US17 e RNF01–RNF05; registro do Workspace adaptativo (TEC34), do protótipo Karma (TEC39) e das limitações/evoluções não bloqueantes | Gustavo (Product Owner) |
 | 23/11/2026 | Revisão de coerência documental: referências de histórico/ranking/comparação, critérios da redistribuição, persistência local e minimização do Workspace e descrição do protótipo Karma | Equipe GreenER |
 | 25/11/2026 | Registro da TEC40 após feedback da Feira de Projetos: exportação de análises individuais e comparativas em PDF, com integração frontend/backend, tolerância a dados parciais e testes automatizados | Vitor |
+| 27/11/2026 | Registro da Sprint Review 3, feedbacks da Feira de Projetos e retrospectiva final da equipe; Review final encerrou-se sem críticas ou solicitações de mudança e não gerou alteração de escopo | Equipe GreenER |
 
 ---
 
