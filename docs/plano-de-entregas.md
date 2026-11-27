@@ -153,6 +153,7 @@ O fluxo principal previsto para a Sprint foi validado ponta a ponta:
 
 **Registro de execução:** o fechamento da Sprint 3 está registrado no Sprint Backlog 3, no manual de validação e no consolidado de testes.
 
+
 ---
 
 ## 04. Governança e responsáveis
