@@ -171,9 +171,34 @@ Ao final da Sprint 3, o GreenER permite ao usuário:
 
 ---
 
-## 7. Sprint Review, decisões e fechamento
+## 7. Sprint Review, feedbacks e decisões
 
-No planejamento inicial, ainda havia expectativa de registrar eventuais ajustes decorrentes da Sprint Review 2. Até o fechamento documental não foi obtido novo feedback formal do cliente que justificasse alterações retrospectivas no backlog.
+### 7.1 Contexto herdado da Sprint Review 2
+
+O retorno formal da Sprint Review 2 não foi encaminhado à equipe. O time registra somente que a apresentação ocorreu e que os feedbacks recebidos foram positivos, indicando que o projeto seguia no caminho esperado. Como não houve uma devolutiva formal com ajustes específicos, nenhuma alteração de escopo da Sprint 3 é atribuída retrospectivamente à Review 2.
+
+### 7.2 Sprint Review 3 — apresentação final
+
+Na última Sprint Review, o cliente **não apresentou críticas nem solicitações de correção ou melhoria** para o incremento demonstrado. O principal destaque foi a maturidade da equipe em manter, desde a primeira sprint, um conceito coerente para o produto e fazê-lo aparecer em diferentes decisões de experiência e funcionalidade.
+
+O conceito de **adaptação**, inicialmente associado à identidade do camaleão, foi reconhecido como uma linha condutora do GreenER: aparece na forma de organizar a interface, no Workspace personalizável, na leitura de diferentes contextos de monitoramento e na evolução da experiência entre as sprints.
+
+Dois pontos receberam destaque positivo específico:
+
+- **Karma:** o cliente valorizou a implementação do assistente como uma evolução inovadora e coerente com o produto;
+- **Workspace personalizável:** foi destacado como uma aplicação concreta do conceito de adaptação e como recurso que amplia a flexibilidade de uso da plataforma.
+
+Como a Review final não gerou críticas nem solicitações de mudança, **nenhum item corretivo de escopo foi criado a partir dessa cerimônia**. Os próximos passos registrados pela equipe são evoluções de qualidade e continuidade, e não pendências impostas pelo cliente para aceite do MVP.
+
+### 7.3 Feira de Projetos — validação externa
+
+Antes da Sprint Review, o GreenER também foi apresentado na Feira de Projetos para professores e demais participantes. Os principais elogios recebidos foram a **facilidade de compreender a proposta do produto**, a clareza das funcionalidades e a **navegabilidade direta da aplicação**.
+
+Esse retorno reforçou uma decisão presente desde o início do projeto: manter uma identidade e uma arquitetura de interface coerentes, mesmo com o crescimento do número de funcionalidades. A Feira é registrada como uma validação externa complementar e não substitui a Sprint Review com o cliente.
+
+Feedbacks posteriores recebidos nesse contexto também deram origem a evoluções pós-Sprint 3, registradas separadamente no Product Backlog, como a **TEC40 — relatórios ambientais em PDF**.
+
+### 7.4 Decisões consolidadas no fechamento
 
 As principais decisões efetivamente registradas durante a Sprint foram:
 
@@ -182,7 +207,8 @@ As principais decisões efetivamente registradas durante a Sprint foram:
 - manter serviços removidos em ranking/comparação histórica quando houver dados no período;
 - aceitar a indicação atual de **Dados parciais** para a entrega final, explicando a limitação ao cliente;
 - tratar projeções e redistribuição como apoio à decisão, sem executar migração real;
-- apresentar a **Karma** como protótipo experimental adicional ao MVP obrigatório.
+- apresentar a **Karma** como protótipo experimental adicional ao MVP obrigatório;
+- preservar o conceito de **adaptação** como princípio de produto e experiência, validado positivamente na Review final.
 
 ---
 ## 8 · Acompanhamento da sprint
@@ -220,3 +246,56 @@ A **Sprint 3 foi concluída em 23/11/2026**, encerrando o ciclo de três entrega
 
 As limitações técnicas ou de evidência que permanecem foram mantidas explicitamente nos documentos de testes, sem serem apresentadas como verificações realizadas quando não houve comprovação.
 
+---
+
+## 10. Retrospectiva da Sprint 3 e do projeto
+
+Após a Sprint Review final, os cinco integrantes realizaram a retrospectiva da terceira sprint e também refletiram sobre o ciclo completo do projeto. O consenso foi de que o principal diferencial da equipe esteve na **coesão entre visão de produto, comunicação e execução**: desde a primeira sprint, o GreenER manteve um propósito claro e um conceito de adaptação que orientou tanto decisões visuais quanto funcionais.
+
+### 10.1 Síntese coletiva
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>✅ O que funcionou bem</h4>
+      Comunicação, responsabilidade, comprometimento e divisão de tarefas foram apontados de forma recorrente. A equipe conseguiu entregar os requisitos esperados e ainda incorporar inovações relevantes, como Karma e Workspace, sem perder a coerência do produto. A transparência entre os integrantes e a clareza sobre o objetivo final também ajudaram a integrar diferentes frentes de desenvolvimento.
+    </td>
+    <td width="50%" valign="top">
+      <h4>⚠️ O que não saiu como planejado</h4>
+      O prazo final foi considerado apertado diante do volume de demandas do MVP e das evoluções adicionais assumidas pela equipe. Como consequência, refinamentos visuais, responsividade e ajustes finos receberam menos tempo do que o desejado. Também houve descoberta de alguns erros apenas nos últimos dias, aumentando a pressão do fechamento.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>💡 O que aprendemos</h4>
+      O grupo destacou o amadurecimento na aplicação de Scrum e dos fundamentos ágeis, a importância da comunicação e de manter uma visão clara do produto sem perder o foco nas entregas menores. Também houve crescimento técnico em React, componentização, estados, arquitetura da aplicação, integração entre módulos e compreensão da IA/Karma. Um aprendizado importante foi a capacidade de navegar e compreender partes do projeto desenvolvidas por outros integrantes.
+    </td>
+    <td width="50%" valign="top">
+      <h4>🚀 Próximos passos possíveis</h4>
+      Refatorar e revisar a organização do código, reduzir acoplamento, melhorar legibilidade e segurança, concluir refinamentos de responsividade e experiência visual, evoluir Landing/Sobre/Funcionamento, ampliar animações quando fizer sentido, fortalecer perfis administrativos e aprofundar a integração e o treinamento da Karma. A equipe também deseja preservar a comunicação, a confiança e o espírito colaborativo construídos durante o projeto.
+    </td>
+  </tr>
+</table>
+
+### 10.3 Plano de evolução pós-projeto
+
+| Prioridade | Frente | Direcionamento |
+| --- | --- | --- |
+| **Alta** | Refatoração e arquitetura | Revisar legibilidade, organização, duplicações e grau de acoplamento; facilitar manutenção e entendimento transversal do código. |
+| **Alta** | Responsividade e acabamento | Reavaliar telas e componentes em diferentes larguras e concluir os refinamentos visuais sacrificados pelo prazo. |
+| **Alta** | Karma | Ampliar treinamento, contexto, integração e confiabilidade da assistente, mantendo os cálculos determinísticos fora do modelo. |
+| **Média** | Segurança e administração | Evoluir perfis administrativos, autorizações e revisões gerais de segurança. |
+| **Média** | Experiência institucional | Refinar Landing, Sobre e Funcionamento e incorporar animações quando contribuírem para a compreensão do produto. |
+| **Contínua** | Processo de equipe | Preservar comunicação, transparência, confiança, divisão clara de responsabilidades e colaboração entre frentes. |
+
+> **Aprendizado central do projeto**
+>
+> A principal conclusão da equipe foi que a qualidade do GreenER não veio apenas da soma das funcionalidades, mas da capacidade de manter uma visão comum durante todo o desenvolvimento. O conceito de adaptação ajudou a conectar identidade visual, experiência, arquitetura de interface e inovação, enquanto a comunicação permitiu que os integrantes compreendessem e colaborassem além de suas próprias tarefas.
+
+---
+
+## 11. Encerramento do ciclo de sprints
+
+A terceira sprint concluiu o ciclo acadêmico planejado para o GreenER. A Sprint Review final encerrou-se sem críticas ou solicitações de mudança e destacou positivamente a coerência e a maturidade do produto; a Feira de Projetos reforçou a clareza da proposta e da navegação.
+
+Os próximos itens registrados pela equipe representam **evoluções pós-projeto**, não requisitos pendentes para considerar o MVP entregue. O Product Backlog permanece como referência para extensões posteriores
